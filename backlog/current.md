@@ -1,24 +1,24 @@
 # Backlog — Groundwork
 
-_Last updated: 2026-03-11T16:00:00 by Manager_
+_Last updated: 2026-03-11T18:00:00 by Manager_
 
 ## TL;DR — Where We Are
 
-**Done:** CLI usability fixes (Sprint 1), seed growth system (Sprint 2). Seeds grow into roots when near water+light. 15 tests pass. Player validation complete — 6 sessions across 5 personas.
+**Done:** CLI usability (Sprint 1), seed growth (Sprint 2), placement validation + growth visibility + batch placement (Sprint 3). The P0 trust blockers are resolved. Seeds are protected, growth is visible, and batch placement removes the tedium wall. 24+ sim tests pass, 5 TUI integration tests pass.
 
-**New P0:** Placement validation. Players can silently destroy seeds, roots, and water spring cells. The most intuitive watering action (place water on seed) kills the seed. 4/6 sessions flagged this as the most hostile moment in the game.
+**Current focus:** Ecological depth. Roots are inert — the first real system interaction (root water absorption, SIM-03) is the top P1. The checkerboard water artifact (SIM-04) and remaining visual polish (SIM-05, VIS-01) round out the sprint.
 
-**The build can:** create worlds, place materials, simulate water flow + light + seed growth, save/load state. The seed→root growth is the first genuine "one more seed" moment.
+**The build can:** create worlds, place/fill materials (with ranges), protect seeds/roots from destruction, simulate water flow + light + seed growth with visible progress (s→S→*), show growth diagnostics, save/load state.
 
-**The build can't yet:** protect living things from accidental destruction, show growth progress visually, handle batch placement, make roots interact with the world, or spread light/water horizontally underground.
+**The build can't yet:** make roots interact with the world, fix the checkerboard water pattern, show water depth, vary terrain, or support multiple species.
 
-**Key insight from player testing:** The seed→root conversion is real delight. Every session confirmed "one more seed" pull. But players nearly quit 2-3 times before reaching that moment due to opaque mechanics and destructive placement. The path to delight is too punishing.
+**Key insight:** The trust barrier is gone. Players can now safely experiment without losing work. The "one more seed" moment is reachable within 5 minutes. The next frontier is ecological depth — making the garden *respond* to the player, not just grow.
 
 ---
 
 ## Completed
 
-### Sprint 1: CLI Usability (PR #3)
+### Sprint 1: CLI Usability
 - ~~CLI-01: Fix no-terminal panic~~ ✓
 - ~~CLI-02: Add legend to `view`~~ ✓
 - ~~CLI-03: Add axis labels to `view`~~ ✓
@@ -32,6 +32,11 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 - ~~SIM-02: Fix light attenuation through soil~~ ✓
 - ~~GAME-01: Add seed species with growth system~~ ✓ (40-tick growth, water+light threshold)
 
+### Sprint 3: Trust & Readability
+- ~~CLI-08: Placement validation~~ ✓ — Seeds/roots protected, water warns, `--force` overrides. 5 integration tests.
+- ~~VIS-02: Seed growth progress indicator~~ ✓ — `s`→`S`→`*` in view, growth diagnostics in inspect (progress %, conditions, dormancy reason).
+- ~~GAME-03: Batch voxel placement~~ ✓ — Range syntax on `place` (`20..40`), `fill` command for rectangles. Optimizer: 138→~10 commands. Spelunker shaft: 99→1 command.
+
 ### Player Validation Round 1 (6 sessions, 5 personas)
 - ~~Seed Growth Playtest~~ ✓ — Confirmed growth works near spring, irrigation channels don't work
 - ~~Ecologist / Scientist~~ ✓ — Mapped viable zone, confirmed deterministic sim (5/5 trust), found exploit paths
@@ -44,29 +49,9 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 
 ## P0 — Blocks core proof or makes build unusable
 
-### CLI-08: Placement validation — protect seeds, roots, and water sources
-- **Owner:** tools
-- **Why:** 4/6 sessions flagged destructive placement as the single worst moment. Placing water on a seed silently destroys it — this is the most intuitive watering action and it kills the plant. The ecologist proved you can permanently destroy the water spring cell by cell. Weekend gardener nearly quit the game over this. A casual player's first instinct (water my seed) must not punish them.
-- **Done when:**
-  - `place` rejects overwriting Seed or Root with any material (prints warning, suggests `--force`)
-  - `place` warns when overwriting a Water cell at surface level (spring protection)
-  - `--force` flag bypasses the protection
-- **Dependencies:** none
-- **Risk:** low
-- **Scope:** Core trust — if the obvious action destroys your work, the game breaks the player's trust before they see any delight.
-- **Evidence:** Weekend gardener BUG-2, Ecologist BUG-1/BUG-2, Garden designer confusion, Seed growth playtest
+_No P0 items. Trust blockers resolved in Sprint 3._
 
-### VIS-02: Seed growth progress indicator (PROMOTED from P2)
-- **Owner:** tools
-- **Why:** 6/6 sessions flagged the invisible growth counter. nutrient_level repurposes as growth but is labeled generically, not shown in view, and gives zero intermediate feedback during the 40-tick wait. Players inspect seeds showing water_level:0 and nutrient_level climbing — both confusing. This is the #1 readability gap.
-- **Done when:**
-  - Seeds in ASCII view show growth stage: `s` (0-99), `S` (100-199), then `*` Root (200+)
-  - `inspect` on a seed shows: `growth: 120/200 (60%)`, conditions met/unmet: `water: YES (neighbor below: 98)`, `light: YES (229)`
-  - If a seed is not growing, inspect says why: `growth blocked: no water nearby` or `growth blocked: no light`
-- **Dependencies:** none
-- **Risk:** low
-- **Scope:** Every session asked for this. Readability is a design constraint. Without it, the growth loop is a black box.
-- **Evidence:** All 6 sessions, Weekend gardener (near-quit #3), Optimizer ("no growth counter visible"), Ecologist ("nutrient_level meaning is opaque")
+---
 
 ## P1 — Strongly improves clarity, feel, or core loop
 
@@ -112,14 +97,6 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 
 ## P2 — Valuable but not required for MVP
 
-### GAME-03: Batch voxel placement (PRIORITY INCREASE — was P2, now high-P2, next to promote)
-- **Owner:** tools
-- **Why:** 5/6 sessions flagged single-voxel placement as the #1 UX friction. Optimizer needed 138 commands. Garden designer needed 300. Spelunker needed 99 for one shaft. Underground play and designed gardens are blocked by this.
-- **Done when:** `place` accepts range syntax like `place air 20..40 30 15` for a row, or `fill` command for rectangles.
-- **Dependencies:** none
-- **Risk:** low
-- **Note:** This is the strongest P2 signal. If the sprint has room after P0/P1, promote this.
-
 ### GAME-02: Varied default terrain
 - **Owner:** gameplay
 - **Why:** Flat uniform terrain is boring. Multiple sessions flagged the "wall of `#`" as a dull first impression.
@@ -134,61 +111,50 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 - **Dependencies:** none
 - **Risk:** low
 
-### CLI-10: Inspect growth diagnostics
-- **Owner:** tools
-- **Why:** Ecologist and optimizer both requested detailed growth diagnostics beyond the P0 progress indicator. Batch inspect, neighbor water details, estimated ticks to maturity.
-- **Done when:** `inspect` on a seed shows neighbor water values, whether each condition (water/light) is met, and estimated ticks remaining.
-- **Dependencies:** VIS-02 (basic growth display ships first)
-- **Risk:** low
-
 ### SIM-06: Seed light attenuation
 - **Owner:** gameplay
 - **Why:** Seeds are 100% transparent to light. Ecologist proved stacking seeds creates "light pipes" delivering more light underground than air does (seeds: 0 attenuation, air: 2/layer). This is a minor exploit.
 - **Done when:** Seeds attenuate light by ~5-10 per layer, comparable to air.
 - **Dependencies:** none
 - **Risk:** low
-- **Decision needed:** Is seed-as-light-pipe intentional? Dev noted "acceptable for MVP since players place seeds on surfaces." With underground play emerging, this matters more. Recommend fixing.
+- **Note:** Matters more with underground play. Low priority for surface MVP.
+
+### CLI-10: Inspect growth diagnostics (PARTIALLY DONE)
+- **Owner:** tools
+- **Why:** Ecologist and optimizer both requested detailed growth diagnostics. VIS-02 shipped the core: progress %, conditions met/unmet, dormancy reason. Remaining: batch inspect, neighbor water details.
+- **Done when:** `inspect` supports coordinate ranges. Neighbor water values shown individually.
+- **Dependencies:** VIS-02 ✓
+- **Risk:** low
 
 ## P3 — Future / expansion
 
 ### UNDERGROUND-01: Underground play expansion
 - **Owner:** gameplay
-- **Why:** The Spelunker session proved caves are dead zones — no horizontal light scatter (SIM-07), no horizontal water flow (SIM-08), and no dark-adapted species (GAME-08). Underground gardening is a compelling future playstyle but depends on multiple system changes that are out of scope for MVP. The core surface loop must be proven first.
-- **Scope:** Future expansion. Encompasses SIM-07 (horizontal light), SIM-08 (horizontal water flow in air), GAME-08 (dark-loving species/mushrooms), and potentially SIM-06 (seed light attenuation, which matters more with underground play). Surface MVP takes priority — underground play is explicitly deferred.
-- **Prerequisite:** Surface growth loop proven fun (GAME-01 ✓), placement safety (CLI-08), growth visibility (VIS-02), root absorption (SIM-03).
-- **Note:** When this is picked up, start with SIM-07 (even 2-3 tiles of light scatter from shaft openings transforms caves) and SIM-08 (water pooling is physically intuitive). GAME-08 (mushrooms) provides content for caves even without full light/water rework.
+- **Part of:** Future expansion
+- **Why:** Spelunker session proved caves are dead zones. Compelling future playstyle but depends on SIM-07, SIM-08, GAME-08.
+- **Prerequisite:** Surface growth loop proven fun (GAME-01 ✓), placement safety (CLI-08 ✓), growth visibility (VIS-02 ✓), root absorption (SIM-03).
+- **Note:** Start with SIM-07 (light scatter) and SIM-08 (water pooling). GAME-08 (mushrooms) provides cave content.
 
 ### GAME-05: Nutrient system
 - **Owner:** gameplay
-- **Why:** Player requested. Creates deeper ecology chain. Too complex for current sprint.
 - **Scope:** Deferred until seed growth loop is proven fun.
 
 ### GAME-06: Multiple plant species
 - **Owner:** gameplay
-- **Why:** 12-20 species is MVP target, but proving one species works comes first.
-- **Scope:** Deferred until one species growth loop works.
+- **Scope:** 12-20 species is MVP target, but proving one species works comes first.
 
 ### SIM-07: Horizontal light scatter
-- **Owner:** gameplay
-- **Part of:** UNDERGROUND-01 (underground play expansion)
-- **Why:** Spelunker proved light propagates strictly top-down. Caves are dead zones — zero horizontal light spread. This blocks the underground garden fantasy entirely. However, implementing proper light scatter is a significant system change and not required to prove the core surface loop.
-- **Scope:** Deferred until surface loop is proven. Underground gardening is a future playstyle expansion.
-- **Note:** Even 2-3 tiles of scatter from shaft openings would transform underground play. Consider a simple heuristic rather than full radiosity.
+- **Part of:** UNDERGROUND-01
+- **Scope:** Deferred. Underground gardening is a future expansion.
 
 ### SIM-08: Horizontal water flow in air
-- **Owner:** gameplay
-- **Part of:** UNDERGROUND-01 (underground play expansion)
-- **Why:** Spelunker found water doesn't spread horizontally through air in caves. Water only flows straight down. Combined with no horizontal light, caves are useless for gardening.
-- **Scope:** Deferred with SIM-07. Underground play depends on both.
-- **Note:** Could be simpler than light — water pooling at the lowest air tile of a cave is physically intuitive.
+- **Part of:** UNDERGROUND-01
+- **Scope:** Deferred with SIM-07.
 
 ### GAME-07: Water containment / drainage
 - **Owner:** gameplay
-- **Why:** Garden designer found water floods all non-stone space uncontrollably. Air gaps don't slow water. No drainage tool. Makes designed layouts impossible to maintain. Optimizer also flagged uncontrollable water channels.
 - **Scope:** Deferred. Interesting design problem but not required for core loop proof.
 
 ### GAME-08: Dark-loving species (mushrooms)
-- **Owner:** gameplay
-- **Part of:** UNDERGROUND-01 (underground play expansion)
-- **Why:** Spelunker requested something that thrives without light. If light can't reach caves easily, give the player something that wants to be in a cave.
+- **Part of:** UNDERGROUND-01
 - **Scope:** Deferred until species system expands.
