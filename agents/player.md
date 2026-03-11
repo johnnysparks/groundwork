@@ -49,4 +49,4 @@ Use these sections:
 8. Brutal bottom line: would I come back tomorrow?
 
 TASK (unless otherwise specified)
-Play a session of the current build or prototype. Write the feedback report the team most needs right now. If something is missing from the build, call that out as a player-facing gap rather than inventing around it. Save that feedback to ../feedback/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_feedback}.md. Link to any artifacts created during gameplay in the document to avoid bloat.
+Play a session of the current build or prototype. Write the feedback report the team most needs right now. If something is missing from the build, call that out as a player-facing gap rather than inventing around it. Submit your feedback according to ../AGENTS.md instructions.
