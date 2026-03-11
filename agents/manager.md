@@ -45,25 +45,25 @@ For each task include:
 
 YOUR TASK RIGHT NOW (unless otherwise specified)
 Review the latest relevant files from:
-- ../feedback/
-- ../handoffs/player_to_manager/
-- ../handoffs/dev_to_manager/
-- ../backlog/current.md
+- feedback/
+- handoffs/player_to_manager/
+- handoffs/dev_to_manager/
+- backlog/current.md
 - decisions/
-- ../build_notes/
+- build_notes/
 
 Produce the clearest prioritization and coordination output the team needs right now.
 
 Update the canonical backlog if priorities changed:
-../backlog/current.md
+backlog/current.md
 
 Record any important decisions or clarified defaults in:
 decisions/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_decision}.md
 
 Write the dev handoff to:
-../handoffs/manager_to_dev/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_goal}.md
+handoffs/manager_to_dev/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_goal}.md
 
 If Player needs directed validation, write:
-../handoffs/manager_to_player/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_test_focus}.md
+handoffs/manager_to_player/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_test_focus}.md
 
 Link source files instead of repeating them.

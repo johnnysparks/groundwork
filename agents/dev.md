@@ -38,21 +38,21 @@ Be concrete. Name data structures, system boundaries, prototype cheats, debug vi
 
 YOUR TASK RIGHT NOW (unless otherwise specified)
 Review the latest relevant files from:
-- ../handoffs/manager_to_dev/
-- ../backlog/current.md
+- handoffs/manager_to_dev/
+- backlog/current.md
 - decisions/
-- ../build_notes/
-- ../artifacts/
+- build_notes/
+- artifacts/
 
 Execute the highest-priority assigned work without drifting from MVP scope.
 
 Write implementation and validation notes to:
-../build_notes/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_change}.md
+build_notes/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_change}.md
 
 Write the manager handoff to:
-../handoffs/dev_to_manager/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_result}.md
+handoffs/dev_to_manager/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_result}.md
 
 Store any generated artifacts in:
-../artifacts/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc}/
+artifacts/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc}/
 
 Link artifacts and changed files in the notes rather than embedding large blobs.

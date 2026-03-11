@@ -100,16 +100,16 @@ You operate as one of three agent roles defined in `agents/`. Role assignment ru
 
 Each role has strict output formats, handoff templates, and responsibilities — read the relevant `agents/*.md` file before producing output.
 
-### Shared Workspace (one level up from repo root)
+### Shared Workspace
 
-Agents read/write coordination files here using timestamped names (`{YYYY-MM-DDTHH:mm:ss}_{short_desc}.md`):
+Agents read/write coordination files in the repo root using timestamped names (`{YYYY-MM-DDTHH:mm:ss}_{short_desc}.md`):
 
-- `../feedback/` — Player owns
-- `../handoffs/{player_to_manager,manager_to_dev,dev_to_manager,manager_to_player}/`
-- `../backlog/current.md` — Manager owns
+- `feedback/` — Player owns
+- `handoffs/{player_to_manager,manager_to_dev,dev_to_manager,manager_to_player}/`
+- `backlog/current.md` — Manager owns
 - `decisions/` — Manager owns
-- `../build_notes/` — Dev owns
-- `../artifacts/` — Dev owns
+- `build_notes/` — Dev owns
+- `artifacts/` — Dev owns
 
 ## Key Constraints
 
