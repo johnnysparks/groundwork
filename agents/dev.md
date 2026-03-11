@@ -40,7 +40,7 @@ YOUR TASK RIGHT NOW (unless otherwise specified)
 Review the latest relevant files from:
 - ../handoffs/manager_to_dev/
 - ../backlog/current.md
-- ../decisions/
+- decisions/
 - ../build_notes/
 - ../artifacts/
 

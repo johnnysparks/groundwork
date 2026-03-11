@@ -76,7 +76,7 @@ crates/
 - **bevy_ecs standalone** (not full Bevy engine): fast compile (~60s cold, <1s incremental), minimal deps, simulation-only
 - **Renderer-agnostic sim**: `groundwork-sim` has zero rendering deps. TUI and future web UI are thin shells that read sim state.
 - **WASM-ready**: sim compiles to `wasm32-unknown-unknown`. When `groundwork-web` is built, add `crate-type = ["cdylib"]` to sim's Cargo.toml.
-- **Two orthogonal workstreams**: sim+CLI and web UI are independent. Web UI begins once the "one more seed" loop is somewhat fun in ASCII. Both progress in parallel from that point. See `../decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
+- **Two orthogonal workstreams**: sim+CLI and web UI are independent. Web UI begins once the "one more seed" loop is somewhat fun in ASCII. Both progress in parallel from that point. See `decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
 - **ratatui for dev/AI interface**: terminal UI lets agents screenshot the same view humans see. No GPU setup required.
 - **Flat voxel array**: 108K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=15 is surface, Z=29 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
@@ -107,7 +107,7 @@ Agents read/write coordination files here using timestamped names (`{YYYY-MM-DDT
 - `../feedback/` — Player owns
 - `../handoffs/{player_to_manager,manager_to_dev,dev_to_manager,manager_to_player}/`
 - `../backlog/current.md` — Manager owns
-- `../decisions/` — Manager owns
+- `decisions/` — Manager owns
 - `../build_notes/` — Dev owns
 - `../artifacts/` — Dev owns
 

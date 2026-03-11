@@ -195,14 +195,14 @@ Canonical locations:
 - ../handoffs/dev_to_manager/
 - ../handoffs/manager_to_player/
 - ../backlog/current.md
-- ../decisions/
+- decisions/
 - ../build_notes/
 - ../artifacts/
 
 ## Workspace rules:
 - Read existing relevant files before starting work.
 - Do not overwrite shared files unless your role owns them.
-- Manager owns ../backlog/current.md and ../decisions/.
+- Manager owns ../backlog/current.md and decisions/.
 - Player owns ../feedback/.
 - Indie Dev owns ../build_notes/.
 - Use timestamped filenames for session outputs: {YYYY-MM-DDTHH:mm:ss}_{short_desc}.md

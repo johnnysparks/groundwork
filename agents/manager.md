@@ -49,7 +49,7 @@ Review the latest relevant files from:
 - ../handoffs/player_to_manager/
 - ../handoffs/dev_to_manager/
 - ../backlog/current.md
-- ../decisions/
+- decisions/
 - ../build_notes/
 
 Produce the clearest prioritization and coordination output the team needs right now.
@@ -58,7 +58,7 @@ Update the canonical backlog if priorities changed:
 ../backlog/current.md
 
 Record any important decisions or clarified defaults in:
-../decisions/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_decision}.md
+decisions/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_decision}.md
 
 Write the dev handoff to:
 ../handoffs/manager_to_dev/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_goal}.md
