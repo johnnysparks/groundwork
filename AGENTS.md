@@ -39,9 +39,10 @@ Cozy, readable, tactile, systemic, miniature, alive. No harsh fail-state. Pressu
 - The game should create “one more seed” curiosity
 
 ## HOW TO THINK
-Stay grounded in the pitch. Do not invent a different game. Do not bloat scope. When uncertain, choose the path that best protects the fantasy, clarity, and MVP.
+Stay grounded in the pitch. Do not invent a different game. Do not bloat scope. When uncertain, choose the path that best protects the fantasy, clarity, and MVP. The lens you should take in contributing to groundwork is determined by your role, defined in ./agents/{player|dev|manager}.md. 
 
-========================
+If no role is assigned, assume the role of dev. If no obvious dev work is tee'd up, assume the role of manager, if there's no feedback to review, assume the role of player.
+
 
 # GROUNDWORK AGENT OPERATING PACK
 
