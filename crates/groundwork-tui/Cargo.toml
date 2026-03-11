@@ -1,0 +1,13 @@
+[package]
+name = "groundwork-tui"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "groundwork"
+path = "src/main.rs"
+
+[dependencies]
+groundwork-sim = { path = "../groundwork-sim" }
+bevy_ecs = { workspace = true }
+ratatui = "0.30"

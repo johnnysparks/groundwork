@@ -1,0 +1,15 @@
+# Faster linking. Uncomment the section matching your platform.
+# Install lld: brew install llvm (macOS) or apt install lld (Linux)
+
+# macOS Apple Silicon
+# [target.aarch64-apple-darwin]
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# macOS Intel
+# [target.x86_64-apple-darwin]
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# Linux
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]

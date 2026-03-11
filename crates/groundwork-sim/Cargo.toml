@@ -1,0 +1,10 @@
+[package]
+name = "groundwork-sim"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+bevy_ecs = { workspace = true }
