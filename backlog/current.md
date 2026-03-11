@@ -2,6 +2,18 @@
 
 _Last updated: 2026-03-11T15:00:00 by Manager_
 
+## TL;DR — Where We Are
+
+**Done:** CLI usability fixes (Sprint 1), seed growth system (Sprint 2). Seeds grow into roots when near water+light. 15 tests pass.
+
+**No P0 blockers.** Next priority: validate seed growth with players, then tackle P1s (root water absorption, water stripe fix, wet-soil threshold, dark underground air).
+
+**The build can:** create worlds, place materials (air/soil/stone/water/root/seed), simulate water flow + light + seed growth, save/load state.
+
+**The build can't yet:** make roots do anything after growth, show growth progress visually, handle batch placement, or vary terrain.
+
+---
+
 ## Completed
 
 ### Sprint 1: CLI Usability (PR #3)
