@@ -19,6 +19,22 @@ fn find_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         .map(|s| s.as_str())
 }
 
+/// Parse a coordinate argument as either a single value or a range.
+/// Accepts: "30" → [30], "20..40" → [20, 21, ..., 39] (exclusive end).
+fn parse_coord_range(s: &str) -> Result<Vec<usize>, String> {
+    if let Some((start_s, end_s)) = s.split_once("..") {
+        let start: usize = start_s.parse().map_err(|e| format!("bad range start: {e}"))?;
+        let end: usize = end_s.parse().map_err(|e| format!("bad range end: {e}"))?;
+        if start >= end {
+            return Err(format!("empty range: {start}..{end} (start must be < end)"));
+        }
+        Ok((start..end).collect())
+    } else {
+        let v: usize = s.parse().map_err(|e| format!("bad coordinate: {e}"))?;
+        Ok(vec![v])
+    }
+}
+
 fn voxel_char(mat: Material, water_level: u8) -> char {
     match mat {
         Material::Air if water_level > 0 => '~',
@@ -160,6 +176,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
 pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     if args.len() < 4 {
         eprintln!("Usage: groundwork place <material> <x> <y> <z> [--state FILE]");
+        eprintln!("  Coordinates accept ranges: place soil 20..40 30 15");
         eprintln!("Materials: air, soil, stone, water, root, seed");
         std::process::exit(1);
     }
@@ -172,32 +189,133 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
         )
     })?;
 
-    let x: usize = args[1].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad x: {e}"))
+    let xs = parse_coord_range(&args[1]).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("x: {e}"))
     })?;
-    let y: usize = args[2].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad y: {e}"))
+    let ys = parse_coord_range(&args[2]).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("y: {e}"))
     })?;
-    let z: usize = args[3].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad z: {e}"))
+    let zs = parse_coord_range(&args[3]).map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("z: {e}"))
     })?;
 
     let path = state_path(&args[4..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
+    let mut placed = 0u64;
+    let mut skipped = 0u64;
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
-        let voxel = grid.get_mut(x, y, z).ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("out of bounds: ({x}, {y}, {z})"),
-            )
-        })?;
-        voxel.set_material(mat);
+        for &z in &zs {
+            for &y in &ys {
+                for &x in &xs {
+                    if let Some(voxel) = grid.get_mut(x, y, z) {
+                        voxel.set_material(mat);
+                        placed += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    if placed == 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "all coordinates out of bounds",
+        ));
     }
 
     groundwork_sim::save::save_world(&world, &path)?;
-    println!("Placed {} at ({x}, {y}, {z})", mat.name());
+
+    if placed == 1 && skipped == 0 {
+        println!("Placed {} at ({}, {}, {})", mat.name(), xs[0], ys[0], zs[0]);
+    } else if skipped > 0 {
+        println!("Placed {} × {} ({} out of bounds, skipped)", placed, mat.name(), skipped);
+    } else {
+        println!("Placed {} × {}", placed, mat.name());
+    }
+    Ok(())
+}
+
+pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
+    if args.len() < 7 {
+        eprintln!("Usage: groundwork fill <material> <x1> <y1> <z1> <x2> <y2> <z2> [--state FILE]");
+        eprintln!("  Fills a rectangular region from (x1,y1,z1) to (x2,y2,z2) inclusive.");
+        eprintln!("Materials: air, soil, stone, water, root, seed");
+        std::process::exit(1);
+    }
+
+    let mat_name = &args[0];
+    let mat = Material::from_name(mat_name).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("unknown material: {mat_name}. Valid: air, soil, stone, water, root, seed"),
+        )
+    })?;
+
+    let parse = |i: usize, label: &str| -> std::io::Result<usize> {
+        args[i].parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad {label}: {e}"))
+        })
+    };
+
+    let x1 = parse(1, "x1")?;
+    let y1 = parse(2, "y1")?;
+    let z1 = parse(3, "z1")?;
+    let x2 = parse(4, "x2")?;
+    let y2 = parse(5, "y2")?;
+    let z2 = parse(6, "z2")?;
+
+    let xlo = x1.min(x2);
+    let xhi = x1.max(x2);
+    let ylo = y1.min(y2);
+    let yhi = y1.max(y2);
+    let zlo = z1.min(z2);
+    let zhi = z1.max(z2);
+
+    let path = state_path(&args[7..]);
+    let mut world = groundwork_sim::save::load_world(&path)?;
+
+    let mut placed = 0u64;
+    let mut skipped = 0u64;
+    {
+        let mut grid = world.resource_mut::<VoxelGrid>();
+        for z in zlo..=zhi {
+            for y in ylo..=yhi {
+                for x in xlo..=xhi {
+                    if let Some(voxel) = grid.get_mut(x, y, z) {
+                        voxel.set_material(mat);
+                        placed += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    if placed == 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "all coordinates out of bounds",
+        ));
+    }
+
+    groundwork_sim::save::save_world(&world, &path)?;
+
+    if skipped > 0 {
+        println!(
+            "Filled {} × {} from ({},{},{}) to ({},{},{}) ({} out of bounds, skipped)",
+            placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi, skipped
+        );
+    } else {
+        println!(
+            "Filled {} × {} from ({},{},{}) to ({},{},{})",
+            placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi
+        );
+    }
     Ok(())
 }
 
@@ -273,7 +391,10 @@ pub fn print_help() {
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
     println!("  view [--z Z]                  Print ASCII slice of the grid");
-    println!("  place <material> <x> <y> <z>  Place a voxel (air/soil/stone/water/root/seed)");
+    println!("  place <mat> <x> <y> <z>       Place a voxel (air/soil/stone/water/root/seed)");
+    println!("    Coordinates accept ranges:  place soil 20..40 30 15");
+    println!("  fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>");
+    println!("                                Fill a rectangular region (inclusive)");
     println!("  inspect <x> <y> <z>           Show voxel details");
     println!("  status                        Show world summary");
     println!("  tui                           Launch interactive terminal UI");

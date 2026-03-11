@@ -15,6 +15,7 @@ fn main() -> std::io::Result<()> {
         Some("tick") => cli::cmd_tick(rest),
         Some("view") => cli::cmd_view(rest),
         Some("place") => cli::cmd_place(rest),
+        Some("fill") => cli::cmd_fill(rest),
         Some("inspect") => cli::cmd_inspect(rest),
         Some("status") => cli::cmd_status(rest),
         Some("help") | Some("--help") | Some("-h") => {
