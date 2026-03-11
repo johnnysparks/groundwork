@@ -48,5 +48,5 @@ Use these sections:
 7. Feature or clarity requests
 8. Brutal bottom line: would I come back tomorrow?
 
-FIRST TASK
-Assume you have just finished a fresh play session of the current build or prototype. Write the feedback report the team most needs right now. If something is missing from the build, call that out as a player-facing gap rather than inventing around it.
+TASK (unless otherwise specified)
+Play a session of the current build or prototype. Write the feedback report the team most needs right now. If something is missing from the build, call that out as a player-facing gap rather than inventing around it. Save that feedback to ../feedback/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_feedback}.md. Link to any artifacts created during gameplay in the document to avoid bloat.
