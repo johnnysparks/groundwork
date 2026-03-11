@@ -95,23 +95,97 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
             let mut light: u8 = 255;
             for z in (0..GRID_Z).rev() {
                 if let Some(cell) = grid.get_mut(x, y, z) {
-                    cell.light_level = light;
+                    // Opaque materials attenuate *before* assignment so
+                    // the first soil layer below open sky isn't full brightness.
                     match cell.material {
-                        Material::Air => {
-                            // Slight attenuation through air.
-                            light = light.saturating_sub(2);
-                        }
-                        Material::Water => {
-                            light = light.saturating_sub(15);
-                        }
                         Material::Soil => {
-                            light = light.saturating_sub(60);
+                            light = light.saturating_sub(40);
                         }
                         Material::Root => {
                             light = light.saturating_sub(40);
                         }
                         Material::Stone => {
                             light = 0;
+                        }
+                        _ => {}
+                    }
+                    cell.light_level = light;
+                    // Transparent materials attenuate *after* assignment.
+                    match cell.material {
+                        Material::Air => {
+                            light = light.saturating_sub(2);
+                        }
+                        Material::Water => {
+                            light = light.saturating_sub(15);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Seeds grow into roots when they have enough water and light.
+/// Uses nutrient_level as a growth counter: increments by 5 each tick
+/// when conditions are met, converts to Root at 200.
+pub fn seed_growth(mut grid: ResMut<VoxelGrid>) {
+    // Snapshot to check neighbors without order artifacts.
+    let snapshot: Vec<(Material, u8)> = grid
+        .cells()
+        .iter()
+        .map(|v| (v.material, v.water_level))
+        .collect();
+
+    for z in 0..GRID_Z {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let idx = VoxelGrid::index(x, y, z);
+                if snapshot[idx].0 != Material::Seed {
+                    continue;
+                }
+
+                let cell_water = grid.cells()[idx].water_level;
+                let cell_light = grid.cells()[idx].light_level;
+
+                // Check own water or adjacent water.
+                let mut has_water = cell_water >= 30;
+                if !has_water {
+                    let neighbors: [(isize, isize, isize); 6] = [
+                        (-1, 0, 0),
+                        (1, 0, 0),
+                        (0, -1, 0),
+                        (0, 1, 0),
+                        (0, 0, -1),
+                        (0, 0, 1),
+                    ];
+                    for (dx, dy, dz) in neighbors {
+                        let nx = x as isize + dx;
+                        let ny = y as isize + dy;
+                        let nz = z as isize + dz;
+                        if nx < 0 || ny < 0 || nz < 0 {
+                            continue;
+                        }
+                        let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
+                        if !VoxelGrid::in_bounds(nx, ny, nz) {
+                            continue;
+                        }
+                        let nidx = VoxelGrid::index(nx, ny, nz);
+                        if snapshot[nidx].1 >= 30 {
+                            has_water = true;
+                            break;
+                        }
+                    }
+                }
+
+                let has_light = cell_light >= 30;
+
+                if has_water && has_light {
+                    if let Some(cell) = grid.get_mut(x, y, z) {
+                        cell.nutrient_level = cell.nutrient_level.saturating_add(5);
+                        if cell.nutrient_level >= 200 {
+                            cell.material = Material::Root;
+                            cell.nutrient_level = 0;
                         }
                     }
                 }
@@ -166,5 +240,92 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>) {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grid::GROUND_LEVEL;
+
+    #[test]
+    fn seed_grows_into_root_on_wet_lit_soil() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place seed above ground with enough water on it.
+            // water_flow skips non-Air/Water materials, so seed keeps its water.
+            if let Some(cell) = grid.get_mut(10, 10, GROUND_LEVEL + 1) {
+                cell.material = Material::Seed;
+                cell.water_level = 100;
+                cell.light_level = 0;
+                cell.nutrient_level = 0;
+            }
+        }
+
+        // 200 / 5 = 40 ticks minimum, extra for light to propagate first tick.
+        for _ in 0..50 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
+        assert_eq!(
+            cell.material,
+            Material::Root,
+            "Seed should have grown into root after 50 ticks with water and light"
+        );
+    }
+
+    #[test]
+    fn seed_does_not_grow_without_water() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place seed far from any water source.
+            if let Some(cell) = grid.get_mut(0, 0, GROUND_LEVEL + 1) {
+                cell.material = Material::Seed;
+                cell.water_level = 0;
+                cell.light_level = 0;
+                cell.nutrient_level = 0;
+            }
+        }
+
+        for _ in 0..50 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let cell = grid.get(0, 0, GROUND_LEVEL + 1).unwrap();
+        assert_eq!(
+            cell.material,
+            Material::Seed,
+            "Seed should remain a seed without water"
+        );
+    }
+
+    #[test]
+    fn light_attenuates_through_soil() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        let sky = grid.get(0, 0, GROUND_LEVEL + 2).unwrap().light_level;
+        let surface_soil = grid.get(0, 0, GROUND_LEVEL).unwrap().light_level;
+        let deep_soil = grid.get(0, 0, GROUND_LEVEL - 3).unwrap().light_level;
+
+        assert!(
+            surface_soil < sky,
+            "Surface soil ({surface_soil}) should be dimmer than sky ({sky})"
+        );
+        assert!(
+            deep_soil < surface_soil,
+            "Deep soil ({deep_soil}) should be dimmer than surface soil ({surface_soil})"
+        );
     }
 }

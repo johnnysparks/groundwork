@@ -7,6 +7,7 @@ pub enum Material {
     Stone = 2,
     Water = 3,
     Root = 4,
+    Seed = 5,
 }
 
 impl Material {
@@ -21,6 +22,7 @@ impl Material {
             2 => Some(Self::Stone),
             3 => Some(Self::Water),
             4 => Some(Self::Root),
+            5 => Some(Self::Seed),
             _ => None,
         }
     }
@@ -32,6 +34,7 @@ impl Material {
             Self::Stone => "stone",
             Self::Water => "water",
             Self::Root => "root",
+            Self::Seed => "seed",
         }
     }
 
@@ -42,6 +45,7 @@ impl Material {
             "stone" => Some(Self::Stone),
             "water" => Some(Self::Water),
             "root" => Some(Self::Root),
+            "seed" => Some(Self::Seed),
             _ => None,
         }
     }
@@ -53,7 +57,7 @@ mod tests {
 
     #[test]
     fn material_u8_round_trip() {
-        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root];
+        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed];
         for mat in all {
             assert_eq!(Material::from_u8(mat.as_u8()), Some(mat));
         }
@@ -61,13 +65,13 @@ mod tests {
 
     #[test]
     fn material_from_u8_invalid() {
-        assert_eq!(Material::from_u8(5), None);
+        assert_eq!(Material::from_u8(6), None);
         assert_eq!(Material::from_u8(255), None);
     }
 
     #[test]
     fn material_name_round_trip() {
-        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root];
+        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed];
         for mat in all {
             assert_eq!(Material::from_name(mat.name()), Some(mat));
         }

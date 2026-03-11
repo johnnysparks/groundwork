@@ -40,6 +40,7 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8) -> (char, Color)
         }
         Material::Stone => ('@', Color::Rgb(dim(120), dim(120), dim(120))),
         Material::Root => ('*', Color::Rgb(dim(80), dim(180), dim(60))),
+        Material::Seed => ('s', Color::Rgb(dim(200), dim(180), dim(60))),
     }
 }
 
