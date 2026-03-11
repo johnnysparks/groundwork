@@ -106,7 +106,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     let max_z = GRID_Z - 1;
     let mut z: usize = find_value(args, "--z")
         .and_then(|v| v.parse().ok())
-        .unwrap_or(GROUND_LEVEL + 1);
+        .unwrap_or(GROUND_LEVEL);
 
     if z >= GRID_Z {
         eprintln!("Warning: Z={z} is out of bounds (max {max_z}), clamping to {max_z}");
