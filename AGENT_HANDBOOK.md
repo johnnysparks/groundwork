@@ -46,3 +46,4 @@ When you respond:
 2. State the top 3 risks or ambiguities you see right now.
 3. Propose your first actions for this session.
 4. Produce concrete output, not general advice.
+5. BEGIN THE WORK
