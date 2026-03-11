@@ -35,7 +35,7 @@ fn parse_coord_range(s: &str) -> Result<Vec<usize>, String> {
     }
 }
 
-fn voxel_char(mat: Material, water_level: u8) -> char {
+fn voxel_char(mat: Material, water_level: u8, nutrient_level: u8) -> char {
     match mat {
         Material::Air if water_level > 0 => '~',
         Material::Air => '.',
@@ -44,6 +44,7 @@ fn voxel_char(mat: Material, water_level: u8) -> char {
         Material::Soil => '#',
         Material::Stone => '@',
         Material::Root => '*',
+        Material::Seed if nutrient_level >= 100 => 'S',
         Material::Seed => 's',
     }
 }
@@ -160,7 +161,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
         let row: String = (0..GRID_X)
             .map(|x| {
                 grid.get(x, y, z)
-                    .map(|v| voxel_char(v.material, v.water_level))
+                    .map(|v| voxel_char(v.material, v.water_level, v.nutrient_level))
                     .unwrap_or(' ')
             })
             .collect();
@@ -169,7 +170,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
 
     // Legend
     println!();
-    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed");
+    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
     Ok(())
 }
 
@@ -359,6 +360,78 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
     println!("  water_level: {}/255", voxel.water_level);
     println!("  light_level: {}/255", voxel.light_level);
     println!("  nutrient_level: {}/255", voxel.nutrient_level);
+
+    // Seed growth diagnostics
+    if voxel.material == Material::Seed {
+        let growth = voxel.nutrient_level;
+        let growth_max = 200u16;
+        let pct = (growth as u16 * 100) / growth_max;
+        println!();
+        println!("  growth: {growth}/{growth_max} ({pct}%)");
+
+        // Check water condition: own water or any neighbor with water_level >= 30
+        let mut has_water = voxel.water_level >= 30;
+        let mut water_source = String::new();
+        if has_water {
+            water_source = format!("own: {}", voxel.water_level);
+        } else {
+            let neighbor_dirs: [(isize, isize, isize, &str); 6] = [
+                (-1, 0, 0, "x-1"),
+                (1, 0, 0, "x+1"),
+                (0, -1, 0, "y-1"),
+                (0, 1, 0, "y+1"),
+                (0, 0, -1, "below"),
+                (0, 0, 1, "above"),
+            ];
+            for (dx, dy, dz, label) in neighbor_dirs {
+                let nx = x as isize + dx;
+                let ny = y as isize + dy;
+                let nz = z as isize + dz;
+                if nx < 0 || ny < 0 || nz < 0 {
+                    continue;
+                }
+                let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
+                if let Some(nv) = grid.get(nx, ny, nz) {
+                    if nv.water_level >= 30 {
+                        has_water = true;
+                        water_source = format!("neighbor {label}: {}/255", nv.water_level);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if has_water {
+            println!("  water: YES ({water_source})");
+        } else {
+            println!("  water: NO — need adjacent water_level >= 30");
+        }
+
+        // Check light condition
+        let has_light = voxel.light_level >= 30;
+        if has_light {
+            println!("  light: YES ({}/255)", voxel.light_level);
+        } else {
+            println!("  light: NO — need light_level >= 30");
+        }
+
+        // Status summary
+        if has_water && has_light {
+            let remaining = growth_max.saturating_sub(growth as u16);
+            let ticks_left = (remaining + 4) / 5; // ceiling division
+            println!("  status: growing (+5/tick, ~{ticks_left} ticks to root)");
+        } else {
+            let mut missing = Vec::new();
+            if !has_water {
+                missing.push("no water nearby");
+            }
+            if !has_light {
+                missing.push("no light");
+            }
+            println!("  status: dormant — {}", missing.join(", "));
+        }
+    }
+
     Ok(())
 }
 

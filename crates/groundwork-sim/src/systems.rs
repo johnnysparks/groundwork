@@ -631,6 +631,58 @@ mod tests {
     }
 
     #[test]
+    fn seed_growth_stages_visible() {
+        // Verify that a seed's nutrient_level passes through the 100 threshold
+        // (used by the display layer to show 's' vs 'S') on its way to 200.
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(10, 10, GROUND_LEVEL + 1) {
+                cell.material = Material::Seed;
+                cell.water_level = 100;
+                cell.light_level = 0;
+                cell.nutrient_level = 0;
+            }
+        }
+
+        // After 15 ticks: growth = 15*5 = 75 (first tick may not grow due to light propagation)
+        // Should still be 's' stage (< 100)
+        for _ in 0..15 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        {
+            let grid = world.resource::<VoxelGrid>();
+            let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
+            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 15 ticks");
+            // First tick has no light yet, so ~14 growth ticks = 70
+            assert!(
+                cell.nutrient_level < 100,
+                "At 15 ticks, nutrient_level ({}) should be < 100 (small seed stage)",
+                cell.nutrient_level
+            );
+        }
+
+        // After 10 more ticks (25 total): growth should cross 100 threshold
+        for _ in 0..10 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        {
+            let grid = world.resource::<VoxelGrid>();
+            let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
+            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 25 ticks");
+            assert!(
+                cell.nutrient_level >= 100,
+                "At 25 ticks, nutrient_level ({}) should be >= 100 (growing seed stage 'S')",
+                cell.nutrient_level
+            );
+        }
+    }
+
+    #[test]
     fn light_attenuates_through_soil() {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();

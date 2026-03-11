@@ -11,7 +11,7 @@ use groundwork_sim::voxel::Material;
 use crate::app::App;
 
 /// Map a voxel to an ASCII character + color.
-fn voxel_style(mat: Material, water_level: u8, light_level: u8) -> (char, Color) {
+fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (char, Color) {
     // Dim factor based on light (0.0–1.0 mapped to color brightness).
     let dim = |c: u8| -> u8 {
         ((c as u16 * light_level as u16) / 255) as u8
@@ -40,7 +40,13 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8) -> (char, Color)
         }
         Material::Stone => ('@', Color::Rgb(dim(120), dim(120), dim(120))),
         Material::Root => ('*', Color::Rgb(dim(80), dim(180), dim(60))),
-        Material::Seed => ('s', Color::Rgb(dim(200), dim(180), dim(60))),
+        Material::Seed => {
+            if nutrient_level >= 100 {
+                ('S', Color::Rgb(dim(140), dim(200), dim(60)))
+            } else {
+                ('s', Color::Rgb(dim(200), dim(180), dim(60)))
+            }
+        }
     }
 }
 
@@ -63,7 +69,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         let mut spans: Vec<Span> = Vec::with_capacity(max_cols.min(GRID_X));
         for x in 0..GRID_X.min(max_cols) {
             if let Some(voxel) = grid.get(x, y, z) {
-                let (ch, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level);
+                let (ch, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level, voxel.nutrient_level);
                 spans.push(Span::styled(
                     String::from(ch),
                     Style::default().fg(fg),
