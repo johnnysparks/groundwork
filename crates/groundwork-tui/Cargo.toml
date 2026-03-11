@@ -11,3 +11,6 @@ path = "src/main.rs"
 groundwork-sim = { path = "../groundwork-sim" }
 bevy_ecs = { workspace = true }
 ratatui = "0.30"
+
+[dev-dependencies]
+tempfile = "3"

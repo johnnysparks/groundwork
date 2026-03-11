@@ -173,9 +173,13 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
+fn has_flag(args: &[String], flag: &str) -> bool {
+    args.iter().any(|a| a == flag)
+}
+
 pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     if args.len() < 4 {
-        eprintln!("Usage: groundwork place <material> <x> <y> <z> [--state FILE]");
+        eprintln!("Usage: groundwork place <material> <x> <y> <z> [--force] [--state FILE]");
         eprintln!("  Coordinates accept ranges: place soil 20..40 30 15");
         eprintln!("Materials: air, soil, stone, water, root, seed");
         std::process::exit(1);
@@ -199,6 +203,7 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("z: {e}"))
     })?;
 
+    let force = has_flag(&args[4..], "--force");
     let path = state_path(&args[4..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
@@ -210,6 +215,28 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
             for &y in &ys {
                 for &x in &xs {
                     if let Some(voxel) = grid.get_mut(x, y, z) {
+                        let existing = voxel.material;
+
+                        // Protect seeds and roots from accidental overwriting
+                        if !force && (existing == Material::Seed || existing == Material::Root) {
+                            eprintln!(
+                                "Error: cannot overwrite {} at ({},{},{}). Use --force to override.",
+                                existing.name(),
+                                x,
+                                y,
+                                z
+                            );
+                            std::process::exit(1);
+                        }
+
+                        // Warn when overwriting water (but still execute)
+                        if !force && existing == Material::Water {
+                            eprintln!(
+                                "Warning: overwriting water at ({},{},{}). Use --force to skip this warning.",
+                                x, y, z
+                            );
+                        }
+
                         voxel.set_material(mat);
                         placed += 1;
                     } else {
@@ -393,6 +420,7 @@ pub fn print_help() {
     println!("  view [--z Z]                  Print ASCII slice of the grid");
     println!("  place <mat> <x> <y> <z>       Place a voxel (air/soil/stone/water/root/seed)");
     println!("    Coordinates accept ranges:  place soil 20..40 30 15");
+    println!("    Rejects overwriting seeds/roots (use --force to override)");
     println!("  fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>");
     println!("                                Fill a rectangular region (inclusive)");
     println!("  inspect <x> <y> <z>           Show voxel details");
