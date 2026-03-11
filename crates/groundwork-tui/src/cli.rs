@@ -157,9 +157,35 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Parse a coordinate argument as a single value or an inclusive range.
+/// Accepts "N" (single) or "N..M" (range from N to M-1, exclusive end).
+fn parse_coord_range(s: &str, label: &str) -> std::io::Result<std::ops::Range<usize>> {
+    if let Some((a, b)) = s.split_once("..") {
+        let start: usize = a.parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad {label} range start: {e}"))
+        })?;
+        let end: usize = b.parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad {label} range end: {e}"))
+        })?;
+        if start >= end {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("{label} range {start}..{end} is empty (start must be < end)"),
+            ));
+        }
+        Ok(start..end)
+    } else {
+        let v: usize = s.parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad {label}: {e}"))
+        })?;
+        Ok(v..v + 1)
+    }
+}
+
 pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     if args.len() < 4 {
         eprintln!("Usage: groundwork place <material> <x> <y> <z> [--state FILE]");
+        eprintln!("  Coordinates accept ranges: place soil 20..40 30 15");
         eprintln!("Materials: air, soil, stone, water, root, seed");
         std::process::exit(1);
     }
@@ -172,32 +198,44 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
         )
     })?;
 
-    let x: usize = args[1].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad x: {e}"))
-    })?;
-    let y: usize = args[2].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad y: {e}"))
-    })?;
-    let z: usize = args[3].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad z: {e}"))
-    })?;
+    let x_range = parse_coord_range(&args[1], "x")?;
+    let y_range = parse_coord_range(&args[2], "y")?;
+    let z_range = parse_coord_range(&args[3], "z")?;
 
     let path = state_path(&args[4..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
+    let mut count: u64 = 0;
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
-        let voxel = grid.get_mut(x, y, z).ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("out of bounds: ({x}, {y}, {z})"),
-            )
-        })?;
-        voxel.set_material(mat);
+        for z in z_range.clone() {
+            for y in y_range.clone() {
+                for x in x_range.clone() {
+                    let voxel = grid.get_mut(x, y, z).ok_or_else(|| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            format!("out of bounds: ({x}, {y}, {z})"),
+                        )
+                    })?;
+                    voxel.set_material(mat);
+                    count += 1;
+                }
+            }
+        }
     }
 
     groundwork_sim::save::save_world(&world, &path)?;
-    println!("Placed {} at ({x}, {y}, {z})", mat.name());
+    if count == 1 {
+        println!(
+            "Placed {} at ({}, {}, {})",
+            mat.name(),
+            x_range.start,
+            y_range.start,
+            z_range.start
+        );
+    } else {
+        println!("Placed {} x{count} voxels", mat.name());
+    }
     Ok(())
 }
 
@@ -273,7 +311,7 @@ pub fn print_help() {
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
     println!("  view [--z Z]                  Print ASCII slice of the grid");
-    println!("  place <material> <x> <y> <z>  Place a voxel (air/soil/stone/water/root/seed)");
+    println!("  place <material> <x> <y> <z>  Place voxel(s) — coords accept ranges (e.g. 20..40)");
     println!("  inspect <x> <y> <z>           Show voxel details");
     println!("  status                        Show world summary");
     println!("  tui                           Launch interactive terminal UI");
