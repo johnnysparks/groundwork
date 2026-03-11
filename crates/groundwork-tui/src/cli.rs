@@ -28,6 +28,7 @@ fn voxel_char(mat: Material, water_level: u8) -> char {
         Material::Soil => '#',
         Material::Stone => '@',
         Material::Root => '*',
+        Material::Seed => 's',
     }
 }
 
@@ -40,8 +41,8 @@ pub fn cmd_new(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn count_materials(grid: &VoxelGrid) -> ([u64; 5], u64) {
-    let mut counts = [0u64; 5];
+fn count_materials(grid: &VoxelGrid) -> ([u64; 6], u64) {
+    let mut counts = [0u64; 6];
     let mut wet_soil = 0u64;
     for v in grid.cells() {
         counts[v.material.as_u8() as usize] += 1;
@@ -76,8 +77,8 @@ pub fn cmd_tick(args: &[String]) -> std::io::Result<()> {
 
     // Show changes
     let mut changes = Vec::new();
-    let names = ["air", "soil", "stone", "water", "root"];
-    for i in 0..5 {
+    let names = ["air", "soil", "stone", "water", "root", "seed"];
+    for i in 0..6 {
         let diff = after_counts[i] as i64 - before_counts[i] as i64;
         if diff != 0 {
             changes.push(format!("{}: {:+}", names[i], diff));
@@ -152,14 +153,14 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
 
     // Legend
     println!();
-    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root");
+    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed");
     Ok(())
 }
 
 pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     if args.len() < 4 {
         eprintln!("Usage: groundwork place <material> <x> <y> <z> [--state FILE]");
-        eprintln!("Materials: air, soil, stone, water, root");
+        eprintln!("Materials: air, soil, stone, water, root, seed");
         std::process::exit(1);
     }
 
@@ -167,7 +168,7 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     let mat = Material::from_name(mat_name).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!("unknown material: {mat_name}. Valid: air, soil, stone, water, root"),
+            format!("unknown material: {mat_name}. Valid: air, soil, stone, water, root, seed"),
         )
     })?;
 
@@ -193,9 +194,11 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
             )
         })?;
         voxel.material = mat;
-        if mat == Material::Water {
-            voxel.water_level = 255;
-        }
+        // Reset all levels when material changes to avoid state bleed
+        // (e.g. stone retaining old water_level from wet soil).
+        voxel.water_level = if mat == Material::Water { 255 } else { 0 };
+        voxel.light_level = 0;
+        voxel.nutrient_level = 0;
     }
 
     groundwork_sim::save::save_world(&world, &path)?;
@@ -257,7 +260,7 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
     println!("Tick: {tick}");
     println!("Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)", GRID_X * GRID_Y * GRID_Z);
     println!("Materials:");
-    for i in 0..5 {
+    for i in 0..6 {
         if let Some(mat) = Material::from_u8(i) {
             println!("  {}: {}", mat.name(), counts[i as usize]);
         }
@@ -275,7 +278,7 @@ pub fn print_help() {
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
     println!("  view [--z Z]                  Print ASCII slice of the grid");
-    println!("  place <material> <x> <y> <z>  Place a voxel (air/soil/stone/water/root)");
+    println!("  place <material> <x> <y> <z>  Place a voxel (air/soil/stone/water/root/seed)");
     println!("  inspect <x> <y> <z>           Show voxel details");
     println!("  status                        Show world summary");
     println!("  tui                           Launch interactive terminal UI");
