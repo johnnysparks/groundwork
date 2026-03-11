@@ -21,8 +21,10 @@ fn find_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
 
 fn voxel_char(mat: Material, water_level: u8) -> char {
     match mat {
+        Material::Air if water_level > 200 => '≈',
         Material::Air if water_level > 0 => '~',
         Material::Air => '.',
+        Material::Water if water_level > 200 => '≈',
         Material::Water => '~',
         Material::Soil if water_level > 100 => '%',
         Material::Soil => '#',
@@ -153,7 +155,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
 
     // Legend
     println!();
-    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed");
+    println!("Legend: . air  ~ water  ≈ deep water  # soil  % wet soil  @ stone  * root  s seed");
     Ok(())
 }
 

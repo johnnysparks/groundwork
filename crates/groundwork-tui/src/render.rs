@@ -19,7 +19,9 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8) -> (char, Color)
 
     match mat {
         Material::Air => {
-            if water_level > 0 {
+            if water_level > 200 {
+                ('≈', Color::Rgb(dim(80), dim(140), dim(255)))
+            } else if water_level > 0 {
                 ('~', Color::Rgb(dim(80), dim(140), dim(255)))
             } else {
                 (' ', Color::Reset)
@@ -27,7 +29,8 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8) -> (char, Color)
         }
         Material::Water => {
             let intensity = 100 + (water_level as u16 * 155 / 255) as u8;
-            ('~', Color::Rgb(dim(40), dim(80), dim(intensity)))
+            let ch = if water_level > 200 { '≈' } else { '~' };
+            (ch, Color::Rgb(dim(40), dim(80), dim(intensity)))
         }
         Material::Soil => {
             if water_level > 100 {
