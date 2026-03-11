@@ -83,6 +83,31 @@ mod tests {
         assert_eq!(Material::from_name("SOIL"), Some(Material::Soil));
         assert_eq!(Material::from_name("unknown"), None);
     }
+
+    #[test]
+    fn set_material_resets_state() {
+        let mut v = Voxel {
+            material: Material::Soil,
+            water_level: 200,
+            light_level: 150,
+            nutrient_level: 50,
+        };
+        v.set_material(Material::Stone);
+        assert_eq!(v.material, Material::Stone);
+        assert_eq!(v.water_level, 0);
+        assert_eq!(v.light_level, 0);
+        assert_eq!(v.nutrient_level, 0);
+    }
+
+    #[test]
+    fn set_material_water_gets_full_water_level() {
+        let mut v = Voxel::default();
+        v.set_material(Material::Water);
+        assert_eq!(v.material, Material::Water);
+        assert_eq!(v.water_level, 255);
+        assert_eq!(v.light_level, 0);
+        assert_eq!(v.nutrient_level, 0);
+    }
 }
 
 /// A single cell in the voxel grid.
@@ -93,4 +118,19 @@ pub struct Voxel {
     pub water_level: u8,
     pub light_level: u8,
     pub nutrient_level: u8,
+}
+
+impl Voxel {
+    /// Change this voxel's material and reset all state fields to defaults
+    /// for the new material. This prevents state bleed (e.g. stone retaining
+    /// water_level from wet soil).
+    ///
+    /// Water voxels start with water_level=255; all others start at 0.
+    /// Light is always reset to 0 (recalculated each tick by light_propagation).
+    pub fn set_material(&mut self, mat: Material) {
+        self.material = mat;
+        self.water_level = if mat == Material::Water { 255 } else { 0 };
+        self.light_level = 0;
+        self.nutrient_level = 0;
+    }
 }
