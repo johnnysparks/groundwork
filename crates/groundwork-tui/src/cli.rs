@@ -187,7 +187,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
         }
 
         println!();
-        println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
+        println!("Legend: . air  (space) dark air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
     } else {
         // Emoji mode — each cell is 2 columns wide
         print!("    ");
