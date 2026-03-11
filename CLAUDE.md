@@ -64,6 +64,8 @@ groundwork new                            # Create a fresh world → groundwork.
 groundwork tick [N]                       # Advance N ticks (default 1)
 groundwork view [--z Z]                   # Print ASCII slice (default Z=16, above ground)
 groundwork place <material> <x> <y> <z>   # Place a voxel (air/soil/stone/water/root/seed)
+                                          # Coords accept ranges: place soil 20..40 30 15
+groundwork fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region (inclusive)
 groundwork inspect <x> <y> <z>            # Show one voxel's full state
 groundwork status                         # Tick count + material summary
 groundwork tui                            # Launch interactive TUI (default)
