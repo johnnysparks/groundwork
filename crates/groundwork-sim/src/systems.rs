@@ -107,10 +107,10 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
                     // the first soil layer below open sky isn't full brightness.
                     match cell.material {
                         Material::Soil => {
-                            light = light.saturating_sub(40);
+                            light = light.saturating_sub(30);
                         }
                         Material::Root => {
-                            light = light.saturating_sub(40);
+                            light = light.saturating_sub(30);
                         }
                         Material::Stone => {
                             light = 0;
@@ -387,6 +387,8 @@ mod tests {
         let grid = world.resource::<VoxelGrid>();
         let sky = grid.get(0, 0, GROUND_LEVEL + 2).unwrap().light_level;
         let surface_soil = grid.get(0, 0, GROUND_LEVEL).unwrap().light_level;
+        let one_below = grid.get(0, 0, GROUND_LEVEL - 1).unwrap().light_level;
+        let two_below = grid.get(0, 0, GROUND_LEVEL - 2).unwrap().light_level;
         let deep_soil = grid.get(0, 0, GROUND_LEVEL - 3).unwrap().light_level;
 
         assert!(
@@ -396,6 +398,25 @@ mod tests {
         assert!(
             deep_soil < surface_soil,
             "Deep soil ({deep_soil}) should be dimmer than surface soil ({surface_soil})"
+        );
+
+        // SIM-02 acceptance: surface soil ~200, gradient through layers,
+        // at least 3-4 layers of soil have usable light (>=30 for seed growth).
+        assert!(
+            surface_soil >= 180 && surface_soil <= 220,
+            "Surface soil ({surface_soil}) should be ~200"
+        );
+        assert!(
+            one_below >= 140 && one_below <= 190,
+            "One layer below ({one_below}) should be ~140-170"
+        );
+        assert!(
+            two_below >= 80 && two_below <= 160,
+            "Two layers below ({two_below}) should be ~80-140"
+        );
+        assert!(
+            deep_soil >= 30,
+            "Three layers deep ({deep_soil}) should still have usable light (>=30)"
         );
     }
 }

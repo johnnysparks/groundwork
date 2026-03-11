@@ -11,6 +11,7 @@ _Last updated: 2026-03-11T13:00:00 by Manager_
 - ~~CLI-05: Warn on out-of-bounds Z~~ ✓
 - ~~CLI-06: Show value ranges in `inspect`~~ ✓
 - ~~CLI-07: Add wet-soil count to `status`~~ ✓
+- ~~SIM-02: Fix light attenuation through soil~~ ✓
 
 ## P0 — Blocks core proof or makes build unusable
 
@@ -21,14 +22,6 @@ _Last updated: 2026-03-11T13:00:00 by Manager_
 - **Dependencies:** none
 - **Risk:** low — one-line fix in `cli.rs:cmd_place`
 - **Scope:** Sim trust is a core design constraint.
-
-### SIM-02: Fix light attenuation through soil
-- **Owner:** gameplay
-- **Why:** Light currently assigns the value *before* attenuating, so surface soil (first solid layer) gets full sky light (227+), and the next layer gets 0 because stone kills it. Player reported "binary light, no gradient." Underground planting will be meaningless without a gradient.
-- **Done when:** Light attenuates *before* assignment for solid materials, or soil attenuation is reduced to ~30 so at least 3-4 layers of soil have usable light. Verify: surface soil gets ~200, one layer down gets ~140-170, two layers down gets ~80-140, stone still blocks fully.
-- **Dependencies:** none
-- **Risk:** low — tuning numbers in `systems.rs:light_propagation`
-- **Scope:** Prerequisite for any plant growth system.
 
 ### GAME-01: Add seed species with growth system
 - **Owner:** gameplay
@@ -41,7 +34,7 @@ _Last updated: 2026-03-11T13:00:00 by Manager_
      - When nutrient_level reaches 200, convert Seed to Root
      - Root already exists as a material, so this "completes" the cycle
   4. At least one test: place seed on wet lit soil, tick N times, verify it becomes Root
-- **Dependencies:** SIM-01 (state bleed fix), SIM-02 (light fix)
+- **Dependencies:** SIM-01 (state bleed fix), ~~SIM-02 (light fix)~~
 - **Risk:** medium — first new game system, needs careful integration with existing ECS schedule
 - **Scope:** This IS the MVP proof. No garden builder without growth.
 
