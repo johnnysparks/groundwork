@@ -193,12 +193,7 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
                 format!("out of bounds: ({x}, {y}, {z})"),
             )
         })?;
-        voxel.material = mat;
-        // Reset all levels when material changes to avoid state bleed
-        // (e.g. stone retaining old water_level from wet soil).
-        voxel.water_level = if mat == Material::Water { 255 } else { 0 };
-        voxel.light_level = 0;
-        voxel.nutrient_level = 0;
+        voxel.set_material(mat);
     }
 
     groundwork_sim::save::save_world(&world, &path)?;

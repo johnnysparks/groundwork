@@ -37,11 +37,15 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                             let transfer = water.min(255 - bv.water_level).min(32);
                             if let Some(cell) = grid.get_mut(x, y, z - 1) {
                                 cell.water_level = cell.water_level.saturating_add(transfer);
-                                cell.material = Material::Water;
+                                if cell.material != Material::Water {
+                                    cell.nutrient_level = 0;
+                                    cell.material = Material::Water;
+                                }
                             }
                             if let Some(cell) = grid.get_mut(x, y, z) {
                                 cell.water_level = cell.water_level.saturating_sub(transfer);
                                 if cell.water_level == 0 && cell.material == Material::Water {
+                                    cell.nutrient_level = 0;
                                     cell.material = Material::Air;
                                 }
                             }
@@ -72,11 +76,15 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                         let transfer = ((water - neighbor_water) / 5).max(1).min(8);
                         if let Some(cell) = grid.get_mut(nx, ny, z) {
                             cell.water_level = cell.water_level.saturating_add(transfer);
-                            cell.material = Material::Water;
+                            if cell.material != Material::Water {
+                                cell.nutrient_level = 0;
+                                cell.material = Material::Water;
+                            }
                         }
                         if let Some(cell) = grid.get_mut(x, y, z) {
                             cell.water_level = cell.water_level.saturating_sub(transfer);
                             if cell.water_level == 0 && cell.material == Material::Water {
+                                cell.nutrient_level = 0;
                                 cell.material = Material::Air;
                             }
                         }
@@ -184,8 +192,7 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>) {
                     if let Some(cell) = grid.get_mut(x, y, z) {
                         cell.nutrient_level = cell.nutrient_level.saturating_add(5);
                         if cell.nutrient_level >= 200 {
-                            cell.material = Material::Root;
-                            cell.nutrient_level = 0;
+                            cell.set_material(Material::Root);
                         }
                     }
                 }
@@ -306,6 +313,69 @@ mod tests {
             Material::Seed,
             "Seed should remain a seed without water"
         );
+    }
+
+    #[test]
+    fn water_flow_does_not_bleed_nutrient_into_new_water() {
+        let mut world = crate::create_world();
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place an air voxel with leftover nutrient (simulating prior state)
+            // directly below a water source.
+            let z = GROUND_LEVEL + 1;
+            if let Some(cell) = grid.get_mut(5, 5, z + 1) {
+                cell.material = Material::Water;
+                cell.water_level = 255;
+            }
+            if let Some(cell) = grid.get_mut(5, 5, z) {
+                cell.material = Material::Air;
+                cell.water_level = 0;
+                cell.nutrient_level = 99; // stale state
+            }
+        }
+
+        let mut schedule = crate::create_schedule();
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        let cell = grid.get(5, 5, GROUND_LEVEL + 1).unwrap();
+        // If water flowed down and converted this to Water, nutrient should be 0.
+        if cell.material == Material::Water {
+            assert_eq!(
+                cell.nutrient_level, 0,
+                "Water converted from air should not retain stale nutrient_level"
+            );
+        }
+    }
+
+    #[test]
+    fn seed_to_root_resets_water_level() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(10, 10, GROUND_LEVEL + 1) {
+                cell.material = Material::Seed;
+                cell.water_level = 100;
+                cell.light_level = 0;
+                cell.nutrient_level = 0;
+            }
+        }
+
+        for _ in 0..50 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
+        if cell.material == Material::Root {
+            assert_eq!(
+                cell.water_level, 0,
+                "Root converted from seed should not retain stale water_level"
+            );
+        }
     }
 
     #[test]
