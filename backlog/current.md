@@ -151,6 +151,13 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 
 ## P3 — Future / expansion
 
+### UNDERGROUND-01: Underground play expansion
+- **Owner:** gameplay
+- **Why:** The Spelunker session proved caves are dead zones — no horizontal light scatter (SIM-07), no horizontal water flow (SIM-08), and no dark-adapted species (GAME-08). Underground gardening is a compelling future playstyle but depends on multiple system changes that are out of scope for MVP. The core surface loop must be proven first.
+- **Scope:** Future expansion. Encompasses SIM-07 (horizontal light), SIM-08 (horizontal water flow in air), GAME-08 (dark-loving species/mushrooms), and potentially SIM-06 (seed light attenuation, which matters more with underground play). Surface MVP takes priority — underground play is explicitly deferred.
+- **Prerequisite:** Surface growth loop proven fun (GAME-01 ✓), placement safety (CLI-08), growth visibility (VIS-02), root absorption (SIM-03).
+- **Note:** When this is picked up, start with SIM-07 (even 2-3 tiles of light scatter from shaft openings transforms caves) and SIM-08 (water pooling is physically intuitive). GAME-08 (mushrooms) provides content for caves even without full light/water rework.
+
 ### GAME-05: Nutrient system
 - **Owner:** gameplay
 - **Why:** Player requested. Creates deeper ecology chain. Too complex for current sprint.
@@ -163,12 +170,14 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 
 ### SIM-07: Horizontal light scatter
 - **Owner:** gameplay
+- **Part of:** UNDERGROUND-01 (underground play expansion)
 - **Why:** Spelunker proved light propagates strictly top-down. Caves are dead zones — zero horizontal light spread. This blocks the underground garden fantasy entirely. However, implementing proper light scatter is a significant system change and not required to prove the core surface loop.
 - **Scope:** Deferred until surface loop is proven. Underground gardening is a future playstyle expansion.
 - **Note:** Even 2-3 tiles of scatter from shaft openings would transform underground play. Consider a simple heuristic rather than full radiosity.
 
 ### SIM-08: Horizontal water flow in air
 - **Owner:** gameplay
+- **Part of:** UNDERGROUND-01 (underground play expansion)
 - **Why:** Spelunker found water doesn't spread horizontally through air in caves. Water only flows straight down. Combined with no horizontal light, caves are useless for gardening.
 - **Scope:** Deferred with SIM-07. Underground play depends on both.
 - **Note:** Could be simpler than light — water pooling at the lowest air tile of a cave is physically intuitive.
@@ -180,5 +189,6 @@ _Last updated: 2026-03-11T16:00:00 by Manager_
 
 ### GAME-08: Dark-loving species (mushrooms)
 - **Owner:** gameplay
+- **Part of:** UNDERGROUND-01 (underground play expansion)
 - **Why:** Spelunker requested something that thrives without light. If light can't reach caves easily, give the player something that wants to be in a cave.
 - **Scope:** Deferred until species system expands.
