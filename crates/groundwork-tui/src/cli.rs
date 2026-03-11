@@ -40,6 +40,18 @@ pub fn cmd_new(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
+fn count_materials(grid: &VoxelGrid) -> ([u64; 5], u64) {
+    let mut counts = [0u64; 5];
+    let mut wet_soil = 0u64;
+    for v in grid.cells() {
+        counts[v.material.as_u8() as usize] += 1;
+        if v.material == Material::Soil && v.water_level > 100 {
+            wet_soil += 1;
+        }
+    }
+    (counts, wet_soil)
+}
+
 pub fn cmd_tick(args: &[String]) -> std::io::Result<()> {
     let path = state_path(args);
     let n: u64 = args
@@ -50,13 +62,37 @@ pub fn cmd_tick(args: &[String]) -> std::io::Result<()> {
     let mut world = groundwork_sim::save::load_world(&path)?;
     let mut schedule = groundwork_sim::create_schedule();
 
+    let (before_counts, before_wet) = count_materials(world.resource::<VoxelGrid>());
+
     for _ in 0..n {
         groundwork_sim::tick(&mut world, &mut schedule);
     }
 
+    let (after_counts, after_wet) = count_materials(world.resource::<VoxelGrid>());
+
     groundwork_sim::save::save_world(&world, &path)?;
     let tick = world.resource::<Tick>().0;
     println!("Tick: {tick} (+{n})");
+
+    // Show changes
+    let mut changes = Vec::new();
+    let names = ["air", "soil", "stone", "water", "root"];
+    for i in 0..5 {
+        let diff = after_counts[i] as i64 - before_counts[i] as i64;
+        if diff != 0 {
+            changes.push(format!("{}: {:+}", names[i], diff));
+        }
+    }
+    let wet_diff = after_wet as i64 - before_wet as i64;
+    if wet_diff != 0 {
+        changes.push(format!("wet soil: {:+}", wet_diff));
+    }
+
+    if changes.is_empty() {
+        println!("  (no material changes)");
+    } else {
+        println!("  Changes: {}", changes.join(", "));
+    }
     Ok(())
 }
 
@@ -66,9 +102,15 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 
-    let z: usize = find_value(args, "--z")
+    let max_z = GRID_Z - 1;
+    let mut z: usize = find_value(args, "--z")
         .and_then(|v| v.parse().ok())
         .unwrap_or(GROUND_LEVEL + 1);
+
+    if z >= GRID_Z {
+        eprintln!("Warning: Z={z} is out of bounds (max {max_z}), clamping to {max_z}");
+        z = max_z;
+    }
 
     let depth_label = if z > GROUND_LEVEL {
         format!("above +{}", z - GROUND_LEVEL)
@@ -81,7 +123,23 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     println!("Z:{z} ({depth_label})  Tick:{tick}  Grid:{GRID_X}x{GRID_Y}x{GRID_Z}");
     println!();
 
+    // X-axis labels (every 10)
+    print!("    ");
+    for x in 0..GRID_X {
+        if x % 10 == 0 {
+            print!("{:<10}", x);
+        }
+    }
+    println!();
+
     for y in 0..GRID_Y {
+        // Y-axis label (every 10, or blank)
+        if y % 10 == 0 {
+            print!("{:>3} ", y);
+        } else {
+            print!("    ");
+        }
+
         let row: String = (0..GRID_X)
             .map(|x| {
                 grid.get(x, y, z)
@@ -91,6 +149,10 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
             .collect();
         println!("{row}");
     }
+
+    // Legend
+    println!();
+    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root");
     Ok(())
 }
 
@@ -168,11 +230,19 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
         )
     })?;
 
-    println!("Voxel at ({x}, {y}, {z}):");
+    let depth_label = if z > GROUND_LEVEL {
+        format!("above +{}", z - GROUND_LEVEL)
+    } else if z == GROUND_LEVEL {
+        "surface".to_string()
+    } else {
+        format!("below -{}", GROUND_LEVEL - z)
+    };
+
+    println!("Voxel at ({x}, {y}, {z}) [{}]:", depth_label);
     println!("  material: {}", voxel.material.name());
-    println!("  water_level: {}", voxel.water_level);
-    println!("  light_level: {}", voxel.light_level);
-    println!("  nutrient_level: {}", voxel.nutrient_level);
+    println!("  water_level: {}/255", voxel.water_level);
+    println!("  light_level: {}/255", voxel.light_level);
+    println!("  nutrient_level: {}/255", voxel.nutrient_level);
     Ok(())
 }
 
@@ -182,10 +252,7 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 
-    let mut counts = [0u64; 5];
-    for v in grid.cells() {
-        counts[v.material.as_u8() as usize] += 1;
-    }
+    let (counts, wet_soil) = count_materials(grid);
 
     println!("Tick: {tick}");
     println!("Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)", GRID_X * GRID_Y * GRID_Z);
@@ -195,6 +262,7 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
             println!("  {}: {}", mat.name(), counts[i as usize]);
         }
     }
+    println!("  wet soil: {}", wet_soil);
     Ok(())
 }
 

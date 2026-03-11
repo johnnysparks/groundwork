@@ -4,6 +4,7 @@ mod input;
 mod render;
 
 use app::App;
+use std::io::IsTerminal;
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
@@ -21,6 +22,10 @@ fn main() -> std::io::Result<()> {
             Ok(())
         }
         Some("tui") | None => {
+            if !std::io::stdout().is_terminal() {
+                cli::print_help();
+                return Ok(());
+            }
             let mut terminal = ratatui::init();
             let result = App::new().run(&mut terminal);
             ratatui::restore();
