@@ -250,6 +250,59 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>) {
     }
 }
 
+/// Roots absorb water from adjacent Soil voxels.
+/// Transfer ~4 units per adjacent wet soil per tick. Root's water_level increases.
+/// Visible effect: wet soil near roots dries out over time.
+pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
+    let snapshot: Vec<(Material, u8)> = grid
+        .cells()
+        .iter()
+        .map(|v| (v.material, v.water_level))
+        .collect();
+
+    for z in 0..GRID_Z {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let idx = VoxelGrid::index(x, y, z);
+                if snapshot[idx].0 != Material::Root {
+                    continue;
+                }
+
+                let neighbors: [(isize, isize, isize); 6] = [
+                    (-1, 0, 0),
+                    (1, 0, 0),
+                    (0, -1, 0),
+                    (0, 1, 0),
+                    (0, 0, -1),
+                    (0, 0, 1),
+                ];
+                for (dx, dy, dz) in neighbors {
+                    let nx = x as isize + dx;
+                    let ny = y as isize + dy;
+                    let nz = z as isize + dz;
+                    if nx < 0 || ny < 0 || nz < 0 {
+                        continue;
+                    }
+                    let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
+                    if !VoxelGrid::in_bounds(nx, ny, nz) {
+                        continue;
+                    }
+                    let nidx = VoxelGrid::index(nx, ny, nz);
+                    if snapshot[nidx].0 == Material::Soil && snapshot[nidx].1 > 0 {
+                        let transfer = snapshot[nidx].1.min(4);
+                        if let Some(soil) = grid.get_mut(nx, ny, nz) {
+                            soil.water_level = soil.water_level.saturating_sub(transfer);
+                        }
+                        if let Some(root) = grid.get_mut(x, y, z) {
+                            root.water_level = root.water_level.saturating_add(transfer);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +429,134 @@ mod tests {
                 "Root converted from seed should not retain stale water_level"
             );
         }
+    }
+
+    #[test]
+    fn root_absorbs_water_from_adjacent_wet_soil() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        // Place a root surrounded by wet soil underground.
+        let root_x = 10;
+        let root_y = 10;
+        let root_z = GROUND_LEVEL - 1; // underground
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(root_x, root_y, root_z) {
+                cell.material = Material::Root;
+                cell.water_level = 0;
+            }
+            // Set adjacent soil to have water.
+            if let Some(cell) = grid.get_mut(root_x + 1, root_y, root_z) {
+                cell.material = Material::Soil;
+                cell.water_level = 50;
+            }
+            if let Some(cell) = grid.get_mut(root_x - 1, root_y, root_z) {
+                cell.material = Material::Soil;
+                cell.water_level = 50;
+            }
+        }
+
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        let root = grid.get(root_x, root_y, root_z).unwrap();
+        assert!(
+            root.water_level > 0,
+            "Root should have absorbed water from adjacent wet soil, got water_level={}",
+            root.water_level
+        );
+        // Each wet soil neighbor donates 4, two neighbors = 8.
+        assert_eq!(root.water_level, 8, "Root should absorb 4 from each of 2 wet soil neighbors");
+
+        let neighbor = grid.get(root_x + 1, root_y, root_z).unwrap();
+        assert!(
+            neighbor.water_level < 50,
+            "Wet soil next to root should lose water, got water_level={}",
+            neighbor.water_level
+        );
+    }
+
+    #[test]
+    fn root_does_not_absorb_from_dry_soil() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let root_x = 5;
+        let root_y = 5;
+        let root_z = GROUND_LEVEL - 1;
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(root_x, root_y, root_z) {
+                cell.material = Material::Root;
+                cell.water_level = 0;
+            }
+            // Ensure adjacent soil is dry.
+            for (dx, dy, dz) in [(-1i32,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)] {
+                let nx = (root_x as i32 + dx) as usize;
+                let ny = (root_y as i32 + dy) as usize;
+                let nz = (root_z as i32 + dz) as usize;
+                if let Some(cell) = grid.get_mut(nx, ny, nz) {
+                    if cell.material == Material::Soil {
+                        cell.water_level = 0;
+                    }
+                }
+            }
+        }
+
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        let root = grid.get(root_x, root_y, root_z).unwrap();
+        assert_eq!(
+            root.water_level, 0,
+            "Root should not absorb water from dry soil"
+        );
+    }
+
+    #[test]
+    fn wet_soil_near_root_dries_over_time() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let root_x = 15;
+        let root_y = 15;
+        let root_z = GROUND_LEVEL - 2;
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(root_x, root_y, root_z) {
+                cell.material = Material::Root;
+                cell.water_level = 0;
+            }
+            // One neighbor with limited water.
+            if let Some(cell) = grid.get_mut(root_x + 1, root_y, root_z) {
+                cell.material = Material::Soil;
+                cell.water_level = 20;
+            }
+            // Dry out other soil neighbors to isolate the test.
+            for (dx, dy, dz) in [(-1i32,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)] {
+                let nx = (root_x as i32 + dx) as usize;
+                let ny = (root_y as i32 + dy) as usize;
+                let nz = (root_z as i32 + dz) as usize;
+                if let Some(cell) = grid.get_mut(nx, ny, nz) {
+                    if cell.material == Material::Soil {
+                        cell.water_level = 0;
+                    }
+                }
+            }
+        }
+
+        // Run enough ticks to drain the soil (20 water / 4 per tick = 5 ticks).
+        for _ in 0..5 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let soil = grid.get(root_x + 1, root_y, root_z).unwrap();
+        assert_eq!(
+            soil.water_level, 0,
+            "Soil adjacent to root should dry out over time"
+        );
     }
 
     #[test]

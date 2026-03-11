@@ -6,7 +6,7 @@ pub mod voxel;
 use bevy_ecs::prelude::*;
 
 use grid::VoxelGrid;
-use systems::{light_propagation, seed_growth, soil_absorption, water_flow};
+use systems::{light_propagation, root_water_absorption, seed_growth, soil_absorption, water_flow};
 
 /// Tick counter resource.
 #[derive(Resource, Default)]
@@ -23,7 +23,7 @@ pub fn create_world() -> World {
 /// Create the simulation schedule with all systems in order.
 pub fn create_schedule() -> Schedule {
     let mut schedule = Schedule::default();
-    schedule.add_systems((water_flow, soil_absorption, light_propagation, seed_growth, tick_counter).chain());
+    schedule.add_systems((water_flow, soil_absorption, root_water_absorption, light_propagation, seed_growth, tick_counter).chain());
     schedule
 }
 
