@@ -6,6 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GROUNDWORK is a cozy ecological voxel garden builder game. The player composes ecosystems by shaping soil, water, light, and plant relationships above and below ground. Core fantasy: build a living miniature world that becomes self-sustaining over time.
 
+## Session Quick Start
+
+Every session, you operate as one of three roles. Pick yours and follow the checklist.
+
+**Role assignment:**
+1. If a role is specified in the prompt, use it.
+2. Default to **dev** if dev work is available (check `handoffs/manager_to_dev/` and `backlog/current.md`).
+3. Fall back to **manager** if no dev work but feedback exists to review (check `feedback/` and `handoffs/player_to_manager/`).
+4. Fall back to **player** if nothing else applies.
+
+### Dev — start here
+1. Read `agents/dev.md` (your role definition)
+2. Read `backlog/current.md` (what's prioritized)
+3. Read latest file in `handoffs/manager_to_dev/` (your current assignment)
+4. Read latest file in `build_notes/` (where the last dev left off)
+5. Build and test: `cargo test -p groundwork-sim && cargo check --workspace`
+6. Do the work. Write build notes and dev→manager handoff when done.
+
+### Manager — start here
+1. Read `agents/manager.md` (your role definition)
+2. Read `backlog/current.md` (current priorities)
+3. Read latest files in `feedback/` and `handoffs/player_to_manager/` (new player input)
+4. Read latest files in `handoffs/dev_to_manager/` (dev results)
+5. Update backlog, write decisions, write handoffs to dev and/or player.
+
+### Player — start here
+1. Read `agents/player.md` (your role definition, includes CLI play instructions)
+2. Read latest file in `handoffs/manager_to_player/` (what to test and specific questions)
+3. Build: `cargo run -p groundwork-tui -- new` then play a session
+4. Write feedback and player→manager handoff when done.
+
+All roles: read `AGENTS.md` for the full operating framework (vision, handoff formats, priority definitions, workspace rules).
+
 ## Build & Run
 
 ```bash
@@ -20,9 +53,6 @@ cargo test -p groundwork-sim
 
 # Check everything compiles
 cargo check --workspace
-
-# Fast linking (optional, install lld first: brew install llvm)
-# Uncomment your platform section in .cargo/config.toml
 ```
 
 ## CLI (non-interactive / agent play)
@@ -33,7 +63,7 @@ The CLI lets agents play the game without a terminal. State persists to a binary
 groundwork new                            # Create a fresh world → groundwork.state
 groundwork tick [N]                       # Advance N ticks (default 1)
 groundwork view [--z Z]                   # Print ASCII slice (default Z=16, above ground)
-groundwork place <material> <x> <y> <z>   # Place a voxel (air/soil/stone/water/root)
+groundwork place <material> <x> <y> <z>   # Place a voxel (air/soil/stone/water/root/seed)
 groundwork inspect <x> <y> <z>            # Show one voxel's full state
 groundwork status                         # Tick count + material summary
 groundwork tui                            # Launch interactive TUI (default)
@@ -43,7 +73,7 @@ groundwork help                           # Show help
 ```
 
 ### ASCII legend
-`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root
+`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed
 
 ### State file format
 Binary, ~422KB. Header (magic `GWRK` + version) + tick count (u64 LE) + 108,000 voxels × 4 bytes each.
@@ -57,7 +87,7 @@ crates/
       lib.rs          Public API: create_world(), create_schedule(), tick()
       voxel.rs        Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
       grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 60×60×30, indexed [x + y*60 + z*3600]
-      systems.rs      ECS systems: water_flow, light_propagation, soil_absorption
+      systems.rs      ECS systems: water_flow, light_propagation, soil_absorption, seed_growth
       save.rs         Binary save/load for VoxelGrid + Tick (zero external deps)
 
   groundwork-tui/     Rust binary — ratatui terminal renderer + CLI
@@ -76,10 +106,10 @@ crates/
 - **bevy_ecs standalone** (not full Bevy engine): fast compile (~60s cold, <1s incremental), minimal deps, simulation-only
 - **Renderer-agnostic sim**: `groundwork-sim` has zero rendering deps. TUI and future web UI are thin shells that read sim state.
 - **WASM-ready**: sim compiles to `wasm32-unknown-unknown`. When `groundwork-web` is built, add `crate-type = ["cdylib"]` to sim's Cargo.toml.
-- **Two orthogonal workstreams**: sim+CLI and web UI are independent. Web UI begins once the "one more seed" loop is somewhat fun in ASCII. Both progress in parallel from that point. See `decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
-- **ratatui for dev/AI interface**: terminal UI lets agents screenshot the same view humans see. No GPU setup required.
+- **Two orthogonal workstreams**: sim+CLI and web UI are independent. See `decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
 - **Flat voxel array**: 108K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=15 is surface, Z=29 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
+- **System execution order**: water_flow → soil_absorption → light_propagation → seed_growth → tick_counter
 
 ### Sim API
 
@@ -89,27 +119,6 @@ let mut schedule = groundwork_sim::create_schedule(); // Systems in order
 groundwork_sim::tick(&mut world, &mut schedule);   // Advance one step
 let grid = world.resource::<VoxelGrid>();          // Read state
 ```
-
-## Role System
-
-You operate as one of three agent roles defined in `agents/`. Role assignment rules (from AGENTS.md line 42-44):
-1. If a role is specified, use it
-2. Default to **dev** if dev work is available
-3. Fall back to **manager** if no dev work but feedback exists to review
-4. Fall back to **player** if nothing else applies
-
-Each role has strict output formats, handoff templates, and responsibilities — read the relevant `agents/*.md` file before producing output.
-
-### Shared Workspace
-
-Agents read/write coordination files in the repo root using timestamped names (`{YYYY-MM-DDTHH:mm:ss}_{short_desc}.md`):
-
-- `feedback/` — Player owns
-- `handoffs/{player_to_manager,manager_to_dev,dev_to_manager,manager_to_player}/`
-- `backlog/current.md` — Manager owns
-- `decisions/` — Manager owns
-- `build_notes/` — Dev owns
-- `artifacts/` — Dev owns
 
 ## Key Constraints
 
