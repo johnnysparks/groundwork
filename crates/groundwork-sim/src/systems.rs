@@ -10,6 +10,9 @@ use crate::voxel::Material;
 pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
     // Snapshot water levels before mutation.
     let snapshot: Vec<u8> = grid.cells().iter().map(|v| v.water_level).collect();
+    // Delta buffer for lateral spread — applied after the full pass to avoid
+    // iteration-order bias that caused diagonal stripe artifacts.
+    let mut lateral_deltas: Vec<i16> = vec![0; snapshot.len()];
 
     // Iterate top-to-bottom so gravity cascades naturally.
     for z in (0..GRID_Z).rev() {
@@ -54,7 +57,7 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                     }
                 }
 
-                // Can't flow down — spread laterally.
+                // Can't flow down — record lateral spread into delta buffer.
                 let neighbors: [(isize, isize); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
                 for (dx, dy) in neighbors {
                     let nx = x as isize + dx;
@@ -74,22 +77,33 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                         && neighbor_water < water.saturating_sub(1)
                     {
                         let transfer = ((water - neighbor_water) / 5).max(1).min(8);
-                        if let Some(cell) = grid.get_mut(nx, ny, z) {
-                            cell.water_level = cell.water_level.saturating_add(transfer);
-                            if cell.material != Material::Water {
-                                cell.nutrient_level = 0;
-                                cell.material = Material::Water;
-                            }
-                        }
-                        if let Some(cell) = grid.get_mut(x, y, z) {
-                            cell.water_level = cell.water_level.saturating_sub(transfer);
-                            if cell.water_level == 0 && cell.material == Material::Water {
-                                cell.nutrient_level = 0;
-                                cell.material = Material::Air;
-                            }
-                        }
+                        lateral_deltas[nidx] += transfer as i16;
+                        lateral_deltas[idx] -= transfer as i16;
                     }
                 }
+            }
+        }
+    }
+
+    // Apply lateral spread deltas in one pass to avoid iteration-order bias.
+    for (i, &delta) in lateral_deltas.iter().enumerate() {
+        if delta == 0 {
+            continue;
+        }
+        let cell = &mut grid.cells_mut()[i];
+        if delta > 0 {
+            cell.water_level = cell.water_level.saturating_add(delta as u8);
+            if cell.material != Material::Water
+                && (cell.material == Material::Air)
+            {
+                cell.nutrient_level = 0;
+                cell.material = Material::Water;
+            }
+        } else {
+            cell.water_level = cell.water_level.saturating_sub((-delta) as u8);
+            if cell.water_level == 0 && cell.material == Material::Water {
+                cell.nutrient_level = 0;
+                cell.material = Material::Air;
             }
         }
     }
@@ -557,6 +571,63 @@ mod tests {
             soil.water_level, 0,
             "Soil adjacent to root should dry out over time"
         );
+    }
+
+    #[test]
+    fn water_spreads_symmetrically() {
+        // Regression test: lateral water spread should not favor +x/+y over -x/-y.
+        // A single water source on a flat plane should produce equal levels in
+        // all four cardinal neighbors after several ticks.
+        use crate::grid::{GRID_X, GRID_Y, GRID_Z};
+
+        let cells = vec![
+            crate::voxel::Voxel {
+                material: Material::Air,
+                water_level: 0,
+                light_level: 0,
+                nutrient_level: 0,
+            };
+            GRID_X * GRID_Y * GRID_Z
+        ];
+        let mut world = crate::create_world();
+        *world.resource_mut::<VoxelGrid>() = VoxelGrid::from_cells(cells);
+
+        // Place stone floor at z=0, air everywhere else, water blob at center z=1.
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            let z = 0;
+            for y in 0..GRID_Y {
+                for x in 0..GRID_X {
+                    if let Some(cell) = grid.get_mut(x, y, z) {
+                        cell.material = Material::Stone;
+                    }
+                }
+            }
+            let cx = GRID_X / 2;
+            let cy = GRID_Y / 2;
+            if let Some(cell) = grid.get_mut(cx, cy, 1) {
+                cell.material = Material::Water;
+                cell.water_level = 200;
+            }
+        }
+
+        let mut schedule = crate::create_schedule();
+        for _ in 0..20 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let cx = GRID_X / 2;
+        let cy = GRID_Y / 2;
+        let w_xm = grid.get(cx - 1, cy, 1).unwrap().water_level;
+        let w_xp = grid.get(cx + 1, cy, 1).unwrap().water_level;
+        let w_ym = grid.get(cx, cy - 1, 1).unwrap().water_level;
+        let w_yp = grid.get(cx, cy + 1, 1).unwrap().water_level;
+
+        // All four cardinal neighbors should have the same water level.
+        assert_eq!(w_xm, w_xp, "x-axis symmetry: -{w_xm} vs +{w_xp}");
+        assert_eq!(w_ym, w_yp, "y-axis symmetry: -{w_ym} vs +{w_yp}");
+        assert_eq!(w_xm, w_ym, "cross-axis symmetry: x{w_xm} vs y{w_ym}");
     }
 
     #[test]
