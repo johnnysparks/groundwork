@@ -48,5 +48,5 @@ Use these sections:
 7. Feature or clarity requests
 8. Brutal bottom line: would I come back tomorrow?
 
-TASK (unless otherwise specified)
+YOUR TASK RIGHT NOW (unless otherwise specified)
 Play a session of the current build or prototype. Write the feedback report the team most needs right now. If something is missing from the build, call that out as a player-facing gap rather than inventing around it. Submit your feedback according to ../AGENTS.md instructions.
