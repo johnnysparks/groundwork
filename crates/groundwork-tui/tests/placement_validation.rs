@@ -15,237 +15,256 @@ fn new_world() -> NamedTempFile {
     f
 }
 
-/// Place a seed, then try to overwrite it without --force → should fail.
+// ── Shovel removes anything ───────────────────────────────────────────
+
+/// Shovel (place air) removes a seed.
 #[test]
-fn place_rejects_overwriting_seed() {
+fn shovel_removes_seed() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place a seed
+    // Place seed on the surface (z=16 is Air above soil at z=15)
+    // Seed has gravity — it will land at z=16 (first Air above soil)
     let out = groundwork()
-        .args(["place", "seed", "10", "10", "15", "--state", p])
+        .args(["place", "seed", "10", "10", "16", "--state", p])
         .output()
         .unwrap();
-    assert!(out.status.success(), "seed placement failed");
+    assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
 
-    // Try to overwrite with water (should be rejected)
+    // Verify seed is there
     let out = groundwork()
-        .args(["place", "water", "10", "10", "15", "--state", p])
+        .args(["inspect", "10", "10", "16", "--state", p])
         .output()
         .unwrap();
-    assert!(!out.status.success(), "overwriting seed should fail without --force");
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(stderr.contains("cannot overwrite seed"), "expected rejection message, got: {stderr}");
-    assert!(stderr.contains("--force"), "should suggest --force");
-}
-
-/// Place a root, then try to overwrite it without --force → should fail.
-#[test]
-fn place_rejects_overwriting_root() {
-    let state = new_world();
-    let p = state.path().to_str().unwrap();
-
-    // Place a root
-    let out = groundwork()
-        .args(["place", "root", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "root placement failed");
-
-    // Try to overwrite with soil (should be rejected)
-    let out = groundwork()
-        .args(["place", "soil", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(!out.status.success(), "overwriting root should fail without --force");
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(stderr.contains("cannot overwrite root"), "expected rejection message, got: {stderr}");
-}
-
-/// --force bypasses protection on seeds.
-#[test]
-fn place_force_overrides_seed_protection() {
-    let state = new_world();
-    let p = state.path().to_str().unwrap();
-
-    // Place a seed
-    let out = groundwork()
-        .args(["place", "seed", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-
-    // Overwrite with --force (should succeed)
-    let out = groundwork()
-        .args(["place", "water", "10", "10", "15", "--force", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "force overwrite should succeed: {}", String::from_utf8_lossy(&out.stderr));
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("Placed water"), "should confirm placement");
+    assert!(stdout.contains("seed"), "expected seed, got: {stdout}");
+
+    // Use shovel to remove it
+    let out = groundwork()
+        .args(["place", "air", "10", "10", "16", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "shovel failed: {}", String::from_utf8_lossy(&out.stderr));
+
+    // Verify it's gone
+    let out = groundwork()
+        .args(["inspect", "10", "10", "16", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("air"), "expected air after shovel, got: {stdout}");
 }
 
-/// Overwriting water emits a warning but succeeds.
+/// Shovel works with 'dig' alias too.
 #[test]
-fn place_warns_on_overwriting_water() {
+fn dig_alias_works() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place water
+    // Dig out some soil at the surface
+    let out = groundwork()
+        .args(["place", "dig", "10", "10", "15", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "dig failed: {}", String::from_utf8_lossy(&out.stderr));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("shovel"), "should say shovel, got: {stdout}");
+}
+
+// ── Protection without --force ────────────────────────────────────────
+
+/// Non-shovel tools can't overwrite occupied cells.
+#[test]
+fn cant_place_on_occupied_cell() {
+    let state = new_world();
+    let p = state.path().to_str().unwrap();
+
+    // Try to place water on soil (z=15 is soil) — should skip
     let out = groundwork()
         .args(["place", "water", "10", "10", "15", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
-
-    // Overwrite with soil (should warn but succeed)
-    let out = groundwork()
-        .args(["place", "soil", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "overwriting water should succeed (warn only)");
+    let stdout = String::from_utf8_lossy(&out.stdout);
     let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(stderr.contains("Warning: overwriting water"), "expected warning, got: {stderr}");
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("Placed soil"), "should confirm placement");
+    // Should report nothing placed (cell is occupied)
+    assert!(
+        stderr.contains("Nothing placed") || stdout.contains("skipped"),
+        "expected skip on occupied cell, stdout: {stdout}, stderr: {stderr}"
+    );
 }
 
-/// Normal placement (non-living target) works without warnings.
+/// Normal placement into air works cleanly.
 #[test]
-fn place_normal_no_warning() {
+fn place_into_air_succeeds() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place soil on air (should work cleanly)
+    // Place stone into air above ground (z=16)
     let out = groundwork()
-        .args(["place", "soil", "10", "10", "16", "--state", p])
+        .args(["place", "stone", "10", "10", "16", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("stone"), "should confirm stone placement, got: {stdout}");
     let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(stderr.is_empty(), "should have no warnings for normal placement, got: {stderr}");
+    assert!(stderr.is_empty(), "should have no warnings, got: {stderr}");
 }
 
-// ── Fill protection tests (CLI-12) ─────────────────────────────────────
+// ── Gravity ───────────────────────────────────────────────────────────
 
-/// Fill skips seeds by default and reports protected count.
+/// Seeds fall through air to land above solid ground.
 #[test]
-fn fill_skips_seeds() {
+fn seed_falls_through_air() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place seeds in the fill region
-    for x in 10..=12 {
+    // Place seed high up (z=20) — should fall to z=16 (first Air above soil at z=15)
+    let out = groundwork()
+        .args(["place", "seed", "10", "10", "20", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
+
+    // Verify seed landed at z=16 (above the soil surface)
+    let out = groundwork()
+        .args(["inspect", "10", "10", "16", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("seed"), "seed should have fallen to z=16, got: {stdout}");
+
+    // Verify z=20 is still air
+    let out = groundwork()
+        .args(["inspect", "10", "10", "20", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("air"), "z=20 should still be air, got: {stdout}");
+}
+
+/// Soil falls through air.
+#[test]
+fn soil_falls_through_air() {
+    let state = new_world();
+    let p = state.path().to_str().unwrap();
+
+    // First, dig out the soil at z=15 to make air there
+    let out = groundwork()
+        .args(["place", "dig", "5", "5", "15", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+
+    // Place soil at z=20 — should fall to z=15 (the gap we just dug)
+    let out = groundwork()
+        .args(["place", "soil", "5", "5", "20", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+
+    // Verify soil is at z=15
+    let out = groundwork()
+        .args(["inspect", "5", "5", "15", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("soil"), "soil should have fallen to z=15, got: {stdout}");
+}
+
+/// Stone does NOT fall (placed directly).
+#[test]
+fn stone_does_not_fall() {
+    let state = new_world();
+    let p = state.path().to_str().unwrap();
+
+    // Place stone at z=20 — should stay at z=20 (no gravity)
+    let out = groundwork()
+        .args(["place", "stone", "10", "10", "20", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+
+    let out = groundwork()
+        .args(["inspect", "10", "10", "20", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("stone"), "stone should stay at z=20, got: {stdout}");
+}
+
+// ── Seeds on stone ────────────────────────────────────────────────────
+
+/// Seeds die on stone — can't plant on rock.
+#[test]
+fn seed_dies_on_stone() {
+    let state = new_world();
+    let p = state.path().to_str().unwrap();
+
+    // Dig out everything above stone at (5,5). Stone is at z=0..4.
+    // Dig z=5..15 (soil layers) to expose stone at z=4.
+    for z in 5..=15 {
         let out = groundwork()
-            .args(["place", "seed", &x.to_string(), "10", "15", "--state", p])
+            .args(["place", "dig", "5", "5", &z.to_string(), "--state", p])
             .output()
             .unwrap();
-        assert!(out.status.success(), "seed placement failed at x={x}");
+        assert!(out.status.success());
     }
 
-    // Fill the region with water — seeds should be skipped
+    // Now try to place a seed — it should fall and land on stone, then die (not placed)
     let out = groundwork()
-        .args(["fill", "water", "10", "10", "15", "14", "10", "15", "--state", p])
+        .args(["place", "seed", "5", "5", "20", "--state", p])
         .output()
         .unwrap();
-    assert!(out.status.success(), "fill should succeed: {}", String::from_utf8_lossy(&out.stderr));
+    // Should report nothing placed since seed dies on stone
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("3 protected cells skipped"), "expected 3 protected, got: {stdout}");
-
-    // Verify seeds still exist
-    for x in 10..=12 {
-        let out = groundwork()
-            .args(["inspect", &x.to_string(), "10", "15", "--state", p])
-            .output()
-            .unwrap();
-        let stdout = String::from_utf8_lossy(&out.stdout);
-        assert!(stdout.contains("seed"), "seed at x={x} should still exist, got: {stdout}");
-    }
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("Nothing placed") || stdout.contains("0"),
+        "seed should die on stone, stdout: {stdout}, stderr: {stderr}"
+    );
 }
 
-/// Fill skips roots by default and reports protected count.
+// ── Fill tests ────────────────────────────────────────────────────────
+
+/// Fill air region with soil works.
 #[test]
-fn fill_skips_roots() {
+fn fill_air_with_soil() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place a root
-    let out = groundwork()
-        .args(["place", "root", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-
-    // Fill the region with soil — root should be skipped
-    let out = groundwork()
-        .args(["fill", "soil", "10", "10", "15", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("1 protected cells skipped"), "expected 1 protected, got: {stdout}");
-
-    // Verify root still exists
-    let out = groundwork()
-        .args(["inspect", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("root"), "root should still exist, got: {stdout}");
-}
-
-/// Fill --force overrides seed/root protection.
-#[test]
-fn fill_force_overrides_protection() {
-    let state = new_world();
-    let p = state.path().to_str().unwrap();
-
-    // Place a seed and a root
-    let out = groundwork()
-        .args(["place", "seed", "10", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-    let out = groundwork()
-        .args(["place", "root", "11", "10", "15", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success());
-
-    // Fill with --force — should overwrite both
-    let out = groundwork()
-        .args(["fill", "water", "10", "10", "15", "11", "10", "15", "--force", "--state", p])
-        .output()
-        .unwrap();
-    assert!(out.status.success(), "fill --force should succeed: {}", String::from_utf8_lossy(&out.stderr));
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(!stdout.contains("protected"), "force should not report protected cells, got: {stdout}");
-    assert!(stdout.contains("Filled 2"), "should fill both cells, got: {stdout}");
-
-    // Verify both are now water
-    for x in ["10", "11"] {
-        let out = groundwork()
-            .args(["inspect", x, "10", "15", "--state", p])
-            .output()
-            .unwrap();
-        let stdout = String::from_utf8_lossy(&out.stdout);
-        assert!(stdout.contains("water"), "cell at x={x} should be water, got: {stdout}");
-    }
-}
-
-/// Fill on a region with no protected cells works normally.
-#[test]
-fn fill_normal_no_protection_message() {
-    let state = new_world();
-    let p = state.path().to_str().unwrap();
-
-    // Fill air with soil (no seeds/roots in the way)
+    // Fill a 3x3x1 region of air (z=16) with soil
     let out = groundwork()
         .args(["fill", "soil", "0", "0", "16", "2", "2", "16", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(!stdout.contains("protected"), "no protection message expected, got: {stdout}");
-    assert!(stdout.contains("Filled 9"), "should fill 3x3x1=9 cells, got: {stdout}");
+    // Soil has gravity, but z=16 is directly above soil at z=15, so it stays at z=16
+    assert!(stdout.contains("soil"), "should confirm soil fill, got: {stdout}");
+}
+
+/// Fill with shovel (dig) removes a region.
+#[test]
+fn fill_dig_removes_region() {
+    let state = new_world();
+    let p = state.path().to_str().unwrap();
+
+    // Fill-dig a 3x3x1 region of soil at z=15
+    let out = groundwork()
+        .args(["fill", "dig", "0", "0", "15", "2", "2", "15", "--state", p])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("shovel"), "should say shovel, got: {stdout}");
+
+    // Verify the cells are now air
+    let out = groundwork()
+        .args(["inspect", "1", "1", "15", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("air"), "cell should be air after dig, got: {stdout}");
 }

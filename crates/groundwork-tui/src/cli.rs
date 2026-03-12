@@ -4,6 +4,8 @@ use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use groundwork_sim::voxel::Material;
 use groundwork_sim::{FocusState, ToolState, Tick};
 
+use crate::app::{self, Tool};
+
 const DEFAULT_STATE: &str = "groundwork.state";
 
 fn state_path(args: &[String]) -> PathBuf {
@@ -20,7 +22,7 @@ fn find_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
 }
 
 /// Parse a coordinate argument as either a single value or a range.
-/// Accepts: "30" → [30], "20..40" → [20, 21, ..., 39] (exclusive end).
+/// Accepts: "30" -> [30], "20..40" -> [20, 21, ..., 39] (exclusive end).
 fn parse_coord_range(s: &str) -> Result<Vec<usize>, String> {
     if let Some((start_s, end_s)) = s.split_once("..") {
         let start: usize = start_s.parse().map_err(|e| format!("bad range start: {e}"))?;
@@ -47,21 +49,6 @@ fn voxel_char(mat: Material, water_level: u8, light_level: u8, nutrient_level: u
         Material::Root => '*',
         Material::Seed if nutrient_level >= 100 => 'S',
         Material::Seed => 's',
-    }
-}
-
-fn voxel_emoji(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> &'static str {
-    match mat {
-        Material::Air if water_level > 0 => "\u{1F4A7}\u{FE0F}", // 💧️ -- with VS16 for consistent width
-        Material::Air if light_level == 0 => "  ",
-        Material::Air => "  ",
-        Material::Water => "💧",
-        Material::Soil if water_level > 50 => "🟤",
-        Material::Soil => "🟫",
-        Material::Stone => "🪨",
-        Material::Root => "🌿",
-        Material::Seed if nutrient_level >= 100 => "🌱",
-        Material::Seed => "🌰",
     }
 }
 
@@ -136,8 +123,6 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 
-    let ascii = has_flag(args, "--ascii");
-
     let max_z = GRID_Z - 1;
     let mut z: usize = find_value(args, "--z")
         .and_then(|v| v.parse().ok())
@@ -159,87 +144,56 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     println!("Z:{z} ({depth_label})  Tick:{tick}  Grid:{GRID_X}x{GRID_Y}x{GRID_Z}");
     println!();
 
-    if ascii {
-        // ASCII mode — original single-char rendering
-        print!("    ");
-        for x in 0..GRID_X {
-            if x % 10 == 0 {
-                print!("{:<10}", x);
-            }
+    print!("    ");
+    for x in 0..GRID_X {
+        if x % 10 == 0 {
+            print!("{:<10}", x);
         }
-        println!();
-
-        for y in 0..GRID_Y {
-            if y % 10 == 0 {
-                print!("{:>3} ", y);
-            } else {
-                print!("    ");
-            }
-
-            let row: String = (0..GRID_X)
-                .map(|x| {
-                    grid.get(x, y, z)
-                        .map(|v| voxel_char(v.material, v.water_level, v.light_level, v.nutrient_level))
-                        .unwrap_or(' ')
-                })
-                .collect();
-            println!("{row}");
-        }
-
-        println!();
-        println!("Legend: . air  (space) dark air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
-    } else {
-        // Emoji mode — each cell is 2 columns wide
-        print!("    ");
-        for x in 0..GRID_X {
-            if x % 10 == 0 {
-                print!("{:<20}", x); // 10 emoji × 2 cols = 20 chars
-            }
-        }
-        println!();
-
-        for y in 0..GRID_Y {
-            if y % 10 == 0 {
-                print!("{:>3} ", y);
-            } else {
-                print!("    ");
-            }
-
-            for x in 0..GRID_X {
-                if let Some(v) = grid.get(x, y, z) {
-                    print!("{}", voxel_emoji(v.material, v.water_level, v.light_level, v.nutrient_level));
-                } else {
-                    print!("  ");
-                }
-            }
-            println!();
-        }
-
-        println!();
-        println!("Legend:    air  \u{1f4a7} water  \u{1f7eb} soil  \u{1f7e4} wet soil  \u{1faa8} stone  \u{1f33f} root  \u{1f330} seed  \u{1f331} growing");
     }
+    println!();
+
+    for y in 0..GRID_Y {
+        if y % 10 == 0 {
+            print!("{:>3} ", y);
+        } else {
+            print!("    ");
+        }
+
+        let row: String = (0..GRID_X)
+            .map(|x| {
+                grid.get(x, y, z)
+                    .map(|v| voxel_char(v.material, v.water_level, v.light_level, v.nutrient_level))
+                    .unwrap_or(' ')
+            })
+            .collect();
+        println!("{row}");
+    }
+
+    println!();
+    println!("Legend: . air  (space) dark  ~ water  # soil  % wet soil  @ stone  * root  s seed  S sprouting");
     Ok(())
 }
 
-fn has_flag(args: &[String], flag: &str) -> bool {
-    args.iter().any(|a| a == flag)
+fn parse_tool(name: &str) -> std::io::Result<Tool> {
+    Tool::from_material_name(name).ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("unknown material: {name}. Valid: air/dig, seed, water, soil, stone"),
+        )
+    })
 }
 
 pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     if args.len() < 4 {
-        eprintln!("Usage: groundwork place <material> <x> <y> <z> [--force] [--state FILE]");
+        eprintln!("Usage: groundwork place <material> <x> <y> <z> [--state FILE]");
         eprintln!("  Coordinates accept ranges: place soil 20..40 30 15");
-        eprintln!("Materials: air, soil, stone, water, root, seed");
+        eprintln!("  Materials: air/dig, seed, water, soil, stone");
+        eprintln!("  Items with gravity (seed, water, soil) fall through air.");
+        eprintln!("  'air' or 'dig' uses the shovel — removes anything.");
         std::process::exit(1);
     }
 
-    let mat_name = &args[0];
-    let mat = Material::from_name(mat_name).ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            format!("unknown material: {mat_name}. Valid: air, soil, stone, water, root, seed"),
-        )
-    })?;
+    let tool = parse_tool(&args[0])?;
 
     let xs = parse_coord_range(&args[1]).map_err(|e| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("x: {e}"))
@@ -251,7 +205,6 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("z: {e}"))
     })?;
 
-    let force = has_flag(&args[4..], "--force");
     let path = state_path(&args[4..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
@@ -262,31 +215,12 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
         for &z in &zs {
             for &y in &ys {
                 for &x in &xs {
-                    if let Some(voxel) = grid.get_mut(x, y, z) {
-                        let existing = voxel.material;
-
-                        // Protect seeds and roots from accidental overwriting
-                        if !force && (existing == Material::Seed || existing == Material::Root) {
-                            eprintln!(
-                                "Error: cannot overwrite {} at ({},{},{}). Use --force to override.",
-                                existing.name(),
-                                x,
-                                y,
-                                z
-                            );
-                            std::process::exit(1);
+                    if VoxelGrid::in_bounds(x, y, z) {
+                        if app::apply_tool(&mut grid, tool, x, y, z) {
+                            placed += 1;
+                        } else {
+                            skipped += 1;
                         }
-
-                        // Warn when overwriting water (but still execute)
-                        if !force && existing == Material::Water {
-                            eprintln!(
-                                "Warning: overwriting water at ({},{},{}). Use --force to skip this warning.",
-                                x, y, z
-                            );
-                        }
-
-                        voxel.set_material(mat);
-                        placed += 1;
                     } else {
                         skipped += 1;
                     }
@@ -296,40 +230,32 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     }
 
     if placed == 0 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "all coordinates out of bounds",
-        ));
+        eprintln!("Nothing placed ({skipped} cells skipped — occupied, protected, or out of bounds)");
+        return Ok(());
     }
 
     groundwork_sim::save::save_world(&world, &path)?;
 
     if placed == 1 && skipped == 0 {
-        println!("Placed {} at ({}, {}, {})", mat.name(), xs[0], ys[0], zs[0]);
+        println!("Used {} at ({}, {}, {})", tool.name(), xs[0], ys[0], zs[0]);
     } else if skipped > 0 {
-        println!("Placed {} × {} ({} out of bounds, skipped)", placed, mat.name(), skipped);
+        println!("Used {} x {} ({} skipped)", tool.name(), placed, skipped);
     } else {
-        println!("Placed {} × {}", placed, mat.name());
+        println!("Used {} x {}", tool.name(), placed);
     }
     Ok(())
 }
 
 pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
     if args.len() < 7 {
-        eprintln!("Usage: groundwork fill <material> <x1> <y1> <z1> <x2> <y2> <z2> [--force] [--state FILE]");
+        eprintln!("Usage: groundwork fill <material> <x1> <y1> <z1> <x2> <y2> <z2> [--state FILE]");
         eprintln!("  Fills a rectangular region from (x1,y1,z1) to (x2,y2,z2) inclusive.");
-        eprintln!("  Seeds and roots are protected; use --force to override.");
-        eprintln!("Materials: air, soil, stone, water, root, seed");
+        eprintln!("  Materials: air/dig, seed, water, soil, stone");
+        eprintln!("  Shovel (air/dig) removes anything. Other tools respect gravity & protection.");
         std::process::exit(1);
     }
 
-    let mat_name = &args[0];
-    let mat = Material::from_name(mat_name).ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            format!("unknown material: {mat_name}. Valid: air, soil, stone, water, root, seed"),
-        )
-    })?;
+    let tool = parse_tool(&args[0])?;
 
     let parse = |i: usize, label: &str| -> std::io::Result<usize> {
         args[i].parse().map_err(|e| {
@@ -351,28 +277,17 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
     let zlo = z1.min(z2);
     let zhi = z1.max(z2);
 
-    let force = has_flag(&args[7..], "--force");
     let path = state_path(&args[7..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
     let mut placed = 0u64;
     let mut skipped = 0u64;
-    let mut protected = 0u64;
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
         for z in zlo..=zhi {
             for y in ylo..=yhi {
                 for x in xlo..=xhi {
-                    if let Some(voxel) = grid.get_mut(x, y, z) {
-                        let existing = voxel.material;
-
-                        // Protect seeds and roots from accidental overwriting
-                        if !force && (existing == Material::Seed || existing == Material::Root) {
-                            protected += 1;
-                            continue;
-                        }
-
-                        voxel.set_material(mat);
+                    if app::apply_tool(&mut grid, tool, x, y, z) {
                         placed += 1;
                     } else {
                         skipped += 1;
@@ -382,31 +297,25 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
         }
     }
 
-    if placed == 0 && protected == 0 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "all coordinates out of bounds",
-        ));
+    if placed == 0 && skipped > 0 {
+        eprintln!("Nothing placed ({skipped} cells skipped)");
+        return Ok(());
     }
 
     groundwork_sim::save::save_world(&world, &path)?;
 
     let mut msg = format!(
-        "Filled {} × {} from ({},{},{}) to ({},{},{})",
-        placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi
+        "Used {} x {} from ({},{},{}) to ({},{},{})",
+        tool.name(), placed, xlo, ylo, zlo, xhi, yhi, zhi
     );
     if skipped > 0 {
-        msg.push_str(&format!(" ({skipped} out of bounds, skipped)"));
-    }
-    if protected > 0 {
-        msg.push_str(&format!(" ({protected} protected cells skipped)"));
+        msg.push_str(&format!(" ({skipped} skipped)"));
     }
     println!("{msg}");
     Ok(())
 }
 
 pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
-    // If first arg looks like a number, parse x y z explicitly; otherwise use focus.
     let has_coords = args.len() >= 3 && args[0].parse::<usize>().is_ok();
 
     let (x, y, z, remaining_args);
@@ -423,7 +332,6 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
         remaining_args = &args[3..];
     } else {
         remaining_args = args;
-        // Will read focus from state below
         x = 0; y = 0; z = 0;
     }
 
@@ -469,7 +377,6 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
         println!();
         println!("  growth: {growth}/{growth_max} ({pct}%)");
 
-        // Check water condition: own water or any neighbor with water_level >= 30
         let mut has_water = voxel.water_level >= 30;
         let mut water_source = String::new();
         if has_water {
@@ -507,7 +414,6 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
             println!("  water: NO — need adjacent water_level >= 30");
         }
 
-        // Check light condition
         let has_light = voxel.light_level >= 30;
         if has_light {
             println!("  light: YES ({}/255)", voxel.light_level);
@@ -515,10 +421,9 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
             println!("  light: NO — need light_level >= 30");
         }
 
-        // Status summary
         if has_water && has_light {
             let remaining = growth_max.saturating_sub(growth as u16);
-            let ticks_left = (remaining + 4) / 5; // ceiling division
+            let ticks_left = (remaining + 4) / 5;
             println!("  status: growing (+5/tick, ~{ticks_left} ticks to root)");
         } else {
             let mut missing = Vec::new();
@@ -560,7 +465,6 @@ pub fn cmd_focus(args: &[String]) -> std::io::Result<()> {
     let has_coords = args.len() >= 3 && args[0].parse::<usize>().is_ok();
 
     if !has_coords {
-        // Print current focus
         let world = groundwork_sim::save::load_world(&path)?;
         let focus = world.resource::<FocusState>();
         let grid = world.resource::<VoxelGrid>();
@@ -620,15 +524,16 @@ pub fn cmd_focus(args: &[String]) -> std::io::Result<()> {
 }
 
 pub fn cmd_tool_start(args: &[String]) -> std::io::Result<()> {
-    if args.is_empty() || Material::from_name(&args[0]).is_none() {
+    if args.is_empty() {
         eprintln!("Usage: groundwork tool-start <material> [--state FILE]");
         eprintln!("  Begins a range operation at the current focus position.");
         eprintln!("  Move focus, then use tool-end to apply.");
-        eprintln!("Materials: air, soil, stone, water, root, seed");
+        eprintln!("  Materials: air/dig, seed, water, soil, stone");
         std::process::exit(1);
     }
 
-    let mat = Material::from_name(&args[0]).unwrap();
+    let tool = parse_tool(&args[0])?;
+    let mat = tool.material();
     let path = state_path(&args[1..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
@@ -647,33 +552,34 @@ pub fn cmd_tool_start(args: &[String]) -> std::io::Result<()> {
     }
 
     groundwork_sim::save::save_world(&world, &path)?;
-    println!("Tool started: {} from ({sx}, {sy}, {sz})", mat.name());
+    println!("Tool started: {} from ({sx}, {sy}, {sz})", tool.name());
     println!("  Move focus with `groundwork focus <x> <y> <z>`, then `groundwork tool-end` to apply.");
     Ok(())
 }
 
 pub fn cmd_tool_end(args: &[String]) -> std::io::Result<()> {
-    let force = has_flag(args, "--force");
     let path = state_path(args);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
     let (mat, sx, sy, sz, ex, ey, ez);
     {
         let focus = world.resource::<FocusState>();
-        let tool = focus.tool.as_ref().ok_or_else(|| {
+        let tool_state = focus.tool.as_ref().ok_or_else(|| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "no tool in progress — use `groundwork tool-start <material>` first",
             )
         })?;
-        mat = tool.material;
-        sx = tool.start_x;
-        sy = tool.start_y;
-        sz = tool.start_z;
+        mat = tool_state.material;
+        sx = tool_state.start_x;
+        sy = tool_state.start_y;
+        sz = tool_state.start_z;
         ex = focus.x;
         ey = focus.y;
         ez = focus.z;
     }
+
+    let tool = Tool::from_material_name(mat.name()).unwrap_or(Tool::Shovel);
 
     let xlo = sx.min(ex);
     let xhi = sx.max(ex);
@@ -684,19 +590,12 @@ pub fn cmd_tool_end(args: &[String]) -> std::io::Result<()> {
 
     let mut placed = 0u64;
     let mut skipped = 0u64;
-    let mut protected = 0u64;
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
         for z in zlo..=zhi {
             for y in ylo..=yhi {
                 for x in xlo..=xhi {
-                    if let Some(voxel) = grid.get_mut(x, y, z) {
-                        let existing = voxel.material;
-                        if !force && (existing == Material::Seed || existing == Material::Root) {
-                            protected += 1;
-                            continue;
-                        }
-                        voxel.set_material(mat);
+                    if app::apply_tool(&mut grid, tool, x, y, z) {
                         placed += 1;
                     } else {
                         skipped += 1;
@@ -715,14 +614,11 @@ pub fn cmd_tool_end(args: &[String]) -> std::io::Result<()> {
     groundwork_sim::save::save_world(&world, &path)?;
 
     let mut msg = format!(
-        "Tool applied: {} × {} from ({},{},{}) to ({},{},{})",
-        placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi
+        "Tool applied: {} x {} from ({},{},{}) to ({},{},{})",
+        tool.name(), placed, xlo, ylo, zlo, xhi, yhi, zhi
     );
     if skipped > 0 {
-        msg.push_str(&format!(" ({skipped} out of bounds)"));
-    }
-    if protected > 0 {
-        msg.push_str(&format!(" ({protected} protected cells skipped)"));
+        msg.push_str(&format!(" ({skipped} skipped)"));
     }
     println!("{msg}");
     Ok(())
@@ -736,23 +632,31 @@ pub fn print_help() {
     println!("Commands:");
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
-    println!("  view [--z Z] [--ascii]        Print slice of the grid (emoji default, --ascii fallback)");
-    println!("  place <mat> <x> <y> <z>       Place a voxel (air/soil/stone/water/root/seed)");
+    println!("  view [--z Z]                  Print a Z-slice of the grid");
+    println!("  place <mat> <x> <y> <z>       Use a tool at coordinates");
     println!("    Coordinates accept ranges:  place soil 20..40 30 15");
-    println!("    Rejects overwriting seeds/roots (use --force to override)");
+    println!("    'air' or 'dig' uses the shovel to remove anything.");
+    println!("    Seed/water/soil fall through air (gravity).");
+    println!("    Seeds die on stone.");
     println!("  fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>");
-    println!("                                Fill a rectangular region (inclusive)");
-    println!("    Skips seeds/roots by default (use --force to override)");
+    println!("                                Fill a rectangular region");
     println!("  inspect [<x> <y> <z>]         Show voxel details (uses focus if no coords)");
     println!("  status                        Show world summary");
     println!();
     println!("Focus & Tool:");
     println!("  focus [<x> <y> <z>]           Get/set the focus cursor position");
     println!("  tool-start <material>         Begin a range operation at current focus");
-    println!("  tool-end [--force]            Apply the tool from start to current focus");
+    println!("  tool-end                      Apply the tool from start to current focus");
     println!();
     println!("  tui                           Launch interactive terminal UI");
     println!("  help                          Show this help");
+    println!();
+    println!("Materials: air/dig, seed, water, soil, stone");
+    println!("  air/dig = shovel (removes anything)");
+    println!("  seed    = seed bag (falls, dies on stone)");
+    println!("  water   = watering can (falls, no-op on water)");
+    println!("  soil    = soil (falls through air)");
+    println!("  stone   = stone (placed directly)");
     println!();
     println!("Options:");
     println!("  --state FILE                  State file (default: groundwork.state)");

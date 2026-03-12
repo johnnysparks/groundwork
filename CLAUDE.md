@@ -62,23 +62,32 @@ The CLI lets agents play the game without a terminal. State persists to a binary
 ```bash
 groundwork new                            # Create a fresh world → groundwork.state
 groundwork tick [N]                       # Advance N ticks (default 1)
-groundwork view [--z Z]                   # Print ASCII slice (default Z=16, above ground)
-groundwork place <material> <x> <y> <z>   # Place a voxel (air/soil/stone/water/root/seed)
+groundwork view [--z Z]                   # Print ASCII slice (default Z=surface+1)
+groundwork place <tool> <x> <y> <z>      # Use a gardening tool at coordinates
                                           # Coords accept ranges: place soil 20..40 30 15
-groundwork fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region (inclusive)
-groundwork inspect [<x> <y> <z>]          # Show one voxel's full state (uses focus if no coords)
+groundwork fill <tool> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region
+groundwork inspect [<x> <y> <z>]          # Show voxel details (uses focus if no coords)
 groundwork status                         # Tick count + material summary
-groundwork focus [<x> <y> <z>]            # Get/set focus cursor position (persisted in state)
-groundwork tool-start <material>          # Begin range operation at current focus
-groundwork tool-end [--force]             # Apply tool from start to current focus
+groundwork focus [<x> <y> <z>]            # Get/set focus cursor position (persisted)
+groundwork tool-start <tool>              # Begin range operation at current focus
+groundwork tool-end                       # Apply tool from start to current focus
 groundwork tui                            # Launch interactive TUI (default)
 groundwork help                           # Show help
 
 # All commands accept --state FILE (default: groundwork.state)
 ```
 
+### Gardening tools
+- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone)
+- `seed` = **seed bag** — plants a seed; falls through air; dies on stone
+- `water` = **watering can** — pours water; falls through air; no-op on water
+- `soil` = **soil** — places soil; falls through air
+- `stone` = **stone** — places stone directly (no gravity)
+
+Non-shovel tools can't overwrite occupied cells. Use the shovel to clear first.
+
 ### ASCII legend
-`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed
+`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting
 
 ### State file format
 Binary, ~422KB. Version 2. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 108,000 voxels × 4 bytes each + focus state (14 bytes: position + tool). Backward-compatible: loads version 1 files (no focus block) with default focus.
@@ -99,9 +108,9 @@ crates/
     src/
       main.rs         Entry point, subcommand dispatch
       cli.rs          Non-interactive CLI commands (new/tick/view/place/fill/inspect/status/focus/tool-start/tool-end)
-      app.rs          App state: World + Schedule, viewport-centered camera, tool mode, material palette
-      render.rs       Viewport-centered emoji rendering of Z-slice around focus, inspect/status panels
-      input.rs        Keyboard controls (WASD pan, J/K depth, Tab material, Enter tool, I/T panels)
+      app.rs          App state: World + Schedule, viewport-centered camera, Tool enum, apply_tool() with gravity
+      render.rs       ASCII rendering of Z-slice around focus; side panel (inspect/status/controls/legend)
+      input.rs        Keyboard controls (WASD pan, J/K depth, Tab tool, Enter use, I/T/H panels)
 
   (future) groundwork-web/    Three.js + WASM — browser renderer (orthogonal workstream)
 ```

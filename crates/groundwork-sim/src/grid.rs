@@ -83,6 +83,25 @@ impl VoxelGrid {
         }
     }
 
+    /// Find the lowest Air cell at (x, y) starting from z, dropping through
+    /// Air until resting above something solid (or the grid floor).
+    /// Returns z unchanged if (x, y, z) is already solid or at the bottom.
+    pub fn find_landing_z(&self, x: usize, y: usize, z: usize) -> usize {
+        let mut z = z;
+        while z > 0 {
+            if let Some(below) = self.get(x, y, z - 1) {
+                if below.material == Material::Air {
+                    z -= 1;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        z
+    }
+
     /// Raw access to the backing storage (useful for double-buffer swaps).
     pub fn cells(&self) -> &[Voxel] {
         &self.cells

@@ -41,16 +41,16 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
                 app.tick_rate_ms = (app.tick_rate_ms + 50).min(2000);
             }
 
-            // Material selection.
-            KeyCode::Tab => app.cycle_material(true),
-            KeyCode::BackTab => app.cycle_material(false),
+            // Tool selection.
+            KeyCode::Tab => app.cycle_tool(true),
+            KeyCode::BackTab => app.cycle_tool(false),
 
             // Tool start/end (Enter).
             KeyCode::Enter => {
                 if app.tool_active {
                     app.tool_end();
                 } else {
-                    app.tool_start();
+                    app.tool_start_op();
                 }
             }
 

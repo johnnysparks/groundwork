@@ -10,40 +10,43 @@ use groundwork_sim::voxel::Material;
 
 use crate::app::App;
 
-/// Map a voxel to an emoji string + color for TUI rendering.
+/// Map a voxel to a 2-char ASCII string + foreground color.
+/// Colors are dimmed by light level to show underground darkness.
 fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (&'static str, Color) {
     let dim = |c: u8| -> u8 {
-        ((c as u16 * light_level as u16) / 255) as u8
+        ((c as u16 * light_level as u16) / 255).max(if light_level > 0 { 20 } else { 0 }) as u8
     };
 
     match mat {
         Material::Air => {
             if water_level > 0 {
-                ("💧", Color::Rgb(dim(80), dim(140), dim(255)))
-            } else {
+                ("~ ", Color::Rgb(dim(80), dim(140), dim(255)))
+            } else if light_level == 0 {
                 ("  ", Color::Reset)
+            } else {
+                (". ", Color::Rgb(dim(60), dim(60), dim(60)))
             }
         }
         Material::Water => {
             let intensity = 100 + (water_level as u16 * 155 / 255) as u8;
-            ("💧", Color::Rgb(dim(40), dim(80), dim(intensity)))
+            ("~~", Color::Rgb(dim(40), dim(80), dim(intensity)))
         }
         Material::Soil => {
             if water_level > 50 {
-                ("🟤", Color::Rgb(dim(80), dim(70), dim(100)))
+                ("%%", Color::Rgb(dim(80), dim(70), dim(100)))
             } else if water_level > 0 {
-                ("🟫", Color::Rgb(dim(110), dim(80), dim(50)))
+                ("##", Color::Rgb(dim(110), dim(80), dim(50)))
             } else {
-                ("🟫", Color::Rgb(dim(139), dim(90), dim(43)))
+                ("##", Color::Rgb(dim(139), dim(90), dim(43)))
             }
         }
-        Material::Stone => ("🪨", Color::Rgb(dim(120), dim(120), dim(120))),
-        Material::Root => ("🌿", Color::Rgb(dim(80), dim(180), dim(60))),
+        Material::Stone => ("@@", Color::Rgb(dim(120), dim(120), dim(120))),
+        Material::Root => ("**", Color::Rgb(dim(80), dim(180), dim(60))),
         Material::Seed => {
             if nutrient_level >= 100 {
-                ("🌱", Color::Rgb(dim(140), dim(200), dim(60)))
+                ("<>", Color::Rgb(dim(140), dim(200), dim(60)))
             } else {
-                ("🌰", Color::Rgb(dim(200), dim(180), dim(60)))
+                ("()", Color::Rgb(dim(200), dim(180), dim(60)))
             }
         }
     }
@@ -78,7 +81,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     let grid = world.resource::<VoxelGrid>();
     let z = app.focus_z;
 
-    // --- Grid ---
+    // --- Grid (2 terminal columns per voxel) ---
     let vp_rows = grid_area.height as usize;
     let vp_cols = grid_area.width as usize / 2;
 
@@ -100,7 +103,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 } else {
                     Style::default().fg(Color::DarkGray)
                 };
-                spans.push(Span::styled("··", style));
+                spans.push(Span::styled(". ", style));
                 continue;
             }
 
@@ -125,7 +128,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 } else {
                     Style::default().fg(Color::DarkGray)
                 };
-                spans.push(Span::styled("··", style));
+                spans.push(Span::styled(". ", style));
             }
         }
         lines.push(Line::from(spans));
@@ -181,7 +184,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             ]));
             panel_lines.push(Line::from(""));
             panel_lines.push(Line::from(vec![
-                Span::styled(" 💧 ", label),
+                Span::styled(" water ", label),
                 Span::styled(
                     format!("{} ", bar(voxel.water_level, 10)),
                     Style::default().fg(Color::Rgb(80, 140, 255)),
@@ -189,7 +192,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 Span::styled(format!("{:>3}", voxel.water_level), value_style),
             ]));
             panel_lines.push(Line::from(vec![
-                Span::styled(" ☀  ", label),
+                Span::styled(" light ", label),
                 Span::styled(
                     format!("{} ", bar(voxel.light_level, 10)),
                     Style::default().fg(Color::Yellow),
@@ -197,7 +200,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 Span::styled(format!("{:>3}", voxel.light_level), value_style),
             ]));
             panel_lines.push(Line::from(vec![
-                Span::styled(" 🌱 ", label),
+                Span::styled(" nutr  ", label),
                 Span::styled(
                     format!("{} ", bar(voxel.nutrient_level, 10)),
                     Style::default().fg(Color::Green),
@@ -276,7 +279,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     }
     panel_lines.push(Line::from(""));
 
-    // Sim info (was in bottom bar)
+    // Sim info
     let mode = if app.auto_tick {
         format!("AUTO {}ms", app.tick_rate_ms)
     } else {
@@ -297,7 +300,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 Span::styled(" tool ", label),
                 Span::styled(
                     format!("{} ({},{},{}) \u{2192} ({},{},{})",
-                        app.selected_material().name(), sx, sy, sz,
+                        app.selected_tool().name(), sx, sy, sz,
                         app.focus_x, app.focus_y, app.focus_z),
                     Style::default().fg(Color::Magenta),
                 ),
@@ -320,19 +323,18 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             }
         }
 
-        let mat_entries: [(&str, usize); 6] = [
-            ("\u{1f4a7}", Material::Water as usize),
-            ("\u{1f7eb}", Material::Soil as usize),
-            ("\u{1faa8}", Material::Stone as usize),
-            ("\u{1f33f}", Material::Root as usize),
-            ("\u{1f330}", Material::Seed as usize),
-            ("  ", Material::Air as usize),
+        let mat_entries: [(&str, &str, usize); 6] = [
+            ("~~", "water", Material::Water as usize),
+            ("##", "soil", Material::Soil as usize),
+            ("@@", "stone", Material::Stone as usize),
+            ("**", "root", Material::Root as usize),
+            ("()", "seed", Material::Seed as usize),
+            (". ", "air", Material::Air as usize),
         ];
 
-        for (icon, idx) in mat_entries {
+        for (icon, name, idx) in mat_entries {
             let count = counts[idx];
             if count > 0 {
-                let name = Material::from_u8(idx as u8).map_or("?", |m| m.name());
                 panel_lines.push(Line::from(vec![
                     Span::styled(format!(" {icon} "), label),
                     Span::styled(format!("{:<6} {:>6}", name, count), value_style),
@@ -341,18 +343,18 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         }
         if wet_soil > 0 {
             panel_lines.push(Line::from(vec![
-                Span::styled(" \u{1f7e4} ", label),
+                Span::styled(" %% ", label),
                 Span::styled(format!("{:<6} {:>6}", "wet", wet_soil), value_style),
             ]));
         }
     }
     panel_lines.push(Line::from(""));
 
-    // Brush
+    // Tool (was Brush)
     panel_lines.push(Line::from(vec![
-        Span::styled(" BRUSH ", Style::default().fg(Color::Black).bg(Color::White)),
+        Span::styled(" TOOL ", Style::default().fg(Color::Black).bg(Color::White)),
         Span::raw(" "),
-        Span::styled(app.selected_material().name().to_string(), Style::default().fg(Color::Cyan)),
+        Span::styled(app.selected_tool().name().to_string(), Style::default().fg(Color::Cyan)),
     ]));
     panel_lines.push(Line::from(""));
 
@@ -364,8 +366,8 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         let controls: [(&str, &str); 11] = [
             ("WASD", "pan"),
             ("J/K", "depth"),
-            ("Enter", "place/fill"),
-            ("Tab", "brush"),
+            ("Enter", "use tool"),
+            ("Tab", "next tool"),
             ("I", "inspect"),
             ("T", "status"),
             ("H", "controls"),
@@ -381,6 +383,24 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 Span::styled(desc.to_string(), label),
             ]));
         }
+    }
+
+    // Legend
+    panel_lines.push(Line::from(""));
+    panel_lines.push(badge("LEGEND"));
+    let legend: [(&str, &str, Color); 6] = [
+        (". ", "air", Color::Gray),
+        ("~~", "water", Color::Rgb(80, 140, 255)),
+        ("##", "soil", Color::Rgb(139, 90, 43)),
+        ("@@", "stone", Color::Rgb(120, 120, 120)),
+        ("**", "root", Color::Rgb(80, 180, 60)),
+        ("()", "seed", Color::Rgb(200, 180, 60)),
+    ];
+    for (ch, name, color) in legend {
+        panel_lines.push(Line::from(vec![
+            Span::styled(format!(" {ch} "), Style::default().fg(color)),
+            Span::styled(name.to_string(), label),
+        ]));
     }
 
     let panel_block = Block::default()

@@ -3,22 +3,134 @@ use std::time::Duration;
 use bevy_ecs::prelude::*;
 use ratatui::DefaultTerminal;
 
-use groundwork_sim::grid::{GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
+use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use groundwork_sim::voxel::Material;
 use groundwork_sim::Tick;
 
 use crate::input;
 use crate::render;
 
-/// Which material the player has selected for placement.
-const MATERIAL_PALETTE: [Material; 6] = [
-    Material::Seed,
-    Material::Soil,
-    Material::Water,
-    Material::Stone,
-    Material::Root,
-    Material::Air,
+/// Gardening tools — each has specific placement behavior.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Tool {
+    Shovel,
+    SeedBag,
+    WateringCan,
+    Soil,
+    Stone,
+}
+
+const TOOL_PALETTE: [Tool; 5] = [
+    Tool::SeedBag,
+    Tool::WateringCan,
+    Tool::Soil,
+    Tool::Stone,
+    Tool::Shovel,
 ];
+
+impl Tool {
+    pub fn name(self) -> &'static str {
+        match self {
+            Tool::Shovel => "shovel",
+            Tool::SeedBag => "seed bag",
+            Tool::WateringCan => "watering can",
+            Tool::Soil => "soil",
+            Tool::Stone => "stone",
+        }
+    }
+
+    pub fn material(self) -> Material {
+        match self {
+            Tool::Shovel => Material::Air,
+            Tool::SeedBag => Material::Seed,
+            Tool::WateringCan => Material::Water,
+            Tool::Soil => Material::Soil,
+            Tool::Stone => Material::Stone,
+        }
+    }
+
+    /// Map a material name from CLI to the corresponding tool.
+    pub fn from_material_name(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "air" | "shovel" | "dig" => Some(Tool::Shovel),
+            "seed" | "seeds" => Some(Tool::SeedBag),
+            "water" => Some(Tool::WateringCan),
+            "soil" => Some(Tool::Soil),
+            "stone" => Some(Tool::Stone),
+            _ => None,
+        }
+    }
+}
+
+/// Apply a tool at a single cell. Handles gravity and tool-specific rules.
+/// Returns true if the tool had an effect.
+pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize) -> bool {
+    // Shovel: dig out whatever is here, no protection
+    if tool == Tool::Shovel {
+        if let Some(voxel) = grid.get_mut(x, y, z) {
+            if voxel.material == Material::Air {
+                return false; // nothing to dig
+            }
+            voxel.set_material(Material::Air);
+            return true;
+        }
+        return false;
+    }
+
+    // Other tools: check if target cell is Air, then apply gravity
+    if let Some(voxel) = grid.get(x, y, z) {
+        if voxel.material != Material::Air {
+            return false; // cell is occupied
+        }
+    } else {
+        return false; // out of bounds
+    }
+
+    // Apply gravity: drop through Air to find landing position
+    let landing_z = match tool {
+        Tool::SeedBag | Tool::WateringCan | Tool::Soil => grid.find_landing_z(x, y, z),
+        _ => z,
+    };
+
+    // Check landing cell is still Air
+    if let Some(landing) = grid.get(x, y, landing_z) {
+        if landing.material != Material::Air {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    let mat = tool.material();
+
+    // Seed bag: seeds die on stone (can't root into stone)
+    if tool == Tool::SeedBag && landing_z > 0 {
+        if let Some(below) = grid.get(x, y, landing_z - 1) {
+            if below.material == Material::Stone {
+                return false;
+            }
+        }
+    }
+
+    // Watering can: no-op if landing on existing water
+    if tool == Tool::WateringCan {
+        if landing_z > 0 {
+            if let Some(below) = grid.get(x, y, landing_z - 1) {
+                if below.material == Material::Water {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // Place the material
+    if let Some(voxel) = grid.get_mut(x, y, landing_z) {
+        voxel.set_material(mat);
+        true
+    } else {
+        false
+    }
+}
 
 pub struct App {
     pub world: World,
@@ -32,7 +144,7 @@ pub struct App {
     pub focus_y: usize,
     pub focus_z: usize,
     // Tool mode
-    pub selected_material: usize, // index into MATERIAL_PALETTE
+    pub selected_tool: usize, // index into TOOL_PALETTE
     pub tool_active: bool,
     pub tool_start: Option<(usize, usize, usize)>,
     // UI panels (toggleable sections in side panel)
@@ -52,7 +164,7 @@ impl App {
             focus_x: 30,
             focus_y: 30,
             focus_z: GROUND_LEVEL + 1,
-            selected_material: 0,
+            selected_tool: 0,
             tool_active: false,
             tool_start: None,
             show_inspect: true,
@@ -83,15 +195,15 @@ impl App {
         groundwork_sim::tick(&mut self.world, &mut self.schedule);
     }
 
-    pub fn selected_material(&self) -> Material {
-        MATERIAL_PALETTE[self.selected_material]
+    pub fn selected_tool(&self) -> Tool {
+        TOOL_PALETTE[self.selected_tool]
     }
 
-    pub fn cycle_material(&mut self, forward: bool) {
+    pub fn cycle_tool(&mut self, forward: bool) {
         if forward {
-            self.selected_material = (self.selected_material + 1) % MATERIAL_PALETTE.len();
+            self.selected_tool = (self.selected_tool + 1) % TOOL_PALETTE.len();
         } else {
-            self.selected_material = (self.selected_material + MATERIAL_PALETTE.len() - 1) % MATERIAL_PALETTE.len();
+            self.selected_tool = (self.selected_tool + TOOL_PALETTE.len() - 1) % TOOL_PALETTE.len();
         }
     }
 
@@ -124,15 +236,15 @@ impl App {
     }
 
     /// Begin tool operation at current focus.
-    pub fn tool_start(&mut self) {
+    pub fn tool_start_op(&mut self) {
         self.tool_active = true;
         self.tool_start = Some((self.focus_x, self.focus_y, self.focus_z));
     }
 
-    /// End tool operation: fill from start to current focus with selected material.
+    /// End tool operation: apply tool from start to current focus.
     pub fn tool_end(&mut self) {
         if let Some((sx, sy, sz)) = self.tool_start.take() {
-            let mat = self.selected_material();
+            let tool = self.selected_tool();
             let xlo = sx.min(self.focus_x);
             let xhi = sx.max(self.focus_x);
             let ylo = sy.min(self.focus_y);
@@ -140,19 +252,11 @@ impl App {
             let zlo = sz.min(self.focus_z);
             let zhi = sz.max(self.focus_z);
 
-            use groundwork_sim::grid::VoxelGrid;
             let mut grid = self.world.resource_mut::<VoxelGrid>();
             for z in zlo..=zhi {
                 for y in ylo..=yhi {
                     for x in xlo..=xhi {
-                        if let Some(voxel) = grid.get_mut(x, y, z) {
-                            let existing = voxel.material;
-                            // Protect seeds and roots
-                            if existing == Material::Seed || existing == Material::Root {
-                                continue;
-                            }
-                            voxel.set_material(mat);
-                        }
+                        apply_tool(&mut grid, tool, x, y, z);
                     }
                 }
             }
