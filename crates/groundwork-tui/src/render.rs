@@ -2,7 +2,7 @@ use bevy_ecs::world::World;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
 use groundwork_sim::grid::{VoxelGrid, GROUND_LEVEL};
@@ -47,6 +47,12 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: 
             }
         }
     }
+}
+
+fn bar(value: u8, width: usize) -> String {
+    let filled = (value as usize * width) / 255;
+    let empty = width - filled;
+    format!("{}{}", "\u{2588}".repeat(filled), "\u{2591}".repeat(empty))
 }
 
 fn in_tool_range(x: usize, y: usize, z: usize, app: &App) -> bool {
@@ -143,12 +149,18 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     // Side panel (inspect + status)
     if let Some(side) = side_area {
         let mut panel_lines: Vec<Line> = Vec::new();
+        let label = Style::default().fg(Color::DarkGray);
+        let value_style = Style::default().fg(Color::White);
+        let badge = |text: &str| -> Line {
+            Line::from(vec![Span::styled(
+                format!(" {text} "),
+                Style::default().fg(Color::Black).bg(Color::White),
+            )])
+        };
 
         if app.show_inspect {
-            panel_lines.push(Line::from(Span::styled(
-                "-- Inspect --",
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-            )));
+            panel_lines.push(badge("INSPECT"));
+            panel_lines.push(Line::from(""));
 
             if let Some(voxel) = grid.get(app.focus_x, app.focus_y, z) {
                 let depth_label = if z > GROUND_LEVEL {
@@ -158,19 +170,69 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 } else {
                     format!("below -{}", GROUND_LEVEL - z)
                 };
-                panel_lines.push(Line::from(format!(
-                    "({}, {}, {}) [{}]",
-                    app.focus_x, app.focus_y, z, depth_label
-                )));
-                panel_lines.push(Line::from(format!("material: {}", voxel.material.name())));
-                panel_lines.push(Line::from(format!("water: {}/255", voxel.water_level)));
-                panel_lines.push(Line::from(format!("light: {}/255", voxel.light_level)));
-                panel_lines.push(Line::from(format!("nutrient: {}/255", voxel.nutrient_level)));
 
+                let mat_color = match voxel.material {
+                    Material::Air => Color::Gray,
+                    Material::Soil => Color::Rgb(139, 90, 43),
+                    Material::Stone => Color::Rgb(120, 120, 120),
+                    Material::Water => Color::Rgb(80, 140, 255),
+                    Material::Root => Color::Rgb(80, 180, 60),
+                    Material::Seed => Color::Rgb(200, 180, 60),
+                };
+
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" pos  ", label),
+                    Span::styled(
+                        format!("({}, {}, {}) {}", app.focus_x, app.focus_y, z, depth_label),
+                        value_style,
+                    ),
+                ]));
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" mat  ", label),
+                    Span::styled(voxel.material.name().to_string(), Style::default().fg(mat_color)),
+                ]));
+                panel_lines.push(Line::from(""));
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" 💧 ", label),
+                    Span::styled(
+                        format!("{} ", bar(voxel.water_level, 10)),
+                        Style::default().fg(Color::Rgb(80, 140, 255)),
+                    ),
+                    Span::styled(format!("{:>3}", voxel.water_level), value_style),
+                ]));
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" ☀  ", label),
+                    Span::styled(
+                        format!("{} ", bar(voxel.light_level, 10)),
+                        Style::default().fg(Color::Yellow),
+                    ),
+                    Span::styled(format!("{:>3}", voxel.light_level), value_style),
+                ]));
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" 🌱 ", label),
+                    Span::styled(
+                        format!("{} ", bar(voxel.nutrient_level, 10)),
+                        Style::default().fg(Color::Green),
+                    ),
+                    Span::styled(format!("{:>3}", voxel.nutrient_level), value_style),
+                ]));
+
+                // Seed diagnostics
                 if voxel.material == Material::Seed {
+                    panel_lines.push(Line::from(""));
+                    panel_lines.push(Line::from(vec![Span::styled(
+                        " SEED ",
+                        Style::default().fg(Color::Black).bg(Color::Rgb(200, 180, 60)),
+                    )]));
+
                     let growth = voxel.nutrient_level;
-                    let pct = (growth as u16 * 100) / 200;
-                    panel_lines.push(Line::from(format!("growth: {}% ({}/200)", pct, growth)));
+                    let growth_max = 200u16;
+                    let pct = (growth as u16 * 100) / growth_max;
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" growth ", label),
+                        Span::styled(format!("{growth}/200 ({pct}%)"), value_style),
+                    ]));
+
                     let has_water = voxel.water_level >= 30 || {
                         let dirs: [(isize, isize, isize); 6] = [
                             (-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)
@@ -185,36 +247,55 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                         })
                     };
                     let has_light = voxel.light_level >= 30;
-                    if has_water && has_light {
-                        panel_lines.push(Line::from(Span::styled(
-                            "status: growing",
-                            Style::default().fg(Color::Green),
-                        )));
+
+                    let water_ind = if has_water {
+                        Span::styled(" YES", Style::default().fg(Color::Rgb(80, 140, 255)))
                     } else {
-                        let mut missing = Vec::new();
-                        if !has_water { missing.push("water"); }
-                        if !has_light { missing.push("light"); }
-                        panel_lines.push(Line::from(Span::styled(
-                            format!("dormant (need {})", missing.join(", ")),
-                            Style::default().fg(Color::Red),
-                        )));
+                        Span::styled(" NO", Style::default().fg(Color::Red))
+                    };
+                    panel_lines.push(Line::from(vec![Span::styled(" water?", label), water_ind]));
+
+                    let light_ind = if has_light {
+                        Span::styled(" YES", Style::default().fg(Color::Yellow))
+                    } else {
+                        Span::styled(" NO", Style::default().fg(Color::Red))
+                    };
+                    panel_lines.push(Line::from(vec![Span::styled(" light?", label), light_ind]));
+
+                    if has_water && has_light {
+                        let remaining = growth_max.saturating_sub(growth as u16);
+                        let ticks_left = (remaining + 4) / 5;
+                        panel_lines.push(Line::from(vec![
+                            Span::styled(" status ", label),
+                            Span::styled(format!("~{ticks_left} ticks"), Style::default().fg(Color::Green)),
+                        ]));
+                    } else {
+                        panel_lines.push(Line::from(vec![
+                            Span::styled(" status ", label),
+                            Span::styled("dormant", Style::default().fg(Color::Red)),
+                        ]));
                     }
                 }
             } else {
-                panel_lines.push(Line::from(format!(
-                    "({}, {}, {}) — out of bounds",
-                    app.focus_x, app.focus_y, z
-                )));
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" pos  ", label),
+                    Span::styled(
+                        format!("({}, {}, {}) out of bounds", app.focus_x, app.focus_y, z),
+                        Style::default().fg(Color::Red),
+                    ),
+                ]));
             }
             panel_lines.push(Line::from(""));
         }
 
         if app.show_status {
-            panel_lines.push(Line::from(Span::styled(
-                "-- Status --",
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-            )));
-            panel_lines.push(Line::from(format!("Tick: {}", app.tick_count())));
+            panel_lines.push(badge("STATUS"));
+            panel_lines.push(Line::from(""));
+            panel_lines.push(Line::from(vec![
+                Span::styled(" tick ", label),
+                Span::styled(format!("{}", app.tick_count()), value_style),
+            ]));
+            panel_lines.push(Line::from(""));
 
             let mut counts = [0u64; 6];
             let mut wet_soil = 0u64;
@@ -224,14 +305,72 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                     wet_soil += 1;
                 }
             }
-            let names = ["air", "soil", "stone", "water", "root", "seed"];
-            for i in 0..6 {
-                panel_lines.push(Line::from(format!("  {}: {}", names[i], counts[i])));
+
+            let mat_entries: [(&str, usize); 6] = [
+                ("💧", Material::Water as usize),
+                ("🟫", Material::Soil as usize),
+                ("🪨", Material::Stone as usize),
+                ("🌿", Material::Root as usize),
+                ("🌰", Material::Seed as usize),
+                ("  ", Material::Air as usize),
+            ];
+
+            for (icon, idx) in mat_entries {
+                let count = counts[idx];
+                if count > 0 {
+                    let name = Material::from_u8(idx as u8).map_or("?", |m| m.name());
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(format!(" {icon} "), label),
+                        Span::styled(format!("{:<6} {:>6}", name, count), value_style),
+                    ]));
+                }
             }
-            panel_lines.push(Line::from(format!("  wet soil: {}", wet_soil)));
+            if wet_soil > 0 {
+                panel_lines.push(Line::from(vec![
+                    Span::styled(" 🟤 ", label),
+                    Span::styled(format!("{:<6} {:>6}", "wet", wet_soil), value_style),
+                ]));
+            }
+            panel_lines.push(Line::from(""));
         }
 
-        let panel = Paragraph::new(panel_lines);
+        // Brush
+        panel_lines.push(Line::from(vec![
+            Span::styled(" BRUSH ", Style::default().fg(Color::Black).bg(Color::White)),
+            Span::raw(" "),
+            Span::styled(app.selected_material().name().to_string(), Style::default().fg(Color::Cyan)),
+        ]));
+        panel_lines.push(Line::from(""));
+
+        // Controls
+        panel_lines.push(badge("CONTROLS"));
+        panel_lines.push(Line::from(""));
+
+        let controls: [(&str, &str); 10] = [
+            ("WASD", "pan"),
+            ("J/K", "depth"),
+            ("Enter", "place/fill"),
+            ("Tab", "brush"),
+            ("I", "inspect"),
+            ("T", "status"),
+            ("Space", "step"),
+            ("P", "auto-tick"),
+            ("+/-", "speed"),
+            ("Q", "quit"),
+        ];
+
+        for (key, desc) in controls {
+            panel_lines.push(Line::from(vec![
+                Span::styled(format!(" {key:<8}"), Style::default().fg(Color::Cyan)),
+                Span::styled(desc.to_string(), label),
+            ]));
+        }
+
+        let panel_block = Block::default()
+            .borders(Borders::LEFT)
+            .border_style(Style::default().fg(Color::DarkGray));
+
+        let panel = Paragraph::new(panel_lines).block(panel_block);
         frame.render_widget(panel, side);
     }
 
