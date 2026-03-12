@@ -25,7 +25,9 @@ struct RayHit {
     face: u8,
     /// Depth along the ray (for sorting / shading).
     t: f64,
-    /// World Z of the hit voxel (for lighting estimation).
+    /// World coordinates of the hit voxel.
+    world_x: usize,
+    world_y: usize,
     world_z: usize,
     /// Water level at hit voxel.
     water_level: u8,
@@ -102,6 +104,8 @@ fn raycast(grid: &VoxelGrid, origin: Vec3, dir: Vec3) -> Option<RayHit> {
                         material: voxel.material,
                         face: last_axis,
                         t,
+                        world_x: vx as usize,
+                        world_y: vy as usize,
                         world_z: vz as usize,
                         water_level: voxel.water_level,
                     });
@@ -189,6 +193,24 @@ fn material_color(mat: Material, face: u8, world_z: usize, water_level: u8) -> C
     }
 }
 
+/// Check if a world voxel coordinate is within the active tool range.
+fn in_tool_range_3d(x: usize, y: usize, z: usize, app: &App, cam: &Camera) -> bool {
+    if !app.tool_active {
+        return false;
+    }
+    if let Some((sx, sy, sz)) = app.tool_start {
+        // In 3D mode, the "end" of the range is the camera focus (snapped to grid)
+        let ex = (cam.focus.x as usize).min(GRID_X - 1);
+        let ey = (cam.focus.y as usize).min(GRID_Y - 1);
+        let ez = (cam.focus.z as usize).min(GRID_Z - 1);
+        x >= sx.min(ex) && x <= sx.max(ex)
+            && y >= sy.min(ey) && y <= sy.max(ey)
+            && z >= sz.min(ez) && z <= sz.max(ez)
+    } else {
+        false
+    }
+}
+
 /// Render the 3D projected view into the frame.
 pub fn draw_3d(frame: &mut Frame, app: &App) {
     let area = frame.area();
@@ -205,6 +227,15 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
     let half_w = cols as f64 / 2.0;
     let half_h = rows as f64 / 2.0;
 
+    // Focus voxel coordinates (camera focus snapped to grid)
+    let focus_vx = cam_focus_x(camera);
+    let focus_vy = cam_focus_y(camera);
+    let focus_vz = cam_focus_z(camera);
+
+    // Screen center for crosshair overlay
+    let center_col = cols / 2;
+    let center_row = rows / 2;
+
     let mut lines: Vec<Line> = Vec::with_capacity(rows);
 
     for row in 0..rows {
@@ -215,7 +246,6 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
             let row_offset = row as f64 - half_h + 0.5;
 
             // Cast 4 sub-rays (2×2 within the cell) for shape-aware glyph selection.
-            // Offsets: ±0.25 in col/row space.
             let sub_offsets: [(f64, f64); 4] = [
                 (-0.25, -0.25), // top-left
                 (0.25, -0.25),  // top-right
@@ -230,7 +260,6 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
                 let (origin, dir) = camera.ray_for_cell(col_offset + dc, row_offset + dr);
                 if let Some(hit) = raycast(grid, origin, dir) {
                     coverage[i] = 1.0;
-                    // Keep the closest (shallowest) hit for material/color
                     if best_hit.is_none() || hit.t < best_hit.unwrap().t {
                         best_hit = Some(hit);
                     }
@@ -238,7 +267,6 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
             }
 
             if let Some(hit) = best_hit {
-                // Material-specific glyph override for water
                 let ch = if hit.material == Material::Water && coverage == [1.0, 1.0, 1.0, 1.0] {
                     '~'
                 } else {
@@ -246,19 +274,55 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
                 };
 
                 let fg = material_color(hit.material, hit.face, hit.world_z, hit.water_level);
-                let bg = Color::Reset;
 
-                spans.push(Span::styled(
-                    ch.to_string(),
-                    Style::default().fg(fg).bg(bg),
-                ));
+                // Highlight: focus voxel or tool range
+                let is_focus = hit.world_x == focus_vx
+                    && hit.world_y == focus_vy
+                    && hit.world_z == focus_vz;
+                let is_in_range = in_tool_range_3d(
+                    hit.world_x, hit.world_y, hit.world_z, app, camera,
+                );
+
+                let style = if is_focus {
+                    Style::default().fg(fg).bg(Color::Rgb(180, 160, 40))
+                } else if is_in_range {
+                    Style::default().fg(fg).bg(Color::Rgb(60, 60, 120))
+                } else {
+                    Style::default().fg(fg)
+                };
+
+                spans.push(Span::styled(ch.to_string(), style));
             } else {
-                // Sky / empty — gradient by row
+                // Sky / empty
                 let sky_intensity = ((1.0 - row as f32 / rows as f32) * 30.0) as u8 + 10;
-                spans.push(Span::styled(
-                    " ".to_string(),
-                    Style::default().bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
-                ));
+
+                // Crosshair at screen center — visible even when focus is in air
+                let is_crosshair =
+                    (col == center_col && (row == center_row - 1 || row == center_row + 1))
+                    || (row == center_row && (col == center_col - 1 || col == center_col + 1));
+                let is_center = col == center_col && row == center_row;
+
+                if is_center {
+                    spans.push(Span::styled(
+                        "+".to_string(),
+                        Style::default()
+                            .fg(Color::Rgb(255, 220, 60))
+                            .bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
+                    ));
+                } else if is_crosshair {
+                    let cross_ch = if col == center_col { "│" } else { "─" };
+                    spans.push(Span::styled(
+                        cross_ch.to_string(),
+                        Style::default()
+                            .fg(Color::Rgb(180, 160, 40))
+                            .bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
+                    ));
+                } else {
+                    spans.push(Span::styled(
+                        " ".to_string(),
+                        Style::default().bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
+                    ));
+                }
             }
         }
         lines.push(Line::from(spans));
@@ -267,8 +331,23 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
     let view_widget = Paragraph::new(lines);
     frame.render_widget(view_widget, view_area);
 
-    // --- Side panel (reuse structure from 2D view) ---
+    // --- Side panel ---
     draw_3d_panel(frame, app, grid, camera, panel_area);
+}
+
+/// Camera focus X snapped to voxel grid.
+fn cam_focus_x(cam: &Camera) -> usize {
+    (cam.focus.x as usize).min(GRID_X - 1)
+}
+
+/// Camera focus Y snapped to voxel grid.
+fn cam_focus_y(cam: &Camera) -> usize {
+    (cam.focus.y as usize).min(GRID_Y - 1)
+}
+
+/// Camera focus Z snapped to voxel grid.
+fn cam_focus_z(cam: &Camera) -> usize {
+    (cam.focus.z as usize).min(GRID_Z - 1)
 }
 
 /// Draw the side panel for 3D mode.

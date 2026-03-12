@@ -259,12 +259,14 @@ impl App {
 
     /// Begin tool operation at current focus.
     pub fn tool_start_op(&mut self) {
+        self.sync_focus_from_camera();
         self.tool_active = true;
         self.tool_start = Some((self.focus_x, self.focus_y, self.focus_z));
     }
 
     /// End tool operation: apply tool from start to current focus.
     pub fn tool_end(&mut self) {
+        self.sync_focus_from_camera();
         if let Some((sx, sy, sz)) = self.tool_start.take() {
             let tool = self.selected_tool();
             let xlo = sx.min(self.focus_x);
@@ -313,6 +315,18 @@ impl App {
                 ViewMode::Slice2D
             }
         };
+    }
+
+    /// Sync the discrete app focus from the camera's continuous focus.
+    /// Called before tool operations in 3D mode so tools target the right voxel.
+    fn sync_focus_from_camera(&mut self) {
+        if self.view_mode == ViewMode::Projected3D {
+            if let Some(ref cam) = self.camera {
+                self.focus_x = (cam.focus.x as usize).min(GRID_X - 1);
+                self.focus_y = (cam.focus.y as usize).min(GRID_Y - 1);
+                self.focus_z = (cam.focus.z as usize).min(GRID_Z - 1);
+            }
+        }
     }
 
     /// Ensure the 3D camera exists and is synced to the current focus.
