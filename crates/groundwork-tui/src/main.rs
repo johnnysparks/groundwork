@@ -1,7 +1,10 @@
 mod app;
+mod camera;
 mod cli;
+mod glyph;
 mod input;
 mod render;
+mod render3d;
 
 use app::App;
 use std::io::IsTerminal;
