@@ -90,7 +90,7 @@ Non-shovel tools can't overwrite occupied cells. Use the shovel to clear first.
 `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting
 
 ### State file format
-Binary, ~422KB. Version 2. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 108,000 voxels × 4 bytes each + focus state (14 bytes: position + tool). Backward-compatible: loads version 1 files (no focus block) with default focus.
+Binary, ~1.07MB. Version 3. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 108,000 voxels × 4 bytes each + focus state (14 bytes: position + tool) + 108,000 soil compositions × 6 bytes each. Backward-compatible: loads version 1/2 files and generates soil composition from terrain depth.
 
 ## Architecture
 
@@ -101,8 +101,9 @@ crates/
       lib.rs          Public API: create_world(), create_schedule(), tick(), FocusState, ToolState
       voxel.rs        Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
       grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 60×60×30, indexed [x + y*60 + z*3600]
-      systems.rs      ECS systems: water_flow, light_propagation, soil_absorption, seed_growth
-      save.rs         Binary save/load v2: VoxelGrid + Tick + FocusState (backward-compatible with v1)
+      soil.rs         SoilComposition (6 bytes: sand/clay/organic/rock/pH/bacteria) + SoilGrid Resource
+      systems.rs      ECS systems: water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth
+      save.rs         Binary save/load v3: VoxelGrid + Tick + FocusState + SoilGrid (backward-compatible with v1/v2)
 
   groundwork-tui/     Rust binary — ratatui terminal renderer + CLI
     src/
@@ -123,7 +124,8 @@ crates/
 - **Two orthogonal workstreams**: sim+CLI and web UI are independent. See `decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
 - **Flat voxel array**: 108K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=15 is surface, Z=29 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
-- **System execution order**: water_flow → soil_absorption → light_propagation → seed_growth → tick_counter
+- **System execution order**: water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tick_counter
+- **Soil composition model**: Parallel `SoilGrid` stores 6-byte composition per cell (sand, clay, organic, rock, pH, bacteria). Derived properties (drainage, retention, nutrient capacity) drive water absorption rates, seed growth rates, and root viability. Soil evolves: organic matter increases near roots, bacteria grow in moist organic soil, rock weathers into clay, pH drifts with organic decomposition.
 - **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
 
 ### Sim API
