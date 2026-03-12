@@ -35,17 +35,33 @@ fn parse_coord_range(s: &str) -> Result<Vec<usize>, String> {
     }
 }
 
-fn voxel_char(mat: Material, water_level: u8, nutrient_level: u8) -> char {
+fn voxel_char(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> char {
     match mat {
         Material::Air if water_level > 0 => '~',
+        Material::Air if light_level == 0 => ' ',
         Material::Air => '.',
         Material::Water => '~',
-        Material::Soil if water_level > 100 => '%',
+        Material::Soil if water_level > 50 => '%',
         Material::Soil => '#',
         Material::Stone => '@',
         Material::Root => '*',
         Material::Seed if nutrient_level >= 100 => 'S',
         Material::Seed => 's',
+    }
+}
+
+fn voxel_emoji(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> &'static str {
+    match mat {
+        Material::Air if water_level > 0 => "\u{1F4A7}\u{FE0F}", // 💧️ -- with VS16 for consistent width
+        Material::Air if light_level == 0 => "  ",
+        Material::Air => "  ",
+        Material::Water => "💧",
+        Material::Soil if water_level > 50 => "🟤",
+        Material::Soil => "🟫",
+        Material::Stone => "🪨",
+        Material::Root => "🌿",
+        Material::Seed if nutrient_level >= 100 => "🌱",
+        Material::Seed => "🌰",
     }
 }
 
@@ -63,7 +79,7 @@ fn count_materials(grid: &VoxelGrid) -> ([u64; 6], u64) {
     let mut wet_soil = 0u64;
     for v in grid.cells() {
         counts[v.material.as_u8() as usize] += 1;
-        if v.material == Material::Soil && v.water_level > 100 {
+        if v.material == Material::Soil && v.water_level > 50 {
             wet_soil += 1;
         }
     }
@@ -120,6 +136,8 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 
+    let ascii = has_flag(args, "--ascii");
+
     let max_z = GRID_Z - 1;
     let mut z: usize = find_value(args, "--z")
         .and_then(|v| v.parse().ok())
@@ -141,36 +159,65 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     println!("Z:{z} ({depth_label})  Tick:{tick}  Grid:{GRID_X}x{GRID_Y}x{GRID_Z}");
     println!();
 
-    // X-axis labels (every 10)
-    print!("    ");
-    for x in 0..GRID_X {
-        if x % 10 == 0 {
-            print!("{:<10}", x);
+    if ascii {
+        // ASCII mode — original single-char rendering
+        print!("    ");
+        for x in 0..GRID_X {
+            if x % 10 == 0 {
+                print!("{:<10}", x);
+            }
         }
-    }
-    println!();
+        println!();
 
-    for y in 0..GRID_Y {
-        // Y-axis label (every 10, or blank)
-        if y % 10 == 0 {
-            print!("{:>3} ", y);
-        } else {
-            print!("    ");
+        for y in 0..GRID_Y {
+            if y % 10 == 0 {
+                print!("{:>3} ", y);
+            } else {
+                print!("    ");
+            }
+
+            let row: String = (0..GRID_X)
+                .map(|x| {
+                    grid.get(x, y, z)
+                        .map(|v| voxel_char(v.material, v.water_level, v.light_level, v.nutrient_level))
+                        .unwrap_or(' ')
+                })
+                .collect();
+            println!("{row}");
         }
 
-        let row: String = (0..GRID_X)
-            .map(|x| {
-                grid.get(x, y, z)
-                    .map(|v| voxel_char(v.material, v.water_level, v.nutrient_level))
-                    .unwrap_or(' ')
-            })
-            .collect();
-        println!("{row}");
-    }
+        println!();
+        println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
+    } else {
+        // Emoji mode — each cell is 2 columns wide
+        print!("    ");
+        for x in 0..GRID_X {
+            if x % 10 == 0 {
+                print!("{:<20}", x); // 10 emoji × 2 cols = 20 chars
+            }
+        }
+        println!();
 
-    // Legend
-    println!();
-    println!("Legend: . air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
+        for y in 0..GRID_Y {
+            if y % 10 == 0 {
+                print!("{:>3} ", y);
+            } else {
+                print!("    ");
+            }
+
+            for x in 0..GRID_X {
+                if let Some(v) = grid.get(x, y, z) {
+                    print!("{}", voxel_emoji(v.material, v.water_level, v.light_level, v.nutrient_level));
+                } else {
+                    print!("  ");
+                }
+            }
+            println!();
+        }
+
+        println!();
+        println!("Legend:    air  \u{1f4a7} water  \u{1f7eb} soil  \u{1f7e4} wet soil  \u{1faa8} stone  \u{1f33f} root  \u{1f330} seed  \u{1f331} growing");
+    }
     Ok(())
 }
 
@@ -269,8 +316,9 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
 
 pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
     if args.len() < 7 {
-        eprintln!("Usage: groundwork fill <material> <x1> <y1> <z1> <x2> <y2> <z2> [--state FILE]");
+        eprintln!("Usage: groundwork fill <material> <x1> <y1> <z1> <x2> <y2> <z2> [--force] [--state FILE]");
         eprintln!("  Fills a rectangular region from (x1,y1,z1) to (x2,y2,z2) inclusive.");
+        eprintln!("  Seeds and roots are protected; use --force to override.");
         eprintln!("Materials: air, soil, stone, water, root, seed");
         std::process::exit(1);
     }
@@ -303,17 +351,27 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
     let zlo = z1.min(z2);
     let zhi = z1.max(z2);
 
+    let force = has_flag(&args[7..], "--force");
     let path = state_path(&args[7..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
 
     let mut placed = 0u64;
     let mut skipped = 0u64;
+    let mut protected = 0u64;
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
         for z in zlo..=zhi {
             for y in ylo..=yhi {
                 for x in xlo..=xhi {
                     if let Some(voxel) = grid.get_mut(x, y, z) {
+                        let existing = voxel.material;
+
+                        // Protect seeds and roots from accidental overwriting
+                        if !force && (existing == Material::Seed || existing == Material::Root) {
+                            protected += 1;
+                            continue;
+                        }
+
                         voxel.set_material(mat);
                         placed += 1;
                     } else {
@@ -324,7 +382,7 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
         }
     }
 
-    if placed == 0 {
+    if placed == 0 && protected == 0 {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             "all coordinates out of bounds",
@@ -333,17 +391,17 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
 
     groundwork_sim::save::save_world(&world, &path)?;
 
+    let mut msg = format!(
+        "Filled {} × {} from ({},{},{}) to ({},{},{})",
+        placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi
+    );
     if skipped > 0 {
-        println!(
-            "Filled {} × {} from ({},{},{}) to ({},{},{}) ({} out of bounds, skipped)",
-            placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi, skipped
-        );
-    } else {
-        println!(
-            "Filled {} × {} from ({},{},{}) to ({},{},{})",
-            placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi
-        );
+        msg.push_str(&format!(" ({skipped} out of bounds, skipped)"));
     }
+    if protected > 0 {
+        msg.push_str(&format!(" ({protected} protected cells skipped)"));
+    }
+    println!("{msg}");
     Ok(())
 }
 
@@ -490,7 +548,7 @@ pub fn print_help() {
     println!("Commands:");
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
-    println!("  view [--z Z]                  Print ASCII slice of the grid");
+    println!("  view [--z Z] [--ascii]         Print slice of the grid (emoji default, --ascii fallback)");
     println!("  place <mat> <x> <y> <z>       Place a voxel (air/soil/stone/water/root/seed)");
     println!("    Coordinates accept ranges:  place soil 20..40 30 15");
     println!("    Rejects overwriting seeds/roots (use --force to override)");

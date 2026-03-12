@@ -107,6 +107,17 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
             }
         }
     }
+
+    // Cleanup: revert water cells with very low water_level to air.
+    // This prevents the checkerboard frontier artifact where tiny amounts
+    // of water oscillate between adjacent cells.
+    for cell in grid.cells_mut().iter_mut() {
+        if cell.material == Material::Water && cell.water_level < 5 {
+            cell.material = Material::Air;
+            cell.water_level = 0;
+            cell.nutrient_level = 0;
+        }
+    }
 }
 
 /// Top-down light propagation. For each (x, y) column, light starts
@@ -628,6 +639,34 @@ mod tests {
         assert_eq!(w_xm, w_xp, "x-axis symmetry: -{w_xm} vs +{w_xp}");
         assert_eq!(w_ym, w_yp, "y-axis symmetry: -{w_ym} vs +{w_yp}");
         assert_eq!(w_xm, w_ym, "cross-axis symmetry: x{w_xm} vs y{w_ym}");
+    }
+
+    #[test]
+    fn no_checkerboard_water_frontier() {
+        // After many ticks, no water cells should have water_level < 5.
+        // This catches the alternating .~.~.~ frontier artifact.
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        for _ in 0..100 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        for z in 0..GRID_Z {
+            for y in 0..GRID_Y {
+                for x in 0..GRID_X {
+                    let cell = grid.get(x, y, z).unwrap();
+                    if cell.material == Material::Water {
+                        assert!(
+                            cell.water_level >= 5,
+                            "Water at ({x},{y},{z}) has water_level={}, should be >= 5 or reverted to air",
+                            cell.water_level
+                        );
+                    }
+                }
+            }
+        }
     }
 
     #[test]
