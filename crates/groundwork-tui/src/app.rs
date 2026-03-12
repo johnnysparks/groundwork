@@ -7,8 +7,19 @@ use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use groundwork_sim::voxel::Material;
 use groundwork_sim::Tick;
 
+use crate::camera::Camera;
 use crate::input;
 use crate::render;
+use crate::render3d;
+
+/// Which view mode the TUI is displaying.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ViewMode {
+    /// Classic 2D slice view (one Z-layer at a time).
+    Slice2D,
+    /// Projected 3D camera view.
+    Projected3D,
+}
 
 /// Gardening tools — each has specific placement behavior.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -151,6 +162,10 @@ pub struct App {
     pub show_inspect: bool,
     pub show_status: bool,
     pub show_controls: bool,
+    // View mode: 2D slice or 3D projected
+    pub view_mode: ViewMode,
+    /// 3D camera state (created on first switch to 3D mode).
+    pub camera: Option<Camera>,
 }
 
 impl App {
@@ -170,12 +185,19 @@ impl App {
             show_inspect: true,
             show_status: false,
             show_controls: true,
+            view_mode: ViewMode::Slice2D,
+            camera: None,
         }
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> std::io::Result<()> {
         while self.running {
-            terminal.draw(|frame| render::draw(frame, &self.world, self))?;
+            terminal.draw(|frame| {
+                match self.view_mode {
+                    ViewMode::Slice2D => render::draw(frame, &self.world, self),
+                    ViewMode::Projected3D => render3d::draw_3d(frame, self),
+                }
+            })?;
 
             let timeout = Duration::from_millis(self.tick_rate_ms);
             if ratatui::crossterm::event::poll(timeout)? {
@@ -268,5 +290,41 @@ impl App {
     pub fn tool_cancel(&mut self) {
         self.tool_active = false;
         self.tool_start = None;
+    }
+
+    /// Toggle between 2D slice and 3D projected view.
+    pub fn toggle_view_mode(&mut self) {
+        self.view_mode = match self.view_mode {
+            ViewMode::Slice2D => {
+                // Initialize camera on first switch, or sync focus
+                self.ensure_camera();
+                ViewMode::Projected3D
+            }
+            ViewMode::Projected3D => {
+                // Sync app focus back from camera position
+                if let Some(ref cam) = self.camera {
+                    let fx = (cam.focus.x as usize).min(GRID_X - 1);
+                    let fy = (cam.focus.y as usize).min(GRID_Y - 1);
+                    let fz = (cam.focus.z as usize).min(GRID_Z - 1);
+                    self.focus_x = fx;
+                    self.focus_y = fy;
+                    self.focus_z = fz;
+                }
+                ViewMode::Slice2D
+            }
+        };
+    }
+
+    /// Ensure the 3D camera exists and is synced to the current focus.
+    fn ensure_camera(&mut self) {
+        if let Some(ref mut cam) = self.camera {
+            cam.sync_focus(self.focus_x, self.focus_y, self.focus_z);
+        } else {
+            self.camera = Some(Camera::new(
+                self.focus_x as f64 + 0.5,
+                self.focus_y as f64 + 0.5,
+                self.focus_z as f64 + 0.5,
+            ));
+        }
     }
 }
