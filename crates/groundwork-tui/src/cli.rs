@@ -50,18 +50,29 @@ fn voxel_char(mat: Material, water_level: u8, light_level: u8, nutrient_level: u
     }
 }
 
-fn voxel_emoji(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> &'static str {
+/// Return (char, ANSI color escape) for colored CLI output.
+/// `below_ground` adjusts root/air presentation for underground layers.
+fn voxel_colored(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8, below_ground: bool) -> (char, &'static str) {
+    // ANSI 256-color or RGB escape sequences for each material.
+    // Using \x1b[38;2;R;G;Bm for true-color foreground.
     match mat {
-        Material::Air if water_level > 0 => "\u{1F4A7}\u{FE0F}", // 💧️ -- with VS16 for consistent width
-        Material::Air if light_level == 0 => "  ",
-        Material::Air => "  ",
-        Material::Water => "💧",
-        Material::Soil if water_level > 50 => "🟤",
-        Material::Soil => "🟫",
-        Material::Stone => "🪨",
-        Material::Root => "🌿",
-        Material::Seed if nutrient_level >= 100 => "🌱",
-        Material::Seed => "🌰",
+        Material::Air if water_level > 0 => ('~', "\x1b[38;2;100;160;255m"),   // blue mist
+        Material::Air if below_ground    => (' ', "\x1b[0m"),                     // dark void
+        Material::Air if light_level == 0 => (' ', "\x1b[0m"),
+        Material::Air                    => ('.', "\x1b[38;2;60;60;70m"),        // dim air
+        Material::Water => {
+            let _intensity = 140 + (water_level as u16 * 115 / 255) as u8;
+            // Use a fixed bright blue — terminal can't interpolate per-cell easily
+            ('~', "\x1b[38;2;40;120;255m")                                       // blue water
+        }
+        Material::Soil if water_level > 50 => ('%', "\x1b[38;2;66;40;14m"),     // wet soil — dark brown
+        Material::Soil if water_level > 0  => ('#', "\x1b[38;2;101;67;33m"),    // moist soil — medium brown
+        Material::Soil                     => ('#', "\x1b[38;2;160;110;60m"),   // dry soil — warm brown
+        Material::Stone => ('@', "\x1b[38;2;150;150;155m"),                      // gray rock
+        Material::Root if below_ground => ('*', "\x1b[38;2;210;180;140m"),       // tan root underground
+        Material::Root                 => ('*', "\x1b[38;2;60;180;60m"),         // green root above ground
+        Material::Seed if nutrient_level >= 100 => ('S', "\x1b[38;2;80;220;60m"), // sprouting — green
+        Material::Seed => ('s', "\x1b[38;2;200;170;60m"),                        // dormant — yellow-brown
     }
 }
 
@@ -136,6 +147,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 
+    let plain = has_flag(args, "--plain");
     let ascii = has_flag(args, "--ascii");
 
     let max_z = GRID_Z - 1;
@@ -159,8 +171,10 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     println!("Z:{z} ({depth_label})  Tick:{tick}  Grid:{GRID_X}x{GRID_Y}x{GRID_Z}");
     println!();
 
-    if ascii {
-        // ASCII mode — original single-char rendering
+    let below_ground = z < GROUND_LEVEL;
+
+    if plain || ascii {
+        // Plain ASCII mode — single-char, no color
         print!("    ");
         for x in 0..GRID_X {
             if x % 10 == 0 {
@@ -189,11 +203,11 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
         println!();
         println!("Legend: . air  (space) dark air  ~ water  # soil  % wet soil  @ stone  * root  s seed  S growing seed");
     } else {
-        // Emoji mode — each cell is 2 columns wide
+        // Colored ASCII mode (default) — single-char with ANSI true-color
         print!("    ");
         for x in 0..GRID_X {
             if x % 10 == 0 {
-                print!("{:<20}", x); // 10 emoji × 2 cols = 20 chars
+                print!("{:<10}", x);
             }
         }
         println!();
@@ -207,16 +221,27 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
 
             for x in 0..GRID_X {
                 if let Some(v) = grid.get(x, y, z) {
-                    print!("{}", voxel_emoji(v.material, v.water_level, v.light_level, v.nutrient_level));
+                    let (ch, color) = voxel_colored(v.material, v.water_level, v.light_level, v.nutrient_level, below_ground);
+                    print!("{color}{ch}");
                 } else {
-                    print!("  ");
+                    print!(" ");
                 }
             }
+            print!("\x1b[0m"); // reset color at end of row
             println!();
         }
 
         println!();
-        println!("Legend:    air  \u{1f4a7} water  \u{1f7eb} soil  \u{1f7e4} wet soil  \u{1faa8} stone  \u{1f33f} root  \u{1f330} seed  \u{1f331} growing");
+        println!(
+            "Legend: \x1b[38;2;60;60;70m.\x1b[0m air  \
+             \x1b[38;2;40;120;255m~\x1b[0m water  \
+             \x1b[38;2;160;110;60m#\x1b[0m soil  \
+             \x1b[38;2;66;40;14m%\x1b[0m wet soil  \
+             \x1b[38;2;150;150;155m@\x1b[0m stone  \
+             \x1b[38;2;210;180;140m*\x1b[0m root  \
+             \x1b[38;2;200;170;60ms\x1b[0m seed  \
+             \x1b[38;2;80;220;60mS\x1b[0m sprouting"
+        );
     }
     Ok(())
 }
@@ -548,7 +573,7 @@ pub fn print_help() {
     println!("Commands:");
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
-    println!("  view [--z Z] [--ascii]         Print slice of the grid (emoji default, --ascii fallback)");
+    println!("  view [--z Z] [--plain]         Print slice (colored ASCII default, --plain for uncolored)");
     println!("  place <mat> <x> <y> <z>       Place a voxel (air/soil/stone/water/root/seed)");
     println!("    Coordinates accept ranges:  place soil 20..40 30 15");
     println!("    Rejects overwriting seeds/roots (use --force to override)");
