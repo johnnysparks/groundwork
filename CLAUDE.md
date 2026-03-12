@@ -81,7 +81,7 @@ groundwork help                           # Show help
 `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed
 
 ### State file format
-Binary, ~422KB. Header (magic `GWRK` + version) + tick count (u64 LE) + 108,000 voxels × 4 bytes each.
+Binary, ~422KB. Version 2. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 108,000 voxels × 4 bytes each + focus state (14 bytes: position + tool). Backward-compatible: loads version 1 files (no focus block) with default focus.
 
 ## Architecture
 
@@ -89,19 +89,19 @@ Binary, ~422KB. Header (magic `GWRK` + version) + tick count (u64 LE) + 108,000 
 crates/
   groundwork-sim/     Rust library — bevy_ecs standalone (no rendering)
     src/
-      lib.rs          Public API: create_world(), create_schedule(), tick()
+      lib.rs          Public API: create_world(), create_schedule(), tick(), FocusState, ToolState
       voxel.rs        Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
       grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 60×60×30, indexed [x + y*60 + z*3600]
       systems.rs      ECS systems: water_flow, light_propagation, soil_absorption, seed_growth
-      save.rs         Binary save/load for VoxelGrid + Tick (zero external deps)
+      save.rs         Binary save/load v2: VoxelGrid + Tick + FocusState (backward-compatible with v1)
 
   groundwork-tui/     Rust binary — ratatui terminal renderer + CLI
     src/
       main.rs         Entry point, subcommand dispatch
-      cli.rs          Non-interactive CLI commands (new/tick/view/place/inspect/status)
-      app.rs          App state: holds World + Schedule, main loop
-      render.rs       ASCII rendering of a Z-slice of the grid (TUI mode)
-      input.rs        Keyboard controls (navigate depth, tick, auto-play)
+      cli.rs          Non-interactive CLI commands (new/tick/view/place/fill/inspect/status/focus/tool-start/tool-end)
+      app.rs          App state: World + Schedule, viewport-centered camera, tool mode, material palette
+      render.rs       Viewport-centered emoji rendering of Z-slice around focus, inspect/status panels
+      input.rs        Keyboard controls (WASD pan, J/K depth, Tab material, Enter tool, I/T panels)
 
   (future) groundwork-web/    Three.js + WASM — browser renderer (orthogonal workstream)
 ```
@@ -115,6 +115,7 @@ crates/
 - **Flat voxel array**: 108K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=15 is surface, Z=29 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
 - **System execution order**: water_flow → soil_absorption → light_propagation → seed_growth → tick_counter
+- **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
 
 ### Sim API
 
