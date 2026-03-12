@@ -389,12 +389,13 @@ fn draw_3d_panel(
     if app.show_controls {
         panel_lines.push(Line::from(""));
 
-        let controls: [(&str, &str); 12] = [
+        let controls: [(&str, &str); 13] = [
             ("W/S", "fly fwd/back"),
             ("A/D", "pan left/right"),
             ("Q/E", "orbit left/right"),
             ("Sh+W/S", "zoom in/out"),
             ("J/K", "focus up/down"),
+            ("R", "reset camera"),
             ("Space", "use tool"),
             ("Tab", "next tool"),
             ("V", "toggle 2D/3D"),

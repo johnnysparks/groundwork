@@ -84,7 +84,7 @@ fn handle_2d(app: &mut App, code: KeyCode, _shift: bool) {
 /// Input handling for the 3D projected view.
 fn handle_3d(app: &mut App, code: KeyCode, shift: bool) {
     match code {
-        KeyCode::Char('q') | KeyCode::Esc => {
+        KeyCode::Esc => {
             if app.tool_active {
                 app.tool_cancel();
             } else {
@@ -94,53 +94,43 @@ fn handle_3d(app: &mut App, code: KeyCode, shift: bool) {
 
         // WASD: fly/pan camera (Shift+W/S = zoom)
         KeyCode::Char('W') if shift => {
-            // Zoom in
             if let Some(ref mut cam) = app.camera {
                 cam.zoom(0.85);
             }
         }
         KeyCode::Char('S') if shift => {
-            // Zoom out
             if let Some(ref mut cam) = app.camera {
                 cam.zoom(1.18);
             }
         }
         KeyCode::Char('w') => {
-            // Fly forward
             if let Some(ref mut cam) = app.camera {
                 cam.fly_forward(2.0);
             }
         }
         KeyCode::Char('s') => {
-            // Fly backward
             if let Some(ref mut cam) = app.camera {
                 cam.fly_forward(-2.0);
             }
         }
         KeyCode::Char('a') => {
-            // Pan left
             if let Some(ref mut cam) = app.camera {
                 cam.pan_right(-2.0);
             }
         }
         KeyCode::Char('d') => {
-            // Pan right
             if let Some(ref mut cam) = app.camera {
                 cam.pan_right(2.0);
             }
         }
 
-        // Q/E: orbit around focus. Note: 'q' without shift is quit (handled above).
-        // We use 'e' for orbit right. For orbit left, we need a different key
-        // since 'q' is quit. Use '[' and ']' as alternate, or handle 'Q' (shift+q).
-        KeyCode::Char('Q') if shift => {
-            // Orbit left (Shift+Q to distinguish from quit)
+        // Q/E: orbit around focus
+        KeyCode::Char('q') => {
             if let Some(ref mut cam) = app.camera {
                 cam.orbit(-0.15);
             }
         }
         KeyCode::Char('e') => {
-            // Orbit right
             if let Some(ref mut cam) = app.camera {
                 cam.orbit(0.15);
             }
