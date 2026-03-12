@@ -554,6 +554,7 @@ pub fn print_help() {
     println!("    Rejects overwriting seeds/roots (use --force to override)");
     println!("  fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>");
     println!("                                Fill a rectangular region (inclusive)");
+    println!("    Skips seeds/roots by default (use --force to override)");
     println!("  inspect <x> <y> <z>           Show voxel details");
     println!("  status                        Show world summary");
     println!("  tui                           Launch interactive terminal UI");
