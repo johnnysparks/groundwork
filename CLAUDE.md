@@ -66,8 +66,11 @@ groundwork view [--z Z]                   # Print ASCII slice (default Z=16, abo
 groundwork place <material> <x> <y> <z>   # Place a voxel (air/soil/stone/water/root/seed)
                                           # Coords accept ranges: place soil 20..40 30 15
 groundwork fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region (inclusive)
-groundwork inspect <x> <y> <z>            # Show one voxel's full state
+groundwork inspect [<x> <y> <z>]          # Show one voxel's full state (uses focus if no coords)
 groundwork status                         # Tick count + material summary
+groundwork focus [<x> <y> <z>]            # Get/set focus cursor position (persisted in state)
+groundwork tool-start <material>          # Begin range operation at current focus
+groundwork tool-end [--force]             # Apply tool from start to current focus
 groundwork tui                            # Launch interactive TUI (default)
 groundwork help                           # Show help
 

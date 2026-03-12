@@ -18,6 +18,9 @@ fn main() -> std::io::Result<()> {
         Some("fill") => cli::cmd_fill(rest),
         Some("inspect") => cli::cmd_inspect(rest),
         Some("status") => cli::cmd_status(rest),
+        Some("focus") => cli::cmd_focus(rest),
+        Some("tool-start") => cli::cmd_tool_start(rest),
+        Some("tool-end") => cli::cmd_tool_end(rest),
         Some("help") | Some("--help") | Some("-h") => {
             cli::print_help();
             Ok(())
