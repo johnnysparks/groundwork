@@ -40,7 +40,7 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: 
                 ("##", Color::Rgb(dim(139), dim(90), dim(43)))
             }
         }
-        Material::Stone => ("@@", Color::Rgb(dim(120), dim(120), dim(120))),
+        Material::Stone => ("@@", Color::Rgb(dim(170), dim(170), dim(180))),
         Material::Root => ("**", Color::Rgb(dim(80), dim(180), dim(60))),
         Material::Seed => {
             if nutrient_level >= 100 {
@@ -165,7 +165,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             let mat_color = match voxel.material {
                 Material::Air => Color::Gray,
                 Material::Soil => Color::Rgb(139, 90, 43),
-                Material::Stone => Color::Rgb(120, 120, 120),
+                Material::Stone => Color::Rgb(170, 170, 180),
                 Material::Water => Color::Rgb(80, 140, 255),
                 Material::Root => Color::Rgb(80, 180, 60),
                 Material::Seed => Color::Rgb(200, 180, 60),
@@ -323,28 +323,30 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             }
         }
 
-        let mat_entries: [(&str, &str, usize); 6] = [
-            ("~~", "water", Material::Water as usize),
-            ("##", "soil", Material::Soil as usize),
-            ("@@", "stone", Material::Stone as usize),
-            ("**", "root", Material::Root as usize),
-            ("()", "seed", Material::Seed as usize),
-            (". ", "air", Material::Air as usize),
+        let mat_entries: [(&str, &str, usize, Color); 6] = [
+            ("~~", "water", Material::Water as usize, Color::Rgb(80, 140, 255)),
+            ("##", "soil", Material::Soil as usize, Color::Rgb(139, 90, 43)),
+            ("@@", "stone", Material::Stone as usize, Color::Rgb(170, 170, 180)),
+            ("**", "root", Material::Root as usize, Color::Rgb(80, 180, 60)),
+            ("()", "seed", Material::Seed as usize, Color::Rgb(200, 180, 60)),
+            (". ", "air", Material::Air as usize, Color::Gray),
         ];
 
-        for (icon, name, idx) in mat_entries {
+        for (icon, name, idx, color) in mat_entries {
             let count = counts[idx];
             if count > 0 {
                 panel_lines.push(Line::from(vec![
-                    Span::styled(format!(" {icon} "), label),
-                    Span::styled(format!("{:<6} {:>6}", name, count), value_style),
+                    Span::styled(format!(" {icon} "), Style::default().fg(color)),
+                    Span::styled(format!("{:<6}", name), Style::default().fg(color)),
+                    Span::styled(format!("{:>6}", count), value_style),
                 ]));
             }
         }
         if wet_soil > 0 {
             panel_lines.push(Line::from(vec![
-                Span::styled(" %% ", label),
-                Span::styled(format!("{:<6} {:>6}", "wet", wet_soil), value_style),
+                Span::styled(" %% ", Style::default().fg(Color::Rgb(80, 70, 100))),
+                Span::styled(format!("{:<6}", "wet"), Style::default().fg(Color::Rgb(80, 70, 100))),
+                Span::styled(format!("{:>6}", wet_soil), value_style),
             ]));
         }
     }
@@ -392,7 +394,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         (". ", "air", Color::Gray),
         ("~~", "water", Color::Rgb(80, 140, 255)),
         ("##", "soil", Color::Rgb(139, 90, 43)),
-        ("@@", "stone", Color::Rgb(120, 120, 120)),
+        ("@@", "stone", Color::Rgb(170, 170, 180)),
         ("**", "root", Color::Rgb(80, 180, 60)),
         ("()", "seed", Color::Rgb(200, 180, 60)),
     ];
