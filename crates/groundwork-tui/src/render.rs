@@ -10,8 +10,8 @@ use groundwork_sim::voxel::Material;
 
 use crate::app::App;
 
-/// Map a voxel to an ASCII character + color.
-fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (char, Color) {
+/// Map a voxel to an emoji string + color for TUI rendering.
+fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (&'static str, Color) {
     // Dim factor based on light (0.0–1.0 mapped to color brightness).
     let dim = |c: u8| -> u8 {
         ((c as u16 * light_level as u16) / 255) as u8
@@ -20,31 +20,31 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: 
     match mat {
         Material::Air => {
             if water_level > 0 {
-                ('~', Color::Rgb(dim(80), dim(140), dim(255)))
+                ("💧", Color::Rgb(dim(80), dim(140), dim(255)))
             } else {
-                (' ', Color::Reset)
+                ("  ", Color::Reset)
             }
         }
         Material::Water => {
             let intensity = 100 + (water_level as u16 * 155 / 255) as u8;
-            ('~', Color::Rgb(dim(40), dim(80), dim(intensity)))
+            ("💧", Color::Rgb(dim(40), dim(80), dim(intensity)))
         }
         Material::Soil => {
-            if water_level > 100 {
-                ('#', Color::Rgb(dim(80), dim(70), dim(100)))
+            if water_level > 50 {
+                ("🟤", Color::Rgb(dim(80), dim(70), dim(100)))
             } else if water_level > 0 {
-                ('#', Color::Rgb(dim(110), dim(80), dim(50)))
+                ("🟫", Color::Rgb(dim(110), dim(80), dim(50)))
             } else {
-                ('#', Color::Rgb(dim(139), dim(90), dim(43)))
+                ("🟫", Color::Rgb(dim(139), dim(90), dim(43)))
             }
         }
-        Material::Stone => ('@', Color::Rgb(dim(120), dim(120), dim(120))),
-        Material::Root => ('*', Color::Rgb(dim(80), dim(180), dim(60))),
+        Material::Stone => ("🪨", Color::Rgb(dim(120), dim(120), dim(120))),
+        Material::Root => ("🌿", Color::Rgb(dim(80), dim(180), dim(60))),
         Material::Seed => {
             if nutrient_level >= 100 {
-                ('S', Color::Rgb(dim(140), dim(200), dim(60)))
+                ("🌱", Color::Rgb(dim(140), dim(200), dim(60)))
             } else {
-                ('s', Color::Rgb(dim(200), dim(180), dim(60)))
+                ("🌰", Color::Rgb(dim(200), dim(180), dim(60)))
             }
         }
     }
@@ -65,13 +65,16 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
 
     let mut lines: Vec<Line> = Vec::with_capacity(max_rows.min(GRID_Y));
 
+    // Each emoji is ~2 columns wide, so halve the max cols.
+    let emoji_cols = max_cols / 2;
+
     for y in 0..GRID_Y.min(max_rows) {
-        let mut spans: Vec<Span> = Vec::with_capacity(max_cols.min(GRID_X));
-        for x in 0..GRID_X.min(max_cols) {
+        let mut spans: Vec<Span> = Vec::with_capacity(emoji_cols.min(GRID_X));
+        for x in 0..GRID_X.min(emoji_cols) {
             if let Some(voxel) = grid.get(x, y, z) {
-                let (ch, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level, voxel.nutrient_level);
+                let (s, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level, voxel.nutrient_level);
                 spans.push(Span::styled(
-                    String::from(ch),
+                    s,
                     Style::default().fg(fg),
                 ));
             }
