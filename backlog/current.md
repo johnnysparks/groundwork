@@ -4,13 +4,15 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 
 ## TL;DR — Where We Are
 
-**Done:** CLI usability (Sprint 1), seed growth (Sprint 2), placement validation + growth visibility + batch placement (Sprint 3), CLI-09 default Z=15, 12 player sessions across 2 rounds.
+**Done:** CLI usability (Sprint 1), seed growth (Sprint 2), placement validation + growth visibility + batch placement (Sprint 3), CLI-09 default Z=15, 12 player sessions across 2 rounds, interface parity sprint (TUI-01–04, CLI-21–22).
 
 **Current focus (Sprint 4):** Visual richness + trust repair. Emoji rendering (user-directed), fill protection bypass fix (P0 from Round 2), checkerboard water fix (10/12 sessions). PR includes before/after text snapshots.
 
-**The build can:** create worlds, place/fill materials (with ranges), protect seeds/roots from single `place` destruction, simulate water flow + light + seed growth with visible progress (s→S→*), show growth diagnostics, save/load state.
+**The build can:** create worlds, place/fill materials (with ranges), protect seeds/roots from `place`/`fill` destruction, simulate water flow + light + seed growth with visible progress (s→S→*), show growth diagnostics, save/load state (v2 with focus persistence), pan a viewport-centered camera in TUI, use focus/tool-start/tool-end workflow in both CLI and TUI, inspect and view status in both interfaces.
 
-**The build can't yet:** render emoji, protect seeds/roots from `fill` destruction, fix checkerboard water, make roots interact with the world, show water depth, vary terrain, or support multiple species.
+**The build can't yet:** render emoji, fix checkerboard water, make roots interact with the world, show water depth, vary terrain, or support multiple species.
+
+**Process rule:** CLI and TUI must ship player-facing features together. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
 
 **Key insight from Round 2:** Trust and beauty scores are sliding (3.5→3.3 trust, 3.0→2.8 beauty). The `fill` bypass undermines Sprint 3's protection work. The checkerboard is universal. Emoji rendering is the fastest path to visual delight. Fix trust + add richness = restore momentum.
 
@@ -99,6 +101,24 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 - **Done when:** Dark air renders as blank space (not dot/emoji) in CLI and TUI.
 - **Dependencies:** none
 - **Risk:** low
+
+### TUI-01: Cursor/focus system in TUI ✓
+_Done 2026-03-12. Viewport-centered camera: focus always at screen center, WASD pans, yellow highlight._
+
+### TUI-02: Tool mode — range placement in TUI ✓
+_Done 2026-03-12. Tab cycles material, Enter start/end, blue range preview, Esc cancel. All 6 materials._
+
+### TUI-03: Inspect panel in TUI ✓
+_Done 2026-03-12. `I` toggles side panel: material, water, light, nutrient, seed growth diagnostics._
+
+### TUI-04: Status display in TUI ✓
+_Done 2026-03-12. `T` toggles side panel with material counts matching CLI `status`._
+
+### CLI-21: Focus command — persistent cursor for CLI ✓
+_Done 2026-03-12. `focus [x y z]`, persisted in state v2, `inspect` uses focus when no args._
+
+### CLI-22: Tool start/end — two-step range operations via focus ✓
+_Done 2026-03-12. `tool-start <material>` + `tool-end [--force]`, protection, state persistence._
 
 ### SIM-03: Root water absorption (Sprint 5)
 - **Owner:** gameplay

@@ -1,18 +1,17 @@
 use bevy_ecs::world::World;
 use ratatui::layout::{Constraint, Layout};
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
-use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GROUND_LEVEL};
+use groundwork_sim::grid::{VoxelGrid, GROUND_LEVEL};
 use groundwork_sim::voxel::Material;
 
 use crate::app::App;
 
 /// Map a voxel to an emoji string + color for TUI rendering.
 fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (&'static str, Color) {
-    // Dim factor based on light (0.0–1.0 mapped to color brightness).
     let dim = |c: u8| -> u8 {
         ((c as u16 * light_level as u16) / 255) as u8
     };
@@ -50,33 +49,89 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: 
     }
 }
 
+fn in_tool_range(x: usize, y: usize, z: usize, app: &App) -> bool {
+    if let Some((sx, sy, sz)) = app.tool_start {
+        let ex = app.focus_x;
+        let ey = app.focus_y;
+        let ez = app.focus_z;
+        x >= sx.min(ex) && x <= sx.max(ex)
+            && y >= sy.min(ey) && y <= sy.max(ey)
+            && z >= sz.min(ez) && z <= sz.max(ez)
+    } else {
+        false
+    }
+}
+
 pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     let area = frame.area();
 
-    let [grid_area, status_area] =
-        Layout::vertical([Constraint::Min(1), Constraint::Length(2)]).areas(area);
+    let has_side_panel = app.show_inspect || app.show_status;
+    let [main_area, status_area] =
+        Layout::vertical([Constraint::Min(1), Constraint::Length(3)]).areas(area);
+
+    let (grid_area, side_area) = if has_side_panel {
+        let [g, s] = Layout::horizontal([Constraint::Percentage(70), Constraint::Percentage(30)])
+            .areas(main_area);
+        (g, Some(s))
+    } else {
+        (main_area, None)
+    };
 
     let grid = world.resource::<VoxelGrid>();
-    let z = app.slice_z;
+    let z = app.focus_z;
 
-    // Render the XY slice at the current Z level.
-    let max_rows = grid_area.height as usize;
-    let max_cols = grid_area.width as usize;
+    // Viewport dimensions in voxel cells.
+    let vp_rows = grid_area.height as usize;
+    let vp_cols = grid_area.width as usize / 2; // each emoji = 2 terminal columns
 
-    let mut lines: Vec<Line> = Vec::with_capacity(max_rows.min(GRID_Y));
+    // Viewport origin: focus is always at center.
+    let (ox, oy) = app.viewport_origin(vp_cols, vp_rows);
 
-    // Each emoji is ~2 columns wide, so halve the max cols.
-    let emoji_cols = max_cols / 2;
+    let mut lines: Vec<Line> = Vec::with_capacity(vp_rows);
 
-    for y in 0..GRID_Y.min(max_rows) {
-        let mut spans: Vec<Span> = Vec::with_capacity(emoji_cols.min(GRID_X));
-        for x in 0..GRID_X.min(emoji_cols) {
-            if let Some(voxel) = grid.get(x, y, z) {
+    for row in 0..vp_rows {
+        let wy = oy + row as isize; // world Y for this screen row
+        let mut spans: Vec<Span> = Vec::with_capacity(vp_cols);
+
+        for col in 0..vp_cols {
+            let wx = ox + col as isize; // world X for this screen col
+
+            let is_focus = wx == app.focus_x as isize && wy == app.focus_y as isize;
+
+            // Out-of-bounds: render void
+            if wx < 0 || wy < 0 {
+                let style = if is_focus {
+                    Style::default().bg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                spans.push(Span::styled("··", style));
+                continue;
+            }
+
+            let (wx, wy) = (wx as usize, wy as usize);
+
+            if let Some(voxel) = grid.get(wx, wy, z) {
                 let (s, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level, voxel.nutrient_level);
-                spans.push(Span::styled(
-                    s,
-                    Style::default().fg(fg),
-                ));
+                let is_in_range = app.tool_active && in_tool_range(wx, wy, z, app);
+
+                let style = if is_focus {
+                    Style::default().fg(fg).bg(Color::Yellow).add_modifier(Modifier::BOLD)
+                } else if is_in_range {
+                    Style::default().fg(fg).bg(Color::Rgb(60, 60, 100))
+                } else {
+                    Style::default().fg(fg)
+                };
+
+                spans.push(Span::styled(s, style));
+            } else {
+                // Beyond grid bounds
+                let style = if is_focus {
+                    Style::default().bg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                spans.push(Span::styled("··", style));
             }
         }
         lines.push(Line::from(spans));
@@ -85,7 +140,102 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     let grid_widget = Paragraph::new(lines);
     frame.render_widget(grid_widget, grid_area);
 
-    // Status bar.
+    // Side panel (inspect + status)
+    if let Some(side) = side_area {
+        let mut panel_lines: Vec<Line> = Vec::new();
+
+        if app.show_inspect {
+            panel_lines.push(Line::from(Span::styled(
+                "-- Inspect --",
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            )));
+
+            if let Some(voxel) = grid.get(app.focus_x, app.focus_y, z) {
+                let depth_label = if z > GROUND_LEVEL {
+                    format!("above +{}", z - GROUND_LEVEL)
+                } else if z == GROUND_LEVEL {
+                    "surface".to_string()
+                } else {
+                    format!("below -{}", GROUND_LEVEL - z)
+                };
+                panel_lines.push(Line::from(format!(
+                    "({}, {}, {}) [{}]",
+                    app.focus_x, app.focus_y, z, depth_label
+                )));
+                panel_lines.push(Line::from(format!("material: {}", voxel.material.name())));
+                panel_lines.push(Line::from(format!("water: {}/255", voxel.water_level)));
+                panel_lines.push(Line::from(format!("light: {}/255", voxel.light_level)));
+                panel_lines.push(Line::from(format!("nutrient: {}/255", voxel.nutrient_level)));
+
+                if voxel.material == Material::Seed {
+                    let growth = voxel.nutrient_level;
+                    let pct = (growth as u16 * 100) / 200;
+                    panel_lines.push(Line::from(format!("growth: {}% ({}/200)", pct, growth)));
+                    let has_water = voxel.water_level >= 30 || {
+                        let dirs: [(isize, isize, isize); 6] = [
+                            (-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)
+                        ];
+                        dirs.iter().any(|&(dx,dy,dz)| {
+                            let nx = app.focus_x as isize + dx;
+                            let ny = app.focus_y as isize + dy;
+                            let nz = z as isize + dz;
+                            if nx < 0 || ny < 0 || nz < 0 { return false; }
+                            grid.get(nx as usize, ny as usize, nz as usize)
+                                .map_or(false, |v| v.water_level >= 30)
+                        })
+                    };
+                    let has_light = voxel.light_level >= 30;
+                    if has_water && has_light {
+                        panel_lines.push(Line::from(Span::styled(
+                            "status: growing",
+                            Style::default().fg(Color::Green),
+                        )));
+                    } else {
+                        let mut missing = Vec::new();
+                        if !has_water { missing.push("water"); }
+                        if !has_light { missing.push("light"); }
+                        panel_lines.push(Line::from(Span::styled(
+                            format!("dormant (need {})", missing.join(", ")),
+                            Style::default().fg(Color::Red),
+                        )));
+                    }
+                }
+            } else {
+                panel_lines.push(Line::from(format!(
+                    "({}, {}, {}) — out of bounds",
+                    app.focus_x, app.focus_y, z
+                )));
+            }
+            panel_lines.push(Line::from(""));
+        }
+
+        if app.show_status {
+            panel_lines.push(Line::from(Span::styled(
+                "-- Status --",
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            )));
+            panel_lines.push(Line::from(format!("Tick: {}", app.tick_count())));
+
+            let mut counts = [0u64; 6];
+            let mut wet_soil = 0u64;
+            for v in grid.cells() {
+                counts[v.material.as_u8() as usize] += 1;
+                if v.material == Material::Soil && v.water_level > 50 {
+                    wet_soil += 1;
+                }
+            }
+            let names = ["air", "soil", "stone", "water", "root", "seed"];
+            for i in 0..6 {
+                panel_lines.push(Line::from(format!("  {}: {}", names[i], counts[i])));
+            }
+            panel_lines.push(Line::from(format!("  wet soil: {}", wet_soil)));
+        }
+
+        let panel = Paragraph::new(panel_lines);
+        frame.render_widget(panel, side);
+    }
+
+    // Status bar
     let depth_label = if z > GROUND_LEVEL {
         format!("above +{}", z - GROUND_LEVEL)
     } else if z == GROUND_LEVEL {
@@ -100,17 +250,34 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         "MANUAL".to_string()
     };
 
-    let status = format!(
-        " Z:{z}/{max} ({depth})  Tick:{tick}  [{mode}]  \
-         [Space]step [P]auto [J/K]depth [+/-]speed [Q]quit",
+    let tool_str = if app.tool_active {
+        if let Some((sx, sy, sz)) = app.tool_start {
+            format!("TOOL:{} ({},{},{})\u{2192}({},{},{})",
+                app.selected_material().name(), sx, sy, sz,
+                app.focus_x, app.focus_y, app.focus_z)
+        } else {
+            format!("TOOL:{}", app.selected_material().name())
+        }
+    } else {
+        format!("[{}]", app.selected_material().name())
+    };
+
+    let status_line1 = format!(
+        " X:{fx} Y:{fy} Z:{z}/{max} ({depth})  Tick:{tick}  [{mode}]  {tool}",
+        fx = app.focus_x,
+        fy = app.focus_y,
         z = z,
         max = groundwork_sim::grid::GRID_Z - 1,
         depth = depth_label,
         tick = app.tick_count(),
         mode = mode,
+        tool = tool_str,
     );
+    let status_line2 = " [WASD]pan [J/K]depth [Tab]material [Enter]tool [I]inspect [T]status [Space]step [P]auto [Q]quit";
 
-    let status_widget = Paragraph::new(status)
-        .style(Style::default().fg(Color::White).bg(Color::DarkGray));
-    frame.render_widget(status_widget, status_area);
+    let status = Paragraph::new(vec![
+        Line::from(status_line1),
+        Line::from(status_line2),
+    ]).style(Style::default().fg(Color::White).bg(Color::DarkGray));
+    frame.render_widget(status, status_area);
 }

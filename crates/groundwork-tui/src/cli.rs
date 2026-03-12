@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use groundwork_sim::voxel::Material;
-use groundwork_sim::Tick;
+use groundwork_sim::{FocusState, ToolState, Tick};
 
 const DEFAULT_STATE: &str = "groundwork.state";
 
@@ -406,23 +406,38 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
 }
 
 pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
-    if args.len() < 3 {
-        eprintln!("Usage: groundwork inspect <x> <y> <z> [--state FILE]");
-        std::process::exit(1);
+    // If first arg looks like a number, parse x y z explicitly; otherwise use focus.
+    let has_coords = args.len() >= 3 && args[0].parse::<usize>().is_ok();
+
+    let (x, y, z, remaining_args);
+    if has_coords {
+        x = args[0].parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad x: {e}"))
+        })?;
+        y = args[1].parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad y: {e}"))
+        })?;
+        z = args[2].parse().map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad z: {e}"))
+        })?;
+        remaining_args = &args[3..];
+    } else {
+        remaining_args = args;
+        // Will read focus from state below
+        x = 0; y = 0; z = 0;
     }
 
-    let x: usize = args[0].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad x: {e}"))
-    })?;
-    let y: usize = args[1].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad y: {e}"))
-    })?;
-    let z: usize = args[2].parse().map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad z: {e}"))
-    })?;
-
-    let path = state_path(&args[3..]);
+    let path = state_path(remaining_args);
     let world = groundwork_sim::save::load_world(&path)?;
+
+    let (x, y, z) = if has_coords {
+        (x, y, z)
+    } else {
+        let focus = world.resource::<FocusState>();
+        println!("(inspecting at focus: {}, {}, {})", focus.x, focus.y, focus.z);
+        (focus.x, focus.y, focus.z)
+    };
+
     let grid = world.resource::<VoxelGrid>();
 
     let voxel = grid.get(x, y, z).ok_or_else(|| {
@@ -540,6 +555,179 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
+pub fn cmd_focus(args: &[String]) -> std::io::Result<()> {
+    let path = state_path(args);
+    let has_coords = args.len() >= 3 && args[0].parse::<usize>().is_ok();
+
+    if !has_coords {
+        // Print current focus
+        let world = groundwork_sim::save::load_world(&path)?;
+        let focus = world.resource::<FocusState>();
+        let grid = world.resource::<VoxelGrid>();
+
+        let depth_label = if focus.z > GROUND_LEVEL {
+            format!("above +{}", focus.z - GROUND_LEVEL)
+        } else if focus.z == GROUND_LEVEL {
+            "surface".to_string()
+        } else {
+            format!("below -{}", GROUND_LEVEL - focus.z)
+        };
+
+        println!("Focus: ({}, {}, {}) [{}]", focus.x, focus.y, focus.z, depth_label);
+        if let Some(v) = grid.get(focus.x, focus.y, focus.z) {
+            println!("  material: {}", v.material.name());
+            println!("  water: {}/255  light: {}/255  nutrient: {}/255",
+                v.water_level, v.light_level, v.nutrient_level);
+        }
+        if let Some(ref tool) = focus.tool {
+            println!("  tool: {} from ({}, {}, {})",
+                tool.material.name(), tool.start_x, tool.start_y, tool.start_z);
+        }
+        return Ok(());
+    }
+
+    let x: usize = args[0].parse().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad x: {e}"))
+    })?;
+    let y: usize = args[1].parse().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad y: {e}"))
+    })?;
+    let z: usize = args[2].parse().map_err(|e| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad z: {e}"))
+    })?;
+
+    if !VoxelGrid::in_bounds(x, y, z) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("out of bounds: ({x}, {y}, {z}) — max ({}, {}, {})", GRID_X - 1, GRID_Y - 1, GRID_Z - 1),
+        ));
+    }
+
+    let path = state_path(&args[3..]);
+    let mut world = groundwork_sim::save::load_world(&path)?;
+    {
+        let mut focus = world.resource_mut::<FocusState>();
+        focus.x = x;
+        focus.y = y;
+        focus.z = z;
+    }
+    groundwork_sim::save::save_world(&world, &path)?;
+
+    let grid = world.resource::<VoxelGrid>();
+    let v = grid.get(x, y, z).unwrap();
+    println!("Focus set to ({x}, {y}, {z}) — {}", v.material.name());
+    Ok(())
+}
+
+pub fn cmd_tool_start(args: &[String]) -> std::io::Result<()> {
+    if args.is_empty() || Material::from_name(&args[0]).is_none() {
+        eprintln!("Usage: groundwork tool-start <material> [--state FILE]");
+        eprintln!("  Begins a range operation at the current focus position.");
+        eprintln!("  Move focus, then use tool-end to apply.");
+        eprintln!("Materials: air, soil, stone, water, root, seed");
+        std::process::exit(1);
+    }
+
+    let mat = Material::from_name(&args[0]).unwrap();
+    let path = state_path(&args[1..]);
+    let mut world = groundwork_sim::save::load_world(&path)?;
+
+    let (sx, sy, sz);
+    {
+        let mut focus = world.resource_mut::<FocusState>();
+        sx = focus.x;
+        sy = focus.y;
+        sz = focus.z;
+        focus.tool = Some(ToolState {
+            material: mat,
+            start_x: sx,
+            start_y: sy,
+            start_z: sz,
+        });
+    }
+
+    groundwork_sim::save::save_world(&world, &path)?;
+    println!("Tool started: {} from ({sx}, {sy}, {sz})", mat.name());
+    println!("  Move focus with `groundwork focus <x> <y> <z>`, then `groundwork tool-end` to apply.");
+    Ok(())
+}
+
+pub fn cmd_tool_end(args: &[String]) -> std::io::Result<()> {
+    let force = has_flag(args, "--force");
+    let path = state_path(args);
+    let mut world = groundwork_sim::save::load_world(&path)?;
+
+    let (mat, sx, sy, sz, ex, ey, ez);
+    {
+        let focus = world.resource::<FocusState>();
+        let tool = focus.tool.as_ref().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "no tool in progress — use `groundwork tool-start <material>` first",
+            )
+        })?;
+        mat = tool.material;
+        sx = tool.start_x;
+        sy = tool.start_y;
+        sz = tool.start_z;
+        ex = focus.x;
+        ey = focus.y;
+        ez = focus.z;
+    }
+
+    let xlo = sx.min(ex);
+    let xhi = sx.max(ex);
+    let ylo = sy.min(ey);
+    let yhi = sy.max(ey);
+    let zlo = sz.min(ez);
+    let zhi = sz.max(ez);
+
+    let mut placed = 0u64;
+    let mut skipped = 0u64;
+    let mut protected = 0u64;
+    {
+        let mut grid = world.resource_mut::<VoxelGrid>();
+        for z in zlo..=zhi {
+            for y in ylo..=yhi {
+                for x in xlo..=xhi {
+                    if let Some(voxel) = grid.get_mut(x, y, z) {
+                        let existing = voxel.material;
+                        if !force && (existing == Material::Seed || existing == Material::Root) {
+                            protected += 1;
+                            continue;
+                        }
+                        voxel.set_material(mat);
+                        placed += 1;
+                    } else {
+                        skipped += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Clear tool state
+    {
+        let mut focus = world.resource_mut::<FocusState>();
+        focus.tool = None;
+    }
+
+    groundwork_sim::save::save_world(&world, &path)?;
+
+    let mut msg = format!(
+        "Tool applied: {} × {} from ({},{},{}) to ({},{},{})",
+        placed, mat.name(), xlo, ylo, zlo, xhi, yhi, zhi
+    );
+    if skipped > 0 {
+        msg.push_str(&format!(" ({skipped} out of bounds)"));
+    }
+    if protected > 0 {
+        msg.push_str(&format!(" ({protected} protected cells skipped)"));
+    }
+    println!("{msg}");
+    Ok(())
+}
+
 pub fn print_help() {
     println!("GROUNDWORK - ecological voxel garden builder");
     println!();
@@ -548,15 +736,21 @@ pub fn print_help() {
     println!("Commands:");
     println!("  new                           Create a new world");
     println!("  tick [N]                      Advance N ticks (default 1)");
-    println!("  view [--z Z] [--ascii]         Print slice of the grid (emoji default, --ascii fallback)");
+    println!("  view [--z Z] [--ascii]        Print slice of the grid (emoji default, --ascii fallback)");
     println!("  place <mat> <x> <y> <z>       Place a voxel (air/soil/stone/water/root/seed)");
     println!("    Coordinates accept ranges:  place soil 20..40 30 15");
     println!("    Rejects overwriting seeds/roots (use --force to override)");
     println!("  fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>");
     println!("                                Fill a rectangular region (inclusive)");
     println!("    Skips seeds/roots by default (use --force to override)");
-    println!("  inspect <x> <y> <z>           Show voxel details");
+    println!("  inspect [<x> <y> <z>]         Show voxel details (uses focus if no coords)");
     println!("  status                        Show world summary");
+    println!();
+    println!("Focus & Tool:");
+    println!("  focus [<x> <y> <z>]           Get/set the focus cursor position");
+    println!("  tool-start <material>         Begin a range operation at current focus");
+    println!("  tool-end [--force]            Apply the tool from start to current focus");
+    println!();
     println!("  tui                           Launch interactive terminal UI");
     println!("  help                          Show this help");
     println!();

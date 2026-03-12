@@ -5,15 +5,19 @@ use bevy_ecs::prelude::*;
 
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use crate::voxel::{Material, Voxel};
-use crate::Tick;
+use crate::{FocusState, ToolState, Tick};
 
 const MAGIC: [u8; 4] = *b"GWRK";
-const VERSION: u16 = 1;
+const VERSION: u16 = 2;
 const VOXEL_COUNT: usize = GRID_X * GRID_Y * GRID_Z;
-const EXPECTED_SIZE: usize = 8 + 8 + VOXEL_COUNT * 4; // header + tick + voxels
+// V1: header(8) + tick(8) + voxels
+const V1_SIZE: usize = 8 + 8 + VOXEL_COUNT * 4;
+// V2: V1 + focus(6) + tool_active(1) + tool_material(1) + tool_start(6) = V1 + 14
+const FOCUS_BLOCK: usize = 14;
+const V2_SIZE: usize = V1_SIZE + FOCUS_BLOCK;
 
-pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, path: &Path) -> io::Result<()> {
-    let mut buf = Vec::with_capacity(EXPECTED_SIZE);
+pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, focus: &FocusState, path: &Path) -> io::Result<()> {
+    let mut buf = Vec::with_capacity(V2_SIZE);
 
     // Header
     buf.extend_from_slice(&MAGIC);
@@ -31,10 +35,26 @@ pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, path: &Path) -> io::Result<()
         buf.push(v.nutrient_level);
     }
 
+    // Focus state (V2)
+    buf.extend_from_slice(&(focus.x as u16).to_le_bytes());
+    buf.extend_from_slice(&(focus.y as u16).to_le_bytes());
+    buf.extend_from_slice(&(focus.z as u16).to_le_bytes());
+    if let Some(ref tool) = focus.tool {
+        buf.push(1); // tool active
+        buf.push(tool.material.as_u8());
+        buf.extend_from_slice(&(tool.start_x as u16).to_le_bytes());
+        buf.extend_from_slice(&(tool.start_y as u16).to_le_bytes());
+        buf.extend_from_slice(&(tool.start_z as u16).to_le_bytes());
+    } else {
+        buf.push(0); // tool inactive
+        buf.push(0);
+        buf.extend_from_slice(&[0u8; 6]);
+    }
+
     std::fs::write(path, &buf)
 }
 
-pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64)> {
+pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState)> {
     let data = std::fs::read(path)?;
 
     if data.len() < 16 {
@@ -44,23 +64,25 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64)> {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "bad magic bytes"));
     }
     let version = u16::from_le_bytes([data[4], data[5]]);
-    if version != VERSION {
+    if version != 1 && version != 2 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!("unsupported version: {version}"),
         ));
     }
-    if data.len() != EXPECTED_SIZE {
+
+    let expected_size = if version == 1 { V1_SIZE } else { V2_SIZE };
+    if data.len() != expected_size {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("expected {EXPECTED_SIZE} bytes, got {}", data.len()),
+            format!("expected {expected_size} bytes, got {}", data.len()),
         ));
     }
 
     let tick = u64::from_le_bytes(data[8..16].try_into().unwrap());
 
     let mut cells = Vec::with_capacity(VOXEL_COUNT);
-    let voxel_data = &data[16..];
+    let voxel_data = &data[16..16 + VOXEL_COUNT * 4];
     for i in 0..VOXEL_COUNT {
         let off = i * 4;
         let mat = Material::from_u8(voxel_data[off]).ok_or_else(|| {
@@ -77,20 +99,43 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64)> {
         });
     }
 
-    Ok((cells, tick))
+    // Parse focus state (V2) or use defaults (V1)
+    let focus = if version >= 2 {
+        let fo = 16 + VOXEL_COUNT * 4;
+        let fx = u16::from_le_bytes([data[fo], data[fo + 1]]) as usize;
+        let fy = u16::from_le_bytes([data[fo + 2], data[fo + 3]]) as usize;
+        let fz = u16::from_le_bytes([data[fo + 4], data[fo + 5]]) as usize;
+        let tool_active = data[fo + 6];
+        let tool = if tool_active != 0 {
+            let mat = Material::from_u8(data[fo + 7]).unwrap_or(Material::Air);
+            let sx = u16::from_le_bytes([data[fo + 8], data[fo + 9]]) as usize;
+            let sy = u16::from_le_bytes([data[fo + 10], data[fo + 11]]) as usize;
+            let sz = u16::from_le_bytes([data[fo + 12], data[fo + 13]]) as usize;
+            Some(ToolState { material: mat, start_x: sx, start_y: sy, start_z: sz })
+        } else {
+            None
+        };
+        FocusState { x: fx, y: fy, z: fz, tool }
+    } else {
+        FocusState::default()
+    };
+
+    Ok((cells, tick, focus))
 }
 
 pub fn save_world(world: &World, path: &Path) -> io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>();
-    save_to_file(grid, tick, path)
+    let focus = world.resource::<FocusState>();
+    save_to_file(grid, tick, focus, path)
 }
 
 pub fn load_world(path: &Path) -> io::Result<World> {
-    let (cells, tick) = load_from_file(path)?;
+    let (cells, tick, focus) = load_from_file(path)?;
     let mut world = World::new();
     world.insert_resource(VoxelGrid::from_cells(cells));
     world.insert_resource(Tick(tick));
+    world.insert_resource(focus);
     Ok(world)
 }
 
@@ -122,6 +167,46 @@ mod tests {
             world.resource::<Tick>().0,
             loaded.resource::<Tick>().0,
         );
+
+        // Focus should round-trip
+        let orig_focus = world.resource::<FocusState>();
+        let loaded_focus = loaded.resource::<FocusState>();
+        assert_eq!(orig_focus.x, loaded_focus.x);
+        assert_eq!(orig_focus.y, loaded_focus.y);
+        assert_eq!(orig_focus.z, loaded_focus.z);
+        assert!(loaded_focus.tool.is_none());
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn round_trip_with_tool_state() {
+        let mut world = create_world();
+        {
+            let mut focus = world.resource_mut::<FocusState>();
+            focus.x = 10;
+            focus.y = 20;
+            focus.z = 5;
+            focus.tool = Some(ToolState {
+                material: Material::Seed,
+                start_x: 5,
+                start_y: 15,
+                start_z: 5,
+            });
+        }
+        let path = std::env::temp_dir().join("groundwork_test_tool_rt.state");
+        save_world(&world, &path).unwrap();
+        let loaded = load_world(&path).unwrap();
+
+        let f = loaded.resource::<FocusState>();
+        assert_eq!(f.x, 10);
+        assert_eq!(f.y, 20);
+        assert_eq!(f.z, 5);
+        let t = f.tool.as_ref().unwrap();
+        assert_eq!(t.material, Material::Seed);
+        assert_eq!(t.start_x, 5);
+        assert_eq!(t.start_y, 15);
+        assert_eq!(t.start_z, 5);
 
         let _ = std::fs::remove_file(&path);
     }
@@ -164,7 +249,7 @@ mod tests {
     #[test]
     fn invalid_material() {
         let path = std::env::temp_dir().join("groundwork_test_bad_mat.state");
-        let mut buf = Vec::with_capacity(EXPECTED_SIZE);
+        let mut buf = Vec::with_capacity(V2_SIZE);
         buf.extend_from_slice(&MAGIC);
         buf.extend_from_slice(&VERSION.to_le_bytes());
         buf.extend_from_slice(&[0u8; 2]);
@@ -173,9 +258,43 @@ mod tests {
         for _ in 0..VOXEL_COUNT {
             buf.extend_from_slice(&[255, 0, 0, 0]);
         }
+        // Focus block
+        buf.extend_from_slice(&[0u8; FOCUS_BLOCK]);
         std::fs::write(&path, &buf).unwrap();
         let err = load_from_file(&path).unwrap_err();
         assert!(err.to_string().contains("invalid material"));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn v1_backward_compatible() {
+        // Build a valid V1 file
+        let world = create_world();
+        let grid = world.resource::<VoxelGrid>();
+        let tick = world.resource::<Tick>();
+
+        let mut buf = Vec::with_capacity(V1_SIZE);
+        buf.extend_from_slice(&MAGIC);
+        buf.extend_from_slice(&1u16.to_le_bytes()); // version 1
+        buf.extend_from_slice(&[0u8; 2]);
+        buf.extend_from_slice(&tick.0.to_le_bytes());
+        for v in grid.cells() {
+            buf.push(v.material.as_u8());
+            buf.push(v.water_level);
+            buf.push(v.light_level);
+            buf.push(v.nutrient_level);
+        }
+
+        let path = std::env::temp_dir().join("groundwork_test_v1_compat.state");
+        std::fs::write(&path, &buf).unwrap();
+
+        let loaded = load_world(&path).unwrap();
+        // Should load with default focus
+        let f = loaded.resource::<FocusState>();
+        assert_eq!(f.x, 30);
+        assert_eq!(f.y, 30);
+        assert!(f.tool.is_none());
+
         let _ = std::fs::remove_file(&path);
     }
 }

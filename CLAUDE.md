@@ -66,8 +66,11 @@ groundwork view [--z Z]                   # Print ASCII slice (default Z=16, abo
 groundwork place <material> <x> <y> <z>   # Place a voxel (air/soil/stone/water/root/seed)
                                           # Coords accept ranges: place soil 20..40 30 15
 groundwork fill <mat> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region (inclusive)
-groundwork inspect <x> <y> <z>            # Show one voxel's full state
+groundwork inspect [<x> <y> <z>]          # Show one voxel's full state (uses focus if no coords)
 groundwork status                         # Tick count + material summary
+groundwork focus [<x> <y> <z>]            # Get/set focus cursor position (persisted in state)
+groundwork tool-start <material>          # Begin range operation at current focus
+groundwork tool-end [--force]             # Apply tool from start to current focus
 groundwork tui                            # Launch interactive TUI (default)
 groundwork help                           # Show help
 
@@ -78,7 +81,7 @@ groundwork help                           # Show help
 `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed
 
 ### State file format
-Binary, ~422KB. Header (magic `GWRK` + version) + tick count (u64 LE) + 108,000 voxels × 4 bytes each.
+Binary, ~422KB. Version 2. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 108,000 voxels × 4 bytes each + focus state (14 bytes: position + tool). Backward-compatible: loads version 1 files (no focus block) with default focus.
 
 ## Architecture
 
@@ -86,19 +89,19 @@ Binary, ~422KB. Header (magic `GWRK` + version) + tick count (u64 LE) + 108,000 
 crates/
   groundwork-sim/     Rust library — bevy_ecs standalone (no rendering)
     src/
-      lib.rs          Public API: create_world(), create_schedule(), tick()
+      lib.rs          Public API: create_world(), create_schedule(), tick(), FocusState, ToolState
       voxel.rs        Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
       grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 60×60×30, indexed [x + y*60 + z*3600]
       systems.rs      ECS systems: water_flow, light_propagation, soil_absorption, seed_growth
-      save.rs         Binary save/load for VoxelGrid + Tick (zero external deps)
+      save.rs         Binary save/load v2: VoxelGrid + Tick + FocusState (backward-compatible with v1)
 
   groundwork-tui/     Rust binary — ratatui terminal renderer + CLI
     src/
       main.rs         Entry point, subcommand dispatch
-      cli.rs          Non-interactive CLI commands (new/tick/view/place/inspect/status)
-      app.rs          App state: holds World + Schedule, main loop
-      render.rs       ASCII rendering of a Z-slice of the grid (TUI mode)
-      input.rs        Keyboard controls (navigate depth, tick, auto-play)
+      cli.rs          Non-interactive CLI commands (new/tick/view/place/fill/inspect/status/focus/tool-start/tool-end)
+      app.rs          App state: World + Schedule, viewport-centered camera, tool mode, material palette
+      render.rs       Viewport-centered emoji rendering of Z-slice around focus, inspect/status panels
+      input.rs        Keyboard controls (WASD pan, J/K depth, Tab material, Enter tool, I/T panels)
 
   (future) groundwork-web/    Three.js + WASM — browser renderer (orthogonal workstream)
 ```
@@ -112,6 +115,7 @@ crates/
 - **Flat voxel array**: 108K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=15 is surface, Z=29 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
 - **System execution order**: water_flow → soil_absorption → light_propagation → seed_growth → tick_counter
+- **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
 
 ### Sim API
 
@@ -121,6 +125,16 @@ let mut schedule = groundwork_sim::create_schedule(); // Systems in order
 groundwork_sim::tick(&mut world, &mut schedule);   // Advance one step
 let grid = world.resource::<VoxelGrid>();          // Read state
 ```
+
+## Interface Parity Rule
+
+**CLI and TUI must ship player-facing features together.** When a sprint adds a new player action to one interface, the same sprint must add the corresponding mechanism to the other. Neither interface ships alone.
+
+**Why:** Agentic play testers use the CLI; human testers use the TUI. If the interfaces diverge, agent feedback stops reflecting real player UX. Agents can't report friction they never experience. We'd be optimizing for a CLI game, not the actual game.
+
+**Focus + Tool model:** Both interfaces share a focus/cursor concept and a two-step tool-start/tool-end workflow for range operations. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
+
+**Dev checklist addition:** Every dev assignment that adds a player-facing action must include acceptance checks for both CLI and TUI.
 
 ## Key Constraints
 

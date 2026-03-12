@@ -1,7 +1,6 @@
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 
 use crate::app::App;
-use groundwork_sim::grid::GRID_Z;
 
 pub fn handle_event(app: &mut App) -> std::io::Result<()> {
     if let Event::Key(key) = event::read()? {
@@ -10,19 +9,23 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
         }
 
         match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => app.running = false,
+            KeyCode::Char('q') | KeyCode::Esc => {
+                if app.tool_active {
+                    app.tool_cancel();
+                } else {
+                    app.running = false;
+                }
+            }
 
-            // Navigate Z slices.
-            KeyCode::Up | KeyCode::Char('k') => {
-                if app.slice_z < GRID_Z - 1 {
-                    app.slice_z += 1;
-                }
-            }
-            KeyCode::Down | KeyCode::Char('j') => {
-                if app.slice_z > 0 {
-                    app.slice_z -= 1;
-                }
-            }
+            // Pan viewport (arrow keys / WASD). Focus stays at screen center.
+            KeyCode::Left | KeyCode::Char('a') => app.pan(-1, 0),
+            KeyCode::Right | KeyCode::Char('d') => app.pan(1, 0),
+            KeyCode::Up | KeyCode::Char('w') => app.pan(0, -1),
+            KeyCode::Down | KeyCode::Char('s') => app.pan(0, 1),
+
+            // Z navigation (depth).
+            KeyCode::Char('k') => app.move_z(1),
+            KeyCode::Char('j') => app.move_z(-1),
 
             // Manual tick.
             KeyCode::Char(' ') => app.step(),
@@ -37,6 +40,25 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
             KeyCode::Char('-') => {
                 app.tick_rate_ms = (app.tick_rate_ms + 50).min(2000);
             }
+
+            // Material selection.
+            KeyCode::Tab => app.cycle_material(true),
+            KeyCode::BackTab => app.cycle_material(false),
+
+            // Tool start/end (Enter).
+            KeyCode::Enter => {
+                if app.tool_active {
+                    app.tool_end();
+                } else {
+                    app.tool_start();
+                }
+            }
+
+            // Toggle inspect panel.
+            KeyCode::Char('i') => app.show_inspect = !app.show_inspect,
+
+            // Toggle status panel.
+            KeyCode::Char('t') => app.show_status = !app.show_status,
 
             _ => {}
         }

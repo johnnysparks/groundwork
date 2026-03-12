@@ -5,18 +5,49 @@ pub mod voxel;
 
 use bevy_ecs::prelude::*;
 
-use grid::VoxelGrid;
+use grid::{VoxelGrid, GROUND_LEVEL};
 use systems::{light_propagation, root_water_absorption, seed_growth, soil_absorption, water_flow};
+use voxel::Material;
 
 /// Tick counter resource.
 #[derive(Resource, Default)]
 pub struct Tick(pub u64);
+
+/// Focus/cursor position in the world. Shared by CLI and TUI.
+#[derive(Resource, Debug, Clone)]
+pub struct FocusState {
+    pub x: usize,
+    pub y: usize,
+    pub z: usize,
+    /// Active tool operation: material being placed and the start position.
+    pub tool: Option<ToolState>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ToolState {
+    pub material: Material,
+    pub start_x: usize,
+    pub start_y: usize,
+    pub start_z: usize,
+}
+
+impl Default for FocusState {
+    fn default() -> Self {
+        Self {
+            x: 30,
+            y: 30,
+            z: GROUND_LEVEL + 1,
+            tool: None,
+        }
+    }
+}
 
 /// Create a new simulation world with default terrain.
 pub fn create_world() -> World {
     let mut world = World::new();
     world.insert_resource(VoxelGrid::new());
     world.insert_resource(Tick::default());
+    world.insert_resource(FocusState::default());
     world
 }
 
