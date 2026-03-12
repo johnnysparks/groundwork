@@ -35,9 +35,10 @@ pub struct App {
     pub selected_material: usize, // index into MATERIAL_PALETTE
     pub tool_active: bool,
     pub tool_start: Option<(usize, usize, usize)>,
-    // UI panels
+    // UI panels (toggleable sections in side panel)
     pub show_inspect: bool,
     pub show_status: bool,
+    pub show_controls: bool,
 }
 
 impl App {
@@ -54,8 +55,9 @@ impl App {
             selected_material: 0,
             tool_active: false,
             tool_start: None,
-            show_inspect: false,
+            show_inspect: true,
             show_status: false,
+            show_controls: true,
         }
     }
 

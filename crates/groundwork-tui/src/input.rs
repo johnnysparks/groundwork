@@ -54,11 +54,10 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
                 }
             }
 
-            // Toggle inspect panel.
+            // Toggle panel sections.
             KeyCode::Char('i') => app.show_inspect = !app.show_inspect,
-
-            // Toggle status panel.
             KeyCode::Char('t') => app.show_status = !app.show_status,
+            KeyCode::Char('h') => app.show_controls = !app.show_controls,
 
             _ => {}
         }
