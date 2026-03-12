@@ -27,8 +27,8 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
             KeyCode::Char('k') => app.move_z(1),
             KeyCode::Char('j') => app.move_z(-1),
 
-            // Manual tick.
-            KeyCode::Char(' ') => app.step(),
+            // Manual tick (Shift+P).
+            KeyCode::Char('P') => app.step(),
 
             // Toggle auto-tick.
             KeyCode::Char('p') => app.auto_tick = !app.auto_tick,
@@ -45,8 +45,8 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
             KeyCode::Tab => app.cycle_tool(true),
             KeyCode::BackTab => app.cycle_tool(false),
 
-            // Tool start/end (Enter).
-            KeyCode::Enter => {
+            // Tool start/end (Space).
+            KeyCode::Char(' ') => {
                 if app.tool_active {
                     app.tool_end();
                 } else {
