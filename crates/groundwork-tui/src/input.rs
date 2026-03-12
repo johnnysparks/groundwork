@@ -17,11 +17,11 @@ pub fn handle_event(app: &mut App) -> std::io::Result<()> {
                 }
             }
 
-            // Cursor movement (arrow keys / WASD).
-            KeyCode::Left | KeyCode::Char('a') => app.move_cursor(-1, 0),
-            KeyCode::Right | KeyCode::Char('d') => app.move_cursor(1, 0),
-            KeyCode::Up | KeyCode::Char('w') => app.move_cursor(0, -1),
-            KeyCode::Down | KeyCode::Char('s') => app.move_cursor(0, 1),
+            // Pan viewport (arrow keys / WASD). Focus stays at screen center.
+            KeyCode::Left | KeyCode::Char('a') => app.pan(-1, 0),
+            KeyCode::Right | KeyCode::Char('d') => app.pan(1, 0),
+            KeyCode::Up | KeyCode::Char('w') => app.pan(0, -1),
+            KeyCode::Down | KeyCode::Char('s') => app.pan(0, 1),
 
             // Z navigation (depth).
             KeyCode::Char('k') => app.move_z(1),

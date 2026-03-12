@@ -5,14 +5,13 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
-use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GROUND_LEVEL};
+use groundwork_sim::grid::{VoxelGrid, GROUND_LEVEL};
 use groundwork_sim::voxel::Material;
 
 use crate::app::App;
 
 /// Map a voxel to an emoji string + color for TUI rendering.
 fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (&'static str, Color) {
-    // Dim factor based on light (0.0–1.0 mapped to color brightness).
     let dim = |c: u8| -> u8 {
         ((c as u16 * light_level as u16) / 255) as u8
     };
@@ -52,9 +51,9 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: 
 
 fn in_tool_range(x: usize, y: usize, z: usize, app: &App) -> bool {
     if let Some((sx, sy, sz)) = app.tool_start {
-        let ex = app.cursor_x;
-        let ey = app.cursor_y;
-        let ez = app.slice_z;
+        let ex = app.focus_x;
+        let ey = app.focus_y;
+        let ez = app.focus_z;
         x >= sx.min(ex) && x <= sx.max(ex)
             && y >= sy.min(ey) && y <= sy.max(ey)
             && z >= sz.min(ez) && z <= sz.max(ez)
@@ -66,7 +65,6 @@ fn in_tool_range(x: usize, y: usize, z: usize, app: &App) -> bool {
 pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     let area = frame.area();
 
-    // Layout: optional side panels + grid + status bar
     let has_side_panel = app.show_inspect || app.show_status;
     let [main_area, status_area] =
         Layout::vertical([Constraint::Min(1), Constraint::Length(3)]).areas(area);
@@ -80,24 +78,44 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     };
 
     let grid = world.resource::<VoxelGrid>();
-    let z = app.slice_z;
+    let z = app.focus_z;
 
-    // Render the XY slice at the current Z level.
-    let max_rows = grid_area.height as usize;
-    let emoji_cols = grid_area.width as usize / 2;
+    // Viewport dimensions in voxel cells.
+    let vp_rows = grid_area.height as usize;
+    let vp_cols = grid_area.width as usize / 2; // each emoji = 2 terminal columns
 
-    let mut lines: Vec<Line> = Vec::with_capacity(max_rows.min(GRID_Y));
+    // Viewport origin: focus is always at center.
+    let (ox, oy) = app.viewport_origin(vp_cols, vp_rows);
 
-    for y in 0..GRID_Y.min(max_rows) {
-        let mut spans: Vec<Span> = Vec::with_capacity(emoji_cols.min(GRID_X));
-        for x in 0..GRID_X.min(emoji_cols) {
-            if let Some(voxel) = grid.get(x, y, z) {
+    let mut lines: Vec<Line> = Vec::with_capacity(vp_rows);
+
+    for row in 0..vp_rows {
+        let wy = oy + row as isize; // world Y for this screen row
+        let mut spans: Vec<Span> = Vec::with_capacity(vp_cols);
+
+        for col in 0..vp_cols {
+            let wx = ox + col as isize; // world X for this screen col
+
+            let is_focus = wx == app.focus_x as isize && wy == app.focus_y as isize;
+
+            // Out-of-bounds: render void
+            if wx < 0 || wy < 0 {
+                let style = if is_focus {
+                    Style::default().bg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                spans.push(Span::styled("··", style));
+                continue;
+            }
+
+            let (wx, wy) = (wx as usize, wy as usize);
+
+            if let Some(voxel) = grid.get(wx, wy, z) {
                 let (s, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level, voxel.nutrient_level);
+                let is_in_range = app.tool_active && in_tool_range(wx, wy, z, app);
 
-                let is_cursor = x == app.cursor_x && y == app.cursor_y;
-                let is_in_range = app.tool_active && in_tool_range(x, y, z, app);
-
-                let style = if is_cursor {
+                let style = if is_focus {
                     Style::default().fg(fg).bg(Color::Yellow).add_modifier(Modifier::BOLD)
                 } else if is_in_range {
                     Style::default().fg(fg).bg(Color::Rgb(60, 60, 100))
@@ -106,6 +124,14 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 };
 
                 spans.push(Span::styled(s, style));
+            } else {
+                // Beyond grid bounds
+                let style = if is_focus {
+                    Style::default().bg(Color::Yellow)
+                } else {
+                    Style::default().fg(Color::DarkGray)
+                };
+                spans.push(Span::styled("··", style));
             }
         }
         lines.push(Line::from(spans));
@@ -124,7 +150,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
             )));
 
-            if let Some(voxel) = grid.get(app.cursor_x, app.cursor_y, z) {
+            if let Some(voxel) = grid.get(app.focus_x, app.focus_y, z) {
                 let depth_label = if z > GROUND_LEVEL {
                     format!("above +{}", z - GROUND_LEVEL)
                 } else if z == GROUND_LEVEL {
@@ -134,7 +160,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 };
                 panel_lines.push(Line::from(format!(
                     "({}, {}, {}) [{}]",
-                    app.cursor_x, app.cursor_y, z, depth_label
+                    app.focus_x, app.focus_y, z, depth_label
                 )));
                 panel_lines.push(Line::from(format!("material: {}", voxel.material.name())));
                 panel_lines.push(Line::from(format!("water: {}/255", voxel.water_level)));
@@ -150,8 +176,8 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                             (-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)
                         ];
                         dirs.iter().any(|&(dx,dy,dz)| {
-                            let nx = app.cursor_x as isize + dx;
-                            let ny = app.cursor_y as isize + dy;
+                            let nx = app.focus_x as isize + dx;
+                            let ny = app.focus_y as isize + dy;
                             let nz = z as isize + dz;
                             if nx < 0 || ny < 0 || nz < 0 { return false; }
                             grid.get(nx as usize, ny as usize, nz as usize)
@@ -174,6 +200,11 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                         )));
                     }
                 }
+            } else {
+                panel_lines.push(Line::from(format!(
+                    "({}, {}, {}) — out of bounds",
+                    app.focus_x, app.focus_y, z
+                )));
             }
             panel_lines.push(Line::from(""));
         }
@@ -204,7 +235,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         frame.render_widget(panel, side);
     }
 
-    // Status bar (bottom).
+    // Status bar
     let depth_label = if z > GROUND_LEVEL {
         format!("above +{}", z - GROUND_LEVEL)
     } else if z == GROUND_LEVEL {
@@ -221,9 +252,9 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
 
     let tool_str = if app.tool_active {
         if let Some((sx, sy, sz)) = app.tool_start {
-            format!("TOOL:{} ({},{},{})→({},{},{})",
+            format!("TOOL:{} ({},{},{})\u{2192}({},{},{})",
                 app.selected_material().name(), sx, sy, sz,
-                app.cursor_x, app.cursor_y, app.slice_z)
+                app.focus_x, app.focus_y, app.focus_z)
         } else {
             format!("TOOL:{}", app.selected_material().name())
         }
@@ -232,9 +263,9 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     };
 
     let status_line1 = format!(
-        " X:{cx} Y:{cy} Z:{z}/{max} ({depth})  Tick:{tick}  [{mode}]  {tool}",
-        cx = app.cursor_x,
-        cy = app.cursor_y,
+        " X:{fx} Y:{fy} Z:{z}/{max} ({depth})  Tick:{tick}  [{mode}]  {tool}",
+        fx = app.focus_x,
+        fy = app.focus_y,
         z = z,
         max = groundwork_sim::grid::GRID_Z - 1,
         depth = depth_label,
@@ -242,7 +273,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         mode = mode,
         tool = tool_str,
     );
-    let status_line2 = " [WASD]move [J/K]depth [Tab]material [Enter]tool [I]inspect [T]status [Space]step [P]auto [Q]quit";
+    let status_line2 = " [WASD]pan [J/K]depth [Tab]material [Enter]tool [I]inspect [T]status [Space]step [P]auto [Q]quit";
 
     let status = Paragraph::new(vec![
         Line::from(status_line1),

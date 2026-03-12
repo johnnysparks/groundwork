@@ -26,10 +26,11 @@ pub struct App {
     pub running: bool,
     pub auto_tick: bool,
     pub tick_rate_ms: u64,
-    // Cursor
-    pub cursor_x: usize,
-    pub cursor_y: usize,
-    pub slice_z: usize,
+    /// Focus position — always rendered at the center of the viewport.
+    /// WASD moves focus, which pans the viewport over the world.
+    pub focus_x: usize,
+    pub focus_y: usize,
+    pub focus_z: usize,
     // Tool mode
     pub selected_material: usize, // index into MATERIAL_PALETTE
     pub tool_active: bool,
@@ -47,9 +48,9 @@ impl App {
             running: true,
             auto_tick: false,
             tick_rate_ms: 200,
-            cursor_x: 30,
-            cursor_y: 30,
-            slice_z: GROUND_LEVEL + 1,
+            focus_x: 30,
+            focus_y: 30,
+            focus_z: GROUND_LEVEL + 1,
             selected_material: 0,
             tool_active: false,
             tool_start: None,
@@ -92,40 +93,50 @@ impl App {
         }
     }
 
-    pub fn move_cursor(&mut self, dx: isize, dy: isize) {
-        let nx = self.cursor_x as isize + dx;
-        let ny = self.cursor_y as isize + dy;
+    /// Move the focus (and viewport) by dx/dy within grid bounds.
+    pub fn pan(&mut self, dx: isize, dy: isize) {
+        let nx = self.focus_x as isize + dx;
+        let ny = self.focus_y as isize + dy;
         if nx >= 0 && (nx as usize) < GRID_X {
-            self.cursor_x = nx as usize;
+            self.focus_x = nx as usize;
         }
         if ny >= 0 && (ny as usize) < GRID_Y {
-            self.cursor_y = ny as usize;
+            self.focus_y = ny as usize;
         }
     }
 
     pub fn move_z(&mut self, dz: isize) {
-        let nz = self.slice_z as isize + dz;
+        let nz = self.focus_z as isize + dz;
         if nz >= 0 && (nz as usize) < GRID_Z {
-            self.slice_z = nz as usize;
+            self.focus_z = nz as usize;
         }
     }
 
-    /// Begin tool operation at current cursor.
-    pub fn tool_start(&mut self) {
-        self.tool_active = true;
-        self.tool_start = Some((self.cursor_x, self.cursor_y, self.slice_z));
+    /// Compute the viewport origin for a given screen size.
+    /// Returns (world_x_start, world_y_start) such that focus is centered.
+    /// Coordinates can be negative (meaning the viewport extends beyond world edge).
+    pub fn viewport_origin(&self, viewport_cols: usize, viewport_rows: usize) -> (isize, isize) {
+        let half_w = viewport_cols as isize / 2;
+        let half_h = viewport_rows as isize / 2;
+        (self.focus_x as isize - half_w, self.focus_y as isize - half_h)
     }
 
-    /// End tool operation: fill from start to current cursor with selected material.
+    /// Begin tool operation at current focus.
+    pub fn tool_start(&mut self) {
+        self.tool_active = true;
+        self.tool_start = Some((self.focus_x, self.focus_y, self.focus_z));
+    }
+
+    /// End tool operation: fill from start to current focus with selected material.
     pub fn tool_end(&mut self) {
         if let Some((sx, sy, sz)) = self.tool_start.take() {
             let mat = self.selected_material();
-            let xlo = sx.min(self.cursor_x);
-            let xhi = sx.max(self.cursor_x);
-            let ylo = sy.min(self.cursor_y);
-            let yhi = sy.max(self.cursor_y);
-            let zlo = sz.min(self.slice_z);
-            let zhi = sz.max(self.slice_z);
+            let xlo = sx.min(self.focus_x);
+            let xhi = sx.max(self.focus_x);
+            let ylo = sy.min(self.focus_y);
+            let yhi = sy.max(self.focus_y);
+            let zlo = sz.min(self.focus_z);
+            let zhi = sz.max(self.focus_z);
 
             use groundwork_sim::grid::VoxelGrid;
             let mut grid = self.world.resource_mut::<VoxelGrid>();
