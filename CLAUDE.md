@@ -122,6 +122,16 @@ groundwork_sim::tick(&mut world, &mut schedule);   // Advance one step
 let grid = world.resource::<VoxelGrid>();          // Read state
 ```
 
+## Interface Parity Rule
+
+**CLI and TUI must ship player-facing features together.** When a sprint adds a new player action to one interface, the same sprint must add the corresponding mechanism to the other. Neither interface ships alone.
+
+**Why:** Agentic play testers use the CLI; human testers use the TUI. If the interfaces diverge, agent feedback stops reflecting real player UX. Agents can't report friction they never experience. We'd be optimizing for a CLI game, not the actual game.
+
+**Focus + Tool model:** Both interfaces share a focus/cursor concept and a two-step tool-start/tool-end workflow for range operations. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
+
+**Dev checklist addition:** Every dev assignment that adds a player-facing action must include acceptance checks for both CLI and TUI.
+
 ## Key Constraints
 
 - **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~60x60x30 voxel garden bed, continuous above/below-ground camera

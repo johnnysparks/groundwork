@@ -10,7 +10,9 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 
 **The build can:** create worlds, place/fill materials (with ranges), protect seeds/roots from single `place` destruction, simulate water flow + light + seed growth with visible progress (s→S→*), show growth diagnostics, save/load state.
 
-**The build can't yet:** render emoji, protect seeds/roots from `fill` destruction, fix checkerboard water, make roots interact with the world, show water depth, vary terrain, or support multiple species.
+**The build can't yet:** render emoji, protect seeds/roots from `fill` destruction, fix checkerboard water, make roots interact with the world, show water depth, vary terrain, support multiple species, or let the TUI player interact with the world (TUI is view-only).
+
+**New process rule:** CLI and TUI must ship player-facing features together. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
 
 **Key insight from Round 2:** Trust and beauty scores are sliding (3.5→3.3 trust, 3.0→2.8 beauty). The `fill` bypass undermines Sprint 3's protection work. The checkerboard is universal. Emoji rendering is the fastest path to visual delight. Fix trust + add richness = restore momentum.
 
@@ -99,6 +101,49 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 - **Done when:** Dark air renders as blank space (not dot/emoji) in CLI and TUI.
 - **Dependencies:** none
 - **Risk:** low
+
+### TUI-01: Cursor/focus system in TUI
+- **Owner:** tools
+- **Why:** TUI has no way to select or interact with individual cells. Human testers can only watch — they can't point at a cell to inspect it or start a placement. Blocks TUI-02 and TUI-03.
+- **Done when:** Arrow keys move a visible cursor on the current Z-slice. Focused cell is highlighted. Cursor position shown in status bar.
+- **Dependencies:** none
+- **Risk:** low
+- **Scope:** Foundation for all TUI interaction. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
+
+### TUI-02: Tool mode — range placement in TUI
+- **Owner:** tools
+- **Why:** Human testers need the same range-placement workflow that CLI agents use. A key starts a tool operation at the cursor; moving the cursor and pressing another key applies the operation to the range. Without this, TUI is view-only and player feedback misses all placement UX.
+- **Done when:** Player can select a material, press a key to begin placement at cursor (tool-start), move cursor, press a key to apply (tool-end). Pending range is visually highlighted. Works for seed, soil, water, stone, air.
+- **Dependencies:** TUI-01
+- **Risk:** medium (first interactive editing in TUI)
+
+### TUI-03: Inspect panel in TUI
+- **Owner:** tools
+- **Why:** CLI `inspect` shows detailed voxel state. Human testers have no equivalent — they can't see water level, light, growth progress, or dormancy reasons.
+- **Done when:** Pressing a key on the focused cell shows voxel details (material, water, light, nutrient, growth status) in a panel or overlay.
+- **Dependencies:** TUI-01
+- **Risk:** low
+
+### TUI-04: Status display in TUI
+- **Owner:** tools
+- **Why:** CLI `status` shows material counts and tick info. TUI only shows Z position and tick in the status bar.
+- **Done when:** A key toggles a status panel showing material counts matching CLI `status` output.
+- **Dependencies:** none
+- **Risk:** low
+
+### CLI-21: Focus command — persistent cursor for CLI
+- **Owner:** tools
+- **Why:** Interface parity with TUI cursor. Agents should navigate the world step-by-step like human testers, not teleport with explicit coordinates. Focus point persists in state file.
+- **Done when:** `groundwork focus <x> <y> <z>` sets focus. `groundwork focus` prints current focus and voxel summary at that position. Focus persisted in state file. `inspect` with no args uses focus.
+- **Dependencies:** none (state file format change — bump version)
+- **Risk:** low-medium (state file format change)
+
+### CLI-22: Tool start/end — two-step range operations via focus
+- **Owner:** tools
+- **Why:** Interface parity with TUI tool mode. Agents should experience the same two-step workflow as humans: set start point, set end point, apply. This ensures agent play-test feedback reflects real UX friction.
+- **Done when:** `groundwork tool-start <material>` marks current focus as range start. `groundwork tool-end` applies material from start to current focus. Pending tool state persisted. Reports cells placed, protected, out-of-bounds. Old `place`/`fill` commands remain as power-user shortcuts.
+- **Dependencies:** CLI-21
+- **Risk:** low-medium (state file format change)
 
 ### SIM-03: Root water absorption (Sprint 5)
 - **Owner:** gameplay
