@@ -3,6 +3,7 @@ mod camera;
 mod cli;
 mod glyph;
 mod input;
+mod quest;
 mod render;
 mod render3d;
 

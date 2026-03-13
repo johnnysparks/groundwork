@@ -471,12 +471,15 @@ fn draw_3d_panel(
     ]));
     panel_lines.push(Line::from(""));
 
+    // Missions
+    panel_lines.extend(app.quest_log.render_lines(app.show_missions, panel_area.width as usize));
+
     // Controls
     panel_lines.push(badge("CONTROLS (H)"));
     if app.show_controls {
         panel_lines.push(Line::from(""));
 
-        let controls: [(&str, &str); 13] = [
+        let controls: [(&str, &str); 15] = [
             ("W/S", "fly fwd/back"),
             ("A/D", "pan left/right"),
             ("Q/E", "orbit left/right"),
@@ -485,9 +488,11 @@ fn draw_3d_panel(
             ("R", "reset camera"),
             ("Space", "use tool"),
             ("Tab", "next tool"),
+            ("[ / ]", "species"),
+            ("M", "missions"),
+            (",/.", "quest nav"),
             ("V", "toggle 2D/3D"),
             ("I", "inspect"),
-            ("T", "status"),
             ("P", "auto-tick"),
             ("Esc", "quit"),
         ];

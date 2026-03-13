@@ -10,6 +10,7 @@ use groundwork_sim::Tick;
 
 use crate::camera::Camera;
 use crate::input;
+use crate::quest::{Action, QuestLog};
 use crate::render;
 use crate::render3d;
 
@@ -183,6 +184,9 @@ pub struct App {
     pub view_mode: ViewMode,
     /// 3D camera state (created on first switch to 3D mode).
     pub camera: Option<Camera>,
+    // Quest / mission log
+    pub quest_log: QuestLog,
+    pub show_missions: bool,
 }
 
 impl App {
@@ -205,11 +209,15 @@ impl App {
             show_controls: true,
             view_mode: ViewMode::Slice2D,
             camera: None,
+            quest_log: QuestLog::new(),
+            show_missions: true,
         }
     }
 
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> std::io::Result<()> {
         while self.running {
+            self.quest_log.tick_notification();
+
             terminal.draw(|frame| {
                 match self.view_mode {
                     ViewMode::Slice2D => render::draw(frame, &self.world, self),
@@ -220,8 +228,10 @@ impl App {
             let timeout = Duration::from_millis(self.tick_rate_ms);
             if ratatui::crossterm::event::poll(timeout)? {
                 input::handle_event(self)?;
+                self.check_quests();
             } else if self.auto_tick {
                 groundwork_sim::tick(&mut self.world, &mut self.schedule);
+                self.check_quests();
             }
         }
         Ok(())
@@ -304,6 +314,7 @@ impl App {
         if let Some((sx, sy, sz)) = self.tool_start.take() {
             let tool = self.selected_tool();
             let species_id = self.selected_species;
+            let is_range = sx != self.focus_x || sy != self.focus_y || sz != self.focus_z;
             let xlo = sx.min(self.focus_x);
             let xhi = sx.max(self.focus_x);
             let ylo = sy.min(self.focus_y);
@@ -313,10 +324,12 @@ impl App {
 
             let mut grid = self.world.resource_mut::<VoxelGrid>();
             let mut seed_landings = Vec::new();
+            let mut affected = 0u32;
             for z in zlo..=zhi {
                 for y in ylo..=yhi {
                     for x in xlo..=xhi {
                         if let Some(pos) = apply_tool(&mut grid, tool, x, y, z) {
+                            affected += 1;
                             if tool == Tool::SeedBag {
                                 seed_landings.push(pos);
                             }
@@ -330,6 +343,19 @@ impl App {
                 for pos in seed_landings {
                     seed_map.map.insert(pos, species_id);
                 }
+            }
+
+            // Record quest actions
+            if affected > 0 {
+                match tool {
+                    Tool::SeedBag => self.quest_log.record(Action::PlantSeed(species_id)),
+                    Tool::WateringCan => self.quest_log.record(Action::PlaceWater),
+                    Tool::Shovel => self.quest_log.record(Action::UseShovel),
+                    _ => {}
+                }
+            }
+            if is_range {
+                self.quest_log.record(Action::UseToolRange);
             }
         }
         self.tool_active = false;
@@ -374,6 +400,14 @@ impl App {
                 self.focus_z = (cam.focus.z as usize).min(GRID_Z - 1);
             }
         }
+    }
+
+    /// Run quest completion checks against current world state.
+    pub fn check_quests(&mut self) {
+        self.sync_focus_from_camera();
+        let focus = (self.focus_x, self.focus_y, self.focus_z);
+        let show_inspect = self.show_inspect;
+        self.quest_log.check(&self.world, focus, show_inspect);
     }
 
     /// Ensure the 3D camera exists and is synced to the current focus.

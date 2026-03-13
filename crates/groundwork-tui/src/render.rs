@@ -360,6 +360,9 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     }
     panel_lines.push(Line::from(""));
 
+    // Missions
+    panel_lines.extend(app.quest_log.render_lines(app.show_missions, panel_width as usize));
+
     // Status
     panel_lines.push(badge("STATUS (T)"));
     if app.show_status {
@@ -434,12 +437,14 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     if app.show_controls {
         panel_lines.push(Line::from(""));
 
-        let controls: [(&str, &str); 12] = [
+        let controls: [(&str, &str); 14] = [
             ("WASD", "pan"),
             ("J/K", "depth"),
             ("Space", "use tool"),
             ("Tab", "next tool"),
             ("[ / ]", "species"),
+            ("M", "missions"),
+            (",/.", "quest nav"),
             ("I", "inspect"),
             ("T", "status"),
             ("H", "controls"),
