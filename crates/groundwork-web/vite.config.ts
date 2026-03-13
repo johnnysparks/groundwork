@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // GitHub Pages serves from /<repo-name>/
+  base: command === 'build' ? '/groundwork/' : '/',
   plugins: [wasm()],
   build: {
     target: 'esnext',
+    outDir: 'dist',
   },
   server: {
     headers: {
@@ -13,4 +16,4 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
   },
-});
+}));
