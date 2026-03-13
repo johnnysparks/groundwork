@@ -199,139 +199,116 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
 /// Uses nutrient_level as a growth counter: increments by 3-8 each tick
 /// (based on adjacent soil quality) when conditions are met, spawns a Tree entity at 200.
 pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut commands: Commands, tick: Res<Tick>, mut seed_species: ResMut<SeedSpeciesMap>) {
-    // Snapshot to check neighbors without order artifacts.
-    let snapshot: Vec<(Material, u8)> = grid
-        .cells()
-        .iter()
-        .map(|v| (v.material, v.water_level))
-        .collect();
+    // No snapshot needed: seeds only read neighbor water/material and write to
+    // themselves. Seeds don't affect each other's neighbor checks.
+    let z_stride = GRID_X * GRID_Y;
+    let cells = grid.cells();
 
+    // First pass: collect seed positions (seeds are very rare, <0.1% of cells)
+    let mut seeds: Vec<(usize, usize, usize, usize)> = Vec::new(); // (x, y, z, idx)
     for z in 0..GRID_Z {
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
-                let idx = VoxelGrid::index(x, y, z);
-                if snapshot[idx].0 != Material::Seed {
-                    continue;
+                let idx = x + y * GRID_X + z * z_stride;
+                if cells[idx].material == Material::Seed {
+                    seeds.push((x, y, z, idx));
                 }
+            }
+        }
+    }
 
-                let cell_water = grid.cells()[idx].water_level;
-                let cell_light = grid.cells()[idx].light_level;
+    for (x, y, z, idx) in seeds {
+        let cells = grid.cells();
+        let cell_water = cells[idx].water_level;
+        let cell_light = cells[idx].light_level;
 
-                // Check own water or adjacent water.
-                let mut has_water = cell_water >= 30;
-                if !has_water {
-                    let neighbors: [(isize, isize, isize); 6] = [
-                        (-1, 0, 0),
-                        (1, 0, 0),
-                        (0, -1, 0),
-                        (0, 1, 0),
-                        (0, 0, -1),
-                        (0, 0, 1),
-                    ];
-                    for (dx, dy, dz) in neighbors {
-                        let nx = x as isize + dx;
-                        let ny = y as isize + dy;
-                        let nz = z as isize + dz;
-                        if nx < 0 || ny < 0 || nz < 0 {
-                            continue;
-                        }
-                        let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
-                        if !VoxelGrid::in_bounds(nx, ny, nz) {
-                            continue;
-                        }
-                        let nidx = VoxelGrid::index(nx, ny, nz);
-                        if snapshot[nidx].1 >= 30 {
-                            has_water = true;
-                            break;
-                        }
+        // Check own water or adjacent water.
+        let mut has_water = cell_water >= 30;
+        if !has_water {
+            macro_rules! check_water {
+                ($nidx:expr) => {
+                    if cells[$nidx].water_level >= 30 { has_water = true; }
+                };
+            }
+            if x > 0 { check_water!(idx - 1); }
+            if !has_water && x + 1 < GRID_X { check_water!(idx + 1); }
+            if !has_water && y > 0 { check_water!(idx - GRID_X); }
+            if !has_water && y + 1 < GRID_Y { check_water!(idx + GRID_X); }
+            if !has_water && z > 0 { check_water!(idx - z_stride); }
+            if !has_water && z + 1 < GRID_Z { check_water!(idx + z_stride); }
+        }
+
+        let has_light = cell_light >= 30;
+
+        if has_water && has_light {
+            let mut best_nutrient_cap: u8 = 0;
+            let mut blocked_by_compaction = false;
+            let soil_cells = soil_grid.cells();
+
+            macro_rules! check_soil {
+                ($nidx:expr) => {{
+                    let nidx = $nidx;
+                    if cells[nidx].material == Material::Soil {
+                        let comp = &soil_cells[nidx];
+                        let nc = comp.nutrient_capacity();
+                        if nc > best_nutrient_cap { best_nutrient_cap = nc; }
+                        if comp.is_compacted() { blocked_by_compaction = true; }
                     }
-                }
+                }};
+            }
 
-                let has_light = cell_light >= 30;
+            if x > 0 { check_soil!(idx - 1); }
+            if x + 1 < GRID_X { check_soil!(idx + 1); }
+            if y > 0 { check_soil!(idx - GRID_X); }
+            if y + 1 < GRID_Y { check_soil!(idx + GRID_X); }
+            if z > 0 { check_soil!(idx - z_stride); }
+            if z + 1 < GRID_Z { check_soil!(idx + z_stride); }
 
-                if has_water && has_light {
-                    // Check soil quality of adjacent soil for growth rate bonus.
-                    // Base growth: 3/tick. Nutrient-rich soil adds up to +5.
-                    let mut best_nutrient_cap: u8 = 0;
-                    let mut blocked_by_compaction = false;
-                    let soil_neighbors: [(isize, isize, isize); 6] = [
-                        (-1, 0, 0), (1, 0, 0),
-                        (0, -1, 0), (0, 1, 0),
-                        (0, 0, -1), (0, 0, 1),
-                    ];
-                    for (dx, dy, dz) in soil_neighbors {
-                        let nx = x as isize + dx;
-                        let ny = y as isize + dy;
-                        let nz = z as isize + dz;
-                        if nx < 0 || ny < 0 || nz < 0 { continue; }
-                        let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
-                        if !VoxelGrid::in_bounds(nx, ny, nz) { continue; }
-                        let nidx = VoxelGrid::index(nx, ny, nz);
-                        if snapshot[nidx].0 == Material::Soil {
-                            if let Some(comp) = soil_grid.get(nx, ny, nz) {
-                                let nc = comp.nutrient_capacity();
-                                if nc > best_nutrient_cap {
-                                    best_nutrient_cap = nc;
-                                }
-                                if comp.is_compacted() {
-                                    blocked_by_compaction = true;
+            if !blocked_by_compaction {
+                let soil_bonus = (best_nutrient_cap as u16 * 5 / 255) as u8;
+                let growth_rate = 3 + soil_bonus;
+                if let Some(cell) = grid.get_mut(x, y, z) {
+                    cell.nutrient_level = cell.nutrient_level.saturating_add(growth_rate);
+                    if cell.nutrient_level >= 200 {
+                        cell.set_material(Material::Trunk);
+
+                        let mut footprint = vec![(x, y, z)];
+                        if z > 0 {
+                            if let Some(below) = grid.get_mut(x, y, z - 1) {
+                                if below.material == Material::Soil {
+                                    below.set_material(Material::Root);
+                                    footprint.push((x, y, z - 1));
                                 }
                             }
                         }
-                    }
-
-                    // Compacted soil blocks growth entirely
-                    if !blocked_by_compaction {
-                        // Growth rate: 3 base + up to 5 from soil nutrients
-                        let soil_bonus = (best_nutrient_cap as u16 * 5 / 255) as u8;
-                        let growth_rate = 3 + soil_bonus;
-                        if let Some(cell) = grid.get_mut(x, y, z) {
-                            cell.nutrient_level = cell.nutrient_level.saturating_add(growth_rate);
-                            if cell.nutrient_level >= 200 {
-                                // Seed matures into a tree seedling
-                                cell.set_material(Material::Trunk);
-
-                                // Place 1-2 Root voxels below in soil
-                                let mut footprint = vec![(x, y, z)];
-                                if z > 0 {
-                                    if let Some(below) = grid.get_mut(x, y, z - 1) {
-                                        if below.material == Material::Soil {
-                                            below.set_material(Material::Root);
-                                            footprint.push((x, y, z - 1));
-                                        }
-                                    }
+                        if z > 1 {
+                            if let Some(below2) = grid.get_mut(x, y, z - 2) {
+                                if below2.material == Material::Soil {
+                                    below2.set_material(Material::Root);
+                                    footprint.push((x, y, z - 2));
                                 }
-                                if z > 1 {
-                                    if let Some(below2) = grid.get_mut(x, y, z - 2) {
-                                        if below2.material == Material::Soil {
-                                            below2.set_material(Material::Root);
-                                            footprint.push((x, y, z - 2));
-                                        }
-                                    }
-                                }
-
-                                // Spawn Tree entity
-                                let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or(0);
-                                let rng_seed = (tick.0 as u64)
-                                    .wrapping_mul(x as u64 + 1)
-                                    .wrapping_mul(y as u64 + 1);
-                                commands.spawn(Tree {
-                                    species_id,
-                                    root_pos: (x, y, z),
-                                    age: 0,
-                                    stage: GrowthStage::Seedling,
-                                    health: 1.0,
-                                    accumulated_water: 0.0,
-                                    accumulated_light: 0.0,
-                                    rng_seed,
-                                    dirty: false,
-                                    voxel_footprint: footprint,
-                                    branches: Vec::new(),
-                                    attraction_points: Vec::new(),
-                                    skeleton_initialized: false,
-                                });
                             }
                         }
+
+                        let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or(0);
+                        let rng_seed = (tick.0 as u64)
+                            .wrapping_mul(x as u64 + 1)
+                            .wrapping_mul(y as u64 + 1);
+                        commands.spawn(Tree {
+                            species_id,
+                            root_pos: (x, y, z),
+                            age: 0,
+                            stage: GrowthStage::Seedling,
+                            health: 1.0,
+                            accumulated_water: 0.0,
+                            accumulated_light: 0.0,
+                            rng_seed,
+                            dirty: false,
+                            voxel_footprint: footprint,
+                            branches: Vec::new(),
+                            attraction_points: Vec::new(),
+                            skeleton_initialized: false,
+                        });
                     }
                 }
             }
@@ -342,91 +319,89 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
 /// Soil absorbs water from adjacent Water voxels and diffuses water to
 /// neighboring soil. Absorption and diffusion rates depend on soil composition.
 pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>) {
-    // Compact snapshot: material + water_level per cell.
-    // Using separate arrays for better cache behavior during the material-check loop.
     let total = GRID_X * GRID_Y * GRID_Z;
-    let cells = grid.cells();
-    let mut snap_mat: Vec<u8> = Vec::with_capacity(total);
-    let mut snap_water: Vec<u8> = Vec::with_capacity(total);
-    for v in cells.iter() {
-        snap_mat.push(v.material.as_u8());
-        snap_water.push(v.water_level);
-    }
+
+    // Interleaved snapshot: (material_u8, water_level) per cell — one cache line
+    // access per neighbor instead of two separate arrays.
+    let snapshot: Vec<(u8, u8)> = grid
+        .cells()
+        .iter()
+        .map(|v| (v.material.as_u8(), v.water_level))
+        .collect();
 
     let soil_cells = soil_grid.cells();
     let soil_u8 = Material::Soil.as_u8();
     let water_u8 = Material::Water.as_u8();
     let z_stride = GRID_X * GRID_Y;
-    let max_transfer = crate::scale::scale_transfer(8) as u16;
+    let max_diffusion = crate::scale::scale_transfer(8) as u16;
 
     // Delta buffer for soil-to-soil diffusion (applied after full pass).
     let mut diffusion_deltas: Vec<i16> = vec![0; total];
+
+    // Water absorption accumulator per soil cell — lets us get a single
+    // mutable borrow of grid.cells_mut() at the end instead of per-cell.
+    let mut water_absorbed: Vec<u8> = vec![0; total];
 
     for z in 0..GRID_Z {
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
                 let idx = x + y * GRID_X + z * z_stride;
-                if snap_mat[idx] != soil_u8 {
+                if snapshot[idx].0 != soil_u8 {
                     continue;
                 }
 
                 let comp = &soil_cells[idx];
                 let absorption = 3 + (comp.drainage_rate() as u16 * 9 / 255) as u8;
                 let max_water = 80 + (comp.water_retention() as u16 * 175 / 255) as u8;
+                // Cache own drainage rate for diffusion (avoid recomputing per neighbor)
+                let my_drainage = comp.drainage_rate() as u16;
+                let my_water = snapshot[idx].1;
 
-                // Inline 6-neighbor checks with direct index arithmetic
-                // (avoids isize conversion and bounds function call overhead)
                 macro_rules! check_neighbor {
-                    ($nidx:expr, $nx:ident, $ny:ident, $nz:ident) => {{
+                    ($nidx:expr) => {{
                         let nidx = $nidx;
-                        let nmat = snap_mat[nidx];
-                        if nmat == water_u8 && snap_water[nidx] > 0 {
-                            let current = snap_water[idx];
-                            if current < max_water {
-                                let space = max_water - current;
-                                let transfer = absorption.min(space);
-                                grid.cells_mut()[idx].water_level =
-                                    grid.cells_mut()[idx].water_level.saturating_add(transfer);
-                            }
-                        }
-                        if nmat == soil_u8 {
-                            let my_water = snap_water[idx];
-                            let their_water = snap_water[nidx];
-                            if my_water > their_water.saturating_add(5) {
-                                let n_comp = &soil_cells[nidx];
-                                let avg_drainage = (comp.drainage_rate() as u16 + n_comp.drainage_rate() as u16) / 2;
-                                let diff = my_water - their_water;
-                                let transfer = ((diff as u16 * avg_drainage) / (255 * 2)).max(1).min(max_transfer) as i16;
-                                diffusion_deltas[nidx] += transfer;
-                                diffusion_deltas[idx] -= transfer;
-                            }
+                        let (nmat, nwater) = snapshot[nidx];
+                        if nmat == water_u8 && nwater > 0 && my_water < max_water {
+                            let space = max_water - my_water;
+                            water_absorbed[idx] = water_absorbed[idx].saturating_add(absorption.min(space));
+                        } else if nmat == soil_u8 && my_water > nwater.saturating_add(5) {
+                            let avg_drainage = (my_drainage + soil_cells[nidx].drainage_rate() as u16) / 2;
+                            let diff = my_water - nwater;
+                            let transfer = ((diff as u16 * avg_drainage) / (255 * 2)).max(1).min(max_diffusion) as i16;
+                            diffusion_deltas[nidx] += transfer;
+                            diffusion_deltas[idx] -= transfer;
                         }
                     }};
                 }
 
-                if x > 0 { check_neighbor!(idx - 1, x, y, z); }
-                if x + 1 < GRID_X { check_neighbor!(idx + 1, x, y, z); }
-                if y > 0 { check_neighbor!(idx - GRID_X, x, y, z); }
-                if y + 1 < GRID_Y { check_neighbor!(idx + GRID_X, x, y, z); }
-                if z > 0 { check_neighbor!(idx - z_stride, x, y, z); }
-                if z + 1 < GRID_Z { check_neighbor!(idx + z_stride, x, y, z); }
+                if x > 0 { check_neighbor!(idx - 1); }
+                if x + 1 < GRID_X { check_neighbor!(idx + 1); }
+                if y > 0 { check_neighbor!(idx - GRID_X); }
+                if y + 1 < GRID_Y { check_neighbor!(idx + GRID_X); }
+                if z > 0 { check_neighbor!(idx - z_stride); }
+                if z + 1 < GRID_Z { check_neighbor!(idx + z_stride); }
             }
         }
     }
 
-    // Apply soil-to-soil diffusion deltas
+    // Apply absorption and diffusion deltas in a single pass.
     let grid_cells = grid.cells_mut();
-    for (i, &delta) in diffusion_deltas.iter().enumerate() {
-        if delta == 0 {
+    for i in 0..total {
+        let absorbed = water_absorbed[i];
+        let delta = diffusion_deltas[i];
+        if absorbed == 0 && delta == 0 {
             continue;
         }
         let cell = &mut grid_cells[i];
         if cell.material != Material::Soil {
             continue;
         }
+        if absorbed > 0 {
+            cell.water_level = cell.water_level.saturating_add(absorbed);
+        }
         if delta > 0 {
             cell.water_level = cell.water_level.saturating_add(delta as u8);
-        } else {
+        } else if delta < 0 {
             cell.water_level = cell.water_level.saturating_sub((-delta) as u8);
         }
     }
