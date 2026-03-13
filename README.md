@@ -87,7 +87,7 @@ Not cosmetic choices. Ecological ones that produce different aesthetics as a con
 
 **Four systems:** Light, water, roots, ecology.
 
-**One bed.** ~60×60×30 voxels. Room for 2-3 trees, a handful of shrubs, a carpet of groundcover.
+**One bed.** ~120×120×60 voxels (60m×60m×30m at 0.5m detail). Room for 2-3 trees, a handful of shrubs, a carpet of groundcover.
 
 **One continuous camera** — above and below ground.
 

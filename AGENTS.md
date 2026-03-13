@@ -23,7 +23,7 @@ The player can dip the camera below the surface with no mode switch. Same world,
 ## MVP TARGET
 - One temperate biome, 12-20 species (canopy/shrub/groundcover)
 - Four systems: light, water, roots, ecology
-- One garden bed (~60x60x30 voxels)
+- One garden bed (~120×120×60 voxels, 60m×60m×30m at 0.5m/voxel)
 - Continuous above/below-ground camera
 - Terrain sculpting, seed placement, basic tending tools
 

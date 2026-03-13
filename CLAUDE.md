@@ -87,10 +87,10 @@ groundwork help                           # Show help
 Non-shovel tools can't overwrite occupied cells. Use the shovel to clear first.
 
 ### ASCII legend
-`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting
+`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting, `|` trunk, `-` branch, `&` leaf, `X` dead
 
 ### State file format
-Binary, ~1.07MB. Version 3. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 108,000 voxels × 4 bytes each + focus state (14 bytes: position + tool) + 108,000 soil compositions × 6 bytes each. Backward-compatible: loads version 1/2 files and generates soil composition from terrain depth.
+Binary, ~8.6MB. Version 3. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 864,000 voxels × 4 bytes each + focus state (14 bytes: position + tool) + 864,000 soil compositions × 6 bytes each. Backward-compatible: loads version 1/2 files and generates soil composition from terrain depth.
 
 ## Architecture
 
@@ -100,9 +100,11 @@ crates/
     src/
       lib.rs          Public API: create_world(), create_schedule(), tick(), FocusState, ToolState
       voxel.rs        Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
-      grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 60×60×30, indexed [x + y*60 + z*3600]
+      grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 120×120×60, indexed [x + y*GRID_X + z*GRID_X*GRID_Y]
+      scale.rs        Scale normalization: VOXEL_SIZE_M (0.5m), meters_to_voxels(), scale_attenuation/transfer()
       soil.rs         SoilComposition (6 bytes: sand/clay/organic/rock/pH/bacteria) + SoilGrid Resource
-      systems.rs      ECS systems: water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth
+      tree.rs         Tree entity, species (oak/birch/willow/pine), growth stages, space colonization branching
+      systems.rs      ECS systems: water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, tree growth/branching/pruning/dispersal
       save.rs         Binary save/load v3: VoxelGrid + Tick + FocusState + SoilGrid (backward-compatible with v1/v2)
 
   groundwork-tui/     Rust binary — ratatui terminal renderer + CLI
@@ -122,10 +124,12 @@ crates/
 - **Renderer-agnostic sim**: `groundwork-sim` has zero rendering deps. TUI and future web UI are thin shells that read sim state.
 - **WASM-ready**: sim compiles to `wasm32-unknown-unknown`. When `groundwork-web` is built, add `crate-type = ["cdylib"]` to sim's Cargo.toml.
 - **Two orthogonal workstreams**: sim+CLI and web UI are independent. See `decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
-- **Flat voxel array**: 108K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=15 is surface, Z=29 is sky.
+- **Scale normalization**: All physical dimensions are in meters, converted to voxels via `scale.rs`. `VOXEL_SIZE_M = 0.5` gives 120×120×60 grid (same 60m×60m×30m space). Changing VOXEL_SIZE_M automatically adjusts everything.
+- **Flat voxel array**: 864K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=GROUND_LEVEL (~30) is surface, Z=59 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
-- **System execution order**: water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tick_counter
+- **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
 - **Soil composition model**: Parallel `SoilGrid` stores 6-byte composition per cell (sand, clay, organic, rock, pH, bacteria). Derived properties (drainage, retention, nutrient capacity) drive water absorption rates, seed growth rates, and root viability. Soil evolves: organic matter increases near roots, bacteria grow in moist organic soil, rock weathers into clay, pH drifts with organic decomposition.
+- **Procedural trees**: 4 species (oak, birch, willow, pine) with space colonization algorithm for natural branching. Growth stages: seed → seedling → sapling → mature → dead. Species differ in height, root depth, crown shape, and growth rate. All dimensions stored in meters.
 - **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
 
 ### Sim API
@@ -149,7 +153,7 @@ let grid = world.resource::<VoxelGrid>();          // Read state
 
 ## Key Constraints
 
-- **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~60x60x30 voxel garden bed, continuous above/below-ground camera
+- **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~120×120×60 voxel garden bed (60m×60m×30m at 0.5m/voxel), continuous above/below-ground camera
 - **Do not** expand beyond MVP, add biomes/economies/multiplayer/narrative (auto-P3), optimize realism over readability, or hide cause-and-effect
 - **Decision rule when uncertain**: (1) make ecological cause-and-effect more readable, (2) keep the build smaller, (3) increase player delight sooner
 - **Source of truth order**: game vision > Manager backlog > player feedback > build notes > older discussion

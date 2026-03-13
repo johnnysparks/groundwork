@@ -65,19 +65,19 @@ cargo run -p groundwork-tui -- new
 # Advance the simulation
 cargo run -p groundwork-tui -- tick 10
 
-# Look around — view a horizontal slice at depth Z (16 = just above ground)
-cargo run -p groundwork-tui -- view --z 16    # above ground (water, air)
-cargo run -p groundwork-tui -- view --z 15    # surface (soil)
-cargo run -p groundwork-tui -- view --z 10    # underground (soil, stone)
+# Look around — view a horizontal slice at depth Z (31 = just above ground)
+cargo run -p groundwork-tui -- view --z 31    # above ground (water, air)
+cargo run -p groundwork-tui -- view --z 30    # surface (soil)
+cargo run -p groundwork-tui -- view --z 20    # underground (soil, stone)
 
 # Use gardening tools to shape the garden
-cargo run -p groundwork-tui -- place water 20 20 16   # watering can
-cargo run -p groundwork-tui -- place seed 20 20 16    # seed bag (seeds fall to soil)
-cargo run -p groundwork-tui -- place soil 20 20 20    # soil (falls through air)
-cargo run -p groundwork-tui -- place dig 20 20 15     # shovel (removes anything)
+cargo run -p groundwork-tui -- place water 40 40 35   # watering can
+cargo run -p groundwork-tui -- place seed 40 40 35    # seed bag (seeds fall to soil)
+cargo run -p groundwork-tui -- place soil 40 40 40    # soil (falls through air)
+cargo run -p groundwork-tui -- place dig 40 40 30     # shovel (removes anything)
 
 # Inspect a single voxel
-cargo run -p groundwork-tui -- inspect 30 30 16
+cargo run -p groundwork-tui -- inspect 60 60 31
 
 # Check overall world state
 cargo run -p groundwork-tui -- status
@@ -96,7 +96,7 @@ Gardening tools:
 
 ASCII legend: `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting
 
-Grid coordinates: X=0..59 (left-right), Y=0..59 (top-bottom), Z=0..29 (deep underground-sky). Z=15 is surface, Z=16+ is above ground.
+Grid coordinates: X=0..119 (left-right), Y=0..119 (top-bottom), Z=0..59 (deep underground-sky). Z=30 is approximately surface, Z=31+ is above ground. Physical size: 60m×60m×30m at 0.5m per voxel.
 
 Typical play loop:
 1. `new` — create a world
