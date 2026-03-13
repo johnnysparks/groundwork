@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GROUNDWORK is a cozy ecological voxel garden builder game. The player composes ecosystems by shaping soil, water, light, and plant relationships above and below ground. Core fantasy: build a living miniature world that becomes self-sustaining over time.
 
+**Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
+
 ## Session Quick Start
 
 Every session, you operate as one of three roles. Pick yours and follow the checklist.
@@ -22,7 +24,8 @@ Every session, you operate as one of three roles. Pick yours and follow the chec
 3. Read latest file in `handoffs/manager_to_dev/` (your current assignment)
 4. Read latest file in `build_notes/` (where the last dev left off)
 5. Build and test: `cargo test -p groundwork-sim && cargo check --workspace`
-6. Do the work. Write build notes and dev→manager handoff when done.
+6. For web work: `cd crates/groundwork-web && npm install && npm run dev`
+7. Do the work. Write build notes and dev→manager handoff when done.
 
 ### Manager — start here
 1. Read `agents/manager.md` (your role definition)
@@ -32,138 +35,129 @@ Every session, you operate as one of three roles. Pick yours and follow the chec
 5. Update backlog, write decisions, write handoffs to dev and/or player.
 
 ### Player — start here
-1. Read `agents/player.md` (your role definition, includes CLI play instructions)
+1. Read `agents/player.md` (your role definition)
 2. Read latest file in `handoffs/manager_to_player/` (what to test and specific questions)
-3. Build: `cargo run -p groundwork-tui -- new` then play a session
-4. Write feedback and player→manager handoff when done.
+3. Launch: `cd crates/groundwork-web && npm run dev` then open http://localhost:5173
+4. Play a session and write feedback + player→manager handoff.
 
 All roles: read `AGENTS.md` for the full operating framework (vision, handoff formats, priority definitions, workspace rules).
 
 ## Build & Run
 
 ```bash
-# Install Rust (if needed)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# --- Simulation (Rust) ---
+cargo test -p groundwork-sim          # Run sim tests
+cargo check --workspace               # Check everything compiles
 
-# Run the interactive TUI
-cargo run -p groundwork-tui
+# --- Web UI (primary player interface) ---
+cd crates/groundwork-web
+npm install                            # First time only
+npm run dev                            # Vite dev server → http://localhost:5173
+npm run build                          # Production build → dist/
 
-# Run just the sim tests
-cargo test -p groundwork-sim
+# --- WASM bridge (connects sim to web) ---
+npm run wasm                           # wasm-pack build (requires wasm-pack installed)
 
-# Check everything compiles
-cargo check --workspace
+# --- TUI (debug/dev tool) ---
+cargo run -p groundwork-tui            # Terminal UI for debugging
+cargo run -p groundwork-tui -- new     # Create fresh world + launch TUI
+cargo run -p groundwork-tui -- help    # CLI commands reference
 ```
-
-## CLI (non-interactive / agent play)
-
-The CLI lets agents play the game without a terminal. State persists to a binary file between invocations.
-
-```bash
-groundwork new                            # Create a fresh world → groundwork.state
-groundwork tick [N]                       # Advance N ticks (default 1)
-groundwork view [--z Z]                   # Print ASCII slice (default Z=surface+1)
-groundwork place <tool> <x> <y> <z>      # Use a gardening tool at coordinates
-                                          # Coords accept ranges: place soil 20..40 30 15
-groundwork fill <tool> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region
-groundwork inspect [<x> <y> <z>]          # Show voxel details (uses focus if no coords)
-groundwork status                         # Tick count + material summary
-groundwork focus [<x> <y> <z>]            # Get/set focus cursor position (persisted)
-groundwork tool-start <tool>              # Begin range operation at current focus
-groundwork tool-end                       # Apply tool from start to current focus
-groundwork tui                            # Launch interactive TUI (default)
-groundwork help                           # Show help
-
-# All commands accept --state FILE (default: groundwork.state)
-```
-
-### Gardening tools
-- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone)
-- `seed` = **seed bag** — plants a seed (oak by default); falls through air; dies on stone
-- `water` = **watering can** — pours water; falls through air; no-op on water
-- `soil` = **soil** — places soil; falls through air
-- `stone` = **stone** — places stone directly (no gravity)
-
-Non-shovel tools can't overwrite occupied cells. Use the shovel to clear first.
-
-### Species (use as material name to plant specific seeds)
-- **Trees:** `oak`, `birch`, `willow`, `pine` — tall, use space colonization branching
-- **Shrubs:** `fern`, `berry-bush`, `holly` — bushy, 1-2m, template-only growth
-- **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing
-- **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly
-
-Example: `groundwork place fern 60 60 40` plants a fern seed.
-In TUI, `[`/`]` cycles species when seed bag is selected.
-
-### ASCII legend
-`.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting, `|` trunk, `-` branch, `&` leaf, `X` dead
-
-### State file format
-Binary, ~8.6MB. Version 3. Header (magic `GWRK` + version u16 LE + 2 reserved) + tick count (u64 LE) + 864,000 voxels × 4 bytes each + focus state (14 bytes: position + tool) + 864,000 soil compositions × 6 bytes each. Backward-compatible: loads version 1/2 files and generates soil composition from terrain depth.
 
 ## Architecture
 
 ```
 crates/
-  groundwork-sim/     Rust library — bevy_ecs standalone (no rendering)
+  groundwork-sim/         Rust library — bevy_ecs standalone (no rendering)
     src/
-      lib.rs          Public API: create_world(), create_schedule(), tick(), FocusState, ToolState
-      voxel.rs        Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
-      grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 120×120×60, indexed [x + y*GRID_X + z*GRID_X*GRID_Y]
-      scale.rs        Scale normalization: VOXEL_SIZE_M (0.5m), meters_to_voxels(), scale_attenuation/transfer()
-      soil.rs         SoilComposition (6 bytes: sand/clay/organic/rock/pH/bacteria) + SoilGrid Resource
-      tree.rs         Tree entity, 12 species (4 trees/3 shrubs/2 flowers/3 groundcover), PlantType, growth stages, space colonization branching for trees, template-only for others
-      systems.rs      ECS systems: water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, tree growth/branching/pruning/dispersal
-      save.rs         Binary save/load v3: VoxelGrid + Tick + FocusState + SoilGrid (backward-compatible with v1/v2)
+      lib.rs              Public API: create_world(), create_schedule(), tick()
+      voxel.rs            Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
+      grid.rs             VoxelGrid Resource — flat Vec<Voxel>, 120×120×60
+      scale.rs            Scale normalization: VOXEL_SIZE_M (0.5m), meters_to_voxels()
+      soil.rs             SoilComposition (6 bytes) + SoilGrid Resource
+      tree.rs             12 species, PlantType enum, growth stages, space colonization
+      systems.rs          ECS systems: water, soil, light, seeds, trees, dispersal
+      save.rs             Binary save/load v3
 
-  groundwork-tui/     Rust binary — ratatui terminal renderer + CLI
+  groundwork-web/         TypeScript — Three.js + Vite (PRIMARY PLAYER INTERFACE)
     src/
-      main.rs         Entry point, subcommand dispatch
-      cli.rs          Non-interactive CLI commands (new/tick/view/place/fill/inspect/status/focus/tool-start/tool-end)
-      app.rs          App state: World + Schedule, viewport-centered camera, Tool enum, apply_tool() with gravity
-      render.rs       ASCII rendering of Z-slice around focus; side panel (inspect/status/controls/legend)
-      input.rs        Keyboard controls (WASD pan, J/K depth, Tab tool, Enter use, I/T/H panels)
+      main.ts             Entry point: scene, render loop, input, auto-tick
+      bridge.ts           WASM bridge: zero-copy typed array views into sim memory
+      mesher/greedy.ts    Greedy meshing with per-vertex AO, 16×16×16 chunks
+      mesher/chunk.ts     Chunk dirty tracking via grid snapshot diffing
+      rendering/terrain.ts  BufferGeometry builder, warm material palette
+      camera/orbit.ts     Orthographic orbit camera with smooth damping
+      lighting/sun.ts     Golden hour directional + hemisphere fill + ambient
+    vite.config.ts        WASM plugin, COOP/COEP headers, GitHub Pages base
+    package.json          three, vite, vite-plugin-wasm, typescript
 
-  (future) groundwork-web/    Three.js + WASM — browser renderer (orthogonal workstream)
+  groundwork-tui/         Rust binary — ratatui (DEBUG/DEV TOOL, not primary UI)
+    src/
+      main.rs             Entry point, subcommand dispatch
+      cli.rs              Non-interactive CLI commands
+      app.rs              App state, tools, species selection
+      quest.rs            Mission/quest onboarding system (20 quests, 9 chapters)
+      render.rs           2D ASCII rendering + side panel
+      render3d.rs         3D projected voxel rendering
+      input.rs            Keyboard controls
+
+  groundwork-profiler/    Rust binary — simulation performance profiling
 ```
 
-### Design Decisions
+### Key Design Decisions
 
-- **bevy_ecs standalone** (not full Bevy engine): fast compile (~60s cold, <1s incremental), minimal deps, simulation-only
-- **Renderer-agnostic sim**: `groundwork-sim` has zero rendering deps. TUI and future web UI are thin shells that read sim state.
-- **WASM-ready**: sim compiles to `wasm32-unknown-unknown`. When `groundwork-web` is built, add `crate-type = ["cdylib"]` to sim's Cargo.toml.
-- **Two orthogonal workstreams**: sim+CLI and web UI are independent. See `decisions/2026-03-11T12:00:00_web_ui_workstream.md`.
-- **Scale normalization**: All physical dimensions are in meters, converted to voxels via `scale.rs`. `VOXEL_SIZE_M = 0.5` gives 120×120×60 grid (same 60m×60m×30m space). Changing VOXEL_SIZE_M automatically adjusts everything.
-- **Flat voxel array**: 864K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=GROUND_LEVEL (~30) is surface, Z=59 is sky.
-- **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
+- **bevy_ecs standalone**: fast compile (~60s cold, <1s incremental), simulation-only
+- **Renderer-agnostic sim**: `groundwork-sim` has zero rendering deps. Web and TUI are thin shells that read sim state.
+- **Three.js + WASM hybrid**: Sim compiles to WASM via wasm-bindgen. Three.js reads the voxel grid via zero-copy typed array views into WASM memory. JS hot-reloads for visual iteration. See `decisions/2026-03-13T18:00:00_3d_web_renderer_plan.md`.
+- **Zero-copy data path**: VoxelGrid is a flat array (864K × 4 bytes = 3.5MB). JS reads it directly from WASM linear memory as a `Uint8Array`.
+- **Greedy meshing with chunking**: 120×120×60 grid divides into 16×16×16 chunks. Per-vertex AO. Only dirty chunks re-mesh after tick.
+- **Scale normalization**: All dimensions in meters, converted via `scale.rs`. `VOXEL_SIZE_M = 0.5`.
+- **Flat voxel array**: 864K voxels in contiguous Vec. Z=0 is deepest, Z=GROUND_LEVEL (~30) is surface, Z=59 is sky.
+- **12 species, 4 plant types**: Tree/Shrub/Groundcover/Flower. Trees use space colonization branching, others use templates.
 - **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
-- **Soil composition model**: Parallel `SoilGrid` stores 6-byte composition per cell (sand, clay, organic, rock, pH, bacteria). Derived properties (drainage, retention, nutrient capacity) drive water absorption rates, seed growth rates, and root viability. Soil evolves: organic matter increases near roots, bacteria grow in moist organic soil, rock weathers into clay, pH drifts with organic decomposition.
-- **Procedural plants**: 12 species across 4 plant types. `PlantType` enum (Tree/Shrub/Groundcover/Flower) controls growth behavior: trees use space colonization branching, all others use template-only growth at every stage. Growth stages: seed → seedling → sapling → mature → dead. Species differ in height, root depth, crown shape, growth rate, water/light needs, dispersal distance/period. All dimensions stored in meters.
-- **Species selection**: CLI accepts species names as tool names (`place fern 60 60 40`). TUI uses `[`/`]` to cycle species when seed bag is selected. `SeedSpeciesMap` resource tracks which species a seed will become.
-- **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
 
 ### Sim API
 
 ```rust
-let mut world = groundwork_sim::create_world();   // World with default terrain + water spring
-let mut schedule = groundwork_sim::create_schedule(); // Systems in order
-groundwork_sim::tick(&mut world, &mut schedule);   // Advance one step
-let grid = world.resource::<VoxelGrid>();          // Read state
+let mut world = groundwork_sim::create_world();
+let mut schedule = groundwork_sim::create_schedule();
+groundwork_sim::tick(&mut world, &mut schedule);
+let grid = world.resource::<VoxelGrid>();
 ```
 
-## Interface Parity Rule
+### WASM Bridge API (planned)
 
-**CLI and TUI must ship player-facing features together.** When a sprint adds a new player action to one interface, the same sprint must add the corresponding mechanism to the other. Neither interface ships alone.
+```
+Rust exports (via wasm-bindgen):
+  init()                    → Create world + schedule
+  tick(n)                   → Advance n ticks
+  grid_ptr() → *const u8   → Pointer to VoxelGrid flat array
+  grid_len() → usize       → Length in bytes (864K × 4)
+  place_tool(tool, x, y, z) → Apply gardening tool
+  fill_tool(tool, x1..z2)  → Fill region
 
-**Why:** Agentic play testers use the CLI; human testers use the TUI. If the interfaces diverge, agent feedback stops reflecting real player UX. Agents can't report friction they never experience. We'd be optimizing for a CLI game, not the actual game.
+JS reads:
+  new Uint8Array(wasm.memory.buffer, grid_ptr(), grid_len())
+  // Each voxel: [material: u8, water_level: u8, light_level: u8, nutrient_level: u8]
+```
 
-**Focus + Tool model:** Both interfaces share a focus/cursor concept and a two-step tool-start/tool-end workflow for range operations. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
+## Gardening Tools
+- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone)
+- `seed` = **seed bag** — plants a seed; falls through air; dies on stone
+- `water` = **watering can** — pours water; falls through air; no-op on water
+- `soil` = **soil** — places soil; falls through air
+- `stone` = **stone** — places stone directly (no gravity)
 
-**Dev checklist addition:** Every dev assignment that adds a player-facing action must include acceptance checks for both CLI and TUI.
+## Species
+- **Trees:** `oak`, `birch`, `willow`, `pine` — tall, space colonization branching
+- **Shrubs:** `fern`, `berry-bush`, `holly` — bushy, 1-2m, template-only
+- **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing
+- **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly
 
 ## Key Constraints
 
 - **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~120×120×60 voxel garden bed (60m×60m×30m at 0.5m/voxel), continuous above/below-ground camera
+- **Web is the primary player interface.** TUI/CLI continue as dev/debug tools.
 - **Do not** expand beyond MVP, add biomes/economies/multiplayer/narrative (auto-P3), optimize realism over readability, or hide cause-and-effect
 - **Decision rule when uncertain**: (1) make ecological cause-and-effect more readable, (2) keep the build smaller, (3) increase player delight sooner
 - **Source of truth order**: game vision > Manager backlog > player feedback > build notes > older discussion

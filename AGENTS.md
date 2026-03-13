@@ -114,7 +114,7 @@ Sections: What changed | What to pay attention to | Known rough edges | Specific
 A valid task must include: concrete player/prototype value, clear definition of done, scope for one focused session, dependencies (if any), and note if it's a prototype cheat or production direction.
 
 ## INTERFACE PARITY
-When a sprint adds a player-facing action to CLI or TUI, it must include the corresponding mechanism in the other interface. Neither ships alone. Agentic testers must experience the same UX as human testers — otherwise agent feedback diverges from real player experience. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
+The **web UI** is the primary player interface. Player-facing features must be playable in the browser. TUI/CLI continue as dev/debug tools but are not the reference experience. Agent play testers use the web UI via browser or webview — not the terminal CLI.
 
 ## DONE CRITERIA
 Do not mark work done unless: it is testable or inspectable, expected outcome is stated, known compromises are listed, and follow-up risks are named.
