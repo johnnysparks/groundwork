@@ -119,6 +119,12 @@ pub struct Species {
     pub water_need: ResourceNeed,
     pub light_need: ResourceNeed,
     pub growth_rate: f32,
+    /// How strongly branches bend toward light (0.0 = none, 1.0 = strong).
+    pub phototropism: f32,
+    /// Light level below which branches accumulate shade stress (0-255).
+    pub shade_tolerance: u8,
+    /// Shade stress ticks before a branch dies and converts to DeadWood.
+    pub prune_threshold: u16,
 }
 
 /// Table of all species, stored as an ECS resource.
@@ -140,6 +146,9 @@ impl Default for SpeciesTable {
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::Medium,
                     growth_rate: 1.0,
+                    phototropism: 0.3,
+                    shade_tolerance: 80,
+                    prune_threshold: 200,
                 },
                 Species {
                     name: "Birch",
@@ -150,6 +159,9 @@ impl Default for SpeciesTable {
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::Medium,
                     growth_rate: 1.5,
+                    phototropism: 0.5,
+                    shade_tolerance: 120,
+                    prune_threshold: 100,
                 },
                 Species {
                     name: "Willow",
@@ -160,6 +172,9 @@ impl Default for SpeciesTable {
                     water_need: ResourceNeed::High,
                     light_need: ResourceNeed::Low,
                     growth_rate: 0.8,
+                    phototropism: 0.2,
+                    shade_tolerance: 60,
+                    prune_threshold: 300,
                 },
                 Species {
                     name: "Pine",
@@ -170,10 +185,29 @@ impl Default for SpeciesTable {
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::High,
                     growth_rate: 0.7,
+                    phototropism: 0.6,
+                    shade_tolerance: 100,
+                    prune_threshold: 150,
                 },
             ],
         }
     }
+}
+
+/// A single node in the branch skeleton for space colonization.
+/// Stored in Tree::branches as a flat Vec indexed by u16.
+#[derive(Clone, Debug)]
+pub struct BranchNode {
+    /// Voxel position relative to tree root_pos.
+    pub pos: (isize, isize, isize),
+    /// Index of parent node in the Vec, or u16::MAX for the trunk base.
+    pub parent: u16,
+    /// Material to rasterize: Trunk, Branch, or Leaf.
+    pub material: Material,
+    /// Accumulated low-light ticks for self-pruning.
+    pub shade_stress: u16,
+    /// Whether this node is alive (false = pruned, rendered as DeadWood then removed).
+    pub alive: bool,
 }
 
 /// Per-tree instance state — what a tree IS right now.
@@ -189,6 +223,12 @@ pub struct Tree {
     pub rng_seed: u64,
     pub dirty: bool,
     pub voxel_footprint: Vec<(usize, usize, usize)>,
+    /// Branch skeleton for space colonization (used for YoungTree+ stages).
+    pub branches: Vec<BranchNode>,
+    /// Attraction points that guide branch growth (relative coords from root_pos).
+    pub attraction_points: Vec<(isize, isize, isize)>,
+    /// Whether the skeleton has been initialized for the current stage.
+    pub skeleton_initialized: bool,
 }
 
 /// Generated template: list of (dx, dy, dz, Material) offsets from root_pos.
@@ -437,6 +477,124 @@ impl TreeTemplate {
     }
 }
 
+/// Generate attraction points within a species-shaped crown envelope.
+/// Points are in relative coordinates from root_pos.
+pub fn generate_attraction_points(
+    species: &Species,
+    stage: &GrowthStage,
+    rng_seed: u64,
+) -> Vec<(isize, isize, isize)> {
+    let trunk_h = match stage {
+        GrowthStage::YoungTree => (species.max_height * 2 / 3).max(3) as isize,
+        _ => species.max_height as isize,
+    };
+    let cr = match stage {
+        GrowthStage::YoungTree => ((species.crown_radius + 1) / 2).max(1) as isize,
+        _ => species.crown_radius as isize,
+    };
+
+    // Number of attraction points scales with crown volume
+    let num_points = match stage {
+        GrowthStage::YoungTree => 20,
+        GrowthStage::Mature => 40,
+        GrowthStage::OldGrowth => 50,
+        _ => return vec![],
+    };
+
+    let mut points = Vec::with_capacity(num_points);
+    for i in 0..num_points * 3 {
+        // Over-sample and filter to shape
+        let h = tree_hash(rng_seed, 5000 + i as u64);
+        let h2 = tree_hash(rng_seed, 6000 + i as u64);
+        let h3 = tree_hash(rng_seed, 7000 + i as u64);
+
+        // Random offset within bounding box
+        let dx = (h % (cr as u64 * 2 + 1)) as isize - cr;
+        let dy = (h2 % (cr as u64 * 2 + 1)) as isize - cr;
+        let crown_height = match species.crown_shape {
+            CrownShape::Round => cr + 1,
+            CrownShape::Narrow => cr + 2,
+            CrownShape::Wide => (cr / 2 + 1).max(2),
+            CrownShape::Conical => cr + 1,
+        };
+        let dz = (h3 % crown_height as u64) as isize;
+
+        let z = trunk_h + dz;
+
+        // Filter by crown shape envelope
+        let inside = match species.crown_shape {
+            CrownShape::Round => {
+                let mid = crown_height / 2;
+                let dist_from_mid = (dz - mid).abs();
+                let allowed_r = (cr - dist_from_mid).max(0);
+                dx * dx + dy * dy <= allowed_r * allowed_r
+            }
+            CrownShape::Narrow => {
+                let nr = (cr / 2).max(1);
+                dx * dx + dy * dy <= nr * nr
+            }
+            CrownShape::Wide => dx * dx + dy * dy <= cr * cr,
+            CrownShape::Conical => {
+                let denom = if crown_height > 1 { crown_height - 1 } else { 1 };
+                let allowed_r = (cr * (denom - dz) / denom).max(0);
+                dx * dx + dy * dy <= allowed_r * allowed_r
+            }
+        };
+
+        if inside && z > 0 {
+            points.push((dx, dy, z));
+            if points.len() >= num_points {
+                break;
+            }
+        }
+    }
+    points
+}
+
+/// Initialize a branch skeleton with trunk nodes for a tree transitioning to
+/// a branching stage. Returns (branches, attraction_points).
+pub fn init_skeleton(
+    species: &Species,
+    stage: &GrowthStage,
+    rng_seed: u64,
+) -> (Vec<BranchNode>, Vec<(isize, isize, isize)>) {
+    let trunk_h = match stage {
+        GrowthStage::YoungTree => (species.max_height * 2 / 3).max(3) as isize,
+        _ => species.max_height as isize,
+    };
+
+    let mut branches = Vec::new();
+
+    // Trunk nodes
+    for z in 0..trunk_h {
+        branches.push(BranchNode {
+            pos: (0, 0, z),
+            parent: if z == 0 { u16::MAX } else { (z - 1) as u16 },
+            material: Material::Trunk,
+            shade_stress: 0,
+            alive: true,
+        });
+    }
+
+    // Roots
+    let root_d = match stage {
+        GrowthStage::YoungTree => (species.root_depth * 2 / 3).max(2) as isize,
+        _ => species.root_depth as isize,
+    };
+    for z in 1..=root_d {
+        branches.push(BranchNode {
+            pos: (0, 0, -z),
+            parent: 0,
+            material: Material::Root,
+            shade_stress: 0,
+            alive: true,
+        });
+    }
+
+    let points = generate_attraction_points(species, stage, rng_seed);
+    (branches, points)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -533,5 +691,63 @@ mod tests {
         let oak = TreeTemplate::generate(&table.species[0], &GrowthStage::Mature, 42);
         let pine = TreeTemplate::generate(&table.species[3], &GrowthStage::Mature, 42);
         assert_ne!(oak.voxels.len(), pine.voxels.len());
+    }
+
+    #[test]
+    fn attraction_points_within_crown_envelope() {
+        let table = SpeciesTable::default();
+        for species in &table.species {
+            let points = generate_attraction_points(species, &GrowthStage::Mature, 42);
+            assert!(!points.is_empty(), "{} should have attraction points", species.name);
+            // All points should be above trunk base (z > 0)
+            for &(_dx, _dy, z) in &points {
+                assert!(z > 0, "{}: attraction point at z={} should be above ground", species.name, z);
+            }
+        }
+    }
+
+    #[test]
+    fn init_skeleton_has_trunk_and_roots() {
+        let table = SpeciesTable::default();
+        let species = &table.species[0]; // Oak
+        let (branches, points) = init_skeleton(species, &GrowthStage::YoungTree, 42);
+
+        let has_trunk = branches.iter().any(|b| b.material == Material::Trunk);
+        let has_root = branches.iter().any(|b| b.material == Material::Root);
+        assert!(has_trunk, "Skeleton should have trunk nodes");
+        assert!(has_root, "Skeleton should have root nodes");
+        assert!(!points.is_empty(), "Should have attraction points");
+
+        // Trunk should go from z=0 to trunk_h-1
+        let trunk_h = (species.max_height * 2 / 3).max(3) as isize;
+        let trunk_positions: Vec<_> = branches.iter()
+            .filter(|b| b.material == Material::Trunk)
+            .map(|b| b.pos.2)
+            .collect();
+        assert_eq!(*trunk_positions.iter().min().unwrap(), 0);
+        assert_eq!(*trunk_positions.iter().max().unwrap(), trunk_h - 1);
+    }
+
+    #[test]
+    fn deterministic_skeleton() {
+        let table = SpeciesTable::default();
+        let species = &table.species[0];
+        let (b1, p1) = init_skeleton(species, &GrowthStage::YoungTree, 42);
+        let (b2, p2) = init_skeleton(species, &GrowthStage::YoungTree, 42);
+        assert_eq!(b1.len(), b2.len());
+        assert_eq!(p1.len(), p2.len());
+        for (a, b) in b1.iter().zip(b2.iter()) {
+            assert_eq!(a.pos, b.pos);
+        }
+    }
+
+    #[test]
+    fn different_seeds_different_points() {
+        let table = SpeciesTable::default();
+        let species = &table.species[0];
+        let p1 = generate_attraction_points(species, &GrowthStage::Mature, 1);
+        let p2 = generate_attraction_points(species, &GrowthStage::Mature, 999);
+        // Different seeds should produce different point distributions
+        assert_ne!(p1, p2);
     }
 }
