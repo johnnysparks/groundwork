@@ -52,13 +52,26 @@ export type ToolCodeType = (typeof ToolCode)[keyof typeof ToolCode];
  * Initialize the WASM simulation module.
  * Must be called before any other bridge function.
  */
-export async function initSim(): Promise<void> {
-  // Dynamic import — the WASM module is built by wasm-pack
-  const wasm = await import('../wasm/groundwork_sim.js');
-  await wasm.default(); // Initialize WASM
-  wasm.init();
-  wasmModule = wasm;
-  wasmMemory = (wasm as any).__wbg_get_memory?.() ?? wasm.memory;
+export async function initSim(): Promise<boolean> {
+  // Dynamic import — the WASM module is built by wasm-pack.
+  // Fails gracefully if WASM hasn't been built yet (mock data mode).
+  try {
+    const wasmUrl = new URL(/* @vite-ignore */ '../wasm/groundwork_sim.js', import.meta.url);
+    const resp = await fetch(wasmUrl, { method: 'HEAD' }).catch(() => null);
+    if (!resp || !resp.ok) {
+      console.warn('WASM module not found — running in mock data mode');
+      return false;
+    }
+    const wasm = await import(/* @vite-ignore */ wasmUrl.href);
+    await wasm.default();
+    wasm.init();
+    wasmModule = wasm;
+    wasmMemory = (wasm as any).__wbg_get_memory?.() ?? wasm.memory;
+    return true;
+  } catch (e) {
+    console.warn('WASM init failed — running in mock data mode:', e);
+    return false;
+  }
 }
 
 /** Advance simulation by n ticks */

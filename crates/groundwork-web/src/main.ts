@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GROUND_LEVEL } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL } from './bridge';
 import { createMockGrid } from './mesher/greedy';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh } from './rendering/terrain';

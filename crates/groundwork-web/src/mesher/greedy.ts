@@ -9,7 +9,7 @@
  * - "Voxel Meshing in Exile" (thenumb.at)
  */
 
-import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, type MaterialType } from '../bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, type MaterialType } from '../bridge';
 
 /** A single face quad emitted by the greedy mesher */
 export interface MeshQuad {
