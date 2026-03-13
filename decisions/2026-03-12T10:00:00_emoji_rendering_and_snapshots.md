@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-12T10:00:00
 **Author:** Manager
-**Status:** Approved
+**Status:** Dropped — never implemented; decided to move past emoji rendering in favor of other visual improvements.
 
 ## Context
 

@@ -6,15 +6,15 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 
 **Done:** CLI usability (Sprint 1), seed growth (Sprint 2), placement validation + growth visibility + batch placement (Sprint 3), CLI-09 default Z=15, 12 player sessions across 2 rounds, interface parity sprint (TUI-01–04, CLI-21–22).
 
-**Current focus (Sprint 4):** Visual richness + trust repair. Emoji rendering (user-directed), fill protection bypass fix (P0 from Round 2), checkerboard water fix (10/12 sessions). PR includes before/after text snapshots.
+**Current focus (Sprint 4):** Visual richness + trust repair. Fill protection bypass fix (P0 from Round 2), checkerboard water fix (10/12 sessions).
 
 **The build can:** create worlds, place/fill materials (with ranges), protect seeds/roots from `place`/`fill` destruction, simulate water flow + light + seed growth with visible progress (s→S→*), show growth diagnostics, save/load state (v2 with focus persistence), pan a viewport-centered camera in TUI, use focus/tool-start/tool-end workflow in both CLI and TUI, inspect and view status in both interfaces.
 
-**The build can't yet:** render emoji, fix checkerboard water, make roots interact with the world, show water depth, vary terrain, or support multiple species.
+**The build can't yet:** fix checkerboard water, make roots interact with the world, show water depth, vary terrain, or support multiple species.
 
 **Process rule:** CLI and TUI must ship player-facing features together. See `decisions/2026-03-12T14:00:00_interface_parity_and_focus_mechanism.md`.
 
-**Key insight from Round 2:** Trust and beauty scores are sliding (3.5→3.3 trust, 3.0→2.8 beauty). The `fill` bypass undermines Sprint 3's protection work. The checkerboard is universal. Emoji rendering is the fastest path to visual delight. Fix trust + add richness = restore momentum.
+**Key insight from Round 2:** Trust and beauty scores are sliding (3.5→3.3 trust, 3.0→2.8 beauty). The `fill` bypass undermines Sprint 3's protection work. The checkerboard is universal. Fix trust + add richness = restore momentum.
 
 ---
 
@@ -72,14 +72,6 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 
 ## P1 — Strongly improves clarity, feel, or core loop
 
-### CLI-11: Emoji rendering for `view` and TUI (Sprint 4)
-- **Owner:** tools
-- **Why:** User-directed. Beauty/readability scores at 2.8/5 across Round 2. Emoji replaces ASCII with richer, more recognizable characters. Before/after snapshots required in PR.
-- **Done when:** `view` uses emoji by default (💧🟫🪨🌿🌰🌱🟤). `view --ascii` fallback. TUI updated. Legend updated. Axis labels adjusted for 2-column width.
-- **Dependencies:** none
-- **Risk:** low (display only)
-- **Scope:** Visual delight — highest delight-per-line ratio in the backlog.
-
 ### SIM-04: Fix checkerboard water artifact (Sprint 4)
 - **Owner:** gameplay
 - **Why:** 10/12 total sessions reported it. Water frontier shows `.~.~.~` alternating pattern. Hydrogeologist identified fix: water cells with water_level < 5 should revert to air.
@@ -98,7 +90,7 @@ _Last updated: 2026-03-12T10:00:00 by Manager_
 ### VIS-01: Dark indicator for underground air (Sprint 4)
 - **Owner:** tools
 - **Why:** Underground air with light_level=0 is indistinguishable from surface air. 3/12 sessions flagged.
-- **Done when:** Dark air renders as blank space (not dot/emoji) in CLI and TUI.
+- **Done when:** Dark air renders as blank space (not dot) in CLI and TUI.
 - **Dependencies:** none
 - **Risk:** low
 
@@ -141,7 +133,7 @@ _Done 2026-03-12. `tool-start <material>` + `tool-end [--force]`, protection, st
 ### GAME-04: Water depth visual
 - **Owner:** tools
 - **Why:** All water looks the same. Hydrogeologist and 3 other sessions want depth indication.
-- **Done when:** Deep water uses a different emoji or character than shallow water.
+- **Done when:** Deep water uses a different character than shallow water.
 - **Risk:** low
 
 ### CLI-13: Cross-section view
