@@ -23,32 +23,40 @@ fn shovel_removes_seed() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place seed on the surface (z=16 is Air above soil at z=15)
-    // Seed has gravity — it will land at z=16 (first Air above soil)
+    // Place seed above terrain. Position (30,10) has surface_height=15,
+    // so seed lands at z=16.
     let out = groundwork()
-        .args(["place", "seed", "10", "10", "16", "--state", p])
+        .args(["place", "seed", "30", "10", "20", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
 
-    // Verify seed is there
+    // z=20 should be air (seed fell)
     let out = groundwork()
-        .args(["inspect", "10", "10", "16", "--state", p])
+        .args(["inspect", "30", "10", "20", "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("seed"), "expected seed, got: {stdout}");
+    assert!(stdout.contains("air"), "z=20 should be air after seed fell, got: {stdout}");
+
+    // Seed should have landed at z=16 (surface_height+1)
+    let out = groundwork()
+        .args(["inspect", "30", "10", "16", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("seed"), "expected seed at z=16, got: {stdout}");
 
     // Use shovel to remove it
     let out = groundwork()
-        .args(["place", "air", "10", "10", "16", "--state", p])
+        .args(["place", "air", "30", "10", "16", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "shovel failed: {}", String::from_utf8_lossy(&out.stderr));
 
     // Verify it's gone
     let out = groundwork()
-        .args(["inspect", "10", "10", "16", "--state", p])
+        .args(["inspect", "30", "10", "16", "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -100,9 +108,9 @@ fn place_into_air_succeeds() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place stone into air above ground (z=16)
+    // Place stone into air well above ground (z=20, away from outcrops)
     let out = groundwork()
-        .args(["place", "stone", "10", "10", "16", "--state", p])
+        .args(["place", "stone", "20", "20", "20", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -120,28 +128,29 @@ fn seed_falls_through_air() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place seed high up (z=20) — should fall to z=16 (first Air above soil at z=15)
+    // Place seed high up (z=25) at position (30,10) where surface_height=15.
+    // Seed lands at z=16 (surface+1).
     let out = groundwork()
-        .args(["place", "seed", "10", "10", "20", "--state", p])
+        .args(["place", "seed", "30", "10", "25", "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
 
-    // Verify seed landed at z=16 (above the soil surface)
+    // Verify z=25 is still air (seed fell)
     let out = groundwork()
-        .args(["inspect", "10", "10", "16", "--state", p])
+        .args(["inspect", "30", "10", "25", "--state", p])
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("air"), "z=25 should still be air, got: {stdout}");
+
+    // Verify seed landed at z=16 (surface_height+1)
+    let out = groundwork()
+        .args(["inspect", "30", "10", "16", "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(stdout.contains("seed"), "seed should have fallen to z=16, got: {stdout}");
-
-    // Verify z=20 is still air
-    let out = groundwork()
-        .args(["inspect", "10", "10", "20", "--state", p])
-        .output()
-        .unwrap();
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "z=20 should still be air, got: {stdout}");
 }
 
 /// Soil falls through air.

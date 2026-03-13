@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Resource;
 
-use crate::grid::{GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VoxelGrid};
+use crate::grid::{GRID_X, GRID_Y, GRID_Z, VoxelGrid};
 use crate::voxel::Material;
 
 /// Per-cell soil composition data. Stored in a parallel grid alongside VoxelGrid.
@@ -104,31 +104,37 @@ pub struct SoilGrid {
 }
 
 impl SoilGrid {
-    /// Create soil grid with depth-based composition matching default terrain.
-    /// - Z=5-7 (near stone): rocky soil
-    /// - Z=8-10: clay subsoil
-    /// - Z=11-12: transition (mixed clay/loam)
-    /// - Z=13-15: topsoil loam
-    /// - Near water spring: peat patches
+    /// Create soil grid with depth-based composition matching dynamic terrain.
+    /// Uses VoxelGrid::surface_height() for per-column ground level.
+    /// - Deep (near stone): rocky soil
+    /// - Subsoil: clay-heavy
+    /// - Transition: mixed clay/loam
+    /// - Topsoil: loam
+    /// - Near water spring/stream: peat patches
+    /// - Grid edges: sandy
     pub fn new() -> Self {
         let mut cells = vec![SoilComposition::default(); GRID_X * GRID_Y * GRID_Z];
 
-        for z in 0..GRID_Z {
-            for y in 0..GRID_Y {
-                for x in 0..GRID_X {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let surface = VoxelGrid::surface_height(x, y);
+
+                for z in 0..GRID_Z {
                     let idx = VoxelGrid::index(x, y, z);
-                    // Only populate soil layers (z=5 through GROUND_LEVEL)
-                    if z < 5 || z > GROUND_LEVEL {
+                    // Only populate soil layers (z=5 through surface)
+                    if z < 5 || z > surface {
                         continue;
                     }
 
-                    let comp = if z <= 7 {
+                    // Depth below surface determines composition
+                    let depth_below = surface.saturating_sub(z);
+                    let comp = if depth_below >= surface - 7 || z <= 7 {
                         // Deep soil near stone: rocky
                         SoilComposition::rocky()
-                    } else if z <= 10 {
+                    } else if depth_below >= 5 {
                         // Subsoil: clay-heavy
                         SoilComposition::clay()
-                    } else if z <= 12 {
+                    } else if depth_below >= 3 {
                         // Transition: blend of clay and loam
                         SoilComposition {
                             sand: 70,
@@ -148,16 +154,28 @@ impl SoilGrid {
             }
         }
 
-        // Peat patches near the water spring (28-31, 28-31)
-        for z in 5..=GROUND_LEVEL {
-            for y in 26..=33 {
-                for x in 26..=33 {
-                    if !VoxelGrid::in_bounds(x, y, z) {
-                        continue;
-                    }
+        // Peat patches near the water spring (28-31, 28-31) and along stream
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let surface = VoxelGrid::surface_height(x, y);
+                // Near spring or stream
+                let near_spring = x >= 26 && x <= 33 && y >= 26 && y <= 33;
+                let near_stream = VoxelGrid::is_stream(x, y)
+                    || (x > 0 && VoxelGrid::is_stream(x - 1, y))
+                    || (y > 0 && VoxelGrid::is_stream(x, y - 1))
+                    || VoxelGrid::is_stream(x + 1, y)
+                    || VoxelGrid::is_stream(x, y + 1);
+
+                if !near_spring && !near_stream {
+                    continue;
+                }
+
+                for z in 5..=surface {
                     let idx = VoxelGrid::index(x, y, z);
-                    // Blend toward peat near water — stronger at topsoil
-                    let peat_strength = if z >= 13 { 200u16 } else if z >= 10 { 100 } else { 50 };
+                    let depth_below = surface.saturating_sub(z);
+                    let peat_strength = if depth_below <= 2 { 200u16 } else if depth_below <= 5 { 100 } else { 50 };
+                    // Weaker peat along stream than at spring
+                    let peat_strength = if near_spring { peat_strength } else { peat_strength / 2 };
                     let base = &cells[idx];
                     cells[idx] = SoilComposition {
                         sand: ((base.sand as u16 * (255 - peat_strength) + 40 * peat_strength) / 255) as u8,
@@ -172,12 +190,15 @@ impl SoilGrid {
         }
 
         // Sandy patches at grid edges
-        for z in (GROUND_LEVEL - 2)..=GROUND_LEVEL {
-            for y in 0..GRID_Y {
-                for x in 0..GRID_X {
-                    // Edges of the grid
-                    let edge_dist = x.min(y).min(GRID_X - 1 - x).min(GRID_Y - 1 - y);
-                    if edge_dist >= 8 {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let surface = VoxelGrid::surface_height(x, y);
+                let edge_dist = x.min(y).min(GRID_X - 1 - x).min(GRID_Y - 1 - y);
+                if edge_dist >= 8 {
+                    continue;
+                }
+                for z in surface.saturating_sub(2)..=surface {
+                    if z < 5 {
                         continue;
                     }
                     let idx = VoxelGrid::index(x, y, z);
@@ -319,7 +340,8 @@ mod tests {
     fn soil_grid_peat_near_spring() {
         let soil = SoilGrid::new();
         // Near water spring at surface should have high organic
-        let near_spring = soil.get(29, 29, GROUND_LEVEL).unwrap();
+        let surface = VoxelGrid::surface_height(29, 29);
+        let near_spring = soil.get(29, 29, surface).unwrap();
         assert!(near_spring.organic > 100, "Near-spring topsoil should be organic-rich, got {}", near_spring.organic);
     }
 
@@ -327,7 +349,8 @@ mod tests {
     fn soil_grid_sandy_edges() {
         let soil = SoilGrid::new();
         // Corner of grid at surface should be sandy
-        let edge = soil.get(0, 0, GROUND_LEVEL).unwrap();
+        let surface = VoxelGrid::surface_height(0, 0);
+        let edge = soil.get(0, 0, surface).unwrap();
         assert!(edge.sand > 100, "Edge topsoil should be sandy, got sand={}", edge.sand);
     }
 }

@@ -6,6 +6,24 @@ use crate::tree::{tree_hash, init_skeleton, generate_attraction_points, BranchNo
 use crate::voxel::Material;
 use crate::Tick;
 
+/// Persistent water spring: refills the spring and stream source each tick.
+/// Without this, the spring dries up by tick ~200 and the garden dies.
+pub fn water_spring(mut grid: ResMut<VoxelGrid>) {
+    // Refill the 4x4 spring at center
+    for dy in 28..=31 {
+        for dx in 28..=31 {
+            let sz = VoxelGrid::surface_height(dx, dy);
+            let wz = sz; // Spring sits at surface level
+            if let Some(cell) = grid.get_mut(dx, dy, wz) {
+                if cell.material == Material::Water || cell.material == Material::Air {
+                    cell.material = Material::Water;
+                    cell.water_level = 255;
+                }
+            }
+        }
+    }
+}
+
 /// Gravity-driven water flow. Each tick, water tries to move down,
 /// then spreads laterally to lower-water neighbors.
 ///
@@ -340,8 +358,8 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
 
                 let comp = soil_grid.get(x, y, z).copied().unwrap_or_default();
                 // Base absorption rate from composition: sandy absorbs fast,
-                // clay absorbs slow. Range: 1-4 per adjacent water per tick.
-                let absorption = 1 + (comp.drainage_rate() as u16 * 3 / 255) as u8;
+                // clay absorbs slow. Range: 3-12 per adjacent water per tick.
+                let absorption = 3 + (comp.drainage_rate() as u16 * 9 / 255) as u8;
                 // Water retention caps how much water soil will hold.
                 // Range: 80-255 based on retention.
                 let max_water = 80 + (comp.water_retention() as u16 * 175 / 255) as u8;
@@ -388,7 +406,7 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
                             let n_comp = soil_grid.get(nx, ny, nz).copied().unwrap_or_default();
                             let avg_drainage = (comp.drainage_rate() as u16 + n_comp.drainage_rate() as u16) / 2;
                             let diff = my_water - their_water;
-                            let transfer = ((diff as u16 * avg_drainage) / (255 * 4)).max(1).min(4) as i16;
+                            let transfer = ((diff as u16 * avg_drainage) / (255 * 2)).max(1).min(8) as i16;
                             diffusion_deltas[nidx] += transfer;
                             diffusion_deltas[idx] -= transfer;
                         }
@@ -1587,6 +1605,7 @@ mod tests {
         // Regression test: lateral water spread should not favor +x/+y over -x/-y.
         // A single water source on a flat plane should produce equal levels in
         // all four cardinal neighbors after several ticks.
+        // Uses a corner far from the spring (28-31) to avoid interference.
         use crate::grid::{GRID_X, GRID_Y, GRID_Z};
 
         let cells = vec![
@@ -1601,7 +1620,8 @@ mod tests {
         let mut world = crate::create_world();
         *world.resource_mut::<VoxelGrid>() = VoxelGrid::from_cells(cells);
 
-        // Place stone floor at z=0, air everywhere else, water blob at center z=1.
+        // Place stone floor at z=0, air everywhere else, water blob at (10,10,1).
+        // Far from the spring at (28-31) so water_spring system doesn't interfere.
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
             let z = 0;
@@ -1612,8 +1632,8 @@ mod tests {
                     }
                 }
             }
-            let cx = GRID_X / 2;
-            let cy = GRID_Y / 2;
+            let cx = 10;
+            let cy = 10;
             if let Some(cell) = grid.get_mut(cx, cy, 1) {
                 cell.material = Material::Water;
                 cell.water_level = 200;
@@ -1626,8 +1646,8 @@ mod tests {
         }
 
         let grid = world.resource::<VoxelGrid>();
-        let cx = GRID_X / 2;
-        let cy = GRID_Y / 2;
+        let cx = 10;
+        let cy = 10;
         let w_xm = grid.get(cx - 1, cy, 1).unwrap().water_level;
         let w_xp = grid.get(cx + 1, cy, 1).unwrap().water_level;
         let w_ym = grid.get(cx, cy - 1, 1).unwrap().water_level;
@@ -2091,12 +2111,13 @@ mod tests {
     #[test]
     fn tree_grows_through_stages() {
         // Full lifecycle: seed → seedling → sapling (with visible canopy).
+        // Position near spring for good water access and loam soil.
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        let tx = 10;
-        let ty = 10;
-        let tz = GROUND_LEVEL + 1;
+        let tx = 25;
+        let ty = 25;
+        let tz = VoxelGrid::surface_height(tx, ty) + 1;
 
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
@@ -2501,7 +2522,7 @@ mod tests {
 
         let tx = 25;
         let ty = 25;
-        let tz = GROUND_LEVEL + 1;
+        let tz = VoxelGrid::surface_height(tx, ty) + 1;
 
         // Manually build a small skeleton
         let branches = vec![
@@ -2539,8 +2560,8 @@ mod tests {
         assert_eq!(grid.get(tx, ty, tz + 2).unwrap().material, Material::Trunk);
         // Branch tip at (1,0,2) should become Leaf (it's a tip)
         assert_eq!(grid.get(tx + 1, ty, tz + 2).unwrap().material, Material::Leaf);
-        // Root below
-        assert_eq!(grid.get(tx, ty, GROUND_LEVEL).unwrap().material, Material::Root);
+        // Root below (pos (0,0,-1) = tz-1)
+        assert_eq!(grid.get(tx, ty, tz - 1).unwrap().material, Material::Root);
     }
 
     #[test]

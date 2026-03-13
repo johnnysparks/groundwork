@@ -25,31 +25,113 @@ impl VoxelGrid {
         Self { cells }
     }
 
+    /// Height map value for position (x, y). Returns a surface elevation
+    /// ranging from ~13 to ~17, creating rolling hills.
+    pub fn surface_height(x: usize, y: usize) -> usize {
+        // Two overlapping sine waves for gentle, natural-looking hills
+        let fx = x as f64;
+        let fy = y as f64;
+        let h1 = (fx * 0.12).sin() * (fy * 0.10).sin() * 1.5;
+        let h2 = ((fx + 20.0) * 0.07).cos() * ((fy + 15.0) * 0.09).cos() * 0.8;
+        let base = GROUND_LEVEL as f64 + h1 + h2;
+        (base.round() as usize).clamp(GROUND_LEVEL - 2, GROUND_LEVEL + 2)
+    }
+
+    /// Whether (x, y) is part of the stream bed. The stream runs from the
+    /// spring (center) toward the southeast edge, ~2-3 voxels wide.
+    pub fn is_stream(x: usize, y: usize) -> bool {
+        // Stream flows from center (30,30) toward edge (59, 59)
+        // Parametric line: (30+t, 30+t) for t in 0..29
+        // Width check: distance from the line <= 1.5
+        if x < 30 || y < 30 {
+            return false;
+        }
+        let dx = x as f64 - 30.0;
+        let dy = y as f64 - 30.0;
+        // Distance from the y=x diagonal (shifted to origin at 30,30)
+        let dist = (dx - dy).abs() / 1.414;
+        dist <= 1.2 && (dx + dy) > 2.0 // exclude the spring itself
+    }
+
+    /// Whether (x, y, z) is a stone outcrop. Creates 3-4 rocky clusters
+    /// that poke through the surface near edges.
+    fn is_stone_outcrop(x: usize, y: usize, z: usize) -> bool {
+        let surface = Self::surface_height(x, y);
+        if z > surface + 1 || z < surface - 1 {
+            return false;
+        }
+        // Cluster 1: near (8, 12)
+        let d1 = ((x as isize - 8) * (x as isize - 8) + (y as isize - 12) * (y as isize - 12)) as f64;
+        if d1 < 10.0 { return true; }
+        // Cluster 2: near (50, 8)
+        let d2 = ((x as isize - 50) * (x as isize - 50) + (y as isize - 8) * (y as isize - 8)) as f64;
+        if d2 < 8.0 { return true; }
+        // Cluster 3: near (12, 48)
+        let d3 = ((x as isize - 12) * (x as isize - 12) + (y as isize - 48) * (y as isize - 48)) as f64;
+        if d3 < 12.0 { return true; }
+        false
+    }
+
     pub fn new() -> Self {
         let mut cells = vec![Voxel::default(); GRID_X * GRID_Y * GRID_Z];
 
-        for z in 0..GRID_Z {
-            for y in 0..GRID_Y {
-                for x in 0..GRID_X {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let surface = Self::surface_height(x, y);
+
+                for z in 0..GRID_Z {
                     let idx = Self::index(x, y, z);
-                    cells[idx].material = if z < 5 {
-                        Material::Stone
-                    } else if z <= GROUND_LEVEL {
-                        Material::Soil
+
+                    if z < 5 {
+                        cells[idx].material = Material::Stone;
+                    } else if z <= surface {
+                        cells[idx].material = Material::Soil;
                     } else {
-                        Material::Air
-                    };
+                        cells[idx].material = Material::Air;
+                    }
+                }
+
+                // Stone outcrops: replace soil/air with stone
+                for z in (surface.saturating_sub(1))..=(surface + 1).min(GRID_Z - 1) {
+                    if Self::is_stone_outcrop(x, y, z) {
+                        let idx = Self::index(x, y, z);
+                        cells[idx].material = Material::Stone;
+                    }
+                }
+
+                // Stream bed: carve 1 level below surface, fill with water
+                if Self::is_stream(x, y) {
+                    // Carve the stream bed 1 below surface
+                    let stream_z = surface;
+                    let idx = Self::index(x, y, stream_z);
+                    cells[idx].material = Material::Water;
+                    cells[idx].water_level = 200;
+                    // Air above the stream
+                    if stream_z + 1 < GRID_Z {
+                        let idx_above = Self::index(x, y, stream_z + 1);
+                        cells[idx_above].material = Material::Air;
+                    }
                 }
             }
         }
 
-        // Place a small water spring near the center at the surface.
-        // This gives something to watch flow on the first tick.
+        // Water spring at center — a 4x4 pool at surface level
+        let spring_z = Self::surface_height(30, 30);
         for dy in 28..=31 {
             for dx in 28..=31 {
-                let idx = Self::index(dx, dy, GROUND_LEVEL + 1);
-                cells[idx].material = Material::Water;
-                cells[idx].water_level = 255;
+                let sz = Self::surface_height(dx, dy).max(spring_z);
+                // Water sits at the spring level
+                let wz = sz;
+                if wz < GRID_Z {
+                    let idx = Self::index(dx, dy, wz);
+                    cells[idx].material = Material::Water;
+                    cells[idx].water_level = 255;
+                    // Ensure air above
+                    if wz + 1 < GRID_Z {
+                        let idx_above = Self::index(dx, dy, wz + 1);
+                        cells[idx_above].material = Material::Air;
+                    }
+                }
             }
         }
 
@@ -135,14 +217,15 @@ mod tests {
         let grid = VoxelGrid::new();
         // Z=0 is stone
         assert_eq!(grid.get(0, 0, 0).unwrap().material, Material::Stone);
-        // Z=10 is soil
+        // Z=10 is soil (always below any surface height)
         assert_eq!(grid.get(0, 0, 10).unwrap().material, Material::Soil);
-        // Z=GROUND_LEVEL is soil
-        assert_eq!(grid.get(0, 0, GROUND_LEVEL).unwrap().material, Material::Soil);
-        // Above ground is air
-        assert_eq!(grid.get(0, 0, GROUND_LEVEL + 2).unwrap().material, Material::Air);
-        // Water spring at center
-        assert_eq!(grid.get(30, 30, GROUND_LEVEL + 1).unwrap().material, Material::Water);
+        // Surface height varies — check that surface is soil and above is air
+        let sh = VoxelGrid::surface_height(0, 0);
+        assert_eq!(grid.get(0, 0, sh).unwrap().material, Material::Soil);
+        assert_eq!(grid.get(0, 0, sh + 2).unwrap().material, Material::Air);
+        // Water spring at center sits at surface height
+        let spring_z = VoxelGrid::surface_height(30, 30);
+        assert_eq!(grid.get(30, 30, spring_z).unwrap().material, Material::Water);
     }
 
     #[test]

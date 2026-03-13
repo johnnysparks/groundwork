@@ -9,7 +9,7 @@ use bevy_ecs::prelude::*;
 
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
-use systems::{branch_growth, light_propagation, root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow};
+use systems::{branch_growth, light_propagation, root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring};
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
 
@@ -61,7 +61,7 @@ pub fn create_world() -> World {
 /// Create the simulation schedule with all systems in order.
 pub fn create_schedule() -> Schedule {
     let mut schedule = Schedule::default();
-    schedule.add_systems((water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, ApplyDeferred, tree_growth, branch_growth, self_pruning, tree_rasterize, root_growth, seed_dispersal, tick_counter).chain());
+    schedule.add_systems((water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, ApplyDeferred, tree_growth, branch_growth, self_pruning, tree_rasterize, root_growth, seed_dispersal, tick_counter).chain());
     schedule
 }
 
