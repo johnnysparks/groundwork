@@ -1,6 +1,6 @@
-/// Side length of one voxel in meters. Default 1.0m preserves current behavior.
-/// Changing this scales all physics rates and species dimensions proportionally.
-pub const VOXEL_SIZE_M: f64 = 1.0;
+/// Side length of one voxel in meters.
+/// 0.5m gives 2x resolution: flower stems ≈ 1 voxel, tree detail in ~16-18 voxels.
+pub const VOXEL_SIZE_M: f64 = 0.5;
 
 pub use crate::grid::{GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 
@@ -66,12 +66,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn identity_at_default_scale() {
-        assert_eq!(meters_to_voxels(1.0), 1);
-        assert_eq!(meters_to_voxels(8.0), 8);
+    fn conversion_basics() {
         assert_eq!(meters_to_voxels(0.0), 0);
-        assert_eq!(voxels_to_meters(1), 1.0);
-        assert_eq!(voxels_to_meters(5), 5.0);
+        // 8m at 0.5m/voxel = 16 voxels
+        assert_eq!(meters_to_voxels(8.0), (8.0 / VOXEL_SIZE_M).round() as usize);
+        assert_eq!(voxels_to_meters(1), VOXEL_SIZE_M);
     }
 
     #[test]
@@ -87,9 +86,12 @@ mod tests {
     }
 
     #[test]
-    fn scale_noop_at_1m() {
-        assert_eq!(scale_attenuation(30), 30);
-        assert_eq!(scale_transfer(32), 32);
+    fn scale_proportional() {
+        // Attenuation and transfer scale linearly with voxel size
+        let a30 = scale_attenuation(30);
+        assert_eq!(a30, (30.0 * VOXEL_SIZE_M).round() as u8);
+        let t32 = scale_transfer(32);
+        assert_eq!(t32, (32.0 * VOXEL_SIZE_M).round() as u8);
         assert_eq!(scale_attenuation(0), 0);
     }
 

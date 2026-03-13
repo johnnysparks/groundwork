@@ -15,6 +15,24 @@ fn new_world() -> NamedTempFile {
     f
 }
 
+/// Query the surface height at (x, y) via `inspect` at GROUND_LEVEL.
+/// Returns the z of the first air cell by binary searching upward.
+fn find_surface(p: &str, x: u32, y: u32) -> u32 {
+    // GROUND_LEVEL is 30 in the 120×120×60 grid. Surface is usually within ±4.
+    // Search upward from z=25 to find the first air cell.
+    for z in 25..=40 {
+        let out = groundwork()
+            .args(["inspect", &x.to_string(), &y.to_string(), &z.to_string(), "--state", p])
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        if stdout.contains("air") {
+            return z - 1; // surface is the last non-air
+        }
+    }
+    30 // fallback
+}
+
 // ── Shovel removes anything ───────────────────────────────────────────
 
 /// Shovel (place air) removes a seed.
@@ -23,40 +41,43 @@ fn shovel_removes_seed() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place seed above terrain. Position (30,10) has surface_height=15,
-    // so seed lands at z=16.
+    let surface = find_surface(p, 60, 20);
+    let above = surface + 1;
+    let high = surface + 10;
+
+    // Place seed high up — it should fall to just above surface.
     let out = groundwork()
-        .args(["place", "seed", "30", "10", "20", "--state", p])
+        .args(["place", "seed", "60", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
 
-    // z=20 should be air (seed fell)
+    // High z should be air (seed fell)
     let out = groundwork()
-        .args(["inspect", "30", "10", "20", "--state", p])
+        .args(["inspect", "60", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "z=20 should be air after seed fell, got: {stdout}");
+    assert!(stdout.contains("air"), "z={high} should be air after seed fell, got: {stdout}");
 
-    // Seed should have landed at z=16 (surface_height+1)
+    // Seed should have landed at surface+1
     let out = groundwork()
-        .args(["inspect", "30", "10", "16", "--state", p])
+        .args(["inspect", "60", "20", &above.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("seed"), "expected seed at z=16, got: {stdout}");
+    assert!(stdout.contains("seed"), "expected seed at z={above}, got: {stdout}");
 
     // Use shovel to remove it
     let out = groundwork()
-        .args(["place", "air", "30", "10", "16", "--state", p])
+        .args(["place", "air", "60", "20", &above.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "shovel failed: {}", String::from_utf8_lossy(&out.stderr));
 
     // Verify it's gone
     let out = groundwork()
-        .args(["inspect", "30", "10", "16", "--state", p])
+        .args(["inspect", "60", "20", &above.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -69,9 +90,11 @@ fn dig_alias_works() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
+    let surface = find_surface(p, 20, 20);
+
     // Dig out some soil at the surface
     let out = groundwork()
-        .args(["place", "dig", "10", "10", "15", "--state", p])
+        .args(["place", "dig", "20", "20", &surface.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "dig failed: {}", String::from_utf8_lossy(&out.stderr));
@@ -87,9 +110,11 @@ fn cant_place_on_occupied_cell() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Try to place water on soil (z=15 is soil) — should skip
+    let surface = find_surface(p, 20, 20);
+
+    // Try to place water on soil (surface is soil) — should skip
     let out = groundwork()
-        .args(["place", "water", "10", "10", "15", "--state", p])
+        .args(["place", "water", "20", "20", &surface.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -108,9 +133,12 @@ fn place_into_air_succeeds() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place stone into air well above ground (z=20, away from outcrops)
+    let surface = find_surface(p, 40, 40);
+    let high = surface + 10; // well above ground
+
+    // Place stone into air well above ground
     let out = groundwork()
-        .args(["place", "stone", "20", "20", "20", "--state", p])
+        .args(["place", "stone", "40", "40", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -128,29 +156,32 @@ fn seed_falls_through_air() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place seed high up (z=25) at position (30,10) where surface_height=15.
-    // Seed lands at z=16 (surface+1).
+    let surface = find_surface(p, 60, 20);
+    let above = surface + 1;
+    let high = surface + 15;
+
+    // Place seed high up — should fall to surface+1.
     let out = groundwork()
-        .args(["place", "seed", "30", "10", "25", "--state", p])
+        .args(["place", "seed", "60", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
 
-    // Verify z=25 is still air (seed fell)
+    // Verify high z is still air (seed fell)
     let out = groundwork()
-        .args(["inspect", "30", "10", "25", "--state", p])
+        .args(["inspect", "60", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "z=25 should still be air, got: {stdout}");
+    assert!(stdout.contains("air"), "z={high} should still be air, got: {stdout}");
 
-    // Verify seed landed at z=16 (surface_height+1)
+    // Verify seed landed at surface+1
     let out = groundwork()
-        .args(["inspect", "30", "10", "16", "--state", p])
+        .args(["inspect", "60", "20", &above.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("seed"), "seed should have fallen to z=16, got: {stdout}");
+    assert!(stdout.contains("seed"), "seed should have fallen to z={above}, got: {stdout}");
 }
 
 /// Soil falls through air.
@@ -159,27 +190,30 @@ fn soil_falls_through_air() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // First, dig out the soil at z=15 to make air there
+    let surface = find_surface(p, 10, 10);
+    let high = surface + 10;
+
+    // First, dig out the soil at the surface to make air there
     let out = groundwork()
-        .args(["place", "dig", "5", "5", "15", "--state", p])
+        .args(["place", "dig", "10", "10", &surface.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
 
-    // Place soil at z=20 — should fall to z=15 (the gap we just dug)
+    // Place soil high up — should fall to the gap we just dug
     let out = groundwork()
-        .args(["place", "soil", "5", "5", "20", "--state", p])
+        .args(["place", "soil", "10", "10", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
 
-    // Verify soil is at z=15
+    // Verify soil is at the dug-out surface level
     let out = groundwork()
-        .args(["inspect", "5", "5", "15", "--state", p])
+        .args(["inspect", "10", "10", &surface.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("soil"), "soil should have fallen to z=15, got: {stdout}");
+    assert!(stdout.contains("soil"), "soil should have fallen to z={surface}, got: {stdout}");
 }
 
 /// Stone does NOT fall (placed directly).
@@ -188,19 +222,22 @@ fn stone_does_not_fall() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Place stone at z=20 — should stay at z=20 (no gravity)
+    let surface = find_surface(p, 20, 20);
+    let high = surface + 10;
+
+    // Place stone high up — should stay there (no gravity for stone)
     let out = groundwork()
-        .args(["place", "stone", "10", "10", "20", "--state", p])
+        .args(["place", "stone", "20", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
 
     let out = groundwork()
-        .args(["inspect", "10", "10", "20", "--state", p])
+        .args(["inspect", "20", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("stone"), "stone should stay at z=20, got: {stdout}");
+    assert!(stdout.contains("stone"), "stone should stay at z={high}, got: {stdout}");
 }
 
 // ── Seeds on stone ────────────────────────────────────────────────────
@@ -211,19 +248,22 @@ fn seed_dies_on_stone() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Dig out everything above stone at (5,5). Stone is at z=0..4.
-    // Dig z=5..15 (soil layers) to expose stone at z=4.
-    for z in 5..=15 {
+    let surface = find_surface(p, 10, 10);
+
+    // Dig out everything above stone at (10,10). Stone top is at z=9.
+    // Dig surface down through soil layers to expose stone.
+    for z in (10..=surface).rev() {
         let out = groundwork()
-            .args(["place", "dig", "5", "5", &z.to_string(), "--state", p])
+            .args(["place", "dig", "10", "10", &z.to_string(), "--state", p])
             .output()
             .unwrap();
         assert!(out.status.success());
     }
 
     // Now try to place a seed — it should fall and land on stone, then die (not placed)
+    let high = surface + 5;
     let out = groundwork()
-        .args(["place", "seed", "5", "5", "20", "--state", p])
+        .args(["place", "seed", "10", "10", &high.to_string(), "--state", p])
         .output()
         .unwrap();
     // Should report nothing placed since seed dies on stone
@@ -243,14 +283,17 @@ fn fill_air_with_soil() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Fill a 3x3x1 region of air (z=16) with soil
+    let surface = find_surface(p, 0, 0);
+    let above = surface + 1;
+
+    // Fill a 3x3x1 region of air just above surface with soil
     let out = groundwork()
-        .args(["fill", "soil", "0", "0", "16", "2", "2", "16", "--state", p])
+        .args(["fill", "soil", "0", "0", &above.to_string(), "2", "2", &above.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
-    // Soil has gravity, but z=16 is directly above soil at z=15, so it stays at z=16
+    // Soil has gravity, but just above surface it rests on top
     assert!(stdout.contains("soil"), "should confirm soil fill, got: {stdout}");
 }
 
@@ -260,9 +303,11 @@ fn fill_dig_removes_region() {
     let state = new_world();
     let p = state.path().to_str().unwrap();
 
-    // Fill-dig a 3x3x1 region of soil at z=15
+    let surface = find_surface(p, 1, 1);
+
+    // Fill-dig a 3x3x1 region of soil at the surface
     let out = groundwork()
-        .args(["fill", "dig", "0", "0", "15", "2", "2", "15", "--state", p])
+        .args(["fill", "dig", "0", "0", &surface.to_string(), "2", "2", &surface.to_string(), "--state", p])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -271,7 +316,7 @@ fn fill_dig_removes_region() {
 
     // Verify the cells are now air
     let out = groundwork()
-        .args(["inspect", "1", "1", "15", "--state", p])
+        .args(["inspect", "1", "1", &surface.to_string(), "--state", p])
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);

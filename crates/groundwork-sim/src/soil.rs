@@ -164,8 +164,9 @@ impl SoilGrid {
                 // Near spring or stream
                 let cx = GRID_X / 2;
                 let cy = GRID_Y / 2;
-                let near_spring = x >= cx.saturating_sub(4) && x <= cx + 3
-                               && y >= cy.saturating_sub(4) && y <= cy + 3;
+                let spring_range = meters_to_voxels(4.0);
+                let near_spring = x >= cx.saturating_sub(spring_range) && x <= cx + spring_range - 1
+                               && y >= cy.saturating_sub(spring_range) && y <= cy + spring_range - 1;
                 let near_stream = VoxelGrid::is_stream(x, y)
                     || (x > 0 && VoxelGrid::is_stream(x - 1, y))
                     || (y > 0 && VoxelGrid::is_stream(x, y - 1))
@@ -332,14 +333,22 @@ mod tests {
     #[test]
     fn soil_grid_new_has_depth_layers() {
         let soil = SoilGrid::new();
-        // Deep layer should be rocky
-        let deep = soil.get(30, 30, 6).unwrap();
+        // Use a position far from edges/water to get standard layers
+        let tx = GRID_X / 2;
+        let ty = GRID_Y / 4; // far from spring, far from edges
+        let surface = VoxelGrid::surface_height(tx, ty);
+        // Deep layer (near stone) should be rocky
+        let deep_z = meters_to_voxels(5.0) + 1; // just above stone
+        let deep = soil.get(tx, ty, deep_z).unwrap();
         assert_eq!(deep.type_name(), "rocky");
-        // Subsoil should be clay
-        let sub = soil.get(30, 30, 9).unwrap();
-        assert_eq!(sub.type_name(), "clay");
-        // Topsoil far from water/edges should be loam
-        let top = soil.get(30, 10, 14).unwrap();
+        // Subsoil should be clay (5+ meters below surface)
+        let sub_z = surface.saturating_sub(meters_to_voxels(6.0));
+        if sub_z > meters_to_voxels(7.0) { // only test if there's room
+            let sub = soil.get(tx, ty, sub_z).unwrap();
+            assert_eq!(sub.type_name(), "clay");
+        }
+        // Topsoil (top 1-2 layers) should be loam
+        let top = soil.get(tx, ty, surface).unwrap();
         assert_eq!(top.type_name(), "loam");
     }
 
