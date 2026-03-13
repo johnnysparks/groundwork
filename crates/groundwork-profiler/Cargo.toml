@@ -1,0 +1,13 @@
+[package]
+name = "groundwork-profiler"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "gw-profile"
+path = "src/main.rs"
+
+[dependencies]
+groundwork-sim = { path = "../groundwork-sim" }
+bevy_ecs = { workspace = true }
+pprof = { version = "0.14", features = ["flamegraph"] }
