@@ -378,7 +378,74 @@ groundwork-web/
 - Mobile touch controls optimization
 - Larger world / streaming chunks
 - Multiplayer via SharedArrayBuffer
-- Native desktop client (could add Bevy or wgpu renderer later — sim stays unchanged)
+- Native desktop/console renderer (see Multi-Platform Strategy below)
+
+---
+
+## Parallelization Strategy
+
+The implementation naturally splits into three independent workstreams that can run concurrently:
+
+```
+Workstream 1: WASM Bridge       Workstream 2: Three.js Renderer      Workstream 3: Sim (ongoing)
+───────────────────────         ────────────────────────────────      ───────────────────────────
+Add cdylib target               Scaffold groundwork-web (Vite)        Continue plant/ecology work
+wasm-bindgen exports            Greedy mesher (mock voxel data)       (already happening)
+  init/tick/grid_ptr/place      Per-vertex AO calculator
+wasm-pack build script          Chunk manager + dirty tracking
+                                Camera controller (orbit, cutaway)
+        │                       Water shader, lighting, post-proc
+        │                       Foliage billboards, particles
+        └──── merge ───────────►Connect real WASM grid to mesher
+                                ── playable ──►
+```
+
+**Why this works:** The mesher and renderer develop against a **mock voxel buffer** — a static `Uint8Array` with test terrain. The WASM bridge is a small, separate task. They connect at integration time.
+
+### Parallel task breakdown
+
+| Task | Depends on | ~Effort | Workstream |
+|------|-----------|---------|------------|
+| **WASM bridge** — wasm-bindgen exports | Nothing | 1-2 days | 1 |
+| **Vite scaffold** — project setup, dev server | Nothing | Half day | 2 |
+| **Greedy mesher** — chunked meshing + AO | Nothing (mock data) | 3-5 days | 2 |
+| **Water shader** — normals, caustics, depth | Scaffold | 2-3 days | 2 |
+| **Lighting system** — sun, hemisphere, ToD | Scaffold | 2-3 days | 2 |
+| **Foliage renderer** — billboards, wind sway | Mesher | 2-3 days | 2 |
+| **Post-processing** — bloom, DOF, SSAO | Lighting | 2-3 days | 2 |
+| **Camera** — orbit, cutaway, smooth | Scaffold | 1-2 days | 2 |
+| **Integration** — WASM grid → mesher, tools → bridge | Bridge + Mesher | 1-2 days | merge |
+| **Sim work** — continues independently | Nothing | Ongoing | 3 |
+
+### Critical path
+
+```
+Vite scaffold ──► Greedy mesher ──► Integration ──► Playable
+                                        ▲
+WASM bridge ────────────────────────────┘
+```
+
+Everything else (water, lighting, foliage, post-processing, camera) hangs off the scaffold and can be composed independently.
+
+---
+
+## Multi-Platform Strategy
+
+The sim is renderer-agnostic. Multiple renderers can coexist — you add per-platform frontends, not rewrite anything.
+
+| Platform | Renderer | How |
+|----------|----------|-----|
+| **Web** | Three.js + WASM | This plan (primary target) |
+| **Desktop (quick)** | Tauri + Three.js | Wrap the web app in a native window. Same code, native binary. ~1 day. |
+| **Desktop (premium)** | Bevy or wgpu native | Second renderer crate. Native GPU, smaller binary, better perf. |
+| **Switch** | wgpu or Bevy native | Must be native (no browser). wgpu targets Vulkan on ARM. |
+
+The sim crate compiles to WASM (web), native ARM (Switch), and native x86 (desktop). Each renderer is a thin shell calling `tick()` and reading the grid.
+
+**Recommended sequencing:**
+1. **Now:** Three.js for web (Phases 1-6)
+2. **After web ships:** Tauri wrapper for Steam/itch.io desktop distribution (essentially free)
+3. **If/when targeting Switch:** Native wgpu renderer (`groundwork-native` crate, ~4-6 weeks). Visual design, meshing algorithms, AO, and shader logic all transfer from Three.js version. Bevy full engine remains viable if its web story improves by then.
 
 ---
 
