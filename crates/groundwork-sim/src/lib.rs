@@ -6,6 +6,9 @@ pub mod systems;
 pub mod tree;
 pub mod voxel;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm_bridge;
+
 use bevy_ecs::prelude::*;
 
 use grid::{VoxelGrid, GROUND_LEVEL};
