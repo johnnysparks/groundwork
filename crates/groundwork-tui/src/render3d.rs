@@ -190,6 +190,10 @@ fn material_color(mat: Material, face: u8, world_z: usize, water_level: u8) -> C
         Material::Stone => Color::Rgb(dim(160), dim(160), dim(170)),
         Material::Root => Color::Rgb(dim(70), dim(170), dim(50)),
         Material::Seed => Color::Rgb(dim(200), dim(180), dim(60)),
+        Material::Trunk => Color::Rgb(dim(139), dim(90), dim(43)),
+        Material::Branch => Color::Rgb(dim(120), dim(80), dim(40)),
+        Material::Leaf => Color::Rgb(dim(60), dim(160), dim(40)),
+        Material::DeadWood => Color::Rgb(dim(100), dim(80), dim(60)),
     }
 }
 
@@ -427,6 +431,10 @@ fn draw_3d_panel(
                 Material::Water => Color::Rgb(80, 140, 255),
                 Material::Root => Color::Rgb(80, 180, 60),
                 Material::Seed => Color::Rgb(200, 180, 60),
+                Material::Trunk => Color::Rgb(139, 90, 43),
+                Material::Branch => Color::Rgb(120, 80, 40),
+                Material::Leaf => Color::Rgb(60, 160, 40),
+                Material::DeadWood => Color::Rgb(100, 80, 60),
             };
             panel_lines.push(Line::from(vec![
                 Span::styled(" mat  ", label),
@@ -495,13 +503,17 @@ fn draw_3d_panel(
     // Legend
     panel_lines.push(Line::from(""));
     panel_lines.push(badge("LEGEND"));
-    let legend: [(&str, &str, Color); 6] = [
+    let legend: [(&str, &str, Color); 10] = [
         (" ", "air/sky", Color::Gray),
         ("~", "water", Color::Rgb(80, 140, 255)),
         ("#", "soil", Color::Rgb(139, 90, 43)),
         ("@", "stone", Color::Rgb(170, 170, 180)),
         ("*", "root", Color::Rgb(80, 180, 60)),
         ("*", "seed", Color::Rgb(200, 180, 60)),
+        ("|", "trunk", Color::Rgb(139, 90, 43)),
+        ("-", "branch", Color::Rgb(120, 80, 40)),
+        ("&", "leaf", Color::Rgb(60, 160, 40)),
+        ("X", "dead", Color::Rgb(100, 80, 60)),
     ];
     for (ch, name, color) in legend {
         panel_lines.push(Line::from(vec![

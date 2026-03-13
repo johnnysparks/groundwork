@@ -1,8 +1,10 @@
-use bevy_ecs::system::ResMut;
+use bevy_ecs::prelude::*;
 
-use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
+use crate::grid::{VoxelGrid, GROUND_LEVEL, GRID_X, GRID_Y, GRID_Z};
 use crate::soil::SoilGrid;
+use crate::tree::{tree_hash, GrowthStage, SeedSpeciesMap, SpeciesTable, Tree, TreeTemplate};
 use crate::voxel::Material;
+use crate::Tick;
 
 /// Gravity-driven water flow. Each tick, water tries to move down,
 /// then spreads laterally to lower-water neighbors.
@@ -141,6 +143,18 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
                         Material::Stone => {
                             light = 0;
                         }
+                        Material::Leaf => {
+                            light = light.saturating_sub(50);
+                        }
+                        Material::Trunk => {
+                            light = light.saturating_sub(30);
+                        }
+                        Material::Branch => {
+                            light = light.saturating_sub(20);
+                        }
+                        Material::DeadWood => {
+                            light = light.saturating_sub(10);
+                        }
                         _ => {}
                     }
                     cell.light_level = light;
@@ -160,10 +174,10 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
     }
 }
 
-/// Seeds grow into roots when they have enough water and light.
+/// Seeds grow into tree seedlings when they have enough water and light.
 /// Uses nutrient_level as a growth counter: increments by 3-8 each tick
-/// (based on adjacent soil quality) when conditions are met, converts to Root at 200.
-pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>) {
+/// (based on adjacent soil quality) when conditions are met, spawns a Tree entity at 200.
+pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut commands: Commands, tick: Res<Tick>, mut seed_species: ResMut<SeedSpeciesMap>) {
     // Snapshot to check neighbors without order artifacts.
     let snapshot: Vec<(Material, u8)> = grid
         .cells()
@@ -253,7 +267,45 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>) {
                         if let Some(cell) = grid.get_mut(x, y, z) {
                             cell.nutrient_level = cell.nutrient_level.saturating_add(growth_rate);
                             if cell.nutrient_level >= 200 {
-                                cell.set_material(Material::Root);
+                                // Seed matures into a tree seedling
+                                cell.set_material(Material::Trunk);
+
+                                // Place 1-2 Root voxels below in soil
+                                let mut footprint = vec![(x, y, z)];
+                                if z > 0 {
+                                    if let Some(below) = grid.get_mut(x, y, z - 1) {
+                                        if below.material == Material::Soil {
+                                            below.set_material(Material::Root);
+                                            footprint.push((x, y, z - 1));
+                                        }
+                                    }
+                                }
+                                if z > 1 {
+                                    if let Some(below2) = grid.get_mut(x, y, z - 2) {
+                                        if below2.material == Material::Soil {
+                                            below2.set_material(Material::Root);
+                                            footprint.push((x, y, z - 2));
+                                        }
+                                    }
+                                }
+
+                                // Spawn Tree entity
+                                let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or(0);
+                                let rng_seed = (tick.0 as u64)
+                                    .wrapping_mul(x as u64 + 1)
+                                    .wrapping_mul(y as u64 + 1);
+                                commands.spawn(Tree {
+                                    species_id,
+                                    root_pos: (x, y, z),
+                                    age: 0,
+                                    stage: GrowthStage::Seedling,
+                                    health: 1.0,
+                                    accumulated_water: 0.0,
+                                    accumulated_light: 0.0,
+                                    rng_seed,
+                                    dirty: false,
+                                    voxel_footprint: footprint,
+                                });
                             }
                         }
                     }
@@ -356,6 +408,307 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
             cell.water_level = cell.water_level.saturating_add(delta as u8);
         } else {
             cell.water_level = cell.water_level.saturating_sub((-delta) as u8);
+        }
+    }
+}
+
+/// Tree growth system: accumulates resources, checks stage transitions.
+/// Health declines when water or light is insufficient.
+pub fn tree_growth(
+    mut trees: Query<&mut Tree>,
+    grid: Res<VoxelGrid>,
+    species_table: Res<SpeciesTable>,
+) {
+    for mut tree in trees.iter_mut() {
+        if tree.stage == GrowthStage::Dead {
+            continue;
+        }
+        let species = &species_table.species[tree.species_id];
+        tree.age += 1;
+
+        // Accumulate water from root voxels, light from above-ground voxels
+        let mut water_intake: f32 = 0.0;
+        let mut light_intake: f32 = 0.0;
+
+        for &(vx, vy, vz) in &tree.voxel_footprint {
+            if let Some(voxel) = grid.get(vx, vy, vz) {
+                match voxel.material {
+                    Material::Root => water_intake += voxel.water_level as f32,
+                    Material::Trunk | Material::Leaf | Material::Branch => {
+                        light_intake += voxel.light_level as f32;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        tree.accumulated_water += water_intake * species.growth_rate;
+        tree.accumulated_light += light_intake * species.growth_rate;
+
+        // Health declines without resources, recovers when well-supplied
+        let water_ok = water_intake >= species.water_need.threshold();
+        let light_ok = light_intake >= species.light_need.threshold();
+        if !water_ok {
+            tree.health = (tree.health - 0.01).max(0.0);
+        }
+        if !light_ok {
+            tree.health = (tree.health - 0.005).max(0.0);
+        }
+        if water_ok && light_ok {
+            tree.health = (tree.health + 0.005).min(1.0);
+        }
+
+        // Check stage transition
+        if let Some(next) = tree.stage.next_stage(
+            tree.age,
+            tree.accumulated_water,
+            tree.accumulated_light,
+            tree.health,
+        ) {
+            tree.stage = next;
+            tree.dirty = true;
+        }
+    }
+}
+
+/// Rasterize dirty trees: clear old voxels, generate template, write new voxels.
+pub fn tree_rasterize(
+    mut trees: Query<&mut Tree>,
+    mut grid: ResMut<VoxelGrid>,
+    species_table: Res<SpeciesTable>,
+) {
+    for mut tree in trees.iter_mut() {
+        if !tree.dirty {
+            continue;
+        }
+
+        let species = &species_table.species[tree.species_id];
+
+        // Clear old footprint
+        for &(x, y, z) in &tree.voxel_footprint {
+            if let Some(cell) = grid.get_mut(x, y, z) {
+                match cell.material {
+                    Material::Trunk | Material::Branch | Material::Leaf
+                    | Material::Root | Material::DeadWood => {
+                        if z <= GROUND_LEVEL {
+                            cell.set_material(Material::Soil);
+                        } else {
+                            cell.set_material(Material::Air);
+                        }
+                    }
+                    _ => {} // changed externally, leave it
+                }
+            }
+        }
+
+        // Generate new template
+        let template = TreeTemplate::generate(species, &tree.stage, tree.rng_seed);
+
+        // Write new voxels to grid
+        let mut new_footprint = Vec::new();
+        let (rx, ry, rz) = tree.root_pos;
+        for &(dx, dy, dz, mat) in &template.voxels {
+            let ax = rx as isize + dx;
+            let ay = ry as isize + dy;
+            let az = rz as isize + dz;
+            if ax < 0 || ay < 0 || az < 0 {
+                continue;
+            }
+            let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
+            if !VoxelGrid::in_bounds(ax, ay, az) {
+                continue;
+            }
+
+            if let Some(cell) = grid.get_mut(ax, ay, az) {
+                let can_place = match mat {
+                    Material::Root => {
+                        cell.material == Material::Soil || cell.material == Material::Root
+                    }
+                    _ => {
+                        cell.material == Material::Air
+                            || cell.material == Material::Trunk
+                            || cell.material == Material::Branch
+                            || cell.material == Material::Leaf
+                            || cell.material == Material::DeadWood
+                    }
+                };
+                if can_place {
+                    cell.set_material(mat);
+                    new_footprint.push((ax, ay, az));
+                }
+            }
+        }
+
+        tree.voxel_footprint = new_footprint;
+        tree.dirty = false;
+    }
+}
+
+/// Dynamic root growth with tropisms: roots extend toward water (hydrotropism)
+/// and downward (gravitropism). Runs every 5 ticks per tree.
+pub fn root_growth(
+    mut trees: Query<&mut Tree>,
+    mut grid: ResMut<VoxelGrid>,
+    species_table: Res<SpeciesTable>,
+) {
+    for mut tree in trees.iter_mut() {
+        if matches!(tree.stage, GrowthStage::Dead | GrowthStage::Seedling) {
+            continue;
+        }
+
+        // Only grow roots every 5 ticks
+        if tree.age % 5 != 0 {
+            continue;
+        }
+
+        let species = &species_table.species[tree.species_id];
+
+        // Max roots based on growth stage
+        let max_roots = match tree.stage {
+            GrowthStage::Sapling => species.root_depth as usize * 3,
+            GrowthStage::YoungTree => species.root_depth as usize * 5,
+            GrowthStage::Mature | GrowthStage::OldGrowth => species.root_depth as usize * 8,
+            _ => 0,
+        };
+
+        // Collect current root positions
+        let current_roots: Vec<(usize, usize, usize)> = tree
+            .voxel_footprint
+            .iter()
+            .filter(|&&(x, y, z)| {
+                grid.get(x, y, z)
+                    .map_or(false, |v| v.material == Material::Root)
+            })
+            .copied()
+            .collect();
+
+        if current_roots.len() >= max_roots {
+            continue;
+        }
+
+        // Find best soil neighbor of any root: score by water (hydrotropism) + depth (gravitropism)
+        let mut best: Option<(usize, usize, usize, u16)> = None;
+
+        for &(rx, ry, rz) in &current_roots {
+            // Prefer downward, then lateral
+            let neighbors: [(i32, i32, i32); 5] =
+                [(0, 0, -1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)];
+            for (dx, dy, dz) in neighbors {
+                let nx = rx as i32 + dx;
+                let ny = ry as i32 + dy;
+                let nz = rz as i32 + dz;
+                if nx < 0 || ny < 0 || nz < 0 {
+                    continue;
+                }
+                let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
+                if !VoxelGrid::in_bounds(nx, ny, nz) {
+                    continue;
+                }
+
+                if let Some(cell) = grid.get(nx, ny, nz) {
+                    if cell.material != Material::Soil {
+                        continue;
+                    }
+
+                    // Hydrotropism: prefer wetter soil
+                    let water_score = cell.water_level as u16;
+                    // Gravitropism: prefer deeper
+                    let depth_score = GROUND_LEVEL.saturating_sub(nz) as u16 * 3;
+                    let score = water_score + depth_score;
+
+                    if best.map_or(true, |(_, _, _, s)| score > s) {
+                        best = Some((nx, ny, nz, score));
+                    }
+                }
+            }
+        }
+
+        if let Some((nx, ny, nz, _)) = best {
+            if let Some(cell) = grid.get_mut(nx, ny, nz) {
+                cell.set_material(Material::Root);
+                tree.voxel_footprint.push((nx, ny, nz));
+            }
+        }
+    }
+}
+
+/// Mature trees disperse seeds nearby. Seeds land on soil via gravity.
+pub fn seed_dispersal(
+    trees: Query<&Tree>,
+    mut grid: ResMut<VoxelGrid>,
+    mut seed_species: ResMut<SeedSpeciesMap>,
+) {
+    for tree in trees.iter() {
+        if !matches!(
+            tree.stage,
+            GrowthStage::Mature | GrowthStage::OldGrowth
+        ) {
+            continue;
+        }
+        if tree.health < 0.5 {
+            continue;
+        }
+
+        // Disperse every ~80-120 ticks (varies per tree)
+        let period = 80 + (tree_hash(tree.rng_seed, 0) % 40) as u32;
+        if tree.age < period || tree.age % period != 0 {
+            continue;
+        }
+
+        // Pick dispersal direction and distance
+        let h = tree_hash(tree.rng_seed, tree.age as u64);
+        let dist = 2 + (h >> 8) % 4;
+        let (dx, dy): (isize, isize) = match h % 8 {
+            0 => (dist as isize, 0),
+            1 => (-(dist as isize), 0),
+            2 => (0, dist as isize),
+            3 => (0, -(dist as isize)),
+            4 => (dist as isize, dist as isize),
+            5 => (-(dist as isize), dist as isize),
+            6 => (dist as isize, -(dist as isize)),
+            _ => (-(dist as isize), -(dist as isize)),
+        };
+
+        let (rx, ry, rz) = tree.root_pos;
+        let sx = rx as isize + dx;
+        let sy = ry as isize + dy;
+        if sx < 0 || sy < 0 {
+            continue;
+        }
+        let (sx, sy) = (sx as usize, sy as usize);
+
+        // Start above the tree canopy and drop down
+        let start_z = (rz + 12).min(GRID_Z - 1);
+        if !VoxelGrid::in_bounds(sx, sy, start_z) {
+            continue;
+        }
+
+        let landing_z = grid.find_landing_z(sx, sy, start_z);
+
+        // Must land on Air with Soil below
+        if let Some(cell) = grid.get(sx, sy, landing_z) {
+            if cell.material != Material::Air {
+                continue;
+            }
+        } else {
+            continue;
+        }
+
+        if landing_z == 0 {
+            continue;
+        }
+        if let Some(below) = grid.get(sx, sy, landing_z - 1) {
+            if below.material != Material::Soil {
+                continue;
+            }
+        } else {
+            continue;
+        }
+
+        // Place seed and record its species
+        if let Some(cell) = grid.get_mut(sx, sy, landing_z) {
+            cell.set_material(Material::Seed);
+            seed_species.map.insert((sx, sy, landing_z), tree.species_id);
         }
     }
 }
@@ -526,15 +879,14 @@ mod tests {
     use crate::grid::GROUND_LEVEL;
 
     #[test]
-    fn seed_grows_into_root_on_wet_lit_soil() {
+    fn seed_grows_into_tree_seedling() {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
+        // Use position away from grid edges so soil is loam (higher nutrient capacity).
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
-            // Place seed above ground with enough water on it.
-            // water_flow skips non-Air/Water materials, so seed keeps its water.
-            if let Some(cell) = grid.get_mut(10, 10, GROUND_LEVEL + 1) {
+            if let Some(cell) = grid.get_mut(30, 10, GROUND_LEVEL + 1) {
                 cell.material = Material::Seed;
                 cell.water_level = 100;
                 cell.light_level = 0;
@@ -542,17 +894,25 @@ mod tests {
             }
         }
 
-        // 200 / 5 = 40 ticks minimum, extra for light to propagate first tick.
-        for _ in 0..50 {
+        // Growth rate is 3-8/tick depending on soil; 80 ticks is enough for any soil type.
+        for _ in 0..80 {
             crate::tick(&mut world, &mut schedule);
         }
 
         let grid = world.resource::<VoxelGrid>();
-        let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
+        let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
         assert_eq!(
             cell.material,
+            Material::Trunk,
+            "Seed should have grown into trunk after 80 ticks with water and light"
+        );
+
+        // Root should have been placed in the soil below
+        let below = grid.get(30, 10, GROUND_LEVEL).unwrap();
+        assert_eq!(
+            below.material,
             Material::Root,
-            "Seed should have grown into root after 50 ticks with water and light"
+            "Root should be placed in soil below the trunk"
         );
     }
 
@@ -620,13 +980,13 @@ mod tests {
     }
 
     #[test]
-    fn seed_to_root_resets_water_level() {
+    fn seed_to_trunk_resets_water_level() {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
-            if let Some(cell) = grid.get_mut(10, 10, GROUND_LEVEL + 1) {
+            if let Some(cell) = grid.get_mut(30, 10, GROUND_LEVEL + 1) {
                 cell.material = Material::Seed;
                 cell.water_level = 100;
                 cell.light_level = 0;
@@ -634,16 +994,16 @@ mod tests {
             }
         }
 
-        for _ in 0..50 {
+        for _ in 0..80 {
             crate::tick(&mut world, &mut schedule);
         }
 
         let grid = world.resource::<VoxelGrid>();
-        let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
-        if cell.material == Material::Root {
+        let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
+        if cell.material == Material::Trunk {
             assert_eq!(
                 cell.water_level, 0,
-                "Root converted from seed should not retain stale water_level"
+                "Trunk converted from seed should not retain stale water_level"
             );
         }
     }
@@ -865,12 +1225,13 @@ mod tests {
     fn seed_growth_stages_visible() {
         // Verify that a seed's nutrient_level passes through the 100 threshold
         // (used by the display layer to show 's' vs 'S') on its way to 200.
+        // Growth rate is soil-dependent (3-8/tick). Using inland position for loam soil (~5/tick).
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
-            if let Some(cell) = grid.get_mut(10, 10, GROUND_LEVEL + 1) {
+            if let Some(cell) = grid.get_mut(30, 10, GROUND_LEVEL + 1) {
                 cell.material = Material::Seed;
                 cell.water_level = 100;
                 cell.light_level = 0;
@@ -878,36 +1239,35 @@ mod tests {
             }
         }
 
-        // After 15 ticks: growth = 15*5 = 75 (first tick may not grow due to light propagation)
-        // Should still be 's' stage (< 100)
-        for _ in 0..15 {
-            crate::tick(&mut world, &mut schedule);
-        }
-
-        {
-            let grid = world.resource::<VoxelGrid>();
-            let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
-            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 15 ticks");
-            // First tick has no light yet, so ~14 growth ticks = 70
-            assert!(
-                cell.nutrient_level < 100,
-                "At 15 ticks, nutrient_level ({}) should be < 100 (small seed stage)",
-                cell.nutrient_level
-            );
-        }
-
-        // After 10 more ticks (25 total): growth should cross 100 threshold
+        // After 10 ticks with soil-aware growth (3-8/tick): at most 80, should be < 100.
         for _ in 0..10 {
             crate::tick(&mut world, &mut schedule);
         }
 
         {
             let grid = world.resource::<VoxelGrid>();
-            let cell = grid.get(10, 10, GROUND_LEVEL + 1).unwrap();
-            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 25 ticks");
+            let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
+            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 10 ticks");
+            assert!(
+                cell.nutrient_level < 100,
+                "At 10 ticks, nutrient_level ({}) should be < 100 (small seed stage)",
+                cell.nutrient_level
+            );
+        }
+
+        // After 25 more ticks (35 total): growth should cross 100 threshold
+        // Even at minimum rate 3/tick: 34 growing ticks * 3 = 102 >= 100
+        for _ in 0..25 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        {
+            let grid = world.resource::<VoxelGrid>();
+            let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
+            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 35 ticks");
             assert!(
                 cell.nutrient_level >= 100,
-                "At 25 ticks, nutrient_level ({}) should be >= 100 (growing seed stage 'S')",
+                "At 35 ticks, nutrient_level ({}) should be >= 100 (growing seed stage 'S')",
                 cell.nutrient_level
             );
         }
@@ -1279,6 +1639,326 @@ mod tests {
         assert_eq!(
             cell.nutrient_level, 0,
             "Seed growth counter should stay at 0 in compacted soil"
+        );
+    }
+
+    #[test]
+    fn tree_grows_through_stages() {
+        // Full lifecycle: seed → seedling → sapling (with visible canopy).
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let tx = 10;
+        let ty = 10;
+        let tz = GROUND_LEVEL + 1;
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                cell.material = Material::Seed;
+                cell.water_level = 100;
+            }
+            // Ensure soil below is wet so roots can accumulate water.
+            for dz in 1..=4 {
+                if let Some(cell) = grid.get_mut(tx, ty, tz - dz) {
+                    cell.water_level = 200;
+                }
+            }
+        }
+
+        // Run until seed matures into seedling (~40-70 ticks depending on soil)
+        for _ in 0..80 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        {
+            let grid = world.resource::<VoxelGrid>();
+            assert_eq!(
+                grid.get(tx, ty, tz).unwrap().material,
+                Material::Trunk,
+                "Seed should have become a trunk (seedling stage)"
+            );
+        }
+
+        // Run more ticks to trigger seedling → sapling transition.
+        // Sapling template adds a second trunk + leaf cap above.
+        for _ in 0..30 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        // Check that the tree has grown taller (sapling has trunk_h >= 2).
+        let grid = world.resource::<VoxelGrid>();
+        let above = grid.get(tx, ty, tz + 1).unwrap();
+        assert!(
+            above.material == Material::Trunk || above.material == Material::Leaf,
+            "After ~110 ticks, tree should have grown above seedling. Got {:?} at z+1",
+            above.material
+        );
+    }
+
+    #[test]
+    fn tree_rasterize_places_leaves() {
+        // Directly test that rasterization generates leaf voxels for a sapling.
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let tx = 20;
+        let ty = 20;
+        let tz = GROUND_LEVEL + 1;
+
+        // Manually spawn a tree entity in Sapling stage with dirty=true.
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Clear the area above ground for tree placement.
+            if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                cell.set_material(Material::Trunk);
+            }
+        }
+
+        world.spawn(Tree {
+            species_id: 0, // Oak
+            root_pos: (tx, ty, tz),
+            age: 50,
+            stage: GrowthStage::Sapling,
+            health: 1.0,
+            accumulated_water: 300.0,
+            accumulated_light: 300.0,
+            rng_seed: 12345,
+            dirty: true,
+            voxel_footprint: vec![(tx, ty, tz)],
+        });
+
+        // One tick runs tree_rasterize which should place the sapling template.
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        // Oak sapling: trunk_h = 8/3 = 2, leaf disc at z+2 with radius 1.
+        let leaf_z = tz + 2;
+        let center_leaf = grid.get(tx, ty, leaf_z).unwrap();
+        assert_eq!(
+            center_leaf.material,
+            Material::Leaf,
+            "Sapling should have leaf at trunk_top. Got {:?}",
+            center_leaf.material
+        );
+
+        // Check a cardinal neighbor also has a leaf (radius 1 disc).
+        let neighbor_leaf = grid.get(tx + 1, ty, leaf_z).unwrap();
+        assert_eq!(
+            neighbor_leaf.material,
+            Material::Leaf,
+            "Sapling leaf disc (r=1) should include cardinal neighbor. Got {:?}",
+            neighbor_leaf.material
+        );
+    }
+
+    #[test]
+    fn roots_grow_toward_water() {
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let tx = 20;
+        let ty = 20;
+        let tz = GROUND_LEVEL + 1;
+
+        // Set up: wet soil on the -x side, dry soil on +x side.
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place trunk
+            if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                cell.set_material(Material::Trunk);
+            }
+            // Place initial root
+            if let Some(cell) = grid.get_mut(tx, ty, GROUND_LEVEL) {
+                cell.set_material(Material::Root);
+            }
+            // Wet soil to the west (lower x)
+            for dx in 1..=5 {
+                if let Some(cell) = grid.get_mut(tx - dx, ty, GROUND_LEVEL) {
+                    cell.water_level = 200;
+                }
+                if let Some(cell) = grid.get_mut(tx - dx, ty, GROUND_LEVEL - 1) {
+                    cell.water_level = 200;
+                }
+            }
+            // Dry soil to the east (higher x)
+            for dx in 1..=5 {
+                if let Some(cell) = grid.get_mut(tx + dx, ty, GROUND_LEVEL) {
+                    cell.water_level = 0;
+                }
+                if let Some(cell) = grid.get_mut(tx + dx, ty, GROUND_LEVEL - 1) {
+                    cell.water_level = 0;
+                }
+            }
+        }
+
+        // Spawn sapling tree with age divisible by 5 so root_growth fires.
+        world.spawn(Tree {
+            species_id: 0,
+            root_pos: (tx, ty, tz),
+            age: 4, // tree_growth increments to 5, then root_growth checks age%5==0
+            stage: GrowthStage::Sapling,
+            health: 1.0,
+            accumulated_water: 300.0,
+            accumulated_light: 300.0,
+            rng_seed: 999,
+            dirty: false,
+            voxel_footprint: vec![(tx, ty, tz), (tx, ty, GROUND_LEVEL)],
+        });
+
+        crate::tick(&mut world, &mut schedule);
+
+        // Root should have grown toward wet soil (lower x or downward), not toward dry soil.
+        let grid = world.resource::<VoxelGrid>();
+        let grew_toward_water = grid
+            .get(tx - 1, ty, GROUND_LEVEL)
+            .map_or(false, |v| v.material == Material::Root)
+            || grid
+                .get(tx, ty, GROUND_LEVEL - 1)
+                .map_or(false, |v| v.material == Material::Root);
+
+        assert!(
+            grew_toward_water,
+            "Root should grow toward wet soil or downward (hydrotropism + gravitropism)"
+        );
+    }
+
+    #[test]
+    fn seed_dispersal_from_mature_tree() {
+        use crate::tree::{GrowthStage, Tree};
+
+        // Place far from water spring (which is at 28..31, 28..31)
+        let tx = 10;
+        let ty = 10;
+        let tz = GROUND_LEVEL + 1;
+
+        // Try multiple rng_seeds to find one that disperses successfully.
+        // Different seeds pick different directions; some may hit water or OOB.
+        let mut found_seed = false;
+        for rng_trial in 0..20u64 {
+            // Reset world for each trial
+            let mut world = crate::create_world();
+            let mut schedule = crate::create_schedule();
+
+            {
+                let mut grid = world.resource_mut::<VoxelGrid>();
+                if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                    cell.set_material(Material::Trunk);
+                }
+                if let Some(cell) = grid.get_mut(tx, ty, GROUND_LEVEL) {
+                    cell.set_material(Material::Root);
+                    cell.water_level = 200;
+                }
+            }
+
+            let rng_seed = rng_trial * 7 + 1;
+            let period = 80 + (crate::tree::tree_hash(rng_seed, 0) % 40) as u32;
+            world.spawn(Tree {
+                species_id: 0,
+                root_pos: (tx, ty, tz),
+                age: period - 1,
+                stage: GrowthStage::Mature,
+                health: 1.0,
+                accumulated_water: 10000.0,
+                accumulated_light: 10000.0,
+                rng_seed,
+                dirty: false,
+                voxel_footprint: vec![(tx, ty, tz), (tx, ty, GROUND_LEVEL)],
+            });
+
+            crate::tick(&mut world, &mut schedule);
+
+            let grid = world.resource::<VoxelGrid>();
+            for dy in -8i32..=8 {
+                for dx in -8i32..=8 {
+                    let sx = tx as i32 + dx;
+                    let sy = ty as i32 + dy;
+                    if sx < 0 || sy < 0 {
+                        continue;
+                    }
+                    let (sx, sy) = (sx as usize, sy as usize);
+                    if !VoxelGrid::in_bounds(sx, sy, 0) {
+                        continue;
+                    }
+                    if let Some(cell) = grid.get(sx, sy, GROUND_LEVEL + 1) {
+                        if cell.material == Material::Seed {
+                            found_seed = true;
+                        }
+                    }
+                }
+            }
+
+            if found_seed {
+                break;
+            }
+        }
+
+        assert!(
+            found_seed,
+            "At least one rng_seed trial should produce a dispersed seed"
+        );
+    }
+
+    #[test]
+    fn health_recovers_with_good_resources() {
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let tx = 15;
+        let ty = 15;
+        let tz = GROUND_LEVEL + 1;
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                cell.set_material(Material::Trunk);
+            }
+            // Place a root in wet soil
+            if let Some(cell) = grid.get_mut(tx, ty, GROUND_LEVEL) {
+                cell.set_material(Material::Root);
+                cell.water_level = 200;
+            }
+            // Wet neighboring soil so root keeps getting water
+            for (dx, dy) in [(-1i32, 0), (1, 0), (0, -1), (0, 1)] {
+                let nx = (tx as i32 + dx) as usize;
+                let ny = (ty as i32 + dy) as usize;
+                if let Some(cell) = grid.get_mut(nx, ny, GROUND_LEVEL) {
+                    cell.water_level = 200;
+                }
+            }
+        }
+
+        // Spawn tree with low health but good resources available.
+        world.spawn(Tree {
+            species_id: 0,
+            root_pos: (tx, ty, tz),
+            age: 100,
+            stage: GrowthStage::Sapling,
+            health: 0.5,
+            accumulated_water: 300.0,
+            accumulated_light: 300.0,
+            rng_seed: 77,
+            dirty: false,
+            voxel_footprint: vec![(tx, ty, tz), (tx, ty, GROUND_LEVEL)],
+        });
+
+        // Run several ticks for health to recover.
+        for _ in 0..20 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let mut trees = world.query::<&Tree>();
+        let tree = trees.iter(&world).next().unwrap();
+        assert!(
+            tree.health > 0.5,
+            "Tree health ({}) should have recovered above 0.5 with good resources",
+            tree.health
         );
     }
 }

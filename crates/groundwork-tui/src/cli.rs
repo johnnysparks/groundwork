@@ -50,6 +50,10 @@ fn voxel_char(mat: Material, water_level: u8, light_level: u8, nutrient_level: u
         Material::Root => '*',
         Material::Seed if nutrient_level >= 100 => 'S',
         Material::Seed => 's',
+        Material::Trunk => '|',
+        Material::Branch => '-',
+        Material::Leaf => '&',
+        Material::DeadWood => 'X',
     }
 }
 
@@ -62,8 +66,8 @@ pub fn cmd_new(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn count_materials(grid: &VoxelGrid) -> ([u64; 6], u64) {
-    let mut counts = [0u64; 6];
+fn count_materials(grid: &VoxelGrid) -> ([u64; 10], u64) {
+    let mut counts = [0u64; 10];
     let mut wet_soil = 0u64;
     for v in grid.cells() {
         counts[v.material.as_u8() as usize] += 1;
@@ -98,8 +102,8 @@ pub fn cmd_tick(args: &[String]) -> std::io::Result<()> {
 
     // Show changes
     let mut changes = Vec::new();
-    let names = ["air", "soil", "stone", "water", "root", "seed"];
-    for i in 0..6 {
+    let names = ["air", "soil", "stone", "water", "root", "seed", "trunk", "branch", "leaf", "deadwood"];
+    for i in 0..10 {
         let diff = after_counts[i] as i64 - before_counts[i] as i64;
         if diff != 0 {
             changes.push(format!("{}: {:+}", names[i], diff));
@@ -171,7 +175,7 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     }
 
     println!();
-    println!("Legend: . air  (space) dark  ~ water  # soil  % wet soil  @ stone  * root  s seed  S sprouting");
+    println!("Legend: . air  ~ water  # soil  % wet  @ stone  * root  s seed  S sprouting  | trunk  - branch  & leaf  X dead");
     Ok(())
 }
 
@@ -468,7 +472,7 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
     println!("Tick: {tick}");
     println!("Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)", GRID_X * GRID_Y * GRID_Z);
     println!("Materials:");
-    for i in 0..6 {
+    for i in 0..10 {
         if let Some(mat) = Material::from_u8(i) {
             println!("  {}: {}", mat.name(), counts[i as usize]);
         }

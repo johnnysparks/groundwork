@@ -50,6 +50,10 @@ fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: 
                 ("()", Color::Rgb(dim(200), dim(180), dim(60)))
             }
         }
+        Material::Trunk => ("||", Color::Rgb(dim(139), dim(90), dim(43))),
+        Material::Branch => ("--", Color::Rgb(dim(120), dim(80), dim(40))),
+        Material::Leaf => ("&&", Color::Rgb(dim(60), dim(160), dim(40))),
+        Material::DeadWood => ("XX", Color::Rgb(dim(100), dim(80), dim(60))),
     }
 }
 
@@ -170,6 +174,10 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 Material::Water => Color::Rgb(80, 140, 255),
                 Material::Root => Color::Rgb(80, 180, 60),
                 Material::Seed => Color::Rgb(200, 180, 60),
+                Material::Trunk => Color::Rgb(139, 90, 43),
+                Material::Branch => Color::Rgb(120, 80, 40),
+                Material::Leaf => Color::Rgb(60, 160, 40),
+                Material::DeadWood => Color::Rgb(100, 80, 60),
             };
 
             panel_lines.push(Line::from(vec![
@@ -357,7 +365,7 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     if app.show_status {
         panel_lines.push(Line::from(""));
 
-        let mut counts = [0u64; 6];
+        let mut counts = [0u64; 10];
         let mut wet_soil = 0u64;
         for v in grid.cells() {
             counts[v.material.as_u8() as usize] += 1;
@@ -366,12 +374,16 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             }
         }
 
-        let mat_entries: [(&str, &str, usize, Color); 6] = [
+        let mat_entries: [(&str, &str, usize, Color); 10] = [
             ("~~", "water", Material::Water as usize, Color::Rgb(80, 140, 255)),
             ("##", "soil", Material::Soil as usize, Color::Rgb(139, 90, 43)),
             ("@@", "stone", Material::Stone as usize, Color::Rgb(170, 170, 180)),
             ("**", "root", Material::Root as usize, Color::Rgb(80, 180, 60)),
             ("()", "seed", Material::Seed as usize, Color::Rgb(200, 180, 60)),
+            ("||", "trunk", Material::Trunk as usize, Color::Rgb(139, 90, 43)),
+            ("--", "branch", Material::Branch as usize, Color::Rgb(120, 80, 40)),
+            ("&&", "leaf", Material::Leaf as usize, Color::Rgb(60, 160, 40)),
+            ("XX", "dead", Material::DeadWood as usize, Color::Rgb(100, 80, 60)),
             (". ", "air", Material::Air as usize, Color::Gray),
         ];
 
@@ -433,13 +445,17 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     // Legend
     panel_lines.push(Line::from(""));
     panel_lines.push(badge("LEGEND"));
-    let legend: [(&str, &str, Color); 6] = [
+    let legend: [(&str, &str, Color); 10] = [
         (". ", "air", Color::Gray),
         ("~~", "water", Color::Rgb(80, 140, 255)),
         ("##", "soil", Color::Rgb(139, 90, 43)),
         ("@@", "stone", Color::Rgb(170, 170, 180)),
         ("**", "root", Color::Rgb(80, 180, 60)),
         ("()", "seed", Color::Rgb(200, 180, 60)),
+        ("||", "trunk", Color::Rgb(139, 90, 43)),
+        ("--", "branch", Color::Rgb(120, 80, 40)),
+        ("&&", "leaf", Color::Rgb(60, 160, 40)),
+        ("XX", "dead", Color::Rgb(100, 80, 60)),
     ];
     for (ch, name, color) in legend {
         panel_lines.push(Line::from(vec![

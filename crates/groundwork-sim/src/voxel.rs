@@ -8,6 +8,10 @@ pub enum Material {
     Water = 3,
     Root = 4,
     Seed = 5,
+    Trunk = 6,
+    Branch = 7,
+    Leaf = 8,
+    DeadWood = 9,
 }
 
 impl Material {
@@ -23,6 +27,10 @@ impl Material {
             3 => Some(Self::Water),
             4 => Some(Self::Root),
             5 => Some(Self::Seed),
+            6 => Some(Self::Trunk),
+            7 => Some(Self::Branch),
+            8 => Some(Self::Leaf),
+            9 => Some(Self::DeadWood),
             _ => None,
         }
     }
@@ -35,6 +43,10 @@ impl Material {
             Self::Water => "water",
             Self::Root => "root",
             Self::Seed => "seed",
+            Self::Trunk => "trunk",
+            Self::Branch => "branch",
+            Self::Leaf => "leaf",
+            Self::DeadWood => "deadwood",
         }
     }
 
@@ -46,6 +58,10 @@ impl Material {
             "water" => Some(Self::Water),
             "root" => Some(Self::Root),
             "seed" => Some(Self::Seed),
+            "trunk" => Some(Self::Trunk),
+            "branch" => Some(Self::Branch),
+            "leaf" => Some(Self::Leaf),
+            "deadwood" => Some(Self::DeadWood),
             _ => None,
         }
     }
@@ -57,7 +73,7 @@ mod tests {
 
     #[test]
     fn material_u8_round_trip() {
-        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed];
+        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed, Material::Trunk, Material::Branch, Material::Leaf, Material::DeadWood];
         for mat in all {
             assert_eq!(Material::from_u8(mat.as_u8()), Some(mat));
         }
@@ -65,13 +81,13 @@ mod tests {
 
     #[test]
     fn material_from_u8_invalid() {
-        assert_eq!(Material::from_u8(6), None);
+        assert_eq!(Material::from_u8(10), None);
         assert_eq!(Material::from_u8(255), None);
     }
 
     #[test]
     fn material_name_round_trip() {
-        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed];
+        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed, Material::Trunk, Material::Branch, Material::Leaf, Material::DeadWood];
         for mat in all {
             assert_eq!(Material::from_name(mat.name()), Some(mat));
         }
