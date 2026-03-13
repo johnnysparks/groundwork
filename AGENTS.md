@@ -27,6 +27,12 @@ The player can dip the camera below the surface with no mode switch. Same world,
 - Continuous above/below-ground camera
 - Terrain sculpting, seed placement, basic tending tools
 
+## WHERE WE ARE (as of 2026-03-13)
+- **Built**: 5 sprints complete. Dynamic terrain (hills, stream, outcrops), water system (spring, flow, absorption), light propagation, soil composition (6 properties + evolution), 4 tree species with procedural branching (space colonization), self-pruning, seed dispersal, CLI (10 commands) + TUI (2D slice + 3D projected view).
+- **Gap**: 4/12-20 species done (need shrubs, groundcover, flowers). No cross-section view. No water depth visual.
+- **Validated**: 12 player sessions across 2 rounds. Core sim is trusted. Biggest feedback: need species diversity and better water visualization.
+- See `backlog/current.md` for the full prioritized list.
+
 ## DESIGN GUARDRAILS
 - Readability over realism
 - Player delight over simulation purity

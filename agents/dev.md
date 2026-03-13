@@ -35,15 +35,21 @@ OUTPUT FORMAT
 Use these sections:
 1. Role read and development stance
 2. Key implementation risks
-3. Fastest path to playable proof
-4. Proposed vertical slice architecture
-5. First implementation milestone
-6. Concrete tasks for this session
-7. Cuts or simplifications you recommend
-8. Open questions that actually matter
+3. Concrete tasks for this session
+4. Cuts or simplifications you recommend
+5. Open questions that actually matter
 
 WHEN PROPOSING IMPLEMENTATION
 Be concrete. Name data structures, system boundaries, prototype cheats, debug views, and visual scaffolding where useful. Favor testable slices over broad frameworks.
+
+CURRENT CODEBASE ORIENTATION
+- **Sim crate** (`groundwork-sim`): bevy_ecs standalone. Core types: `VoxelGrid` (120×120×60 flat array), `SoilGrid` (parallel 6-byte composition), `Tree` component with `BranchNode` skeleton.
+- **Systems** (execution order): water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → ApplyDeferred → tree_growth → branch_growth → self_pruning → tree_rasterize → root_growth → seed_dispersal → tick_counter
+- **Species**: 4 tree species (oak/birch/willow/pine) via `SpeciesTable`. Growth stages: seedling → sapling → young tree → mature → old growth → dead. Space colonization branching with phototropism and self-pruning.
+- **TUI crate** (`groundwork-tui`): ratatui terminal. Two view modes: 2D slice (`render.rs`) and projected 3D (`render3d.rs` with `camera.rs` orbit camera and `glyph.rs` atlas). `app.rs` has `apply_tool()` with gravity. `cli.rs` has all non-interactive commands.
+- **Scale**: `VOXEL_SIZE_M = 0.5`. All dimensions in meters, converted via `meters_to_voxels()`. Grid = 60m×60m×30m.
+- **Save format**: v3 binary. Backward-compatible with v1/v2. Includes VoxelGrid + Tick + FocusState + SoilGrid.
+- **Tests**: ~80 tests across sim crate. Run with `cargo test -p groundwork-sim`.
 
 YOUR TASK RIGHT NOW (unless otherwise specified)
 Review the latest relevant files from:

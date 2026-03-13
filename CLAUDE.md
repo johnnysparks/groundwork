@@ -62,7 +62,7 @@ The CLI lets agents play the game without a terminal. State persists to a binary
 ```bash
 groundwork new                            # Create a fresh world → groundwork.state
 groundwork tick [N]                       # Advance N ticks (default 1)
-groundwork view [--z Z]                   # Print ASCII slice (default Z=surface+1)
+groundwork view [--z Z]                   # Print ASCII slice (default Z=surface)
 groundwork place <tool> <x> <y> <z>      # Use a gardening tool at coordinates
                                           # Coords accept ranges: place soil 20..40 30 15
 groundwork fill <tool> <x1> <y1> <z1> <x2> <y2> <z2>  # Fill rectangular region
@@ -111,9 +111,13 @@ crates/
     src/
       main.rs         Entry point, subcommand dispatch
       cli.rs          Non-interactive CLI commands (new/tick/view/place/fill/inspect/status/focus/tool-start/tool-end)
-      app.rs          App state: World + Schedule, viewport-centered camera, Tool enum, apply_tool() with gravity
-      render.rs       ASCII rendering of Z-slice around focus; side panel (inspect/status/controls/legend)
-      input.rs        Keyboard controls (WASD pan, J/K depth, Tab tool, Enter use, I/T/H panels)
+      app.rs          App state: World + Schedule, Tool enum, apply_tool() with gravity, ViewMode (Slice2D/Projected3D)
+      camera.rs       Orbit camera for 3D view: Vec3, yaw/pitch/zoom, orthographic projection
+      render.rs       2D slice renderer: ASCII Z-slice around focus; side panel (inspect/status/controls/legend)
+      render3d.rs     Projected 3D renderer: orthographic raycasting, DDA traversal, shape-aware glyphs
+      glyph.rs        GlyphAtlas: material→glyph lookup with face/depth-aware character selection
+      input.rs        Keyboard controls — 2D: WASD pan, J/K depth, Space tool, Tab cycle, V toggle view, P tick
+                                          3D: WASD fly/pan, Q/E orbit, Shift+W/S zoom, R reset, J/K focus Z
 
   (future) groundwork-web/    Three.js + WASM — browser renderer (orthogonal workstream)
 ```
@@ -127,10 +131,11 @@ crates/
 - **Scale normalization**: All physical dimensions are in meters, converted to voxels via `scale.rs`. `VOXEL_SIZE_M = 0.5` gives 120×120×60 grid (same 60m×60m×30m space). Changing VOXEL_SIZE_M automatically adjusts everything.
 - **Flat voxel array**: 864K voxels in a contiguous Vec for cache-friendly iteration. Z=0 is deepest underground, Z=GROUND_LEVEL (~30) is surface, Z=59 is sky.
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
-- **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
+- **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → ApplyDeferred → tree_growth → branch_growth → self_pruning → tree_rasterize → root_growth → seed_dispersal → tick_counter
 - **Soil composition model**: Parallel `SoilGrid` stores 6-byte composition per cell (sand, clay, organic, rock, pH, bacteria). Derived properties (drainage, retention, nutrient capacity) drive water absorption rates, seed growth rates, and root viability. Soil evolves: organic matter increases near roots, bacteria grow in moist organic soil, rock weathers into clay, pH drifts with organic decomposition.
-- **Procedural trees**: 4 species (oak, birch, willow, pine) with space colonization algorithm for natural branching. Growth stages: seed → seedling → sapling → mature → dead. Species differ in height, root depth, crown shape, and growth rate. All dimensions stored in meters.
-- **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
+- **Procedural trees**: 4 species (oak, birch, willow, pine) with space colonization algorithm for natural branching. Growth stages: seedling → sapling → young tree → mature → old growth → dead. Species differ in height, root depth, crown shape (round/narrow/wide/conical), growth rate, phototropism, and shade tolerance. All dimensions stored in meters.
+- **Dual view modes**: TUI supports 2D slice view (classic Z-layer ASCII) and projected 3D view (orthographic raycasting with DDA traversal). Toggle with `V`. Both share the same sim state.
+- **Viewport-centered camera**: In 2D mode, focus is always at screen center; WASD pans the viewport. In 3D mode, an orbit camera with yaw/pitch/zoom provides a rotatable isometric view. Screen size and world size are decoupled.
 
 ### Sim API
 

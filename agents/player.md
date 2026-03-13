@@ -65,10 +65,10 @@ cargo run -p groundwork-tui -- new
 # Advance the simulation
 cargo run -p groundwork-tui -- tick 10
 
-# Look around — view a horizontal slice at depth Z (31 = just above ground)
-cargo run -p groundwork-tui -- view --z 31    # above ground (water, air)
-cargo run -p groundwork-tui -- view --z 30    # surface (soil)
-cargo run -p groundwork-tui -- view --z 20    # underground (soil, stone)
+# Look around — view a horizontal slice at depth Z
+cargo run -p groundwork-tui -- view --z 31    # above ground (trees, air)
+cargo run -p groundwork-tui -- view --z 30    # surface (soil, water spring)
+cargo run -p groundwork-tui -- view --z 20    # underground (soil, stone, roots)
 
 # Use gardening tools to shape the garden
 cargo run -p groundwork-tui -- place water 40 40 35   # watering can
@@ -76,7 +76,22 @@ cargo run -p groundwork-tui -- place seed 40 40 35    # seed bag (seeds fall to 
 cargo run -p groundwork-tui -- place soil 40 40 40    # soil (falls through air)
 cargo run -p groundwork-tui -- place dig 40 40 30     # shovel (removes anything)
 
-# Inspect a single voxel
+# Place in a range (X from 20 to 39)
+cargo run -p groundwork-tui -- place soil 20..40 30 15
+
+# Fill a rectangular region
+cargo run -p groundwork-tui -- fill water 50 50 30 60 60 35
+
+# Set and use the persistent focus cursor
+cargo run -p groundwork-tui -- focus 40 40 31          # set focus position
+cargo run -p groundwork-tui -- focus                    # show current focus
+
+# Two-step range operations via focus
+cargo run -p groundwork-tui -- tool-start soil          # mark start at current focus
+cargo run -p groundwork-tui -- focus 50 50 35           # move focus to end
+cargo run -p groundwork-tui -- tool-end                 # fill soil from start to focus
+
+# Inspect a single voxel (uses focus if no coords given)
 cargo run -p groundwork-tui -- inspect 60 60 31
 
 # Check overall world state
@@ -87,20 +102,52 @@ cargo run -p groundwork-tui -- new --state session2.state
 cargo run -p groundwork-tui -- view --state session2.state
 ```
 
-Gardening tools:
-- `air`/`dig` = **shovel** — removes anything
-- `seed` = **seed bag** — plants a seed (falls through air, dies on stone)
-- `water` = **watering can** — pours water (falls through air)
-- `soil` = soil (falls through air)
-- `stone` = stone (placed directly)
+HOW TO PLAY (TUI — interactive)
 
-ASCII legend: `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting
+Launch the TUI for real-time interactive play:
+
+```bash
+cargo run -p groundwork-tui             # launch TUI (default)
+cargo run -p groundwork-tui -- tui      # explicit TUI launch
+```
+
+TUI controls (2D slice view):
+- **WASD / Arrow keys** — pan viewport (focus stays at screen center)
+- **J / K** — move down / up through Z layers
+- **Tab / Shift+Tab** — cycle gardening tool
+- **Space** — start tool operation; Space again to apply (fill range)
+- **Esc / Q** — cancel tool operation, or quit
+- **P** — toggle auto-tick; **Shift+P** — single manual tick
+- **+/-** — adjust tick speed
+- **V** — toggle between 2D slice view and 3D projected view
+- **I** — toggle inspect panel; **T** — toggle status panel; **H** — toggle controls
+
+TUI controls (3D projected view):
+- **WASD** — fly/pan camera
+- **Shift+W / Shift+S** — zoom in/out
+- **Q / E** — orbit camera around focus
+- **J / K** — move focus Z down/up
+- **R** — reset camera to default angle
+- All other controls (tool, tick, panels) same as 2D
+
+Gardening tools:
+- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone)
+- `seed` = **seed bag** — plants a seed (falls through air, dies on stone)
+- `water` = **watering can** — pours water (falls through air, no-op on water)
+- `soil` = **soil** — places soil (falls through air)
+- `stone` = **stone** — placed directly (no gravity)
+
+Non-shovel tools can't overwrite occupied cells. Use the shovel to clear first.
+
+ASCII legend: `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting, `|` trunk, `-` branch, `&` leaf, `X` dead
 
 Grid coordinates: X=0..119 (left-right), Y=0..119 (top-bottom), Z=0..59 (deep underground-sky). Z=30 is approximately surface, Z=31+ is above ground. Physical size: 60m×60m×30m at 0.5m per voxel.
 
+Default terrain: rolling hills (surface Z varies ~26-34), water spring at center, stream flowing SE, stone outcrops near edges. Seeds grow through 6 stages near water: seedling → sapling → young tree → mature → old growth → dead. 4 tree species: oak, birch, willow, pine.
+
 Typical play loop:
 1. `new` — create a world
-2. `view` — see what's there
+2. `view` — see what's there (surface by default)
 3. `place` — use tools to shape terrain, plant seeds, add water
 4. `tick N` — let the simulation run
 5. `view` / `inspect` — observe results

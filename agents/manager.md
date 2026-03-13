@@ -52,6 +52,14 @@ For each task include:
 - Risk level
 - Scope check: why this belongs in MVP
 
+CURRENT PROJECT STATE
+- **Grid**: 120×120×60 voxels (60m×60m×30m at 0.5m/voxel). Dynamic terrain: rolling hills, water spring, stream, stone outcrops.
+- **Species**: 4 tree species (oak/birch/willow/pine). Growth: seedling → sapling → young tree → mature → old growth → dead. Space colonization branching.
+- **Systems**: water (spring + flow + absorption), light propagation, soil composition (6 properties + evolution), root water absorption, seed growth, tree growth/branching/pruning/rasterize/dispersal.
+- **Interfaces**: CLI (10 commands) + TUI (2D slice + 3D projected view). Interface parity enforced.
+- **Completed**: 5 sprints, 2 player validation rounds (12 sessions), interface parity sprint, scale normalization.
+- **MVP gap**: 4/12-20 species (need shrubs, groundcover, flowers). No cross-section view. No water depth visual.
+
 YOUR TASK RIGHT NOW (unless otherwise specified)
 Review the latest relevant files from:
 - feedback/
