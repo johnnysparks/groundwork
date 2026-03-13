@@ -342,6 +342,9 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
     // mutable borrow of grid.cells_mut() at the end instead of per-cell.
     let mut water_absorbed: Vec<u8> = vec![0; total];
 
+    // Sequential scan: ~35% of cells are soil, but the branch predictor handles
+    // the `continue` path efficiently. An indexed approach is slower due to
+    // index-to-coordinate decomposition and worse cache prefetch.
     for z in 0..GRID_Z {
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
