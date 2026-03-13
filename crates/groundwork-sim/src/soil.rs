@@ -1,6 +1,7 @@
 use bevy_ecs::prelude::Resource;
 
 use crate::grid::{GRID_X, GRID_Y, GRID_Z, VoxelGrid};
+use crate::scale::meters_to_voxels;
 use crate::voxel::Material;
 
 /// Per-cell soil composition data. Stored in a parallel grid alongside VoxelGrid.
@@ -121,20 +122,22 @@ impl SoilGrid {
 
                 for z in 0..GRID_Z {
                     let idx = VoxelGrid::index(x, y, z);
-                    // Only populate soil layers (z=5 through surface)
-                    if z < 5 || z > surface {
+                    // Only populate soil layers (z=stone_top through surface)
+                    let stone_top = meters_to_voxels(5.0);
+                    if z < stone_top || z > surface {
                         continue;
                     }
 
                     // Depth below surface determines composition
                     let depth_below = surface.saturating_sub(z);
-                    let comp = if depth_below >= surface - 7 || z <= 7 {
+                    let deep_thresh = meters_to_voxels(7.0);
+                    let comp = if depth_below >= surface.saturating_sub(deep_thresh) || z <= deep_thresh {
                         // Deep soil near stone: rocky
                         SoilComposition::rocky()
-                    } else if depth_below >= 5 {
+                    } else if depth_below >= meters_to_voxels(5.0) {
                         // Subsoil: clay-heavy
                         SoilComposition::clay()
-                    } else if depth_below >= 3 {
+                    } else if depth_below >= meters_to_voxels(3.0) {
                         // Transition: blend of clay and loam
                         SoilComposition {
                             sand: 70,
@@ -173,10 +176,10 @@ impl SoilGrid {
                     continue;
                 }
 
-                for z in 5..=surface {
+                for z in meters_to_voxels(5.0)..=surface {
                     let idx = VoxelGrid::index(x, y, z);
                     let depth_below = surface.saturating_sub(z);
-                    let peat_strength = if depth_below <= 2 { 200u16 } else if depth_below <= 5 { 100 } else { 50 };
+                    let peat_strength = if depth_below <= meters_to_voxels(2.0) { 200u16 } else if depth_below <= meters_to_voxels(5.0) { 100 } else { 50 };
                     // Weaker peat along stream than at spring
                     let peat_strength = if near_spring { peat_strength } else { peat_strength / 2 };
                     let base = &cells[idx];
@@ -197,15 +200,16 @@ impl SoilGrid {
             for x in 0..GRID_X {
                 let surface = VoxelGrid::surface_height(x, y);
                 let edge_dist = x.min(y).min(GRID_X - 1 - x).min(GRID_Y - 1 - y);
-                if edge_dist >= 8 {
+                let edge_band = meters_to_voxels(8.0);
+                if edge_dist >= edge_band {
                     continue;
                 }
-                for z in surface.saturating_sub(2)..=surface {
-                    if z < 5 {
+                for z in surface.saturating_sub(meters_to_voxels(2.0))..=surface {
+                    if z < meters_to_voxels(5.0) {
                         continue;
                     }
                     let idx = VoxelGrid::index(x, y, z);
-                    let sand_strength = ((8 - edge_dist) as u16 * 32).min(255);
+                    let sand_strength = ((edge_band - edge_dist) as u16 * 32).min(255);
                     let base = &cells[idx];
                     cells[idx] = SoilComposition {
                         sand: ((base.sand as u16 * (255 - sand_strength) + 200 * sand_strength) / 255) as u8,

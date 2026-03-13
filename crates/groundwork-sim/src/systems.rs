@@ -60,7 +60,7 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                         if (bv.material == Material::Air || bv.material == Material::Water)
                             && bv.water_level < 255
                         {
-                            let transfer = water.min(255 - bv.water_level).min(32);
+                            let transfer = water.min(255 - bv.water_level).min(crate::scale::scale_transfer(32));
                             if let Some(cell) = grid.get_mut(x, y, z - 1) {
                                 cell.water_level = cell.water_level.saturating_add(transfer);
                                 if cell.material != Material::Water {
@@ -99,7 +99,7 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                     if (neighbor_mat == Material::Air || neighbor_mat == Material::Water)
                         && neighbor_water < water.saturating_sub(1)
                     {
-                        let transfer = ((water - neighbor_water) / 5).max(1).min(8);
+                        let transfer = ((water - neighbor_water) / 5).max(1).min(crate::scale::scale_transfer(8));
                         lateral_deltas[nidx] += transfer as i16;
                         lateral_deltas[idx] -= transfer as i16;
                     }
@@ -155,25 +155,25 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
                     // the first soil layer below open sky isn't full brightness.
                     match cell.material {
                         Material::Soil => {
-                            light = light.saturating_sub(30);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(30));
                         }
                         Material::Root => {
-                            light = light.saturating_sub(30);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(30));
                         }
                         Material::Stone => {
                             light = 0;
                         }
                         Material::Leaf => {
-                            light = light.saturating_sub(50);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(50));
                         }
                         Material::Trunk => {
-                            light = light.saturating_sub(30);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(30));
                         }
                         Material::Branch => {
-                            light = light.saturating_sub(20);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(20));
                         }
                         Material::DeadWood => {
-                            light = light.saturating_sub(10);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(10));
                         }
                         _ => {}
                     }
@@ -181,10 +181,10 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
                     // Transparent materials attenuate *after* assignment.
                     match cell.material {
                         Material::Air => {
-                            light = light.saturating_sub(2);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(2));
                         }
                         Material::Water => {
-                            light = light.saturating_sub(15);
+                            light = light.saturating_sub(crate::scale::scale_attenuation(15));
                         }
                         _ => {}
                     }
@@ -408,7 +408,7 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
                             let n_comp = soil_grid.get(nx, ny, nz).copied().unwrap_or_default();
                             let avg_drainage = (comp.drainage_rate() as u16 + n_comp.drainage_rate() as u16) / 2;
                             let diff = my_water - their_water;
-                            let transfer = ((diff as u16 * avg_drainage) / (255 * 2)).max(1).min(8) as i16;
+                            let transfer = ((diff as u16 * avg_drainage) / (255 * 2)).max(1).min(crate::scale::scale_transfer(8) as u16) as i16;
                             diffusion_deltas[nidx] += transfer;
                             diffusion_deltas[idx] -= transfer;
                         }
@@ -1125,7 +1125,9 @@ pub fn seed_dispersal(
 
         // Pick dispersal direction and distance
         let h = tree_hash(tree.rng_seed, tree.age as u64);
-        let dist = 2 + (h >> 8) % 4;
+        let base_dist = crate::scale::meters_to_voxels(2.0) as u64;
+        let var_dist = crate::scale::meters_to_voxels(4.0).max(1) as u64;
+        let dist = base_dist + (h >> 8) % var_dist;
         let (dx, dy): (isize, isize) = match h % 8 {
             0 => (dist as isize, 0),
             1 => (-(dist as isize), 0),
@@ -1220,7 +1222,7 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                     }
                     let nidx = VoxelGrid::index(nx, ny, nz);
                     if snapshot[nidx].0 == Material::Soil && snapshot[nidx].1 > 0 {
-                        let transfer = snapshot[nidx].1.min(4);
+                        let transfer = snapshot[nidx].1.min(crate::scale::scale_transfer(4));
                         if let Some(soil) = grid.get_mut(nx, ny, nz) {
                             soil.water_level = soil.water_level.saturating_sub(transfer);
                         }
