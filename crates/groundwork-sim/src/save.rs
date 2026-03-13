@@ -5,6 +5,7 @@ use bevy_ecs::prelude::*;
 
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use crate::soil::{SoilComposition, SoilGrid};
+use crate::tree::{SeedSpeciesMap, SpeciesTable};
 use crate::voxel::{Material, Voxel};
 use crate::{FocusState, ToolState, Tick};
 
@@ -182,6 +183,8 @@ pub fn load_world(path: &Path) -> io::Result<World> {
     world.insert_resource(soil_grid);
     world.insert_resource(Tick(tick));
     world.insert_resource(focus);
+    world.insert_resource(SpeciesTable::default());
+    world.insert_resource(SeedSpeciesMap::default());
     Ok(world)
 }
 
