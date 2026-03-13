@@ -6,6 +6,7 @@ use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Frame;
 
 use groundwork_sim::grid::{VoxelGrid, GROUND_LEVEL};
+use groundwork_sim::soil::SoilGrid;
 use groundwork_sim::voxel::Material;
 
 use crate::app::App;
@@ -207,6 +208,48 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 ),
                 Span::styled(format!("{:>3}", voxel.nutrient_level), value_style),
             ]));
+
+            // Soil composition diagnostics
+            if voxel.material == Material::Soil {
+                let soil_grid = world.resource::<SoilGrid>();
+                if let Some(comp) = soil_grid.get(app.focus_x, app.focus_y, z) {
+                    panel_lines.push(Line::from(""));
+                    panel_lines.push(Line::from(vec![Span::styled(
+                        format!(" {} SOIL ", comp.type_name().to_uppercase()),
+                        Style::default().fg(Color::Black).bg(Color::Rgb(139, 90, 43)),
+                    )]));
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" sand ", label),
+                        Span::styled(format!("{} {:>3}", bar(comp.sand, 8), comp.sand), Style::default().fg(Color::Rgb(194, 178, 128))),
+                    ]));
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" clay ", label),
+                        Span::styled(format!("{} {:>3}", bar(comp.clay, 8), comp.clay), Style::default().fg(Color::Rgb(180, 120, 80))),
+                    ]));
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" org  ", label),
+                        Span::styled(format!("{} {:>3}", bar(comp.organic, 8), comp.organic), Style::default().fg(Color::Rgb(80, 60, 30))),
+                    ]));
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" rock ", label),
+                        Span::styled(format!("{} {:>3}", bar(comp.rock, 8), comp.rock), Style::default().fg(Color::Rgb(150, 150, 160))),
+                    ]));
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" bact ", label),
+                        Span::styled(format!("{} {:>3}", bar(comp.bacteria, 8), comp.bacteria), Style::default().fg(Color::Rgb(100, 200, 100))),
+                    ]));
+                    panel_lines.push(Line::from(vec![
+                        Span::styled(" pH   ", label),
+                        Span::styled(format!("{:.1}", comp.ph_value()), value_style),
+                    ]));
+                    if comp.is_compacted() {
+                        panel_lines.push(Line::from(vec![Span::styled(
+                            " COMPACTED",
+                            Style::default().fg(Color::Red),
+                        )]));
+                    }
+                }
+            }
 
             // Seed diagnostics
             if voxel.material == Material::Seed {

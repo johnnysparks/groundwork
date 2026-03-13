@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
+use groundwork_sim::soil::SoilGrid;
 use groundwork_sim::voxel::Material;
 use groundwork_sim::{FocusState, ToolState, Tick};
 
@@ -369,6 +370,22 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
     println!("  light_level: {}/255", voxel.light_level);
     println!("  nutrient_level: {}/255", voxel.nutrient_level);
 
+    // Soil composition diagnostics
+    if voxel.material == Material::Soil {
+        let soil_grid = world.resource::<SoilGrid>();
+        if let Some(comp) = soil_grid.get(x, y, z) {
+            println!();
+            println!("  soil type: {}", comp.type_name());
+            println!("  sand: {:>3}  clay: {:>3}  organic: {:>3}", comp.sand, comp.clay, comp.organic);
+            println!("  rock: {:>3}  pH: {:.1}  bacteria: {:>3}", comp.rock, comp.ph_value(), comp.bacteria);
+            println!("  drainage: {:>3}  retention: {:>3}  nutrients: {:>3}",
+                comp.drainage_rate(), comp.water_retention(), comp.nutrient_capacity());
+            if comp.is_compacted() {
+                println!("  WARNING: compacted — blocks root growth");
+            }
+        }
+    }
+
     // Seed growth diagnostics
     if voxel.material == Material::Seed {
         let growth = voxel.nutrient_level;
@@ -457,6 +474,31 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
         }
     }
     println!("  wet soil: {}", wet_soil);
+
+    // Soil composition summary
+    let soil_grid = world.resource::<SoilGrid>();
+    let mut type_counts: std::collections::HashMap<&str, u64> = std::collections::HashMap::new();
+    for z in 0..GRID_Z {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                if let Some(v) = grid.get(x, y, z) {
+                    if v.material == Material::Soil {
+                        if let Some(comp) = soil_grid.get(x, y, z) {
+                            *type_counts.entry(comp.type_name()).or_default() += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if !type_counts.is_empty() {
+        println!("Soil types:");
+        let mut sorted: Vec<_> = type_counts.into_iter().collect();
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        for (name, count) in sorted {
+            println!("  {}: {}", name, count);
+        }
+    }
     Ok(())
 }
 

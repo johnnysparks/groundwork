@@ -4,20 +4,24 @@ use std::path::Path;
 use bevy_ecs::prelude::*;
 
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
+use crate::soil::{SoilComposition, SoilGrid};
 use crate::voxel::{Material, Voxel};
 use crate::{FocusState, ToolState, Tick};
 
 const MAGIC: [u8; 4] = *b"GWRK";
-const VERSION: u16 = 2;
+const VERSION: u16 = 3;
 const VOXEL_COUNT: usize = GRID_X * GRID_Y * GRID_Z;
 // V1: header(8) + tick(8) + voxels
 const V1_SIZE: usize = 8 + 8 + VOXEL_COUNT * 4;
 // V2: V1 + focus(6) + tool_active(1) + tool_material(1) + tool_start(6) = V1 + 14
 const FOCUS_BLOCK: usize = 14;
 const V2_SIZE: usize = V1_SIZE + FOCUS_BLOCK;
+// V3: V2 + soil composition (6 bytes per voxel)
+const SOIL_BYTES_PER_CELL: usize = 6;
+const V3_SIZE: usize = V2_SIZE + VOXEL_COUNT * SOIL_BYTES_PER_CELL;
 
-pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, focus: &FocusState, path: &Path) -> io::Result<()> {
-    let mut buf = Vec::with_capacity(V2_SIZE);
+pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, focus: &FocusState, soil: &SoilGrid, path: &Path) -> io::Result<()> {
+    let mut buf = Vec::with_capacity(V3_SIZE);
 
     // Header
     buf.extend_from_slice(&MAGIC);
@@ -51,10 +55,20 @@ pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, focus: &FocusState, path: &Pa
         buf.extend_from_slice(&[0u8; 6]);
     }
 
+    // Soil composition (V3)
+    for sc in soil.cells() {
+        buf.push(sc.sand);
+        buf.push(sc.clay);
+        buf.push(sc.organic);
+        buf.push(sc.rock);
+        buf.push(sc.ph);
+        buf.push(sc.bacteria);
+    }
+
     std::fs::write(path, &buf)
 }
 
-pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState)> {
+pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState, Option<Vec<SoilComposition>>)> {
     let data = std::fs::read(path)?;
 
     if data.len() < 16 {
@@ -64,18 +78,23 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState)> 
         return Err(io::Error::new(io::ErrorKind::InvalidData, "bad magic bytes"));
     }
     let version = u16::from_le_bytes([data[4], data[5]]);
-    if version != 1 && version != 2 {
+    if version == 0 || version > 3 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!("unsupported version: {version}"),
         ));
     }
 
-    let expected_size = if version == 1 { V1_SIZE } else { V2_SIZE };
+    let expected_size = match version {
+        1 => V1_SIZE,
+        2 => V2_SIZE,
+        3 => V3_SIZE,
+        _ => unreachable!(),
+    };
     if data.len() != expected_size {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("expected {expected_size} bytes, got {}", data.len()),
+            format!("expected {expected_size} bytes for v{version}, got {}", data.len()),
         ));
     }
 
@@ -99,7 +118,7 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState)> 
         });
     }
 
-    // Parse focus state (V2) or use defaults (V1)
+    // Parse focus state (V2+) or use defaults (V1)
     let focus = if version >= 2 {
         let fo = 16 + VOXEL_COUNT * 4;
         let fx = u16::from_le_bytes([data[fo], data[fo + 1]]) as usize;
@@ -120,20 +139,47 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState)> 
         FocusState::default()
     };
 
-    Ok((cells, tick, focus))
+    // Parse soil composition (V3) or return None for older versions
+    let soil_cells = if version >= 3 {
+        let soil_offset = V2_SIZE;
+        let mut soil = Vec::with_capacity(VOXEL_COUNT);
+        for i in 0..VOXEL_COUNT {
+            let off = soil_offset + i * SOIL_BYTES_PER_CELL;
+            soil.push(SoilComposition {
+                sand: data[off],
+                clay: data[off + 1],
+                organic: data[off + 2],
+                rock: data[off + 3],
+                ph: data[off + 4],
+                bacteria: data[off + 5],
+            });
+        }
+        Some(soil)
+    } else {
+        None
+    };
+
+    Ok((cells, tick, focus, soil_cells))
 }
 
 pub fn save_world(world: &World, path: &Path) -> io::Result<()> {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>();
     let focus = world.resource::<FocusState>();
-    save_to_file(grid, tick, focus, path)
+    let soil = world.resource::<SoilGrid>();
+    save_to_file(grid, tick, focus, soil, path)
 }
 
 pub fn load_world(path: &Path) -> io::Result<World> {
-    let (cells, tick, focus) = load_from_file(path)?;
+    let (cells, tick, focus, soil_cells) = load_from_file(path)?;
+    let voxel_grid = VoxelGrid::from_cells(cells);
+    let soil_grid = match soil_cells {
+        Some(sc) => SoilGrid::from_cells(sc),
+        None => SoilGrid::from_voxel_grid(&voxel_grid),
+    };
     let mut world = World::new();
-    world.insert_resource(VoxelGrid::from_cells(cells));
+    world.insert_resource(voxel_grid);
+    world.insert_resource(soil_grid);
     world.insert_resource(Tick(tick));
     world.insert_resource(focus);
     Ok(world)
@@ -249,7 +295,7 @@ mod tests {
     #[test]
     fn invalid_material() {
         let path = std::env::temp_dir().join("groundwork_test_bad_mat.state");
-        let mut buf = Vec::with_capacity(V2_SIZE);
+        let mut buf = Vec::with_capacity(V3_SIZE);
         buf.extend_from_slice(&MAGIC);
         buf.extend_from_slice(&VERSION.to_le_bytes());
         buf.extend_from_slice(&[0u8; 2]);
@@ -260,6 +306,8 @@ mod tests {
         }
         // Focus block
         buf.extend_from_slice(&[0u8; FOCUS_BLOCK]);
+        // Soil block
+        buf.extend_from_slice(&vec![0u8; VOXEL_COUNT * SOIL_BYTES_PER_CELL]);
         std::fs::write(&path, &buf).unwrap();
         let err = load_from_file(&path).unwrap_err();
         assert!(err.to_string().contains("invalid material"));
