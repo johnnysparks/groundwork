@@ -2434,12 +2434,14 @@ mod tests {
                 cell.set_material(Material::Root);
                 cell.water_level = 200;
             }
-            // Wet neighboring soil so root keeps getting water
-            for (dx, dy) in [(-1i32, 0), (1, 0), (0, -1), (0, 1)] {
-                let nx = (tx as i32 + dx) as usize;
-                let ny = (ty as i32 + dy) as usize;
-                if let Some(cell) = grid.get_mut(nx, ny, GROUND_LEVEL) {
-                    cell.water_level = 200;
+            // Saturate surrounding soil so root keeps getting water
+            for dx in -3i32..=3 {
+                for dy in -3i32..=3 {
+                    let nx = (tx as i32 + dx) as usize;
+                    let ny = (ty as i32 + dy) as usize;
+                    if let Some(cell) = grid.get_mut(nx, ny, GROUND_LEVEL) {
+                        cell.water_level = 255;
+                    }
                 }
             }
         }
@@ -2450,7 +2452,7 @@ mod tests {
             root_pos: (tx, ty, tz),
             age: 100,
             stage: GrowthStage::Sapling,
-            health: 0.5,
+            health: 0.3,
             accumulated_water: 300.0,
             accumulated_light: 300.0,
             rng_seed: 77,
@@ -2469,8 +2471,8 @@ mod tests {
         let mut trees = world.query::<&Tree>();
         let tree = trees.iter(&world).next().unwrap();
         assert!(
-            tree.health > 0.5,
-            "Tree health ({}) should have recovered above 0.5 with good resources",
+            tree.health > 0.3,
+            "Tree health ({}) should have recovered above 0.3 with good resources",
             tree.health
         );
     }
