@@ -136,7 +136,3 @@ New species and tools unlock through play — not tutorials, but milestones that
 Players can predictably improve a garden through visible ecological relationships, and watching those relationships unfold is satisfying enough to drive "one more seed" play.
 
 If that's true, everything else follows.
-
-
-# TODO - 
-// build / run / install / gameplay instructions. BUILD.md and PLAY.md need creating
