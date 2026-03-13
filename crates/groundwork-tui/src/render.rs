@@ -408,11 +408,25 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     panel_lines.push(Line::from(""));
 
     // Tool (was Brush)
-    panel_lines.push(Line::from(vec![
-        Span::styled(" TOOL ", Style::default().fg(Color::Black).bg(Color::White)),
-        Span::raw(" "),
-        Span::styled(app.selected_tool().name().to_string(), Style::default().fg(Color::Cyan)),
-    ]));
+    {
+        let tool = app.selected_tool();
+        let tool_label = if tool == crate::app::Tool::SeedBag {
+            format!("{} ({})", tool.name(), app.species_name())
+        } else {
+            tool.name().to_string()
+        };
+        panel_lines.push(Line::from(vec![
+            Span::styled(" TOOL ", Style::default().fg(Color::Black).bg(Color::White)),
+            Span::raw(" "),
+            Span::styled(tool_label, Style::default().fg(Color::Cyan)),
+        ]));
+        if tool == crate::app::Tool::SeedBag {
+            panel_lines.push(Line::from(vec![
+                Span::styled("  [ / ]", Style::default().fg(Color::DarkGray)),
+                Span::styled(" change species", Style::default().fg(Color::DarkGray)),
+            ]));
+        }
+    }
     panel_lines.push(Line::from(""));
 
     // Controls
@@ -420,11 +434,12 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     if app.show_controls {
         panel_lines.push(Line::from(""));
 
-        let controls: [(&str, &str); 11] = [
+        let controls: [(&str, &str); 12] = [
             ("WASD", "pan"),
             ("J/K", "depth"),
             ("Space", "use tool"),
             ("Tab", "next tool"),
+            ("[ / ]", "species"),
             ("I", "inspect"),
             ("T", "status"),
             ("H", "controls"),

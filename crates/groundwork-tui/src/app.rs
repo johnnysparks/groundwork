@@ -4,6 +4,7 @@ use bevy_ecs::prelude::*;
 use ratatui::DefaultTerminal;
 
 use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
+use groundwork_sim::tree::{SeedSpeciesMap, SpeciesTable, species_name_to_id};
 use groundwork_sim::voxel::Material;
 use groundwork_sim::Tick;
 
@@ -73,28 +74,43 @@ impl Tool {
     }
 }
 
+/// Parse a tool name, returning the tool and species ID for seeds.
+/// Species names (e.g. "fern", "oak") map to SeedBag with that species.
+/// "seed" maps to SeedBag with species 0 (Oak) as default.
+pub fn parse_tool_and_species(s: &str) -> Option<(Tool, usize)> {
+    // Try as regular tool first
+    if let Some(tool) = Tool::from_material_name(s) {
+        return Some((tool, 0));
+    }
+    // Try as species name
+    if let Some(id) = species_name_to_id(s) {
+        return Some((Tool::SeedBag, id));
+    }
+    None
+}
+
 /// Apply a tool at a single cell. Handles gravity and tool-specific rules.
-/// Returns true if the tool had an effect.
-pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize) -> bool {
+/// Returns the landing position `(x, y, z)` if the tool had an effect, or `None`.
+pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize) -> Option<(usize, usize, usize)> {
     // Shovel: dig out whatever is here, no protection
     if tool == Tool::Shovel {
         if let Some(voxel) = grid.get_mut(x, y, z) {
             if voxel.material == Material::Air {
-                return false; // nothing to dig
+                return None;
             }
             voxel.set_material(Material::Air);
-            return true;
+            return Some((x, y, z));
         }
-        return false;
+        return None;
     }
 
     // Other tools: check if target cell is Air, then apply gravity
     if let Some(voxel) = grid.get(x, y, z) {
         if voxel.material != Material::Air {
-            return false; // cell is occupied
+            return None;
         }
     } else {
-        return false; // out of bounds
+        return None;
     }
 
     // Apply gravity: drop through Air to find landing position
@@ -106,10 +122,10 @@ pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize
     // Check landing cell is still Air
     if let Some(landing) = grid.get(x, y, landing_z) {
         if landing.material != Material::Air {
-            return false;
+            return None;
         }
     } else {
-        return false;
+        return None;
     }
 
     let mat = tool.material();
@@ -118,7 +134,7 @@ pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize
     if tool == Tool::SeedBag && landing_z > 0 {
         if let Some(below) = grid.get(x, y, landing_z - 1) {
             if below.material == Material::Stone {
-                return false;
+                return None;
             }
         }
     }
@@ -128,7 +144,7 @@ pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize
         if landing_z > 0 {
             if let Some(below) = grid.get(x, y, landing_z - 1) {
                 if below.material == Material::Water {
-                    return false;
+                    return None;
                 }
             }
         }
@@ -137,9 +153,9 @@ pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize
     // Place the material
     if let Some(voxel) = grid.get_mut(x, y, landing_z) {
         voxel.set_material(mat);
-        true
+        Some((x, y, landing_z))
     } else {
-        false
+        None
     }
 }
 
@@ -156,6 +172,7 @@ pub struct App {
     pub focus_z: usize,
     // Tool mode
     pub selected_tool: usize, // index into TOOL_PALETTE
+    pub selected_species: usize, // index into SpeciesTable (used when tool is SeedBag)
     pub tool_active: bool,
     pub tool_start: Option<(usize, usize, usize)>,
     // UI panels (toggleable sections in side panel)
@@ -180,6 +197,7 @@ impl App {
             focus_y: GRID_Y / 2,
             focus_z: GROUND_LEVEL + 1,
             selected_tool: 0,
+            selected_species: 0,
             tool_active: false,
             tool_start: None,
             show_inspect: true,
@@ -229,6 +247,22 @@ impl App {
         }
     }
 
+    /// Cycle through species when seed bag is selected.
+    pub fn cycle_species(&mut self, forward: bool) {
+        let count = self.world.resource::<SpeciesTable>().species.len();
+        if forward {
+            self.selected_species = (self.selected_species + 1) % count;
+        } else {
+            self.selected_species = (self.selected_species + count - 1) % count;
+        }
+    }
+
+    /// Get the name of the currently selected species.
+    pub fn species_name(&self) -> &str {
+        let table = self.world.resource::<SpeciesTable>();
+        table.species[self.selected_species].name
+    }
+
     /// Move the focus (and viewport) by dx/dy within grid bounds.
     pub fn pan(&mut self, dx: isize, dy: isize) {
         let nx = self.focus_x as isize + dx;
@@ -269,6 +303,7 @@ impl App {
         self.sync_focus_from_camera();
         if let Some((sx, sy, sz)) = self.tool_start.take() {
             let tool = self.selected_tool();
+            let species_id = self.selected_species;
             let xlo = sx.min(self.focus_x);
             let xhi = sx.max(self.focus_x);
             let ylo = sy.min(self.focus_y);
@@ -277,11 +312,23 @@ impl App {
             let zhi = sz.max(self.focus_z);
 
             let mut grid = self.world.resource_mut::<VoxelGrid>();
+            let mut seed_landings = Vec::new();
             for z in zlo..=zhi {
                 for y in ylo..=yhi {
                     for x in xlo..=xhi {
-                        apply_tool(&mut grid, tool, x, y, z);
+                        if let Some(pos) = apply_tool(&mut grid, tool, x, y, z) {
+                            if tool == Tool::SeedBag {
+                                seed_landings.push(pos);
+                            }
+                        }
                     }
+                }
+            }
+            // Register species for placed seeds
+            if !seed_landings.is_empty() {
+                let mut seed_map = self.world.resource_mut::<SeedSpeciesMap>();
+                for pos in seed_landings {
+                    seed_map.map.insert(pos, species_id);
                 }
             }
         }

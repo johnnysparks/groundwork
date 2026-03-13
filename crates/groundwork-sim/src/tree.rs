@@ -108,11 +108,27 @@ pub enum CrownShape {
     Conical,
 }
 
-/// Species parameters — defines what a tree CAN become.
+/// What kind of plant this species is. Controls growth behavior:
+/// - Trees use space colonization branching at YoungTree+ stages.
+/// - All other types use templates at every stage (no skeleton).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlantType {
+    /// Tall woody plant with trunk and canopy. Uses space colonization.
+    Tree,
+    /// Woody plant, 1-3m. Bushy shape, no tall trunk. Template-only.
+    Shrub,
+    /// Low-growing plant, <0.5m. Spreads laterally. Template-only.
+    Groundcover,
+    /// Herbaceous plant, 0.5-1.5m. Thin stem + bloom. Template-only.
+    Flower,
+}
+
+/// Species parameters — defines what a plant CAN become.
 /// Dimensions are in meters; use accessor methods for voxel units.
 #[derive(Clone, Debug)]
 pub struct Species {
     pub name: &'static str,
+    pub plant_type: PlantType,
     pub max_height_m: f64,
     pub root_depth_m: f64,
     pub crown_radius_m: f64,
@@ -121,11 +137,16 @@ pub struct Species {
     pub light_need: ResourceNeed,
     pub growth_rate: f32,
     /// How strongly branches bend toward light (0.0 = none, 1.0 = strong).
+    /// Only used for Tree plant types.
     pub phototropism: f32,
     /// Light level below which branches accumulate shade stress (0-255).
     pub shade_tolerance: u8,
     /// Shade stress ticks before a branch dies and converts to DeadWood.
     pub prune_threshold: u16,
+    /// Dispersal distance in meters. Trees disperse far, groundcover spreads nearby.
+    pub dispersal_distance_m: f64,
+    /// Ticks between seed dispersal attempts. Lower = faster spread.
+    pub dispersal_period: u32,
 }
 
 impl Species {
@@ -141,6 +162,21 @@ impl Species {
     pub fn crown_radius(&self) -> u8 {
         crate::scale::meters_to_voxels(self.crown_radius_m) as u8
     }
+    /// Whether this species uses space colonization branching.
+    pub fn uses_skeleton(&self) -> bool {
+        self.plant_type == PlantType::Tree
+    }
+}
+
+/// Look up a species by name (case-insensitive, ignores spaces/hyphens/underscores).
+/// Returns the species index in the default SpeciesTable.
+pub fn species_name_to_id(name: &str) -> Option<usize> {
+    let norm = |s: &str| -> String {
+        s.to_ascii_lowercase().replace([' ', '-', '_'], "")
+    };
+    let needle = norm(name);
+    let table = SpeciesTable::default();
+    table.species.iter().position(|s| norm(s.name) == needle)
 }
 
 /// Table of all species, stored as an ECS resource.
@@ -153,8 +189,10 @@ impl Default for SpeciesTable {
     fn default() -> Self {
         Self {
             species: vec![
+                // --- Trees (indices 0-3) ---
                 Species {
                     name: "Oak",
+                    plant_type: PlantType::Tree,
                     max_height_m: 8.0,
                     root_depth_m: 4.0,
                     crown_radius_m: 3.0,
@@ -165,9 +203,12 @@ impl Default for SpeciesTable {
                     phototropism: 0.3,
                     shade_tolerance: 80,
                     prune_threshold: 200,
+                    dispersal_distance_m: 4.0,
+                    dispersal_period: 100,
                 },
                 Species {
                     name: "Birch",
+                    plant_type: PlantType::Tree,
                     max_height_m: 7.0,
                     root_depth_m: 3.0,
                     crown_radius_m: 2.0,
@@ -178,9 +219,12 @@ impl Default for SpeciesTable {
                     phototropism: 0.5,
                     shade_tolerance: 120,
                     prune_threshold: 100,
+                    dispersal_distance_m: 5.0,
+                    dispersal_period: 80,
                 },
                 Species {
                     name: "Willow",
+                    plant_type: PlantType::Tree,
                     max_height_m: 5.0,
                     root_depth_m: 3.0,
                     crown_radius_m: 4.0,
@@ -191,9 +235,12 @@ impl Default for SpeciesTable {
                     phototropism: 0.2,
                     shade_tolerance: 60,
                     prune_threshold: 300,
+                    dispersal_distance_m: 3.0,
+                    dispersal_period: 120,
                 },
                 Species {
                     name: "Pine",
+                    plant_type: PlantType::Tree,
                     max_height_m: 9.0,
                     root_depth_m: 5.0,
                     crown_radius_m: 3.0,
@@ -204,6 +251,139 @@ impl Default for SpeciesTable {
                     phototropism: 0.6,
                     shade_tolerance: 100,
                     prune_threshold: 150,
+                    dispersal_distance_m: 6.0,
+                    dispersal_period: 90,
+                },
+                // --- Shrubs (indices 4-6) ---
+                Species {
+                    name: "Fern",
+                    plant_type: PlantType::Shrub,
+                    max_height_m: 1.0,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 1.0,
+                    crown_shape: CrownShape::Wide,
+                    water_need: ResourceNeed::High,
+                    light_need: ResourceNeed::Low,
+                    growth_rate: 1.5,
+                    phototropism: 0.0,
+                    shade_tolerance: 30,
+                    prune_threshold: 500,
+                    dispersal_distance_m: 1.5,
+                    dispersal_period: 60,
+                },
+                Species {
+                    name: "Berry Bush",
+                    plant_type: PlantType::Shrub,
+                    max_height_m: 1.5,
+                    root_depth_m: 1.0,
+                    crown_radius_m: 1.0,
+                    crown_shape: CrownShape::Round,
+                    water_need: ResourceNeed::Medium,
+                    light_need: ResourceNeed::Medium,
+                    growth_rate: 1.2,
+                    phototropism: 0.0,
+                    shade_tolerance: 80,
+                    prune_threshold: 300,
+                    dispersal_distance_m: 3.0,
+                    dispersal_period: 80,
+                },
+                Species {
+                    name: "Holly",
+                    plant_type: PlantType::Shrub,
+                    max_height_m: 2.0,
+                    root_depth_m: 1.5,
+                    crown_radius_m: 1.0,
+                    crown_shape: CrownShape::Conical,
+                    water_need: ResourceNeed::Low,
+                    light_need: ResourceNeed::Low,
+                    growth_rate: 0.6,
+                    phototropism: 0.0,
+                    shade_tolerance: 40,
+                    prune_threshold: 400,
+                    dispersal_distance_m: 2.0,
+                    dispersal_period: 100,
+                },
+                // --- Flowers (indices 7-8) ---
+                Species {
+                    name: "Wildflower",
+                    plant_type: PlantType::Flower,
+                    max_height_m: 0.5,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 0.5,
+                    crown_shape: CrownShape::Round,
+                    water_need: ResourceNeed::Medium,
+                    light_need: ResourceNeed::High,
+                    growth_rate: 2.0,
+                    phototropism: 0.0,
+                    shade_tolerance: 150,
+                    prune_threshold: 100,
+                    dispersal_distance_m: 2.0,
+                    dispersal_period: 40,
+                },
+                Species {
+                    name: "Daisy",
+                    plant_type: PlantType::Flower,
+                    max_height_m: 0.5,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 0.5,
+                    crown_shape: CrownShape::Narrow,
+                    water_need: ResourceNeed::Low,
+                    light_need: ResourceNeed::High,
+                    growth_rate: 2.5,
+                    phototropism: 0.0,
+                    shade_tolerance: 160,
+                    prune_threshold: 80,
+                    dispersal_distance_m: 1.5,
+                    dispersal_period: 30,
+                },
+                // --- Groundcover (indices 9-11) ---
+                Species {
+                    name: "Moss",
+                    plant_type: PlantType::Groundcover,
+                    max_height_m: 0.5,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 1.0,
+                    crown_shape: CrownShape::Wide,
+                    water_need: ResourceNeed::High,
+                    light_need: ResourceNeed::Low,
+                    growth_rate: 1.0,
+                    phototropism: 0.0,
+                    shade_tolerance: 20,
+                    prune_threshold: 500,
+                    dispersal_distance_m: 1.0,
+                    dispersal_period: 25,
+                },
+                Species {
+                    name: "Grass",
+                    plant_type: PlantType::Groundcover,
+                    max_height_m: 0.5,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 0.5,
+                    crown_shape: CrownShape::Narrow,
+                    water_need: ResourceNeed::Low,
+                    light_need: ResourceNeed::High,
+                    growth_rate: 2.0,
+                    phototropism: 0.0,
+                    shade_tolerance: 140,
+                    prune_threshold: 100,
+                    dispersal_distance_m: 1.0,
+                    dispersal_period: 20,
+                },
+                Species {
+                    name: "Clover",
+                    plant_type: PlantType::Groundcover,
+                    max_height_m: 0.5,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 0.5,
+                    crown_shape: CrownShape::Round,
+                    water_need: ResourceNeed::Medium,
+                    light_need: ResourceNeed::Medium,
+                    growth_rate: 1.8,
+                    phototropism: 0.0,
+                    shade_tolerance: 100,
+                    prune_threshold: 150,
+                    dispersal_distance_m: 1.0,
+                    dispersal_period: 30,
                 },
             ],
         }
@@ -255,12 +435,29 @@ pub struct TreeTemplate {
 impl TreeTemplate {
     /// Generate a voxel template for the given species and growth stage.
     pub fn generate(species: &Species, stage: &GrowthStage, rng_seed: u64) -> Self {
-        match stage {
-            GrowthStage::Seedling => Self::seedling(species),
-            GrowthStage::Sapling => Self::sapling(species, rng_seed),
-            GrowthStage::YoungTree => Self::young_tree(species, rng_seed),
-            GrowthStage::Mature | GrowthStage::OldGrowth => Self::mature(species, rng_seed),
-            GrowthStage::Dead => Self::dead(species, rng_seed),
+        match species.plant_type {
+            PlantType::Tree => match stage {
+                GrowthStage::Seedling => Self::seedling(species),
+                GrowthStage::Sapling => Self::sapling(species, rng_seed),
+                GrowthStage::YoungTree => Self::young_tree(species, rng_seed),
+                GrowthStage::Mature | GrowthStage::OldGrowth => Self::mature(species, rng_seed),
+                GrowthStage::Dead => Self::dead(species, rng_seed),
+            },
+            PlantType::Shrub => match stage {
+                GrowthStage::Seedling => Self::seedling(species),
+                GrowthStage::Dead => Self::dead_small(species),
+                _ => Self::shrub(species, stage, rng_seed),
+            },
+            PlantType::Flower => match stage {
+                GrowthStage::Seedling => Self::seedling(species),
+                GrowthStage::Dead => Self::dead_small(species),
+                _ => Self::flower(species, stage, rng_seed),
+            },
+            PlantType::Groundcover => match stage {
+                GrowthStage::Seedling => Self::seedling_ground(),
+                GrowthStage::Dead => Self::dead_small(species),
+                _ => Self::groundcover(species, stage, rng_seed),
+            },
         }
     }
 
@@ -390,6 +587,116 @@ impl TreeTemplate {
         for z in 1..=(species.root_depth() as isize / 2).max(1) {
             voxels.push((0, 0, -z, Material::Root));
         }
+
+        Self { voxels }
+    }
+
+    // --- Small plant templates ---
+
+    /// Groundcover seedling: just a single leaf at ground level.
+    fn seedling_ground() -> Self {
+        Self { voxels: vec![(0, 0, 0, Material::Leaf), (0, 0, -1, Material::Root)] }
+    }
+
+    /// Dead small plant: single deadwood voxel.
+    fn dead_small(species: &Species) -> Self {
+        let mut voxels = vec![(0, 0, 0, Material::DeadWood)];
+        if species.root_depth() >= 1 {
+            voxels.push((0, 0, -1, Material::Root));
+        }
+        Self { voxels }
+    }
+
+    /// Shrub template: short woody base with bushy leaf crown.
+    fn shrub(species: &Species, stage: &GrowthStage, rng_seed: u64) -> Self {
+        let mut voxels = Vec::new();
+        let max_h = species.max_height().max(1) as isize;
+        let crown_r = species.crown_radius().max(1);
+
+        // Scale by growth stage
+        let (trunk_h, cr, root_d) = match stage {
+            GrowthStage::Sapling => (1isize, 1u8, 1isize),
+            GrowthStage::YoungTree => ((max_h / 2).max(1), (crown_r / 2).max(1), 1),
+            _ => (max_h.max(1), crown_r, species.root_depth().max(1) as isize),
+        };
+
+        // Short woody trunk (Branch material for shrubs)
+        for z in 0..trunk_h {
+            voxels.push((0, 0, z, Material::Branch));
+        }
+
+        // Bushy crown — use the species crown shape
+        if cr > 0 {
+            Self::add_crown(&mut voxels, trunk_h, cr, &species.crown_shape, rng_seed);
+        }
+
+        // Shallow roots
+        for z in 1..=root_d {
+            voxels.push((0, 0, -z, Material::Root));
+        }
+
+        Self { voxels }
+    }
+
+    /// Flower template: thin stem with leaf bloom at top.
+    fn flower(species: &Species, stage: &GrowthStage, _rng_seed: u64) -> Self {
+        let mut voxels = Vec::new();
+        let max_h = species.max_height().max(1) as isize;
+
+        let (stem_h, has_bloom) = match stage {
+            GrowthStage::Sapling => (1isize, false),
+            GrowthStage::YoungTree => ((max_h / 2).max(1), true),
+            _ => (max_h, true),
+        };
+
+        // Thin stem (trunk)
+        for z in 0..stem_h {
+            voxels.push((0, 0, z, Material::Trunk));
+        }
+
+        // Bloom at top (leaf voxel)
+        if has_bloom {
+            voxels.push((0, 0, stem_h, Material::Leaf));
+        }
+
+        // Shallow root
+        voxels.push((0, 0, -1, Material::Root));
+
+        Self { voxels }
+    }
+
+    /// Groundcover template: flat spread of leaves at surface level.
+    fn groundcover(species: &Species, stage: &GrowthStage, rng_seed: u64) -> Self {
+        let mut voxels = Vec::new();
+        let max_r = species.crown_radius().max(1) as isize;
+
+        let r = match stage {
+            GrowthStage::Sapling => 0isize,
+            GrowthStage::YoungTree => (max_r / 2).max(0),
+            _ => max_r,
+        };
+
+        // Flat carpet of leaves at z=0
+        if r == 0 {
+            voxels.push((0, 0, 0, Material::Leaf));
+        } else {
+            let r_sq = r * r;
+            for dx in -r..=r {
+                for dy in -r..=r {
+                    if dx * dx + dy * dy <= r_sq {
+                        // Use hash to create natural-looking gaps
+                        let h = tree_hash(rng_seed, (dx + 100) as u64 * 200 + (dy + 100) as u64);
+                        if h % 4 != 0 {
+                            // ~75% coverage for natural look
+                            voxels.push((dx, dy, 0, Material::Leaf));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Single root below center
+        voxels.push((0, 0, -1, Material::Root));
 
         Self { voxels }
     }
@@ -713,6 +1020,10 @@ mod tests {
     fn attraction_points_within_crown_envelope() {
         let table = SpeciesTable::default();
         for species in &table.species {
+            if !species.uses_skeleton() {
+                // Non-tree types don't use attraction points
+                continue;
+            }
             let points = generate_attraction_points(species, &GrowthStage::Mature, 42);
             assert!(!points.is_empty(), "{} should have attraction points", species.name);
             // All points should be above trunk base (z > 0)
@@ -765,5 +1076,100 @@ mod tests {
         let p2 = generate_attraction_points(species, &GrowthStage::Mature, 999);
         // Different seeds should produce different point distributions
         assert_ne!(p1, p2);
+    }
+
+    #[test]
+    fn species_table_has_12_species() {
+        let table = SpeciesTable::default();
+        assert_eq!(table.species.len(), 12);
+    }
+
+    #[test]
+    fn plant_types_correct() {
+        let table = SpeciesTable::default();
+        // 4 trees
+        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Tree).count(), 4);
+        // 3 shrubs
+        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Shrub).count(), 3);
+        // 2 flowers
+        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Flower).count(), 2);
+        // 3 groundcover
+        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Groundcover).count(), 3);
+    }
+
+    #[test]
+    fn shrub_template_has_branch_and_leaf() {
+        let table = SpeciesTable::default();
+        // Fern = index 4
+        let fern = &table.species[4];
+        assert_eq!(fern.plant_type, PlantType::Shrub);
+        let template = TreeTemplate::generate(fern, &GrowthStage::Mature, 42);
+        let has_branch = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Branch);
+        let has_leaf = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Leaf);
+        let has_root = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Root);
+        assert!(has_branch, "Shrub should have branch voxels");
+        assert!(has_leaf, "Shrub should have leaf voxels");
+        assert!(has_root, "Shrub should have root voxels");
+    }
+
+    #[test]
+    fn flower_template_has_stem_and_bloom() {
+        let table = SpeciesTable::default();
+        // Wildflower = index 7
+        let wildflower = &table.species[7];
+        assert_eq!(wildflower.plant_type, PlantType::Flower);
+        let template = TreeTemplate::generate(wildflower, &GrowthStage::Mature, 42);
+        let has_trunk = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Trunk);
+        let has_leaf = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Leaf);
+        assert!(has_trunk, "Flower should have stem (trunk)");
+        assert!(has_leaf, "Flower should have bloom (leaf)");
+        // Flowers should be short
+        let max_z = template.voxels.iter().map(|(_, _, z, _)| *z).max().unwrap();
+        assert!(max_z <= 2, "Flower should be short, max_z={}", max_z);
+    }
+
+    #[test]
+    fn groundcover_template_is_flat() {
+        let table = SpeciesTable::default();
+        // Moss = index 9
+        let moss = &table.species[9];
+        assert_eq!(moss.plant_type, PlantType::Groundcover);
+        let template = TreeTemplate::generate(moss, &GrowthStage::Mature, 42);
+        let has_leaf = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Leaf);
+        assert!(has_leaf, "Groundcover should have leaf voxels");
+        // All above-ground voxels should be at z=0
+        let above_ground: Vec<_> = template.voxels.iter()
+            .filter(|(_, _, z, m)| *z >= 0 && *m != Material::Root)
+            .collect();
+        assert!(!above_ground.is_empty());
+        for (_, _, z, _) in &above_ground {
+            assert_eq!(*z, 0, "Groundcover should be flat at z=0");
+        }
+    }
+
+    #[test]
+    fn non_tree_species_no_skeleton() {
+        let table = SpeciesTable::default();
+        for species in &table.species {
+            if species.plant_type != PlantType::Tree {
+                assert!(!species.uses_skeleton(), "{} should not use skeleton", species.name);
+            }
+        }
+    }
+
+    #[test]
+    fn all_species_have_valid_templates_at_all_stages() {
+        let table = SpeciesTable::default();
+        let stages = [
+            GrowthStage::Seedling, GrowthStage::Sapling,
+            GrowthStage::YoungTree, GrowthStage::Mature, GrowthStage::Dead,
+        ];
+        for species in &table.species {
+            for stage in &stages {
+                let template = TreeTemplate::generate(species, stage, 42);
+                assert!(!template.voxels.is_empty(),
+                    "{} at {:?} should produce voxels", species.name, stage);
+            }
+        }
     }
 }

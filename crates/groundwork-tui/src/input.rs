@@ -63,6 +63,10 @@ fn handle_2d(app: &mut App, code: KeyCode, _shift: bool) {
         KeyCode::Tab => app.cycle_tool(true),
         KeyCode::BackTab => app.cycle_tool(false),
 
+        // Species selection (when seed bag is active).
+        KeyCode::Char(']') => app.cycle_species(true),
+        KeyCode::Char('[') => app.cycle_species(false),
+
         // Tool start/end (Space).
         KeyCode::Char(' ') => {
             if app.tool_active {
@@ -170,6 +174,10 @@ fn handle_3d(app: &mut App, code: KeyCode, shift: bool) {
         // Tool selection
         KeyCode::Tab => app.cycle_tool(true),
         KeyCode::BackTab => app.cycle_tool(false),
+
+        // Species selection
+        KeyCode::Char(']') => app.cycle_species(true),
+        KeyCode::Char('[') => app.cycle_species(false),
 
         // Tool use
         KeyCode::Char(' ') => {

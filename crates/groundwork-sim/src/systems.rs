@@ -494,49 +494,52 @@ pub fn tree_growth(
             tree.dirty = true;
 
             // Initialize or expand skeleton on transition to branching stages
-            match next {
-                GrowthStage::YoungTree => {
-                    let (branches, points) =
-                        init_skeleton(species, &next, tree.rng_seed);
-                    tree.branches = branches;
-                    tree.attraction_points = points;
-                    tree.skeleton_initialized = true;
-                }
-                GrowthStage::Mature | GrowthStage::OldGrowth => {
-                    // Add more attraction points for larger crown
-                    let new_points =
-                        generate_attraction_points(species, &next, tree.rng_seed);
-                    tree.attraction_points.extend(new_points);
-                    // Extend trunk if needed
-                    if prev == GrowthStage::YoungTree {
-                        let old_trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
-                        let new_trunk_h = species.max_height() as isize;
-                        for z in old_trunk_h..new_trunk_h {
-                            let parent_idx = tree.branches.iter()
-                                .position(|b| b.pos == (0, 0, z - 1))
-                                .unwrap_or(0) as u16;
-                            tree.branches.push(BranchNode {
-                                pos: (0, 0, z),
-                                parent: parent_idx,
-                                material: Material::Trunk,
-                                shade_stress: 0,
-                                alive: true,
-                            });
-                        }
+            // Only trees use space colonization; other plant types always use templates
+            if species.uses_skeleton() {
+                match next {
+                    GrowthStage::YoungTree => {
+                        let (branches, points) =
+                            init_skeleton(species, &next, tree.rng_seed);
+                        tree.branches = branches;
+                        tree.attraction_points = points;
+                        tree.skeleton_initialized = true;
                     }
-                }
-                GrowthStage::Dead => {
-                    // Kill all branch nodes
-                    for node in &mut tree.branches {
-                        if node.material != Material::Root {
-                            node.alive = false;
-                            if node.material != Material::Trunk {
-                                node.material = Material::DeadWood;
+                    GrowthStage::Mature | GrowthStage::OldGrowth => {
+                        // Add more attraction points for larger crown
+                        let new_points =
+                            generate_attraction_points(species, &next, tree.rng_seed);
+                        tree.attraction_points.extend(new_points);
+                        // Extend trunk if needed
+                        if prev == GrowthStage::YoungTree {
+                            let old_trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
+                            let new_trunk_h = species.max_height() as isize;
+                            for z in old_trunk_h..new_trunk_h {
+                                let parent_idx = tree.branches.iter()
+                                    .position(|b| b.pos == (0, 0, z - 1))
+                                    .unwrap_or(0) as u16;
+                                tree.branches.push(BranchNode {
+                                    pos: (0, 0, z),
+                                    parent: parent_idx,
+                                    material: Material::Trunk,
+                                    shade_stress: 0,
+                                    alive: true,
+                                });
                             }
                         }
                     }
+                    GrowthStage::Dead => {
+                        // Kill all branch nodes
+                        for node in &mut tree.branches {
+                            if node.material != Material::Root {
+                                node.alive = false;
+                                if node.material != Material::Trunk {
+                                    node.material = Material::DeadWood;
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }
@@ -550,6 +553,11 @@ pub fn branch_growth(
     species_table: Res<SpeciesTable>,
 ) {
     for mut tree in trees.iter_mut() {
+        let species = &species_table.species[tree.species_id];
+        // Only trees use space colonization branching
+        if !species.uses_skeleton() {
+            continue;
+        }
         if tree.branches.is_empty() || tree.attraction_points.is_empty() {
             continue;
         }
@@ -561,7 +569,6 @@ pub fn branch_growth(
             continue;
         }
 
-        let species = &species_table.species[tree.species_id];
         let (rx, ry, rz) = tree.root_pos;
 
         // Find active tips: alive branch/leaf nodes with no children
@@ -774,6 +781,11 @@ pub fn self_pruning(
     species_table: Res<SpeciesTable>,
 ) {
     for mut tree in trees.iter_mut() {
+        let species = &species_table.species[tree.species_id];
+        // Only trees use skeleton-based pruning
+        if !species.uses_skeleton() {
+            continue;
+        }
         if tree.branches.is_empty() {
             continue;
         }
@@ -781,7 +793,6 @@ pub fn self_pruning(
             continue;
         }
 
-        let species = &species_table.species[tree.species_id];
         let (rx, ry, rz) = tree.root_pos;
         let mut any_changed = false;
 
@@ -1106,6 +1117,7 @@ pub fn seed_dispersal(
     trees: Query<&Tree>,
     mut grid: ResMut<VoxelGrid>,
     mut seed_species: ResMut<SeedSpeciesMap>,
+    species_table: Res<SpeciesTable>,
 ) {
     for tree in trees.iter() {
         if !matches!(
@@ -1118,16 +1130,19 @@ pub fn seed_dispersal(
             continue;
         }
 
-        // Disperse every ~80-120 ticks (varies per tree)
-        let period = 80 + (tree_hash(tree.rng_seed, 0) % 40) as u32;
+        let species = &species_table.species[tree.species_id];
+
+        // Dispersal period varies per species and per individual tree
+        let base_period = species.dispersal_period;
+        let period = base_period + (tree_hash(tree.rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
         if tree.age < period || tree.age % period != 0 {
             continue;
         }
 
-        // Pick dispersal direction and distance
+        // Pick dispersal direction and distance (species-specific)
         let h = tree_hash(tree.rng_seed, tree.age as u64);
-        let base_dist = crate::scale::meters_to_voxels(2.0) as u64;
-        let var_dist = crate::scale::meters_to_voxels(4.0).max(1) as u64;
+        let base_dist = crate::scale::meters_to_voxels(species.dispersal_distance_m / 2.0).max(1) as u64;
+        let var_dist = crate::scale::meters_to_voxels(species.dispersal_distance_m).max(1) as u64;
         let dist = base_dist + (h >> 8) % var_dist;
         let (dx, dy): (isize, isize) = match h % 8 {
             0 => (dist as isize, 0),
@@ -1148,8 +1163,9 @@ pub fn seed_dispersal(
         }
         let (sx, sy) = (sx as usize, sy as usize);
 
-        // Start above the tree canopy and drop down
-        let start_z = (rz + crate::scale::meters_to_voxels(12.0)).min(GRID_Z - 1);
+        // Start above the canopy and drop down
+        let canopy_h = crate::scale::meters_to_voxels(species.max_height_m * 1.5).max(2);
+        let start_z = (rz + canopy_h).min(GRID_Z - 1);
         if !VoxelGrid::in_bounds(sx, sy, start_z) {
             continue;
         }
@@ -2344,7 +2360,10 @@ mod tests {
             }
 
             let rng_seed = rng_trial * 7 + 1;
-            let period = 80 + (crate::tree::tree_hash(rng_seed, 0) % 40) as u32;
+            // Must match the dispersal period formula in seed_dispersal system
+            let species = &world.resource::<crate::tree::SpeciesTable>().species[0];
+            let base_period = species.dispersal_period;
+            let period = base_period + (crate::tree::tree_hash(rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
             world.spawn(Tree {
                 species_id: 0,
                 root_pos: (tx, ty, tz),
@@ -2364,8 +2383,8 @@ mod tests {
             crate::tick(&mut world, &mut schedule);
 
             let grid = world.resource::<VoxelGrid>();
-            for dy in -8i32..=8 {
-                for dx in -8i32..=8 {
+            for dy in -16i32..=16 {
+                for dx in -16i32..=16 {
                     let sx = tx as i32 + dx;
                     let sy = ty as i32 + dy;
                     if sx < 0 || sy < 0 {

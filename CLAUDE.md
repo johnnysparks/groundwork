@@ -79,12 +79,21 @@ groundwork help                           # Show help
 
 ### Gardening tools
 - `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone)
-- `seed` = **seed bag** — plants a seed; falls through air; dies on stone
+- `seed` = **seed bag** — plants a seed (oak by default); falls through air; dies on stone
 - `water` = **watering can** — pours water; falls through air; no-op on water
 - `soil` = **soil** — places soil; falls through air
 - `stone` = **stone** — places stone directly (no gravity)
 
 Non-shovel tools can't overwrite occupied cells. Use the shovel to clear first.
+
+### Species (use as material name to plant specific seeds)
+- **Trees:** `oak`, `birch`, `willow`, `pine` — tall, use space colonization branching
+- **Shrubs:** `fern`, `berry-bush`, `holly` — bushy, 1-2m, template-only growth
+- **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing
+- **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly
+
+Example: `groundwork place fern 60 60 40` plants a fern seed.
+In TUI, `[`/`]` cycles species when seed bag is selected.
 
 ### ASCII legend
 `.` air, `~` water, `#` soil, `%` wet soil, `@` stone, `*` root, `s` seed, `S` sprouting, `|` trunk, `-` branch, `&` leaf, `X` dead
@@ -103,7 +112,7 @@ crates/
       grid.rs         VoxelGrid Resource — flat Vec<Voxel>, 120×120×60, indexed [x + y*GRID_X + z*GRID_X*GRID_Y]
       scale.rs        Scale normalization: VOXEL_SIZE_M (0.5m), meters_to_voxels(), scale_attenuation/transfer()
       soil.rs         SoilComposition (6 bytes: sand/clay/organic/rock/pH/bacteria) + SoilGrid Resource
-      tree.rs         Tree entity, species (oak/birch/willow/pine), growth stages, space colonization branching
+      tree.rs         Tree entity, 12 species (4 trees/3 shrubs/2 flowers/3 groundcover), PlantType, growth stages, space colonization branching for trees, template-only for others
       systems.rs      ECS systems: water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, tree growth/branching/pruning/dispersal
       save.rs         Binary save/load v3: VoxelGrid + Tick + FocusState + SoilGrid (backward-compatible with v1/v2)
 
@@ -129,7 +138,8 @@ crates/
 - **Snapshot-based systems**: water_flow takes a snapshot of water levels before mutation to avoid iteration-order artifacts.
 - **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
 - **Soil composition model**: Parallel `SoilGrid` stores 6-byte composition per cell (sand, clay, organic, rock, pH, bacteria). Derived properties (drainage, retention, nutrient capacity) drive water absorption rates, seed growth rates, and root viability. Soil evolves: organic matter increases near roots, bacteria grow in moist organic soil, rock weathers into clay, pH drifts with organic decomposition.
-- **Procedural trees**: 4 species (oak, birch, willow, pine) with space colonization algorithm for natural branching. Growth stages: seed → seedling → sapling → mature → dead. Species differ in height, root depth, crown shape, and growth rate. All dimensions stored in meters.
+- **Procedural plants**: 12 species across 4 plant types. `PlantType` enum (Tree/Shrub/Groundcover/Flower) controls growth behavior: trees use space colonization branching, all others use template-only growth at every stage. Growth stages: seed → seedling → sapling → mature → dead. Species differ in height, root depth, crown shape, growth rate, water/light needs, dispersal distance/period. All dimensions stored in meters.
+- **Species selection**: CLI accepts species names as tool names (`place fern 60 60 40`). TUI uses `[`/`]` to cycle species when seed bag is selected. `SeedSpeciesMap` resource tracks which species a seed will become.
 - **Viewport-centered camera**: TUI focus is always at screen center. WASD pans the viewport. Screen size and world size are decoupled — precursor to arbitrarily large worlds and full voxel rendering.
 
 ### Sim API

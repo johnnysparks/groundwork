@@ -5,7 +5,9 @@ use groundwork_sim::soil::SoilGrid;
 use groundwork_sim::voxel::Material;
 use groundwork_sim::{FocusState, ToolState, Tick};
 
-use crate::app::{self, Tool};
+use groundwork_sim::tree::SeedSpeciesMap;
+
+use crate::app::{self, Tool, parse_tool_and_species};
 
 const DEFAULT_STATE: &str = "groundwork.state";
 
@@ -179,11 +181,11 @@ pub fn cmd_view(args: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
-fn parse_tool(name: &str) -> std::io::Result<Tool> {
-    Tool::from_material_name(name).ok_or_else(|| {
+fn parse_tool(name: &str) -> std::io::Result<(Tool, usize)> {
+    parse_tool_and_species(name).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!("unknown material: {name}. Valid: air/dig, seed, water, soil, stone"),
+            format!("unknown material: {name}. Valid: air/dig, seed, water, soil, stone, or a species name (oak, fern, moss, etc.)"),
         )
     })
 }
@@ -193,12 +195,13 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
         eprintln!("Usage: groundwork place <material> <x> <y> <z> [--state FILE]");
         eprintln!("  Coordinates accept ranges: place soil 20..40 30 15");
         eprintln!("  Materials: air/dig, seed, water, soil, stone");
+        eprintln!("  Or use a species name: oak, fern, moss, wildflower, etc.");
         eprintln!("  Items with gravity (seed, water, soil) fall through air.");
         eprintln!("  'air' or 'dig' uses the shovel — removes anything.");
         std::process::exit(1);
     }
 
-    let tool = parse_tool(&args[0])?;
+    let (tool, species_id) = parse_tool(&args[0])?;
 
     let xs = parse_coord_range(&args[1]).map_err(|e| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("x: {e}"))
@@ -215,14 +218,18 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
 
     let mut placed = 0u64;
     let mut skipped = 0u64;
+    let mut seed_landings = Vec::new();
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
         for &z in &zs {
             for &y in &ys {
                 for &x in &xs {
                     if VoxelGrid::in_bounds(x, y, z) {
-                        if app::apply_tool(&mut grid, tool, x, y, z) {
+                        if let Some(pos) = app::apply_tool(&mut grid, tool, x, y, z) {
                             placed += 1;
+                            if tool == Tool::SeedBag {
+                                seed_landings.push(pos);
+                            }
                         } else {
                             skipped += 1;
                         }
@@ -231,6 +238,13 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
                     }
                 }
             }
+        }
+    }
+    // Register species for placed seeds
+    if !seed_landings.is_empty() {
+        let mut seed_map = world.resource_mut::<SeedSpeciesMap>();
+        for pos in seed_landings {
+            seed_map.map.insert(pos, species_id);
         }
     }
 
@@ -255,12 +269,12 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
     if args.len() < 7 {
         eprintln!("Usage: groundwork fill <material> <x1> <y1> <z1> <x2> <y2> <z2> [--state FILE]");
         eprintln!("  Fills a rectangular region from (x1,y1,z1) to (x2,y2,z2) inclusive.");
-        eprintln!("  Materials: air/dig, seed, water, soil, stone");
+        eprintln!("  Materials: air/dig, seed, water, soil, stone, or a species name");
         eprintln!("  Shovel (air/dig) removes anything. Other tools respect gravity & protection.");
         std::process::exit(1);
     }
 
-    let tool = parse_tool(&args[0])?;
+    let (tool, species_id) = parse_tool(&args[0])?;
 
     let parse = |i: usize, label: &str| -> std::io::Result<usize> {
         args[i].parse().map_err(|e| {
@@ -287,18 +301,28 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
 
     let mut placed = 0u64;
     let mut skipped = 0u64;
+    let mut seed_landings = Vec::new();
     {
         let mut grid = world.resource_mut::<VoxelGrid>();
         for z in zlo..=zhi {
             for y in ylo..=yhi {
                 for x in xlo..=xhi {
-                    if app::apply_tool(&mut grid, tool, x, y, z) {
+                    if let Some(pos) = app::apply_tool(&mut grid, tool, x, y, z) {
                         placed += 1;
+                        if tool == Tool::SeedBag {
+                            seed_landings.push(pos);
+                        }
                     } else {
                         skipped += 1;
                     }
                 }
             }
+        }
+    }
+    if !seed_landings.is_empty() {
+        let mut seed_map = world.resource_mut::<SeedSpeciesMap>();
+        for pos in seed_landings {
+            seed_map.map.insert(pos, species_id);
         }
     }
 
@@ -574,11 +598,11 @@ pub fn cmd_tool_start(args: &[String]) -> std::io::Result<()> {
         eprintln!("Usage: groundwork tool-start <material> [--state FILE]");
         eprintln!("  Begins a range operation at the current focus position.");
         eprintln!("  Move focus, then use tool-end to apply.");
-        eprintln!("  Materials: air/dig, seed, water, soil, stone");
+        eprintln!("  Materials: air/dig, seed, water, soil, stone, or a species name");
         std::process::exit(1);
     }
 
-    let tool = parse_tool(&args[0])?;
+    let (tool, _species_id) = parse_tool(&args[0])?;
     let mat = tool.material();
     let path = state_path(&args[1..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
@@ -641,7 +665,7 @@ pub fn cmd_tool_end(args: &[String]) -> std::io::Result<()> {
         for z in zlo..=zhi {
             for y in ylo..=yhi {
                 for x in xlo..=xhi {
-                    if app::apply_tool(&mut grid, tool, x, y, z) {
+                    if app::apply_tool(&mut grid, tool, x, y, z).is_some() {
                         placed += 1;
                     } else {
                         skipped += 1;
@@ -699,10 +723,16 @@ pub fn print_help() {
     println!();
     println!("Materials: air/dig, seed, water, soil, stone");
     println!("  air/dig = shovel (removes anything)");
-    println!("  seed    = seed bag (falls, dies on stone)");
+    println!("  seed    = seed bag (falls, dies on stone) — plants oak by default");
     println!("  water   = watering can (falls, no-op on water)");
     println!("  soil    = soil (falls through air)");
     println!("  stone   = stone (placed directly)");
+    println!();
+    println!("Species (use as material name to plant a specific seed):");
+    println!("  Trees:       oak, birch, willow, pine");
+    println!("  Shrubs:      fern, berry-bush, holly");
+    println!("  Flowers:     wildflower, daisy");
+    println!("  Groundcover: moss, grass, clover");
     println!();
     println!("Options:");
     println!("  --state FILE                  State file (default: groundwork.state)");
