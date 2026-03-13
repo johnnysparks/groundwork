@@ -109,12 +109,13 @@ pub enum CrownShape {
 }
 
 /// Species parameters — defines what a tree CAN become.
+/// Dimensions are in meters; use accessor methods for voxel units.
 #[derive(Clone, Debug)]
 pub struct Species {
     pub name: &'static str,
-    pub max_height: u8,
-    pub root_depth: u8,
-    pub crown_radius: u8,
+    pub max_height_m: f64,
+    pub root_depth_m: f64,
+    pub crown_radius_m: f64,
     pub crown_shape: CrownShape,
     pub water_need: ResourceNeed,
     pub light_need: ResourceNeed,
@@ -125,6 +126,21 @@ pub struct Species {
     pub shade_tolerance: u8,
     /// Shade stress ticks before a branch dies and converts to DeadWood.
     pub prune_threshold: u16,
+}
+
+impl Species {
+    /// Max height in voxel units.
+    pub fn max_height(&self) -> u8 {
+        crate::scale::meters_to_voxels(self.max_height_m) as u8
+    }
+    /// Root depth in voxel units.
+    pub fn root_depth(&self) -> u8 {
+        crate::scale::meters_to_voxels(self.root_depth_m) as u8
+    }
+    /// Crown radius in voxel units.
+    pub fn crown_radius(&self) -> u8 {
+        crate::scale::meters_to_voxels(self.crown_radius_m) as u8
+    }
 }
 
 /// Table of all species, stored as an ECS resource.
@@ -139,9 +155,9 @@ impl Default for SpeciesTable {
             species: vec![
                 Species {
                     name: "Oak",
-                    max_height: 8,
-                    root_depth: 4,
-                    crown_radius: 3,
+                    max_height_m: 8.0,
+                    root_depth_m: 4.0,
+                    crown_radius_m: 3.0,
                     crown_shape: CrownShape::Round,
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::Medium,
@@ -152,9 +168,9 @@ impl Default for SpeciesTable {
                 },
                 Species {
                     name: "Birch",
-                    max_height: 7,
-                    root_depth: 3,
-                    crown_radius: 2,
+                    max_height_m: 7.0,
+                    root_depth_m: 3.0,
+                    crown_radius_m: 2.0,
                     crown_shape: CrownShape::Narrow,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::Medium,
@@ -165,9 +181,9 @@ impl Default for SpeciesTable {
                 },
                 Species {
                     name: "Willow",
-                    max_height: 5,
-                    root_depth: 3,
-                    crown_radius: 4,
+                    max_height_m: 5.0,
+                    root_depth_m: 3.0,
+                    crown_radius_m: 4.0,
                     crown_shape: CrownShape::Wide,
                     water_need: ResourceNeed::High,
                     light_need: ResourceNeed::Low,
@@ -178,9 +194,9 @@ impl Default for SpeciesTable {
                 },
                 Species {
                     name: "Pine",
-                    max_height: 9,
-                    root_depth: 5,
-                    crown_radius: 3,
+                    max_height_m: 9.0,
+                    root_depth_m: 5.0,
+                    crown_radius_m: 3.0,
                     crown_shape: CrownShape::Conical,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::High,
@@ -258,7 +274,7 @@ impl TreeTemplate {
 
     fn sapling(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
-        let trunk_h = (species.max_height / 3).max(2) as isize;
+        let trunk_h = (species.max_height() / 3).max(2) as isize;
 
         // Trunk
         for z in 0..trunk_h {
@@ -269,7 +285,7 @@ impl TreeTemplate {
         Self::add_leaf_disc(&mut voxels, 0, 0, trunk_h, 1, rng_seed, 0);
 
         // Roots
-        let root_d = (species.root_depth / 2).max(1) as isize;
+        let root_d = (species.root_depth() / 2).max(1) as isize;
         for z in 1..=root_d {
             voxels.push((0, 0, -z, Material::Root));
         }
@@ -279,8 +295,8 @@ impl TreeTemplate {
 
     fn young_tree(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
-        let trunk_h = (species.max_height * 2 / 3).max(3) as isize;
-        let crown_r = ((species.crown_radius + 1) / 2).max(1);
+        let trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
+        let crown_r = ((species.crown_radius() + 1) / 2).max(1);
 
         // Trunk
         for z in 0..trunk_h {
@@ -297,7 +313,7 @@ impl TreeTemplate {
         }
 
         // Roots
-        let root_d = (species.root_depth * 2 / 3).max(2) as isize;
+        let root_d = (species.root_depth() * 2 / 3).max(2) as isize;
         for z in 1..=root_d {
             voxels.push((0, 0, -z, Material::Root));
             if z >= 2 {
@@ -315,8 +331,8 @@ impl TreeTemplate {
 
     fn mature(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
-        let trunk_h = species.max_height as isize;
-        let crown_r = species.crown_radius;
+        let trunk_h = species.max_height() as isize;
+        let crown_r = species.crown_radius();
 
         // Trunk
         for z in 0..trunk_h {
@@ -337,7 +353,7 @@ impl TreeTemplate {
         }
 
         // Full roots with lateral spread
-        let root_d = species.root_depth as isize;
+        let root_d = species.root_depth() as isize;
         for z in 1..=root_d {
             voxels.push((0, 0, -z, Material::Root));
             if z >= 2 {
@@ -357,7 +373,7 @@ impl TreeTemplate {
 
     fn dead(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
-        let trunk_h = (species.max_height / 2).max(1) as isize;
+        let trunk_h = (species.max_height() / 2).max(1) as isize;
 
         for z in 0..trunk_h {
             voxels.push((0, 0, z, Material::DeadWood));
@@ -371,7 +387,7 @@ impl TreeTemplate {
         }
 
         // Remaining roots
-        for z in 1..=(species.root_depth as isize / 2).max(1) {
+        for z in 1..=(species.root_depth() as isize / 2).max(1) {
             voxels.push((0, 0, -z, Material::Root));
         }
 
@@ -485,12 +501,12 @@ pub fn generate_attraction_points(
     rng_seed: u64,
 ) -> Vec<(isize, isize, isize)> {
     let trunk_h = match stage {
-        GrowthStage::YoungTree => (species.max_height * 2 / 3).max(3) as isize,
-        _ => species.max_height as isize,
+        GrowthStage::YoungTree => (species.max_height() * 2 / 3).max(3) as isize,
+        _ => species.max_height() as isize,
     };
     let cr = match stage {
-        GrowthStage::YoungTree => ((species.crown_radius + 1) / 2).max(1) as isize,
-        _ => species.crown_radius as isize,
+        GrowthStage::YoungTree => ((species.crown_radius() + 1) / 2).max(1) as isize,
+        _ => species.crown_radius() as isize,
     };
 
     // Number of attraction points scales with crown volume
@@ -559,8 +575,8 @@ pub fn init_skeleton(
     rng_seed: u64,
 ) -> (Vec<BranchNode>, Vec<(isize, isize, isize)>) {
     let trunk_h = match stage {
-        GrowthStage::YoungTree => (species.max_height * 2 / 3).max(3) as isize,
-        _ => species.max_height as isize,
+        GrowthStage::YoungTree => (species.max_height() * 2 / 3).max(3) as isize,
+        _ => species.max_height() as isize,
     };
 
     let mut branches = Vec::new();
@@ -578,8 +594,8 @@ pub fn init_skeleton(
 
     // Roots
     let root_d = match stage {
-        GrowthStage::YoungTree => (species.root_depth * 2 / 3).max(2) as isize,
-        _ => species.root_depth as isize,
+        GrowthStage::YoungTree => (species.root_depth() * 2 / 3).max(2) as isize,
+        _ => species.root_depth() as isize,
     };
     for z in 1..=root_d {
         branches.push(BranchNode {
@@ -671,7 +687,7 @@ mod tests {
         let species = &SpeciesTable::default().species[3]; // Pine
         let t = TreeTemplate::generate(species, &GrowthStage::Mature, 42);
         let leaves: Vec<_> = t.voxels.iter().filter(|v| v.3 == Material::Leaf).collect();
-        let trunk_top = species.max_height as isize;
+        let trunk_top = species.max_height() as isize;
         // Bottom layer leaves
         let bottom: Vec<_> = leaves.iter().filter(|v| v.2 == trunk_top).collect();
         // Top layer leaves
@@ -719,7 +735,7 @@ mod tests {
         assert!(!points.is_empty(), "Should have attraction points");
 
         // Trunk should go from z=0 to trunk_h-1
-        let trunk_h = (species.max_height * 2 / 3).max(3) as isize;
+        let trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
         let trunk_positions: Vec<_> = branches.iter()
             .filter(|b| b.material == Material::Trunk)
             .map(|b| b.pos.2)

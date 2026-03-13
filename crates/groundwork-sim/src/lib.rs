@@ -1,5 +1,6 @@
 pub mod grid;
 pub mod save;
+pub mod scale;
 pub mod soil;
 pub mod systems;
 pub mod tree;
@@ -38,8 +39,8 @@ pub struct ToolState {
 impl Default for FocusState {
     fn default() -> Self {
         Self {
-            x: 30,
-            y: 30,
+            x: scale::grid_center_x(),
+            y: scale::grid_center_y(),
             z: GROUND_LEVEL + 1,
             tool: None,
         }

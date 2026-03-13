@@ -342,8 +342,8 @@ mod tests {
         let loaded = load_world(&path).unwrap();
         // Should load with default focus
         let f = loaded.resource::<FocusState>();
-        assert_eq!(f.x, 30);
-        assert_eq!(f.y, 30);
+        assert_eq!(f.x, GRID_X / 2);
+        assert_eq!(f.y, GRID_Y / 2);
         assert!(f.tool.is_none());
 
         let _ = std::fs::remove_file(&path);

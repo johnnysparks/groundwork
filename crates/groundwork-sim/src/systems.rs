@@ -10,8 +10,10 @@ use crate::Tick;
 /// Without this, the spring dries up by tick ~200 and the garden dies.
 pub fn water_spring(mut grid: ResMut<VoxelGrid>) {
     // Refill the 4x4 spring at center
-    for dy in 28..=31 {
-        for dx in 28..=31 {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    for dy in (cy - 2)..=(cy + 1) {
+        for dx in (cx - 2)..=(cx + 1) {
             let sz = VoxelGrid::surface_height(dx, dy);
             let wz = sz; // Spring sits at surface level
             if let Some(cell) = grid.get_mut(dx, dy, wz) {
@@ -506,8 +508,8 @@ pub fn tree_growth(
                     tree.attraction_points.extend(new_points);
                     // Extend trunk if needed
                     if prev == GrowthStage::YoungTree {
-                        let old_trunk_h = (species.max_height * 2 / 3).max(3) as isize;
-                        let new_trunk_h = species.max_height as isize;
+                        let old_trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
+                        let new_trunk_h = species.max_height() as isize;
                         for z in old_trunk_h..new_trunk_h {
                             let parent_idx = tree.branches.iter()
                                 .position(|b| b.pos == (0, 0, z - 1))
@@ -582,8 +584,10 @@ pub fn branch_growth(
             continue;
         }
 
-        let influence_dist_sq: isize = 16; // 4 voxels squared
-        let kill_dist_sq: isize = 4; // 2 voxels squared
+        let influence_v = crate::scale::meters_to_voxels_f64(4.0);
+        let kill_v = crate::scale::meters_to_voxels_f64(2.0);
+        let influence_dist_sq = (influence_v * influence_v) as isize;
+        let kill_dist_sq = (kill_v * kill_v) as isize;
 
         // Associate each attraction point with its nearest tip
         let mut tip_directions: Vec<(isize, isize, isize, u32)> = vec![(0, 0, 0, 0); tips.len()];
@@ -1029,9 +1033,9 @@ pub fn root_growth(
 
         // Max roots based on growth stage
         let max_roots = match tree.stage {
-            GrowthStage::Sapling => species.root_depth as usize * 3,
-            GrowthStage::YoungTree => species.root_depth as usize * 5,
-            GrowthStage::Mature | GrowthStage::OldGrowth => species.root_depth as usize * 8,
+            GrowthStage::Sapling => species.root_depth() as usize * 3,
+            GrowthStage::YoungTree => species.root_depth() as usize * 5,
+            GrowthStage::Mature | GrowthStage::OldGrowth => species.root_depth() as usize * 8,
             _ => 0,
         };
 
@@ -1142,7 +1146,7 @@ pub fn seed_dispersal(
         let (sx, sy) = (sx as usize, sy as usize);
 
         // Start above the tree canopy and drop down
-        let start_z = (rz + 12).min(GRID_Z - 1);
+        let start_z = (rz + crate::scale::meters_to_voxels(12.0)).min(GRID_Z - 1);
         if !VoxelGrid::in_bounds(sx, sy, start_z) {
             continue;
         }

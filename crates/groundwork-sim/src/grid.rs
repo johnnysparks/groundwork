@@ -28,11 +28,18 @@ impl VoxelGrid {
     /// Height map value for position (x, y). Returns a surface elevation
     /// ranging from ~13 to ~17, creating rolling hills.
     pub fn surface_height(x: usize, y: usize) -> usize {
-        // Two overlapping sine waves for gentle, natural-looking hills
+        // Two overlapping sine waves for gentle, natural-looking hills.
+        // Frequencies normalized to grid size so terrain scales with grid dimensions.
         let fx = x as f64;
         let fy = y as f64;
-        let h1 = (fx * 0.12).sin() * (fy * 0.10).sin() * 1.5;
-        let h2 = ((fx + 20.0) * 0.07).cos() * ((fy + 15.0) * 0.09).cos() * 0.8;
+        let freq_x1 = 7.2 / GRID_X as f64;  // 0.12 at GRID_X=60
+        let freq_y1 = 6.0 / GRID_Y as f64;  // 0.10 at GRID_Y=60
+        let freq_x2 = 4.2 / GRID_X as f64;  // 0.07 at GRID_X=60
+        let freq_y2 = 5.4 / GRID_Y as f64;  // 0.09 at GRID_Y=60
+        let phase_x = 20.0 / 60.0 * GRID_X as f64;
+        let phase_y = 15.0 / 60.0 * GRID_Y as f64;
+        let h1 = (fx * freq_x1).sin() * (fy * freq_y1).sin() * 1.5;
+        let h2 = ((fx + phase_x) * freq_x2).cos() * ((fy + phase_y) * freq_y2).cos() * 0.8;
         let base = GROUND_LEVEL as f64 + h1 + h2;
         (base.round() as usize).clamp(GROUND_LEVEL - 2, GROUND_LEVEL + 2)
     }
@@ -40,17 +47,16 @@ impl VoxelGrid {
     /// Whether (x, y) is part of the stream bed. The stream runs from the
     /// spring (center) toward the southeast edge, ~2-3 voxels wide.
     pub fn is_stream(x: usize, y: usize) -> bool {
-        // Stream flows from center (30,30) toward edge (59, 59)
-        // Parametric line: (30+t, 30+t) for t in 0..29
-        // Width check: distance from the line <= 1.5
-        if x < 30 || y < 30 {
+        // Stream flows from grid center toward the SE edge.
+        let cx = GRID_X / 2;
+        let cy = GRID_Y / 2;
+        if x < cx || y < cy {
             return false;
         }
-        let dx = x as f64 - 30.0;
-        let dy = y as f64 - 30.0;
-        // Distance from the y=x diagonal (shifted to origin at 30,30)
+        let dx = x as f64 - cx as f64;
+        let dy = y as f64 - cy as f64;
         let dist = (dx - dy).abs() / 1.414;
-        dist <= 1.2 && (dx + dy) > 2.0 // exclude the spring itself
+        dist <= 1.2 && (dx + dy) > 2.0
     }
 
     /// Whether (x, y, z) is a stone outcrop. Creates 3-4 rocky clusters
@@ -60,15 +66,20 @@ impl VoxelGrid {
         if z > surface + 1 || z < surface - 1 {
             return false;
         }
-        // Cluster 1: near (8, 12)
-        let d1 = ((x as isize - 8) * (x as isize - 8) + (y as isize - 12) * (y as isize - 12)) as f64;
-        if d1 < 10.0 { return true; }
-        // Cluster 2: near (50, 8)
-        let d2 = ((x as isize - 50) * (x as isize - 50) + (y as isize - 8) * (y as isize - 8)) as f64;
-        if d2 < 8.0 { return true; }
-        // Cluster 3: near (12, 48)
-        let d3 = ((x as isize - 12) * (x as isize - 12) + (y as isize - 48) * (y as isize - 48)) as f64;
-        if d3 < 12.0 { return true; }
+        // Cluster positions as fractions of grid dimensions.
+        // (8/60, 12/60), (50/60, 8/60), (12/60, 48/60)
+        let clusters: [(f64, f64, f64); 3] = [
+            (8.0 / 60.0, 12.0 / 60.0, 10.0),
+            (50.0 / 60.0, 8.0 / 60.0, 8.0),
+            (12.0 / 60.0, 48.0 / 60.0, 12.0),
+        ];
+        for (fx, fy, r_sq) in clusters {
+            let cx = (fx * GRID_X as f64).round() as isize;
+            let cy = (fy * GRID_Y as f64).round() as isize;
+            let d = ((x as isize - cx) * (x as isize - cx)
+                   + (y as isize - cy) * (y as isize - cy)) as f64;
+            if d < r_sq { return true; }
+        }
         false
     }
 
@@ -116,9 +127,11 @@ impl VoxelGrid {
         }
 
         // Water spring at center — a 4x4 pool at surface level
-        let spring_z = Self::surface_height(30, 30);
-        for dy in 28..=31 {
-            for dx in 28..=31 {
+        let cx = GRID_X / 2;
+        let cy = GRID_Y / 2;
+        let spring_z = Self::surface_height(cx, cy);
+        for dy in (cy - 2)..=(cy + 1) {
+            for dx in (cx - 2)..=(cx + 1) {
                 let sz = Self::surface_height(dx, dy).max(spring_z);
                 // Water sits at the spring level
                 let wz = sz;
@@ -224,8 +237,10 @@ mod tests {
         assert_eq!(grid.get(0, 0, sh).unwrap().material, Material::Soil);
         assert_eq!(grid.get(0, 0, sh + 2).unwrap().material, Material::Air);
         // Water spring at center sits at surface height
-        let spring_z = VoxelGrid::surface_height(30, 30);
-        assert_eq!(grid.get(30, 30, spring_z).unwrap().material, Material::Water);
+        let cx = GRID_X / 2;
+        let cy = GRID_Y / 2;
+        let spring_z = VoxelGrid::surface_height(cx, cy);
+        assert_eq!(grid.get(cx, cy, spring_z).unwrap().material, Material::Water);
     }
 
     #[test]

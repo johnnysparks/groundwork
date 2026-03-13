@@ -159,7 +159,10 @@ impl SoilGrid {
             for x in 0..GRID_X {
                 let surface = VoxelGrid::surface_height(x, y);
                 // Near spring or stream
-                let near_spring = x >= 26 && x <= 33 && y >= 26 && y <= 33;
+                let cx = GRID_X / 2;
+                let cy = GRID_Y / 2;
+                let near_spring = x >= cx.saturating_sub(4) && x <= cx + 3
+                               && y >= cy.saturating_sub(4) && y <= cy + 3;
                 let near_stream = VoxelGrid::is_stream(x, y)
                     || (x > 0 && VoxelGrid::is_stream(x - 1, y))
                     || (y > 0 && VoxelGrid::is_stream(x, y - 1))
@@ -340,8 +343,10 @@ mod tests {
     fn soil_grid_peat_near_spring() {
         let soil = SoilGrid::new();
         // Near water spring at surface should have high organic
-        let surface = VoxelGrid::surface_height(29, 29);
-        let near_spring = soil.get(29, 29, surface).unwrap();
+        let sx = GRID_X / 2 - 1;
+        let sy = GRID_Y / 2 - 1;
+        let surface = VoxelGrid::surface_height(sx, sy);
+        let near_spring = soil.get(sx, sy, surface).unwrap();
         assert!(near_spring.organic > 100, "Near-spring topsoil should be organic-rich, got {}", near_spring.organic);
     }
 
