@@ -380,36 +380,29 @@ fn draw_3d_panel(
     ]));
     panel_lines.push(Line::from(""));
 
-    // Camera info
-    panel_lines.push(badge("CAMERA"));
-    panel_lines.push(Line::from(""));
-    panel_lines.push(Line::from(vec![
-        Span::styled(" focus ", label),
-        Span::styled(
-            format!("({:.0}, {:.0}, {:.0})", camera.focus.x, camera.focus.y, camera.focus.z),
-            value_style,
-        ),
-    ]));
-    panel_lines.push(Line::from(vec![
-        Span::styled(" yaw   ", label),
-        Span::styled(format!("{:.0}°", camera.yaw.to_degrees()), value_style),
-    ]));
-    panel_lines.push(Line::from(vec![
-        Span::styled(" pitch ", label),
-        Span::styled(format!("{:.0}°", camera.pitch.to_degrees()), value_style),
-    ]));
-    panel_lines.push(Line::from(vec![
-        Span::styled(" zoom  ", label),
-        Span::styled(format!("{:.2}", camera.ortho_scale), value_style),
-    ]));
-    panel_lines.push(Line::from(""));
-
-    // Focus voxel inspect
+    // Focus voxel inspect (camera info folded in)
     let fx = camera.focus.x as usize;
     let fy = camera.focus.y as usize;
     let fz = camera.focus.z as usize;
     panel_lines.push(badge("INSPECT (I)"));
     if app.show_inspect {
+        // Camera details
+        panel_lines.push(Line::from(""));
+        panel_lines.push(Line::from(vec![
+            Span::styled(" focus ", label),
+            Span::styled(
+                format!("({:.0}, {:.0}, {:.0})", camera.focus.x, camera.focus.y, camera.focus.z),
+                value_style,
+            ),
+        ]));
+        panel_lines.push(Line::from(vec![
+            Span::styled(" cam   ", label),
+            Span::styled(
+                format!("{:.0}° {:.0}° z{:.2}", camera.yaw.to_degrees(), camera.pitch.to_degrees(), camera.ortho_scale),
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]));
+        panel_lines.push(Line::from(""));
         panel_lines.push(Line::from(""));
         if let Some(voxel) = grid.get(fx, fy, fz) {
             let depth_label = if fz > GROUND_LEVEL {
