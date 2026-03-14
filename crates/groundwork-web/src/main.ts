@@ -2,17 +2,20 @@
  * Groundwork Web — main entry point.
  *
  * Initializes the WASM simulation (or mock data), builds the voxel mesh,
- * sets up Three.js scene with lighting and camera, and runs the render loop.
+ * sets up Three.js scene with lighting and camera, HUD overlay with tool
+ * palette and species picker, raycaster click-to-place, and render loop.
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL } from './bridge';
-import { createMockGrid } from './mesher/greedy';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode } from './bridge';
+import { createMockGrid, CHUNK_SIZE } from './mesher/greedy';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh } from './rendering/terrain';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
+import { Hud } from './ui/hud';
+import { setupControls } from './ui/controls';
 
 // --- Scene setup ---
 
@@ -67,13 +70,81 @@ for (const chunk of updatedChunks) {
 
 const postProcessing = createPostProcessing(renderer, scene, orbit.camera);
 
+// --- HUD & Controls ---
+
+const hud = new Hud();
+
+/** Apply a tool to the mock grid and re-mesh affected chunks */
+function applyToolToMockGrid(toolCode: number, x: number, y: number, z: number): void {
+  const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+  if (idx < 0 || idx >= grid.length) return;
+
+  switch (toolCode) {
+    case ToolCode.Shovel:
+      grid[idx] = Material.Air;
+      grid[idx + 1] = 0; // water
+      grid[idx + 2] = 0; // light
+      grid[idx + 3] = 0; // nutrients
+      break;
+    case ToolCode.Seed:
+      grid[idx] = Material.Seed;
+      break;
+    case ToolCode.Water:
+      grid[idx] = Material.Water;
+      grid[idx + 1] = 255;
+      break;
+    case ToolCode.Soil:
+      grid[idx] = Material.Soil;
+      break;
+    case ToolCode.Stone:
+      grid[idx] = Material.Stone;
+      break;
+  }
+}
+
+/** Re-mesh chunks affected by a voxel change at (x, y, z) */
+function remeshAt(x: number, y: number, z: number): void {
+  chunkManager.detectChanges(grid);
+  const rebuilt = chunkManager.rebuildDirty(grid);
+  for (const chunk of rebuilt) {
+    const name = `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
+    // Remove old mesh
+    const old = chunkMeshes.get(name);
+    if (old) {
+      terrainGroup.remove(old);
+      old.geometry.dispose();
+      chunkMeshes.delete(name);
+    }
+    // Add new mesh
+    const mesh = buildChunkMesh(chunk);
+    if (mesh) {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      terrainGroup.add(mesh);
+      chunkMeshes.set(mesh.name, mesh);
+    }
+  }
+}
+
+setupControls({
+  hud,
+  camera: orbit.camera,
+  terrainGroup,
+  canvas: renderer.domElement,
+  onToolPlaced: (hit) => {
+    // In mock mode, apply directly to the grid
+    applyToolToMockGrid(hud.state.activeTool, hit.x, hit.y, hit.z);
+    remeshAt(hit.x, hit.y, hit.z);
+  },
+});
+
 // --- Sim state ---
 
 let autoTick = false;
 let tickAccumulator = 0;
 const TICK_INTERVAL_MS = 200;
 
-// --- Input ---
+// --- Camera orbit input ---
 
 let isDragging = false;
 let lastMouseX = 0;
@@ -106,6 +177,7 @@ document.addEventListener('keydown', (e) => {
   switch (e.key) {
     case ' ':
       autoTick = !autoTick;
+      hud.setAutoTick(autoTick);
       break;
   }
 });
@@ -154,5 +226,5 @@ console.log(
 console.log(
   `Grid: ${GRID_X}x${GRID_Y}x${GRID_Z} | ` +
   `Chunks: ${chunkMeshes.size} active | ` +
-  `Drag to orbit, scroll to zoom, space to auto-tick`,
+  `1-5: tools, Q/E: species, drag: orbit, scroll: zoom, space: auto-tick`,
 );
