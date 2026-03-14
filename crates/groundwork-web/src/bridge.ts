@@ -56,17 +56,11 @@ export async function initSim(): Promise<boolean> {
   // Dynamic import — the WASM module is built by wasm-pack.
   // Fails gracefully if WASM hasn't been built yet (mock data mode).
   try {
-    const wasmUrl = new URL(/* @vite-ignore */ '../wasm/groundwork_sim.js', import.meta.url);
-    const resp = await fetch(wasmUrl, { method: 'HEAD' }).catch(() => null);
-    if (!resp || !resp.ok) {
-      console.warn('WASM module not found — running in mock data mode');
-      return false;
-    }
-    const wasm = await import(/* @vite-ignore */ wasmUrl.href);
-    await wasm.default();
+    const wasm = await import(/* @vite-ignore */ '../wasm/groundwork_sim.js');
+    const initOutput = await wasm.default();
     wasm.init();
     wasmModule = wasm;
-    wasmMemory = (wasm as any).__wbg_get_memory?.() ?? wasm.memory;
+    wasmMemory = initOutput.memory;
     return true;
   } catch (e) {
     console.warn('WASM init failed — running in mock data mode:', e);

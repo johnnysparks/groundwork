@@ -3,3 +3,5 @@
 /pkg/
 *.wasm
 *.state
+crates/groundwork-web/wasm/
+node_modules/
