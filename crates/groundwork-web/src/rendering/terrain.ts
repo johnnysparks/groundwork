@@ -42,8 +42,12 @@ const FACE_NORMALS: [number, number, number][] = [
 
 /**
  * Build a Three.js mesh for a chunk's greedy-meshed quads.
+ * Accepts optional clipping planes for underground cutaway.
  */
-export function buildChunkMesh(chunk: ChunkMesh): THREE.Mesh | null {
+export function buildChunkMesh(
+  chunk: ChunkMesh,
+  clippingPlanes?: THREE.Plane[],
+): THREE.Mesh | null {
   const { quads } = chunk;
   if (quads.length === 0) return null;
 
@@ -99,7 +103,7 @@ export function buildChunkMesh(chunk: ChunkMesh): THREE.Mesh | null {
 
   const material = new THREE.MeshLambertMaterial({
     vertexColors: true,
-    // Water is semi-transparent
+    clippingPlanes: clippingPlanes ?? [],
   });
 
   const mesh = new THREE.Mesh(geometry, material);
