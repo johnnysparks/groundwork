@@ -12,6 +12,8 @@ import { createMockGrid, CHUNK_SIZE } from './mesher/greedy';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
+import { FoliageRenderer } from './rendering/foliage';
+import { GrowthParticles } from './rendering/particles';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
@@ -90,6 +92,19 @@ if (waterMesh) {
 const sunDir = new THREE.Vector3();
 sunDir.subVectors(lights.sun.target.position, lights.sun.position).negate();
 updateWaterSun(sunDir, lights.sun.intensity);
+
+// --- Foliage (billboard sprites with wind sway) ---
+
+const foliage = new FoliageRenderer();
+scene.add(foliage.group);
+foliage.rebuild(grid);
+
+// --- Growth particles ---
+
+const particles = new GrowthParticles();
+scene.add(particles.points);
+// Initial detection pass (no bursts on first load)
+particles.detectGrowth(grid);
 
 // --- Post-processing ---
 
@@ -249,6 +264,7 @@ function animate(): void {
   requestAnimationFrame(animate);
 
   const dt = clock.getDelta(); // seconds
+  const elapsed = clock.elapsedTime;
 
   // Auto-tick simulation
   if (autoTick) {
@@ -256,6 +272,7 @@ function animate(): void {
     while (tickAccumulator >= TICK_INTERVAL_MS) {
       tickAccumulator -= TICK_INTERVAL_MS;
       // When WASM is connected: tick(1) then re-mesh dirty chunks
+      // and call: foliage.rebuild(grid); particles.detectGrowth(grid);
     }
   }
 
@@ -264,6 +281,12 @@ function animate(): void {
 
   // Update day cycle (sun position, colors, sky gradient)
   dayCycle.update(dt, lights, scene, skyUniforms);
+
+  // Animate foliage wind sway
+  foliage.update(elapsed);
+
+  // Animate growth particles
+  particles.update(dt);
 
   orbit.update(dt);
   postProcessing.composer.render();
@@ -277,7 +300,8 @@ console.log(
 );
 console.log(
   `Grid: ${GRID_X}x${GRID_Y}x${GRID_Z} | ` +
-  `Chunks: ${chunkMeshes.size} active`,
+  `Chunks: ${chunkMeshes.size} active | ` +
+  `Foliage: ${foliage.count} sprites`,
 );
 console.log(
   'Controls: 1-5=tools, WASD/Arrows=pan, Q/E=cutaway, R=reset, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle',

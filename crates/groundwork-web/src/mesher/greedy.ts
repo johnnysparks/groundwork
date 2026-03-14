@@ -35,12 +35,19 @@ export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE); // 8
 export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 4
 
 /**
- * Check if a voxel is solid (not air or water).
- * Air and water voxels don't generate terrain faces.
- * Water is rendered separately with a custom shader.
+ * Check if a voxel is solid (not air, water, or foliage).
+ * Air voxels don't generate faces. Water is rendered separately
+ * with a custom shader. Foliage (Leaf) is rendered as billboard sprites.
  */
 function isSolid(mat: number): boolean {
-  return mat !== Material.Air && mat !== Material.Water;
+  return mat !== Material.Air && mat !== Material.Water && mat !== Material.Leaf;
+}
+
+/**
+ * Check if a material is vegetation that should be rendered as billboards.
+ */
+export function isFoliage(mat: number): boolean {
+  return mat === Material.Leaf;
 }
 
 /**
@@ -367,32 +374,55 @@ export function createMockGrid(): Uint8Array {
     }
   }
 
-  // A tiny tree
-  const tx = 40, ty = 40;
-  for (let h = 0; h < 6; h++) {
-    const z = GROUND_LEVEL + 1 + h;
-    const idx = (tx + ty * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
-    grid[idx] = Material.Trunk;
-  }
-  // Leaves
-  const leafZ = GROUND_LEVEL + 5;
-  for (let dy = -2; dy <= 2; dy++) {
-    for (let dx = -2; dx <= 2; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      for (let dz = 0; dz <= 2; dz++) {
-        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (dist <= 2.5) {
-          const z = leafZ + dz;
-          if (z < GRID_Z) {
-            const idx = ((tx + dx) + (ty + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
-            if (grid[idx] === Material.Air) {
-              grid[idx] = Material.Leaf;
+  // --- Trees and vegetation ---
+
+  // Helper: place a tree with trunk and leaf canopy
+  function placeTree(tx: number, ty: number, trunkHeight: number, canopyRadius: number): void {
+    // Trunk
+    for (let h = 0; h < trunkHeight; h++) {
+      const z = GROUND_LEVEL + 1 + h;
+      if (z >= GRID_Z) break;
+      const idx = (tx + ty * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+      grid[idx] = Material.Trunk;
+    }
+    // Canopy (sphere of leaves at top of trunk)
+    const canopyZ = GROUND_LEVEL + trunkHeight - 1;
+    for (let dz = -1; dz <= canopyRadius; dz++) {
+      for (let dy = -canopyRadius; dy <= canopyRadius; dy++) {
+        for (let dx = -canopyRadius; dx <= canopyRadius; dx++) {
+          if (dx === 0 && dy === 0 && dz <= 0) continue; // don't overwrite trunk
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+          if (dist <= canopyRadius + 0.3) {
+            const z = canopyZ + dz;
+            const x = tx + dx;
+            const y = ty + dy;
+            if (z >= 0 && z < GRID_Z && x >= 0 && x < GRID_X && y >= 0 && y < GRID_Y) {
+              const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+              if (grid[idx] === Material.Air) {
+                grid[idx] = Material.Leaf;
+              }
             }
           }
         }
       }
     }
   }
+
+  // Original tree
+  placeTree(40, 40, 6, 3);
+
+  // More trees for a small grove
+  placeTree(50, 45, 8, 4);    // taller oak-like
+  placeTree(35, 55, 5, 2);    // small tree
+  placeTree(55, 55, 7, 3);    // medium tree
+  placeTree(45, 35, 4, 2);    // short tree
+  placeTree(65, 50, 9, 4);    // tall tree
+  placeTree(70, 65, 6, 3);    // tree near edge
+
+  // A few shrubs (short trunk + small canopy)
+  placeTree(42, 50, 2, 1);
+  placeTree(48, 42, 2, 1);
+  placeTree(58, 48, 2, 1);
 
   return grid;
 }

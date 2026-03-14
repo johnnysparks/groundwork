@@ -1,0 +1,208 @@
+/**
+ * Foliage billboard renderer with wind sway animation.
+ *
+ * Replaces Leaf voxel cubes with billboard sprites that always face the
+ * camera and gently sway in simulated wind. Creates a lush, organic look
+ * instead of blocky cubes.
+ *
+ * Uses InstancedMesh for efficient rendering of many leaf sprites.
+ * Custom ShaderMaterial provides:
+ * - Camera-facing billboard rotation
+ * - Sine-wave wind sway (offset by world position for natural variation)
+ * - Soft circular alpha cutout
+ * - Per-instance color variation for visual richness
+ */
+
+import * as THREE from 'three';
+import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, GROUND_LEVEL } from '../bridge';
+import { isFoliage } from '../mesher/greedy';
+
+/** Maximum number of foliage instances (pre-allocated) */
+const MAX_FOLIAGE = 50_000;
+
+/** Foliage sprite size (slightly larger than a voxel for lush overlap) */
+const SPRITE_SIZE = 1.3;
+
+/** Wind sway vertex shader */
+const FOLIAGE_VERT = /* glsl */ `
+  attribute vec3 instanceColor;
+
+  uniform float uTime;
+  uniform float uWindStrength;
+
+  varying vec3 vColor;
+  varying vec2 vUv;
+
+  void main() {
+    vColor = instanceColor;
+    vUv = uv;
+
+    // Billboard: extract instance position from instance matrix
+    vec4 worldPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+
+    // Wind sway: sine wave offset by world position for natural variation
+    // Height above ground increases sway amplitude
+    float heightFactor = max(0.0, (worldPos.z - ${GROUND_LEVEL.toFixed(1)}) * 0.04);
+    float swayX = sin(uTime * 1.2 + worldPos.x * 0.7 + worldPos.y * 0.3) * uWindStrength * heightFactor;
+    float swayY = cos(uTime * 0.9 + worldPos.y * 0.5 + worldPos.x * 0.4) * uWindStrength * heightFactor * 0.6;
+    float swayZ = sin(uTime * 0.7 + worldPos.x * 0.3 + worldPos.y * 0.6) * uWindStrength * heightFactor * 0.2;
+
+    // Billboard: orient quad to face camera
+    // Keep local vertex position (quad corners), but orient in camera space
+    vec3 cameraRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    vec3 cameraUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+
+    // Scale from instance matrix (uniform scale assumed)
+    float scale = length(instanceMatrix[0].xyz);
+
+    vec3 vertexWorld = worldPos.xyz
+      + cameraRight * position.x * scale
+      + cameraUp * position.y * scale
+      + vec3(swayX, swayY, swayZ);
+
+    gl_Position = projectionMatrix * viewMatrix * vec4(vertexWorld, 1.0);
+  }
+`;
+
+/** Foliage fragment shader with soft circular cutout */
+const FOLIAGE_FRAG = /* glsl */ `
+  varying vec3 vColor;
+  varying vec2 vUv;
+
+  void main() {
+    // Soft circular alpha — creates a leaf-like blob instead of hard square
+    float dist = length(vUv - 0.5) * 2.0;
+    float alpha = 1.0 - smoothstep(0.5, 1.0, dist);
+    if (alpha < 0.05) discard;
+
+    // Slight shading: darker toward edges
+    float shade = 1.0 - dist * 0.2;
+
+    gl_FragColor = vec4(vColor * shade, alpha * 0.92);
+  }
+`;
+
+/** Base leaf colors with warm green variation */
+const LEAF_COLORS = [
+  new THREE.Color(0.30, 0.55, 0.20), // warm green (base)
+  new THREE.Color(0.35, 0.58, 0.22), // slightly lighter
+  new THREE.Color(0.25, 0.50, 0.18), // slightly darker
+  new THREE.Color(0.32, 0.52, 0.25), // yellow-green tint
+  new THREE.Color(0.28, 0.48, 0.22), // deeper green
+];
+
+export class FoliageRenderer {
+  readonly group: THREE.Group;
+
+  private mesh: THREE.InstancedMesh;
+  private material: THREE.ShaderMaterial;
+  private colorAttr: THREE.InstancedBufferAttribute;
+  private instanceCount = 0;
+  private dummy = new THREE.Object3D();
+
+  constructor() {
+    this.group = new THREE.Group();
+    this.group.name = 'foliage';
+
+    // Quad geometry for billboard sprite
+    const geo = new THREE.PlaneGeometry(SPRITE_SIZE, SPRITE_SIZE);
+
+    // Custom shader material with wind sway + billboard
+    this.material = new THREE.ShaderMaterial({
+      vertexShader: FOLIAGE_VERT,
+      fragmentShader: FOLIAGE_FRAG,
+      uniforms: {
+        uTime: { value: 0 },
+        uWindStrength: { value: 0.35 },
+      },
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+
+    // Per-instance colors
+    const colorArray = new Float32Array(MAX_FOLIAGE * 3);
+    this.colorAttr = new THREE.InstancedBufferAttribute(colorArray, 3);
+
+    this.mesh = new THREE.InstancedMesh(geo, this.material, MAX_FOLIAGE);
+    this.mesh.instanceColor = null; // we use custom attribute instead
+    this.mesh.geometry.setAttribute('instanceColor', this.colorAttr);
+    this.mesh.frustumCulled = false; // billboards change size, let them all render
+    this.mesh.count = 0;
+
+    this.group.add(this.mesh);
+  }
+
+  /**
+   * Scan the voxel grid and build foliage instances for all Leaf voxels.
+   * Call after grid changes (tick, tool placement).
+   */
+  rebuild(grid: Uint8Array): void {
+    let count = 0;
+
+    for (let z = 0; z < GRID_Z && count < MAX_FOLIAGE; z++) {
+      for (let y = 0; y < GRID_Y && count < MAX_FOLIAGE; y++) {
+        for (let x = 0; x < GRID_X && count < MAX_FOLIAGE; x++) {
+          const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+          const mat = grid[idx];
+
+          if (!isFoliage(mat)) continue;
+
+          // Position at voxel center
+          this.dummy.position.set(x + 0.5, y + 0.5, z + 0.5);
+
+          // Slight random scale variation based on position hash
+          const hash = (x * 73856093 ^ y * 19349663 ^ z * 83492791) & 0xffff;
+          const scaleVar = 0.85 + (hash & 0xff) / 255.0 * 0.3;
+          this.dummy.scale.setScalar(scaleVar);
+
+          // Random rotation around Z for visual variety (won't matter much with billboard)
+          this.dummy.rotation.set(0, 0, (hash >> 8) / 255.0 * Math.PI);
+          this.dummy.updateMatrix();
+          this.mesh.setMatrixAt(count, this.dummy.matrix);
+
+          // Pick color with slight variation
+          const colorIdx = hash % LEAF_COLORS.length;
+          const baseColor = LEAF_COLORS[colorIdx];
+          // Add subtle per-instance brightness variation
+          const brightness = 0.9 + ((hash >> 4) & 0xf) / 15.0 * 0.2;
+          this.colorAttr.setXYZ(
+            count,
+            baseColor.r * brightness,
+            baseColor.g * brightness,
+            baseColor.b * brightness,
+          );
+
+          count++;
+        }
+      }
+    }
+
+    this.instanceCount = count;
+    this.mesh.count = count;
+    this.mesh.instanceMatrix.needsUpdate = true;
+    this.colorAttr.needsUpdate = true;
+  }
+
+  /**
+   * Update wind animation. Call each frame with elapsed time.
+   */
+  update(elapsedTime: number): void {
+    this.material.uniforms.uTime.value = elapsedTime;
+  }
+
+  /** Set wind strength (0 = still, 1 = gusty) */
+  setWindStrength(strength: number): void {
+    this.material.uniforms.uWindStrength.value = strength;
+  }
+
+  /** Current number of active foliage sprites */
+  get count(): number {
+    return this.instanceCount;
+  }
+
+  dispose(): void {
+    this.mesh.geometry.dispose();
+    this.material.dispose();
+  }
+}
