@@ -12,6 +12,7 @@ import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh } from './rendering/terrain';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
+import { createPostProcessing } from './postprocessing/effects';
 
 // --- Scene setup ---
 
@@ -62,6 +63,10 @@ for (const chunk of updatedChunks) {
   }
 }
 
+// --- Post-processing ---
+
+const postProcessing = createPostProcessing(renderer, scene, orbit.camera);
+
 // --- Sim state ---
 
 let autoTick = false;
@@ -110,6 +115,7 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   orbit.resize(window.innerWidth / window.innerHeight);
+  postProcessing.resize(window.innerWidth, window.innerHeight);
 });
 
 // --- Hide loading screen ---
@@ -136,7 +142,7 @@ function animate(): void {
   }
 
   orbit.update();
-  renderer.render(scene, orbit.camera);
+  postProcessing.composer.render();
 }
 
 animate();
