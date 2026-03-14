@@ -180,14 +180,34 @@ pub fn place_tool(tool: u8, x: usize, y: usize, z: usize) -> i32 {
 }
 
 /// Fill a rectangular region with a tool.
+/// Skips seeds and roots to protect living plants (matching CLI behavior).
 #[wasm_bindgen]
 pub fn fill_tool(tool: u8, x1: usize, y1: usize, z1: usize, x2: usize, y2: usize, z2: usize) {
     let (x_lo, x_hi) = (x1.min(x2), x1.max(x2));
     let (y_lo, y_hi) = (y1.min(y2), y1.max(y2));
     let (z_lo, z_hi) = (z1.min(z2), z1.max(z2));
+
+    // Shovel (tool=0) fill needs explicit protection for seeds/roots.
+    // Non-shovel tools already skip non-Air cells via place_tool.
+    let is_shovel = tool == 0;
+
     for z in z_lo..=z_hi {
         for y in y_lo..=y_hi {
             for x in x_lo..=x_hi {
+                if is_shovel {
+                    // Skip seeds and roots during fill-dig
+                    let should_skip = with_sim(|sim| {
+                        let grid = sim.world.resource::<VoxelGrid>();
+                        if let Some(v) = grid.get(x, y, z) {
+                            matches!(v.material, Material::Seed | Material::Root)
+                        } else {
+                            false
+                        }
+                    });
+                    if should_skip {
+                        continue;
+                    }
+                }
                 place_tool(tool, x, y, z);
             }
         }

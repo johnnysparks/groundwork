@@ -182,7 +182,7 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
                 cell.light_level = light;
                 // Transparent materials attenuate *after* assignment.
                 match cell.material {
-                    Material::Air => {
+                    Material::Air | Material::Seed => {
                         light = light.saturating_sub(att_air);
                     }
                     Material::Water => {
@@ -241,7 +241,7 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
         let has_light = cell_light >= 30;
 
         if has_water && has_light {
-            let mut best_nutrient_cap: u8 = 0;
+            let mut best_nutrient: u8 = 0;
             let mut blocked_by_compaction = false;
             let soil_cells = soil_grid.cells();
 
@@ -250,8 +250,10 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
                     let nidx = $nidx;
                     if cells[nidx].material == Material::Soil {
                         let comp = &soil_cells[nidx];
-                        let nc = comp.nutrient_capacity();
-                        if nc > best_nutrient_cap { best_nutrient_cap = nc; }
+                        // Use actual nutrient_level if available, fall back to capacity
+                        let nl = cells[nidx].nutrient_level;
+                        let effective = if nl > 0 { nl } else { comp.nutrient_capacity() };
+                        if effective > best_nutrient { best_nutrient = effective; }
                         if comp.is_compacted() { blocked_by_compaction = true; }
                     }
                 }};
@@ -265,7 +267,7 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
             if z + 1 < GRID_Z { check_soil!(idx + z_stride); }
 
             if !blocked_by_compaction {
-                let soil_bonus = (best_nutrient_cap as u16 * 5 / 255) as u8;
+                let soil_bonus = (best_nutrient as u16 * 5 / 255) as u8;
                 let growth_rate = 3 + soil_bonus;
                 if let Some(cell) = grid.get_mut(x, y, z) {
                     cell.nutrient_level = cell.nutrient_level.saturating_add(growth_rate);
@@ -1178,16 +1180,17 @@ pub fn seed_dispersal(
 /// Transfer ~4 units per adjacent wet soil per tick. Root's water_level increases.
 /// Visible effect: wet soil near roots dries out over time.
 pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
-    // Single snapshot: (material_u8, water_level) pairs for cache-friendly reads.
-    let snapshot: Vec<(u8, u8)> = grid
+    // Single snapshot: (material_u8, water_level, nutrient_level) tuples for cache-friendly reads.
+    let snapshot: Vec<(u8, u8, u8)> = grid
         .cells()
         .iter()
-        .map(|v| (v.material.as_u8(), v.water_level))
+        .map(|v| (v.material.as_u8(), v.water_level, v.nutrient_level))
         .collect();
 
     let root_u8 = Material::Root.as_u8();
     let soil_u8 = Material::Soil.as_u8();
     let max_transfer = crate::scale::scale_transfer(4);
+    let max_nutrient_transfer: u8 = 2; // nutrients move slower than water
     let z_stride = GRID_X * GRID_Y;
 
     let cells = grid.cells_mut();
@@ -1202,10 +1205,20 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                 macro_rules! absorb {
                     ($nidx:expr) => {{
                         let nidx = $nidx;
-                        if snapshot[nidx].0 == soil_u8 && snapshot[nidx].1 > 0 {
-                            let transfer = snapshot[nidx].1.min(max_transfer);
-                            cells[nidx].water_level = cells[nidx].water_level.saturating_sub(transfer);
-                            cells[idx].water_level = cells[idx].water_level.saturating_add(transfer);
+                        if snapshot[nidx].0 == soil_u8 {
+                            // Water absorption
+                            if snapshot[nidx].1 > 0 {
+                                let transfer = snapshot[nidx].1.min(max_transfer);
+                                cells[nidx].water_level = cells[nidx].water_level.saturating_sub(transfer);
+                                cells[idx].water_level = cells[idx].water_level.saturating_add(transfer);
+                            }
+                            // Nutrient absorption
+                            if snapshot[nidx].2 > 0 {
+                                let transfer = snapshot[nidx].2.min(max_nutrient_transfer);
+                                cells[nidx].nutrient_level = cells[nidx].nutrient_level.saturating_sub(transfer);
+                                // Root stores absorbed nutrients (visible in inspect)
+                                cells[idx].nutrient_level = cells[idx].nutrient_level.saturating_add(transfer);
+                            }
                         }
                     }};
                 }
@@ -1226,38 +1239,52 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
 /// - Bacteria grow in moist, organic-rich soil; die in dry soil.
 /// - pH drifts acidic with organic decomposition; rock buffers toward neutral.
 /// - Rock fragments slowly weather into clay when wet.
-pub fn soil_evolution(grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGrid>, tick: Res<Tick>) {
+pub fn soil_evolution(mut grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGrid>, tick: Res<Tick>) {
     // Soil chemistry changes slowly — only run every 10 ticks.
     // Organic/bacteria/pH increments are scaled 10× to compensate.
     if tick.0 % 10 != 0 {
         return;
     }
 
-    let grid_cells = grid.cells();
+    // Snapshot grid state so we can read neighbors while writing nutrient_level.
+    let snapshot: Vec<(u8, u8)> = grid
+        .cells()
+        .iter()
+        .map(|v| (v.material.as_u8(), v.water_level))
+        .collect();
+
     let soil_cells = soil_grid.cells_mut();
+
+    let root_u8 = Material::Root.as_u8();
+    let soil_u8 = Material::Soil.as_u8();
+    let z_stride = GRID_X * GRID_Y;
+
+    // First pass: evolve soil composition and compute nutrient generation amounts.
+    // We collect nutrient deltas because we need soil_cells borrow to end before
+    // we can mutate grid cells.
+    let mut nutrient_deltas: Vec<(usize, u8)> = Vec::new();
 
     for z in 0..GRID_Z {
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
                 let idx = VoxelGrid::index(x, y, z);
-                if grid_cells[idx].material != Material::Soil {
+                if snapshot[idx].0 != soil_u8 {
                     continue;
                 }
 
-                let water_level = grid_cells[idx].water_level;
+                let water_level = snapshot[idx].1;
                 let comp = &mut soil_cells[idx];
 
                 // --- Organic matter ---
                 // Increases when adjacent to roots (+10/run per adjacent root, compensating for 10-tick skip)
                 let mut adjacent_roots = 0u8;
                 // Inline neighbor checks to avoid isize conversion overhead
-                if x > 0 && grid_cells[idx - 1].material == Material::Root { adjacent_roots += 1; }
-                if x + 1 < GRID_X && grid_cells[idx + 1].material == Material::Root { adjacent_roots += 1; }
-                if y > 0 && grid_cells[idx - GRID_X].material == Material::Root { adjacent_roots += 1; }
-                if y + 1 < GRID_Y && grid_cells[idx + GRID_X].material == Material::Root { adjacent_roots += 1; }
-                let z_stride = GRID_X * GRID_Y;
-                if z > 0 && grid_cells[idx - z_stride].material == Material::Root { adjacent_roots += 1; }
-                if z + 1 < GRID_Z && grid_cells[idx + z_stride].material == Material::Root { adjacent_roots += 1; }
+                if x > 0 && snapshot[idx - 1].0 == root_u8 { adjacent_roots += 1; }
+                if x + 1 < GRID_X && snapshot[idx + 1].0 == root_u8 { adjacent_roots += 1; }
+                if y > 0 && snapshot[idx - GRID_X].0 == root_u8 { adjacent_roots += 1; }
+                if y + 1 < GRID_Y && snapshot[idx + GRID_X].0 == root_u8 { adjacent_roots += 1; }
+                if z > 0 && snapshot[idx - z_stride].0 == root_u8 { adjacent_roots += 1; }
+                if z + 1 < GRID_Z && snapshot[idx + z_stride].0 == root_u8 { adjacent_roots += 1; }
 
                 if adjacent_roots > 0 {
                     // 10× because we run every 10 ticks
@@ -1300,7 +1327,27 @@ pub fn soil_evolution(grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGrid>, 
                         comp.clay = comp.clay.saturating_add(1);
                     }
                 }
+
+                // --- Nutrient generation ---
+                // Bacteria decompose organic matter into plant-available nutrients.
+                // Rate scales with bacteria activity and organic content.
+                // Nutrients cap at nutrient_capacity (rich soil holds more).
+                if comp.bacteria > 20 && comp.organic > 20 {
+                    let generation = ((comp.bacteria as u16 * comp.organic as u16) / 6400) as u8;
+                    let gen = generation.max(1); // at least 1 per 10-tick cycle
+                    let cap = comp.nutrient_capacity();
+                    nutrient_deltas.push((idx, gen.min(cap)));
+                }
             }
+        }
+    }
+
+    // Second pass: apply nutrient generation to grid voxels.
+    let grid_cells = grid.cells_mut();
+    for (idx, gen) in nutrient_deltas {
+        let cap = soil_cells[idx].nutrient_capacity();
+        if grid_cells[idx].nutrient_level < cap {
+            grid_cells[idx].nutrient_level = grid_cells[idx].nutrient_level.saturating_add(gen).min(cap);
         }
     }
 }
@@ -2643,6 +2690,123 @@ mod tests {
             grid.get(tx, ty, leaf_z).unwrap().material,
             Material::Leaf,
             "Sapling without skeleton should still use template rasterization"
+        );
+    }
+
+    #[test]
+    fn seed_transparent_to_light() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        // Place seed high above ground so below is also air (not soil)
+        let x = 40;
+        let y = 40;
+        let seed_z = GROUND_LEVEL + 5;
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(x, y, seed_z) {
+                cell.material = Material::Seed;
+            }
+        }
+
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        let above = grid.get(x, y, seed_z + 1).unwrap().light_level;
+        let at_seed = grid.get(x, y, seed_z).unwrap().light_level;
+        // Check air cell below the seed (not soil)
+        let below = grid.get(x, y, seed_z - 1).unwrap().light_level;
+
+        // Seed should receive nearly the same light as air above it
+        // (both attenuate by att_air after assignment)
+        assert!(
+            at_seed >= above.saturating_sub(5),
+            "Seed should be transparent to light: above={above}, at_seed={at_seed}"
+        );
+        // Air below seed should get nearly the same as the seed
+        // (seed attenuates like air — minimal reduction)
+        assert!(
+            below >= at_seed.saturating_sub(5),
+            "Light below seed should continue: at_seed={at_seed}, below={below}"
+        );
+    }
+
+    #[test]
+    fn soil_generates_nutrients_from_bacteria() {
+        use crate::soil::SoilGrid;
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let x = 20;
+        let y = 20;
+        let z = GROUND_LEVEL - 1;
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Ensure the cell is soil with water
+            if let Some(cell) = grid.get_mut(x, y, z) {
+                cell.material = Material::Soil;
+                cell.water_level = 100;
+                cell.nutrient_level = 0;
+            }
+        }
+        {
+            let mut soil = world.resource_mut::<SoilGrid>();
+            let comp = soil.get_mut(x, y, z).unwrap();
+            comp.organic = 150;
+            comp.bacteria = 100;
+        }
+
+        // Run enough ticks for soil_evolution to fire (every 10 ticks)
+        for _ in 0..30 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let nutrient = grid.get(x, y, z).unwrap().nutrient_level;
+        assert!(
+            nutrient > 0,
+            "Soil with bacteria + organic matter should generate nutrients, got {nutrient}"
+        );
+    }
+
+    #[test]
+    fn root_absorbs_nutrients_from_soil() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let root_x = 25;
+        let root_y = 25;
+        let z = GROUND_LEVEL - 1;
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place a root
+            if let Some(cell) = grid.get_mut(root_x, root_y, z) {
+                cell.material = Material::Root;
+                cell.water_level = 0;
+                cell.nutrient_level = 0;
+            }
+            // Place soil with nutrients adjacent to root
+            if let Some(cell) = grid.get_mut(root_x + 1, root_y, z) {
+                cell.material = Material::Soil;
+                cell.water_level = 100;
+                cell.nutrient_level = 50;
+            }
+        }
+
+        crate::tick(&mut world, &mut schedule);
+
+        let grid = world.resource::<VoxelGrid>();
+        let root_nutrients = grid.get(root_x, root_y, z).unwrap().nutrient_level;
+        let soil_nutrients = grid.get(root_x + 1, root_y, z).unwrap().nutrient_level;
+
+        assert!(
+            root_nutrients > 0,
+            "Root should absorb nutrients from adjacent soil, got {root_nutrients}"
+        );
+        assert!(
+            soil_nutrients < 50,
+            "Soil nutrients should decrease after root absorption, got {soil_nutrients}"
         );
     }
 }
