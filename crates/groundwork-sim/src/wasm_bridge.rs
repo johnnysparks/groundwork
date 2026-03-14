@@ -10,8 +10,9 @@
 
 use wasm_bindgen::prelude::*;
 
-use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
+use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use crate::soil::SoilGrid;
+use crate::tree::{SeedSpeciesMap, SpeciesTable};
 use crate::voxel::Material;
 use crate::{FocusState, Tick};
 
@@ -172,6 +173,14 @@ pub fn place_tool(tool: u8, x: usize, y: usize, z: usize) -> i32 {
 
         if let Some(voxel) = grid.get_mut(x, y, landing_z) {
             voxel.set_material(mat);
+
+            // Register seed species so the engine grows the right plant
+            if mat == Material::Seed {
+                let species_idx = SELECTED_SPECIES.with(|cell| *cell.borrow());
+                let mut seed_map = sim.world.resource_mut::<SeedSpeciesMap>();
+                seed_map.map.insert((x, y, landing_z), species_idx);
+            }
+
             landing_z as i32
         } else {
             -1
@@ -239,4 +248,109 @@ pub fn set_focus(x: usize, y: usize, z: usize) {
         focus.y = y;
         focus.z = z;
     });
+}
+
+// --- Grid constants ---
+
+/// Ground level Z coordinate (surface height baseline).
+#[wasm_bindgen]
+pub fn ground_level() -> usize {
+    GROUND_LEVEL
+}
+
+// --- Material metadata ---
+
+/// Total number of material types.
+#[wasm_bindgen]
+pub fn material_count() -> u8 {
+    Material::COUNT
+}
+
+/// Name of material at the given index, or empty string if invalid.
+#[wasm_bindgen]
+pub fn material_name(idx: u8) -> String {
+    Material::from_u8(idx).map_or(String::new(), |m| m.name().to_string())
+}
+
+/// Whether a material generates solid mesh geometry.
+#[wasm_bindgen]
+pub fn material_is_solid(idx: u8) -> bool {
+    Material::from_u8(idx).map_or(false, |m| m.is_solid())
+}
+
+/// Whether a material is foliage (rendered as billboard sprites).
+#[wasm_bindgen]
+pub fn material_is_foliage(idx: u8) -> bool {
+    Material::from_u8(idx).map_or(false, |m| m.is_foliage())
+}
+
+/// Whether a material is a seed (rendered as small sprites).
+#[wasm_bindgen]
+pub fn material_is_seed(idx: u8) -> bool {
+    Material::from_u8(idx).map_or(false, |m| m.is_seed())
+}
+
+// --- Tool metadata ---
+
+/// Number of available tools.
+#[wasm_bindgen]
+pub fn tool_count() -> u8 {
+    5
+}
+
+/// Name of tool at the given index.
+#[wasm_bindgen]
+pub fn tool_name(idx: u8) -> String {
+    match idx {
+        0 => "Shovel".to_string(),
+        1 => "Seed".to_string(),
+        2 => "Water".to_string(),
+        3 => "Soil".to_string(),
+        4 => "Stone".to_string(),
+        _ => String::new(),
+    }
+}
+
+// --- Species metadata ---
+
+/// Number of species in the species table.
+#[wasm_bindgen]
+pub fn species_count() -> usize {
+    with_sim(|sim| sim.world.resource::<SpeciesTable>().species.len())
+}
+
+/// Name of species at the given index.
+#[wasm_bindgen]
+pub fn species_name(idx: usize) -> String {
+    with_sim(|sim| {
+        let table = sim.world.resource::<SpeciesTable>();
+        table.species.get(idx).map_or(String::new(), |s| s.name.to_string())
+    })
+}
+
+/// Plant type name of species at the given index (Tree, Shrub, Ground, Flower).
+#[wasm_bindgen]
+pub fn species_plant_type(idx: usize) -> String {
+    with_sim(|sim| {
+        let table = sim.world.resource::<SpeciesTable>();
+        table.species.get(idx).map_or(String::new(), |s| s.plant_type.name().to_string())
+    })
+}
+
+// --- Species selection for seed placement ---
+
+thread_local! {
+    static SELECTED_SPECIES: RefCell<usize> = RefCell::new(0);
+}
+
+/// Set the species index used when placing seeds.
+#[wasm_bindgen]
+pub fn set_selected_species(idx: usize) {
+    SELECTED_SPECIES.with(|cell| *cell.borrow_mut() = idx);
+}
+
+/// Get the currently selected species index.
+#[wasm_bindgen]
+pub fn get_selected_species() -> usize {
+    SELECTED_SPECIES.with(|cell| *cell.borrow())
 }

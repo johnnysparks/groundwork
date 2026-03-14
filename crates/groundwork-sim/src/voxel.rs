@@ -65,6 +65,25 @@ impl Material {
             _ => None,
         }
     }
+
+    /// Whether this material generates solid mesh geometry.
+    /// Air, Water, Leaf, and Seed are non-solid (rendered separately or not at all).
+    pub fn is_solid(self) -> bool {
+        !matches!(self, Self::Air | Self::Water | Self::Leaf | Self::Seed)
+    }
+
+    /// Whether this material is foliage rendered as billboard sprites.
+    pub fn is_foliage(self) -> bool {
+        matches!(self, Self::Leaf)
+    }
+
+    /// Whether this material is a seed (rendered as small sprites).
+    pub fn is_seed(self) -> bool {
+        matches!(self, Self::Seed)
+    }
+
+    /// Total number of material variants.
+    pub const COUNT: u8 = 10;
 }
 
 #[cfg(test)]

@@ -6,8 +6,8 @@
  */
 
 import * as THREE from 'three';
-import { ToolCode, type ToolCodeType, placeTool, isInitialized } from '../bridge';
-import { Hud, TOOLS } from './hud';
+import { ToolCode, type ToolCodeType, TOOLS, placeTool, isInitialized } from '../bridge';
+import { Hud } from './hud';
 import { raycastVoxel, type VoxelHit } from './raycaster';
 import type { QuestLog } from './quests';
 
