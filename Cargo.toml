@@ -4,6 +4,7 @@ members = [
     "crates/groundwork-sim",
     "crates/groundwork-tui",
     "crates/groundwork-profiler",
+    "crates/groundwork-player",
 ]
 
 [workspace.package]

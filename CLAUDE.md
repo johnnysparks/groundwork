@@ -58,6 +58,9 @@ npm run build                          # Production build → dist/
 # --- WASM bridge (connects sim to web) ---
 npm run wasm                           # wasm-pack build (requires wasm-pack installed)
 
+# --- Player agent (automated playtesting) ---
+cargo test -p groundwork-player       # Run all scenarios (deterministic)
+
 # --- TUI (debug/dev tool) ---
 cargo run -p groundwork-tui            # Terminal UI for debugging
 cargo run -p groundwork-tui -- new     # Create fresh world + launch TUI
@@ -112,6 +115,20 @@ crates/
       camera.rs           Orbit camera for 3D projected view
       glyph.rs            Character/sprite glyph system
       input.rs            Keyboard controls
+
+  groundwork-player/      Rust library — embodied player agent framework
+    src/
+      lib.rs              Public API
+      action.rs           Player actions (place, tick, inspect, etc.)
+      scenario.rs         Scenario definition + fluent builder
+      runner.rs           Deterministic scenario executor
+      trace.rs            Run trace recording (action→observation→oracle triples)
+      observer.rs         Actor-view observations (what the player sees)
+      oracle.rs           Oracle-view state snapshots (privileged ground truth)
+      evaluator.rs        Evaluator trait + built-in evaluators
+      scenarios/          Built-in scenario definitions
+    tests/
+      scenarios.rs        Integration tests: all scenarios pass deterministically
 
   groundwork-profiler/    Rust binary — simulation performance profiling
 ```
