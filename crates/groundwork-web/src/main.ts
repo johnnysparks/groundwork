@@ -17,8 +17,9 @@ import { GrowthParticles } from './rendering/particles';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
-import { Hud } from './ui/hud';
+import { Hud, SPECIES } from './ui/hud';
 import { setupControls } from './ui/controls';
+import { QuestLog } from './ui/quests';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 
@@ -124,6 +125,7 @@ async function main() {
   // --- HUD & Controls ---
 
   const hud = new Hud();
+  const questLog = new QuestLog();
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
   function applyToolToMockGrid(toolCode: number, x: number, y: number, z: number): void {
@@ -181,6 +183,7 @@ async function main() {
 
   setupControls({
     hud,
+    questLog,
     camera: orbit.camera,
     terrainGroup,
     canvas: renderer.domElement,
@@ -192,6 +195,13 @@ async function main() {
         // Mock mode: apply directly to the grid
         applyToolToMockGrid(hud.state.activeTool, hit.x, hit.y, hit.z);
       }
+      // Record tool use for quest tracking
+      const speciesIdx = SPECIES.findIndex(s => s.id === hud.state.activeSpecies);
+      questLog.recordToolUse(hud.state.activeTool, speciesIdx);
+      questLog.recordClick(hit.x, hit.y, hit.z);
+      // Check quests against updated grid
+      const freshGrid = isInitialized() ? getGridView() : grid;
+      questLog.check(freshGrid);
       remeshDirty();
     },
   });
@@ -221,6 +231,7 @@ async function main() {
     orbit.rotate(-dx * 0.005, -dy * 0.005);
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
+    if (Math.abs(dx) + Math.abs(dy) > 3) questLog.recordOrbit();
   });
 
   renderer.domElement.addEventListener('mouseup', () => { isDragging = false; });
@@ -236,11 +247,17 @@ async function main() {
     // Pass to camera for continuous movement keys
     orbit.keyDown(e.key);
 
+    // Track pan for quests (WASD / arrows)
+    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
+      questLog.recordPan();
+    }
+
     switch (e.key.toLowerCase()) {
       case ' ':
         e.preventDefault();
         autoTick = !autoTick;
         hud.setAutoTick(autoTick);
+        questLog.recordToggleAutoTick();
         console.log(`Auto-tick: ${autoTick ? 'ON' : 'OFF'}`);
         break;
       case 'r':
@@ -250,9 +267,18 @@ async function main() {
         // Manual single tick
         if (isInitialized()) {
           simTick(1);
+          questLog.recordStepManually();
+          const freshGrid = getGridView();
+          questLog.check(freshGrid);
           remeshDirty();
           console.log('Ticked 1');
         }
+        break;
+      case 'q':
+      case 'e':
+        // Q/E are used for both cutaway depth and species cycling.
+        // Record depth change for quests (orbit camera handles the actual movement).
+        questLog.recordDepthChange();
         break;
       case '[':
         dayCycle.step(-0.04);
@@ -296,12 +322,21 @@ async function main() {
     // Auto-tick simulation
     if (autoTick && isInitialized()) {
       tickAccumulator += dt * 1000;
+      let ticked = false;
       while (tickAccumulator >= TICK_INTERVAL_MS) {
         tickAccumulator -= TICK_INTERVAL_MS;
         simTick(1);
+        ticked = true;
+      }
+      if (ticked) {
+        const freshGrid = getGridView();
+        questLog.check(freshGrid);
       }
       remeshDirty();
     }
+
+    // Fade quest notifications
+    questLog.tickNotification();
 
     // Animate water ripples
     updateWaterTime(elapsed);
