@@ -913,6 +913,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "groundwork-player"
+version = "0.1.0"
+dependencies = [
+ "bevy_ecs",
+ "groundwork-sim",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "groundwork-profiler"
 version = "0.1.0"
 dependencies = [
