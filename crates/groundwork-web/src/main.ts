@@ -17,6 +17,8 @@ import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
 import { Hud } from './ui/hud';
 import { setupControls } from './ui/controls';
+import { DayCycle } from './lighting/daycycle';
+import { createSkyGradient } from './lighting/sky';
 
 // --- Scene setup ---
 
@@ -41,6 +43,12 @@ const orbit = new OrbitCamera(window.innerWidth / window.innerHeight);
 
 // Lighting
 const lights = createLighting(scene);
+
+// Sky gradient dome (replaces flat background color)
+const skyUniforms = createSkyGradient(scene);
+
+// Day cycle controller
+const dayCycle = new DayCycle();
 
 // --- Voxel mesh ---
 
@@ -204,6 +212,15 @@ document.addEventListener('keydown', (e) => {
     case 'r':
       orbit.reset();
       break;
+    case '[':
+      dayCycle.step(-0.04);
+      break;
+    case ']':
+      dayCycle.step(0.04);
+      break;
+    case '\\':
+      dayCycle.toggleAuto();
+      break;
   }
 });
 
@@ -245,6 +262,9 @@ function animate(): void {
   // Animate water ripples
   updateWaterTime(clock.elapsedTime);
 
+  // Update day cycle (sun position, colors, sky gradient)
+  dayCycle.update(dt, lights, scene, skyUniforms);
+
   orbit.update(dt);
   postProcessing.composer.render();
 }
@@ -260,5 +280,5 @@ console.log(
   `Chunks: ${chunkMeshes.size} active`,
 );
 console.log(
-  'Controls: 1-5=tools, WASD/Arrows=pan, Q/E=cutaway, R=reset, drag=orbit, scroll=zoom, space=auto-tick',
+  'Controls: 1-5=tools, WASD/Arrows=pan, Q/E=cutaway, R=reset, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle',
 );
