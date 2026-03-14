@@ -3,17 +3,21 @@
  *
  * The sim exposes raw pointers into its linear memory. We wrap them as
  * typed arrays for zero-copy access from the renderer.
+ *
+ * Grid dimensions, material constants, tool codes, and species metadata
+ * are all populated from the WASM engine at init time. TypeScript never
+ * defines these values — the Rust engine is the single source of truth.
  */
 
 // These will be populated after WASM init
 let wasmModule: any = null;
 let wasmMemory: WebAssembly.Memory | null = null;
 
-/** Grid dimensions (constants from Rust — glen scale: 4m×4m×5m at 5cm/voxel) */
-export const GRID_X = 80;
-export const GRID_Y = 80;
-export const GRID_Z = 100;
-export const GROUND_LEVEL = 40;
+/** Grid dimensions — populated from WASM engine at init, fallback for mock mode */
+export let GRID_X = 80;
+export let GRID_Y = 80;
+export let GRID_Z = 100;
+export let GROUND_LEVEL = 40;
 
 /** Voxel byte layout: [material, water_level, light_level, nutrient_level] */
 export const VOXEL_BYTES = 4;
@@ -21,8 +25,11 @@ export const VOXEL_BYTES = 4;
 /** Soil byte layout: [sand, clay, organic, rock, ph, bacteria] */
 export const SOIL_BYTES = 6;
 
-/** Material enum matching Rust's Material repr(u8) */
-export const Material = {
+/**
+ * Material enum — populated from WASM engine at init.
+ * Fallback values match the Rust Material repr(u8) for mock mode.
+ */
+export const Material: Record<string, number> = {
   Air: 0,
   Soil: 1,
   Stone: 2,
@@ -33,20 +40,173 @@ export const Material = {
   Branch: 7,
   Leaf: 8,
   DeadWood: 9,
-} as const;
+};
 
-export type MaterialType = (typeof Material)[keyof typeof Material];
+export type MaterialType = number;
 
-/** Tool codes matching the WASM bridge */
-export const ToolCode = {
+/**
+ * Tool codes — populated from WASM engine at init.
+ * Fallback values match the Rust wasm_bridge tool codes for mock mode.
+ */
+export const ToolCode: Record<string, number> = {
   Shovel: 0,
   Seed: 1,
   Water: 2,
   Soil: 3,
   Stone: 4,
-} as const;
+};
 
-export type ToolCodeType = (typeof ToolCode)[keyof typeof ToolCode];
+export type ToolCodeType = number;
+
+/** Material classification — delegates to engine when available */
+const solidCache = new Map<number, boolean>();
+const foliageCache = new Map<number, boolean>();
+const seedCache = new Map<number, boolean>();
+
+/** Whether a material generates solid mesh geometry (not air, water, or leaf). */
+export function materialIsSolid(mat: number): boolean {
+  const cached = solidCache.get(mat);
+  if (cached !== undefined) return cached;
+  let result: boolean;
+  if (wasmModule?.material_is_solid) {
+    result = wasmModule.material_is_solid(mat);
+  } else {
+    // Fallback for mock mode
+    result = mat !== Material.Air && mat !== Material.Water && mat !== Material.Leaf;
+  }
+  solidCache.set(mat, result);
+  return result;
+}
+
+/** Whether a material is foliage rendered as billboard sprites. */
+export function materialIsFoliage(mat: number): boolean {
+  const cached = foliageCache.get(mat);
+  if (cached !== undefined) return cached;
+  let result: boolean;
+  if (wasmModule?.material_is_foliage) {
+    result = wasmModule.material_is_foliage(mat);
+  } else {
+    result = mat === Material.Leaf;
+  }
+  foliageCache.set(mat, result);
+  return result;
+}
+
+/** Whether a material is a seed (rendered as small sprites). */
+export function materialIsSeed(mat: number): boolean {
+  const cached = seedCache.get(mat);
+  if (cached !== undefined) return cached;
+  let result: boolean;
+  if (wasmModule?.material_is_seed) {
+    result = wasmModule.material_is_seed(mat);
+  } else {
+    result = mat === Material.Seed;
+  }
+  seedCache.set(mat, result);
+  return result;
+}
+
+/** Species definition from the engine */
+export interface SpeciesDef {
+  index: number;
+  name: string;
+  type: string;
+}
+
+/** Species list — populated from WASM engine at init */
+export let SPECIES: SpeciesDef[] = [];
+
+/** Tool definition from the engine */
+export interface ToolDef {
+  code: number;
+  name: string;
+}
+
+/** Tool list — populated from WASM engine at init */
+export let TOOLS: ToolDef[] = [];
+
+/**
+ * Populate constants from the WASM engine.
+ * Called once after WASM init succeeds.
+ */
+function populateFromEngine(): void {
+  // Grid dimensions
+  GRID_X = wasmModule.grid_width();
+  GRID_Y = wasmModule.grid_height();
+  GRID_Z = wasmModule.grid_depth();
+  GROUND_LEVEL = wasmModule.ground_level();
+
+  // Material enum — rebuild from engine
+  const matCount = wasmModule.material_count();
+  for (let i = 0; i < matCount; i++) {
+    const name = wasmModule.material_name(i);
+    if (name) {
+      // Convert "deadwood" → "DeadWood", "air" → "Air", etc.
+      const key = name.charAt(0).toUpperCase() + name.slice(1);
+      Material[key] = i;
+    }
+  }
+
+  // Pre-populate classification caches
+  solidCache.clear();
+  foliageCache.clear();
+  seedCache.clear();
+  for (let i = 0; i < matCount; i++) {
+    solidCache.set(i, wasmModule.material_is_solid(i));
+    foliageCache.set(i, wasmModule.material_is_foliage(i));
+    seedCache.set(i, wasmModule.material_is_seed(i));
+  }
+
+  // Tool list
+  const toolCount = wasmModule.tool_count();
+  TOOLS = [];
+  for (let i = 0; i < toolCount; i++) {
+    const name = wasmModule.tool_name(i);
+    if (name) {
+      TOOLS.push({ code: i, name });
+      ToolCode[name] = i;
+    }
+  }
+
+  // Species list
+  const speciesCount = wasmModule.species_count();
+  SPECIES = [];
+  for (let i = 0; i < speciesCount; i++) {
+    const name = wasmModule.species_name(i);
+    const plantType = wasmModule.species_plant_type(i);
+    if (name) {
+      SPECIES.push({ index: i, name, type: plantType });
+    }
+  }
+}
+
+/**
+ * Populate fallback constants for mock mode (when WASM fails to load).
+ */
+function populateFallbacks(): void {
+  TOOLS = [
+    { code: 0, name: 'Shovel' },
+    { code: 1, name: 'Seed' },
+    { code: 2, name: 'Water' },
+    { code: 3, name: 'Soil' },
+    { code: 4, name: 'Stone' },
+  ];
+
+  SPECIES = [
+    { index: 0, name: 'Oak', type: 'Tree' },
+    { index: 1, name: 'Birch', type: 'Tree' },
+    { index: 2, name: 'Willow', type: 'Tree' },
+    { index: 3, name: 'Pine', type: 'Tree' },
+    { index: 4, name: 'Fern', type: 'Shrub' },
+    { index: 5, name: 'Berry Bush', type: 'Shrub' },
+    { index: 6, name: 'Holly', type: 'Shrub' },
+    { index: 7, name: 'Wildflower', type: 'Flower' },
+    { index: 8, name: 'Daisy', type: 'Flower' },
+    { index: 9, name: 'Moss', type: 'Ground' },
+    { index: 10, name: 'Grass', type: 'Ground' },
+    { index: 11, name: 'Clover', type: 'Ground' },
+  ];
+}
 
 /**
  * Initialize the WASM simulation module.
@@ -60,6 +220,7 @@ export async function initSim(): Promise<boolean> {
     const resp = await fetch(wasmUrl, { method: 'HEAD' }).catch(() => null);
     if (!resp || !resp.ok) {
       console.warn('WASM module not found — running in mock data mode');
+      populateFallbacks();
       return false;
     }
     const wasm = await import(/* @vite-ignore */ wasmUrl.href);
@@ -69,9 +230,11 @@ export async function initSim(): Promise<boolean> {
     wasmModule = wasm;
     // Memory lives on the InitOutput (instance.exports), not the ES module
     wasmMemory = initOutput.memory;
+    populateFromEngine();
     return true;
   } catch (e) {
     console.warn('WASM init failed — running in mock data mode:', e);
+    populateFallbacks();
     return false;
   }
 }
@@ -119,6 +282,11 @@ export function getWaterLevel(grid: Uint8Array, x: number, y: number, z: number)
 /** Place a tool at coordinates. Returns landing z or -1 on no effect. */
 export function placeTool(tool: ToolCodeType, x: number, y: number, z: number): number {
   return wasmModule.place_tool(tool, x, y, z);
+}
+
+/** Set the selected species index for seed placement. */
+export function setSelectedSpecies(idx: number): void {
+  wasmModule.set_selected_species(idx);
 }
 
 /** Fill a rectangular region with a tool */

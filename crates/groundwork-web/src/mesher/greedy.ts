@@ -9,7 +9,7 @@
  * - "Voxel Meshing in Exile" (thenumb.at)
  */
 
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, type MaterialType } from '../bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, type MaterialType, materialIsSolid, materialIsFoliage, materialIsSeed } from '../bridge';
 
 /** A single face quad emitted by the greedy mesher */
 export interface MeshQuad {
@@ -34,27 +34,19 @@ export const CHUNKS_X = Math.ceil(GRID_X / CHUNK_SIZE); // 5
 export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE); // 5
 export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 7
 
-/**
- * Check if a voxel is solid (not air, water, or foliage).
- * Air voxels don't generate faces. Water is rendered separately
- * with a custom shader. Foliage (Leaf) is rendered as billboard sprites.
- */
+/** Delegates to engine-defined material classification. */
 function isSolid(mat: number): boolean {
-  return mat !== Material.Air && mat !== Material.Water && mat !== Material.Leaf && mat !== Material.Seed;
+  return materialIsSolid(mat);
 }
 
-/**
- * Check if a material is vegetation that should be rendered as billboards.
- */
+/** Delegates to engine-defined material classification. */
 export function isFoliage(mat: number): boolean {
-  return mat === Material.Leaf;
+  return materialIsFoliage(mat);
 }
 
-/**
- * Check if a material is a seed (rendered as small transparent mound sprites).
- */
+/** Delegates to engine-defined material classification. */
 export function isSeed(mat: number): boolean {
-  return mat === Material.Seed;
+  return materialIsSeed(mat);
 }
 
 /**

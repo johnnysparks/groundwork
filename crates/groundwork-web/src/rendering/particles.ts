@@ -9,8 +9,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material } from '../bridge';
-import { isFoliage } from '../mesher/greedy';
+import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, materialIsFoliage as isFoliage } from '../bridge';
 
 /** Maximum particles alive at once */
 const MAX_PARTICLES = 2000;

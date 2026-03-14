@@ -123,6 +123,17 @@ pub enum PlantType {
     Flower,
 }
 
+impl PlantType {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Tree => "Tree",
+            Self::Shrub => "Shrub",
+            Self::Groundcover => "Ground",
+            Self::Flower => "Flower",
+        }
+    }
+}
+
 /// Species parameters — defines what a plant CAN become.
 /// Dimensions are in meters; use accessor methods for voxel units.
 #[derive(Clone, Debug)]

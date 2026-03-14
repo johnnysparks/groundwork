@@ -14,8 +14,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, GROUND_LEVEL } from '../bridge';
-import { isFoliage } from '../mesher/greedy';
+import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, GROUND_LEVEL, materialIsFoliage as isFoliage } from '../bridge';
 
 /** Maximum number of foliage instances (pre-allocated) */
 const MAX_FOLIAGE = 50_000;

@@ -5,10 +5,10 @@
  * and standard UI behavior. Communicates tool/species selection via callbacks.
  */
 
-import { ToolCode, type ToolCodeType } from '../bridge';
+import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized } from '../bridge';
 
-/** Tool definitions for the palette */
-export interface ToolDef {
+/** Tool UI definition (extends bridge ToolDef with display properties) */
+export interface ToolUIDef {
   code: ToolCodeType;
   name: string;
   icon: string;
@@ -16,43 +16,28 @@ export interface ToolDef {
   description: string;
 }
 
-export const TOOLS: ToolDef[] = [
-  { code: ToolCode.Shovel, name: 'Shovel', icon: 'S', key: '1', description: 'Dig / remove' },
-  { code: ToolCode.Seed,   name: 'Seed',   icon: 'P', key: '2', description: 'Plant a seed' },
-  { code: ToolCode.Water,  name: 'Water',  icon: 'W', key: '3', description: 'Pour water' },
-  { code: ToolCode.Soil,   name: 'Soil',   icon: 'D', key: '4', description: 'Place soil' },
-  { code: ToolCode.Stone,  name: 'Stone',  icon: 'R', key: '5', description: 'Place stone' },
-];
+/** UI metadata for tools (icon, hotkey, description). Keyed by tool name. */
+const TOOL_UI: Record<string, { icon: string; description: string }> = {
+  Shovel: { icon: 'S', description: 'Dig / remove' },
+  Seed:   { icon: 'P', description: 'Plant a seed' },
+  Water:  { icon: 'W', description: 'Pour water' },
+  Soil:   { icon: 'D', description: 'Place soil' },
+  Stone:  { icon: 'R', description: 'Place stone' },
+};
 
-/** Species definitions (matches Rust's PlantType species) */
-export interface SpeciesDef {
-  id: string;
-  name: string;
-  type: string;
+/** Build tool UI definitions from engine-provided tool list */
+function buildTools(): ToolUIDef[] {
+  return BRIDGE_TOOLS.map((t, i) => {
+    const ui = TOOL_UI[t.name] ?? { icon: t.name.charAt(0), description: t.name };
+    return { code: t.code, name: t.name, icon: ui.icon, key: String(i + 1), description: ui.description };
+  });
 }
 
-export const SPECIES: SpeciesDef[] = [
-  // Trees
-  { id: 'oak',        name: 'Oak',        type: 'Tree' },
-  { id: 'birch',      name: 'Birch',      type: 'Tree' },
-  { id: 'willow',     name: 'Willow',     type: 'Tree' },
-  { id: 'pine',       name: 'Pine',       type: 'Tree' },
-  // Shrubs
-  { id: 'fern',       name: 'Fern',       type: 'Shrub' },
-  { id: 'berry-bush', name: 'Berry Bush', type: 'Shrub' },
-  { id: 'holly',      name: 'Holly',      type: 'Shrub' },
-  // Flowers
-  { id: 'wildflower', name: 'Wildflower', type: 'Flower' },
-  { id: 'daisy',      name: 'Daisy',      type: 'Flower' },
-  // Groundcover
-  { id: 'moss',       name: 'Moss',       type: 'Ground' },
-  { id: 'grass',      name: 'Grass',      type: 'Ground' },
-  { id: 'clover',     name: 'Clover',     type: 'Ground' },
-];
+export { type SpeciesDef } from '../bridge';
 
 export interface HudState {
   activeTool: ToolCodeType;
-  activeSpecies: string;
+  activeSpeciesIndex: number;
   autoTick: boolean;
   tickCount: number;
 }
@@ -65,11 +50,13 @@ type HudChangeCallback = (state: HudState) => void;
 export class Hud {
   readonly state: HudState = {
     activeTool: ToolCode.Seed,
-    activeSpecies: 'oak',
+    activeSpeciesIndex: 0,
     autoTick: false,
     tickCount: 0,
   };
 
+  private tools: ToolUIDef[];
+  private species: SpeciesDef[];
   private container: HTMLElement;
   private toolButtons: HTMLElement[] = [];
   private speciesButtons: HTMLElement[] = [];
@@ -78,6 +65,9 @@ export class Hud {
   private onChange: HudChangeCallback | null = null;
 
   constructor() {
+    this.tools = buildTools();
+    this.species = BRIDGE_SPECIES;
+
     this.container = document.createElement('div');
     this.container.id = 'hud';
     this.container.innerHTML = HUD_HTML;
@@ -90,7 +80,7 @@ export class Hud {
 
     // Wire up tool buttons
     const toolBar = this.container.querySelector('#tool-bar')!;
-    for (const tool of TOOLS) {
+    for (const tool of this.tools) {
       const btn = document.createElement('button');
       btn.className = 'tool-btn';
       btn.dataset.tool = String(tool.code);
@@ -104,11 +94,11 @@ export class Hud {
       this.toolButtons.push(btn);
     }
 
-    // Wire up species picker
+    // Wire up species picker (data comes from the engine via bridge)
     this.speciesPanel = this.container.querySelector('#species-panel')! as HTMLElement;
     const speciesList = this.speciesPanel.querySelector('#species-list')!;
     let currentType = '';
-    for (const sp of SPECIES) {
+    for (const sp of this.species) {
       if (sp.type !== currentType) {
         currentType = sp.type;
         const header = document.createElement('div');
@@ -118,11 +108,11 @@ export class Hud {
       }
       const btn = document.createElement('button');
       btn.className = 'species-btn';
-      btn.dataset.species = sp.id;
+      btn.dataset.speciesIndex = String(sp.index);
       btn.textContent = sp.name;
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.selectSpecies(sp.id);
+        this.selectSpecies(sp.index);
       });
       speciesList.appendChild(btn);
       this.speciesButtons.push(btn);
@@ -156,18 +146,21 @@ export class Hud {
     this.notify();
   }
 
-  /** Select a species by ID */
-  selectSpecies(id: string): void {
-    this.state.activeSpecies = id;
+  /** Select a species by index */
+  selectSpecies(index: number): void {
+    this.state.activeSpeciesIndex = index;
+    if (isInitialized()) {
+      setSelectedSpecies(index);
+    }
     this.render();
     this.notify();
   }
 
   /** Cycle to next species */
   cycleSpecies(direction: 1 | -1): void {
-    const idx = SPECIES.findIndex(s => s.id === this.state.activeSpecies);
-    const next = (idx + direction + SPECIES.length) % SPECIES.length;
-    this.selectSpecies(SPECIES[next].id);
+    const idx = this.species.findIndex(s => s.index === this.state.activeSpeciesIndex);
+    const next = (idx + direction + this.species.length) % this.species.length;
+    this.selectSpecies(this.species[next].index);
   }
 
   /** Update tick count display */
@@ -209,7 +202,7 @@ export class Hud {
 
     // Update species buttons
     for (const btn of this.speciesButtons) {
-      btn.classList.toggle('active', btn.dataset.species === this.state.activeSpecies);
+      btn.classList.toggle('active', btn.dataset.speciesIndex === String(this.state.activeSpeciesIndex));
     }
 
     this.renderStatus();
