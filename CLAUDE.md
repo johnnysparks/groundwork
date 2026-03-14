@@ -78,6 +78,7 @@ crates/
       tree.rs             12 species, PlantType enum, growth stages, space colonization
       systems.rs          ECS systems: water, soil, light, seeds, trees, dispersal
       save.rs             Binary save/load v3
+      wasm_bridge.rs      wasm-bindgen exports (cfg(wasm32) guarded)
 
   groundwork-web/         TypeScript — Three.js + Vite (PRIMARY PLAYER INTERFACE)
     src/
@@ -86,8 +87,17 @@ crates/
       mesher/greedy.ts    Greedy meshing with per-vertex AO, 16×16×16 chunks
       mesher/chunk.ts     Chunk dirty tracking via grid snapshot diffing
       rendering/terrain.ts  BufferGeometry builder, warm material palette
+      rendering/water.ts  Water surface mesh renderer
+      rendering/foliage.ts  Foliage billboard sprites with wind sway
+      rendering/particles.ts  Growth particle burst system
       camera/orbit.ts     Orthographic orbit camera with smooth damping
       lighting/sun.ts     Golden hour directional + hemisphere fill + ambient
+      lighting/sky.ts     Sky gradient background shader
+      lighting/daycycle.ts  Time-of-day cycle controller
+      postprocessing/effects.ts  SSAO, bloom, DOF, color grading
+      ui/raycaster.ts     Mouse click → voxel coordinate raycasting
+      ui/controls.ts      Input controls and keyboard shortcuts
+      ui/hud.ts           HUD overlay: tool palette, species picker, status
     vite.config.ts        WASM plugin, COOP/COEP headers, GitHub Pages base
     package.json          three, vite, vite-plugin-wasm, typescript
 
@@ -99,6 +109,8 @@ crates/
       quest.rs            Mission/quest onboarding system (20 quests, 9 chapters)
       render.rs           2D ASCII rendering + side panel
       render3d.rs         3D projected voxel rendering
+      camera.rs           Orbit camera for 3D projected view
+      glyph.rs            Character/sprite glyph system
       input.rs            Keyboard controls
 
   groundwork-profiler/    Rust binary — simulation performance profiling
@@ -125,16 +137,22 @@ groundwork_sim::tick(&mut world, &mut schedule);
 let grid = world.resource::<VoxelGrid>();
 ```
 
-### WASM Bridge API (planned)
+### WASM Bridge API
 
 ```
-Rust exports (via wasm-bindgen):
+Rust exports (via wasm-bindgen, in wasm_bridge.rs):
   init()                    → Create world + schedule
   tick(n)                   → Advance n ticks
   grid_ptr() → *const u8   → Pointer to VoxelGrid flat array
   grid_len() → usize       → Length in bytes (864K × 4)
+  soil_ptr() → *const u8   → Pointer to SoilGrid flat array
+  soil_len() → usize       → Length in bytes
+  grid_width/height/depth() → Grid dimensions
+  get_tick() → u64          → Current tick count
   place_tool(tool, x, y, z) → Apply gardening tool
   fill_tool(tool, x1..z2)  → Fill region
+  get_focus_x/y/z()        → Camera focus point
+  set_focus(x, y, z)       → Set camera focus
 
 JS reads:
   new Uint8Array(wasm.memory.buffer, grid_ptr(), grid_len())
