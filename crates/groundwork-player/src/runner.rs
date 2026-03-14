@@ -4,6 +4,10 @@
 //! observations and oracle snapshots, and returns a complete trace.
 //! Camera state is tracked alongside sim state so evaluators can assess
 //! what the player was looking at.
+//!
+//! Two entry points:
+//! - `run()` — execute a scripted `Scenario` (deterministic action list)
+//! - `run_autonomous()` — execute with a `Planner` that decides actions dynamically
 
 use bevy_ecs::prelude::*;
 
@@ -12,9 +16,10 @@ use groundwork_sim::tree::{SeedSpeciesMap, species_name_to_id};
 use groundwork_sim::voxel::Material;
 
 use crate::action::Action;
-use crate::evaluator::Verdict;
+use crate::evaluator::{Evaluator, Verdict};
 use crate::observer::{self, Observation};
 use crate::oracle::{self, CameraState};
+use crate::planner::{ObservationEntry, Planner};
 use crate::scenario::Scenario;
 use crate::trace::Trace;
 
@@ -82,6 +87,63 @@ pub fn run(scenario: &Scenario) -> RunResult {
         .iter()
         .map(|e| e.evaluate(&trace))
         .collect();
+
+    RunResult { trace, verdicts }
+}
+
+/// Run an autonomous session with a planner that decides actions dynamically.
+///
+/// The planner sees only `ObservationEntry` (actor-visible text).
+/// Oracle snapshots are recorded for evaluators but never shown to the planner.
+pub fn run_autonomous(
+    planner: &mut dyn Planner,
+    probes: &[(usize, usize, usize)],
+    evaluators: &[Box<dyn Evaluator>],
+    max_steps: usize,
+) -> RunResult {
+    let mut world = groundwork_sim::create_world();
+    let mut schedule = groundwork_sim::create_schedule();
+    let mut camera = CameraState::default();
+
+    let scenario_name = format!("autonomous_{}", planner.name());
+    let mut trace_builder = Trace::builder(&scenario_name);
+    let mut history: Vec<ObservationEntry> = Vec::new();
+    let mut step_index: usize = 0;
+
+    loop {
+        if step_index >= max_steps || planner.should_stop(&history) {
+            break;
+        }
+
+        let batch = planner.plan(&history);
+        if batch.is_empty() {
+            break;
+        }
+
+        for action in batch {
+            if step_index >= max_steps {
+                break;
+            }
+
+            trace_builder.begin_step();
+            let observation = execute_action(&mut world, &mut schedule, &mut camera, &action);
+            let oracle_snapshot = oracle::snapshot_with_probes(&world, probes, &camera);
+
+            // Record in history (actor-visible only — planner sees this)
+            history.push(ObservationEntry {
+                action: action.clone(),
+                observation: observation.clone(),
+                step_index,
+            });
+
+            // Record in trace (includes oracle — planner never sees this)
+            trace_builder.record(action, observation, oracle_snapshot);
+            step_index += 1;
+        }
+    }
+
+    let trace = trace_builder.finish();
+    let verdicts: Vec<Verdict> = evaluators.iter().map(|e| e.evaluate(&trace)).collect();
 
     RunResult { trace, verdicts }
 }

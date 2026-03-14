@@ -62,11 +62,13 @@ The **oracle** (evaluators) can read full sim state: material counts, specific v
 - 3 scripted scenarios with pass/fail evaluators
 - Runs as `cargo test -p groundwork-player`
 
-#### Phase 2: Autonomous Actor (future)
-- LLM-powered planner that reads observations and chooses actions
-- Observation formatting tuned for LLM consumption
-- Action space definition (what the planner can do)
-- Slow planner cadence (plan every N ticks) over fast actor (execute plan steps)
+#### Phase 2: Autonomous Actor (COMPLETE — 2026-03-14)
+- `Planner` trait with `ObservationEntry` (actor-visible only, enforces oracle separation)
+- `ScriptedPlanner`: deterministic 6-phase strategy for testing the planner→runner integration
+- `LlmPlanner`: Claude-powered planner behind `llm` feature flag, batch planning (5 actions/call)
+- `run_autonomous()`: planner-driven runner loop with same evaluator pipeline
+- 4 new tests: session, max_steps, determinism, serialization (13/13 total pass)
+- `reqwest` optional dependency, gated behind `llm` feature
 
 #### Phase 3: Self-Improvement Loop (future)
 - Task-setter: generates new scenarios from observed failures
