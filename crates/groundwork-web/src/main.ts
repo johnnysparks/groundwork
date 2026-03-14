@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool } from './bridge';
 import { createMockGrid, CHUNK_SIZE } from './mesher/greedy';
 import { ChunkManager } from './mesher/chunk';
-import { buildChunkMesh } from './rendering/terrain';
+import { buildChunkMesh, setXrayMode } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
@@ -38,7 +38,6 @@ async function main() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
-  renderer.localClippingEnabled = true; // Required for cutaway clipping planes
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -79,19 +78,25 @@ async function main() {
   const terrainGroup = new THREE.Group();
   scene.add(terrainGroup);
 
-  // Map from chunk key to Three.js mesh
+  // Map from chunk key to Three.js meshes (solid + soil)
   const chunkMeshes = new Map<string, THREE.Mesh>();
 
-  // Cutaway clipping planes array (shared reference — plane constant updates each frame)
-  const clippingPlanes = [orbit.cutawayPlane];
+  // X-ray mode state
+  let xrayActive = false;
 
   for (const chunk of updatedChunks) {
-    const mesh = buildChunkMesh(chunk, clippingPlanes);
-    if (mesh) {
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      terrainGroup.add(mesh);
-      chunkMeshes.set(mesh.name, mesh);
+    const { solidMesh, soilMesh } = buildChunkMesh(chunk);
+    if (solidMesh) {
+      solidMesh.castShadow = true;
+      solidMesh.receiveShadow = true;
+      terrainGroup.add(solidMesh);
+      chunkMeshes.set(solidMesh.name, solidMesh);
+    }
+    if (soilMesh) {
+      soilMesh.castShadow = true;
+      soilMesh.receiveShadow = true;
+      terrainGroup.add(soilMesh);
+      chunkMeshes.set(soilMesh.name, soilMesh);
     }
   }
 
@@ -174,19 +179,29 @@ async function main() {
     chunkManager.detectChanges(freshGrid);
     const rebuilt = chunkManager.rebuildDirty(freshGrid);
     for (const chunk of rebuilt) {
-      const name = `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
-      const old = chunkMeshes.get(name);
-      if (old) {
-        terrainGroup.remove(old);
-        old.geometry.dispose();
-        chunkMeshes.delete(name);
+      // Remove old solid and soil meshes for this chunk
+      const solidName = `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
+      const soilName = `soil_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
+      for (const name of [solidName, soilName]) {
+        const old = chunkMeshes.get(name);
+        if (old) {
+          terrainGroup.remove(old);
+          old.geometry.dispose();
+          chunkMeshes.delete(name);
+        }
       }
-      const mesh = buildChunkMesh(chunk, clippingPlanes);
-      if (mesh) {
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        terrainGroup.add(mesh);
-        chunkMeshes.set(mesh.name, mesh);
+      const { solidMesh, soilMesh } = buildChunkMesh(chunk);
+      if (solidMesh) {
+        solidMesh.castShadow = true;
+        solidMesh.receiveShadow = true;
+        terrainGroup.add(solidMesh);
+        chunkMeshes.set(solidMesh.name, solidMesh);
+      }
+      if (soilMesh) {
+        soilMesh.castShadow = true;
+        soilMesh.receiveShadow = true;
+        terrainGroup.add(soilMesh);
+        chunkMeshes.set(soilMesh.name, soilMesh);
       }
     }
     // Rebuild foliage, seeds, and detect growth after grid changes
@@ -256,7 +271,7 @@ async function main() {
     orbit.zoom(e.deltaY > 0 ? 0.9 : 1.1);
   }, { passive: false });
 
-  // Keyboard: WASD/arrows for pan, Q/E for cutaway depth, R for reset, Space for auto-tick
+  // Keyboard: WASD/arrows for pan, Q for x-ray toggle, R for reset, Space for auto-tick
   document.addEventListener('keydown', (e) => {
     // Pass to camera for continuous movement keys
     orbit.keyDown(e.key);
@@ -289,10 +304,11 @@ async function main() {
         }
         break;
       case 'q':
-      case 'e':
-        // Q/E are used for both cutaway depth and species cycling.
-        // Record depth change for quests (orbit camera handles the actual movement).
+        // Toggle x-ray: make soil/stone transparent to see roots underground
+        xrayActive = !xrayActive;
+        setXrayMode(xrayActive);
         questLog.recordDepthChange();
+        console.log(`X-ray: ${xrayActive ? 'ON' : 'OFF'}`);
         break;
       case '[':
         dayCycle.step(-0.04);
@@ -382,7 +398,7 @@ async function main() {
     `Seeds: ${seeds.count} sprites`,
   );
   console.log(
-    'Controls: 1-5=tools, WASD/Arrows=pan, Q/E=cutaway, R=reset, T=tick, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle',
+    'Controls: 1-5=tools, WASD/Arrows=pan, Q=x-ray, R=reset, T=tick, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle',
   );
 }
 

@@ -1,5 +1,5 @@
 /**
- * Orthographic orbit camera with WASD fly, underground cutaway, and smooth transitions.
+ * Orthographic orbit camera with WASD fly and smooth transitions.
  *
  * Coordinate convention: Three.js Y-up.
  *   Sim (x, y, z) where Z=up  →  Three.js (x, z, y) where Y=up.
@@ -9,13 +9,12 @@
  *   WASD / Arrow keys  — Pan camera across the garden
  *   Scroll wheel       — Zoom in/out
  *   Left-drag          — Orbit (rotate around center)
- *   Q / E              — Lower / raise cutaway depth (slice underground)
  *   R                  — Reset camera to default view
  *   Shift              — Hold for faster pan speed
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL } from '../bridge';
+import { GRID_X, GRID_Y, GROUND_LEVEL } from '../bridge';
 
 /** Default camera state (Y-up: sim Z → Three.js Y, sim Y → Three.js Z) */
 const DEFAULT_THETA = Math.PI / 4;      // 45 deg azimuth
@@ -35,16 +34,8 @@ const MAX_PHI = Math.PI / 2 - 0.05;
 const PAN_SPEED = 30;
 const PAN_SPEED_FAST = 60;
 
-/** Cutaway depth range (Three.js Y axis = sim Z) */
-const MIN_CUTAWAY_Y = 0;
-const MAX_CUTAWAY_Y = GRID_Z;
-const CUTAWAY_SPEED = 20; // voxels per second
-
 export class OrbitCamera {
   readonly camera: THREE.OrthographicCamera;
-
-  /** The clipping plane used for underground cutaway. Applied to materials. */
-  readonly cutawayPlane: THREE.Plane;
 
   /** Spherical angles (radians) — current smoothed values */
   private theta = DEFAULT_THETA;
@@ -58,10 +49,6 @@ export class OrbitCamera {
 
   /** Smoothed center */
   private center = new THREE.Vector3(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
-
-  /** Cutaway depth: everything above this Y gets clipped. GRID_Z = no cutaway. */
-  private targetCutawayY = MAX_CUTAWAY_Y;
-  private cutawayY = MAX_CUTAWAY_Y;
 
   /** Camera distance from center */
   private distance = 100;
@@ -85,10 +72,6 @@ export class OrbitCamera {
       500,
     );
 
-    // Cutaway clipping plane: normal pointing down (-Y), clips everything above cutawayY
-    // Plane equation: -y + cutawayY >= 0, i.e. y <= cutawayY
-    this.cutawayPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), MAX_CUTAWAY_Y);
-
     this.updatePosition();
   }
 
@@ -96,9 +79,6 @@ export class OrbitCamera {
   update(dt: number): void {
     // --- Keyboard-driven panning ---
     this.applyKeyboardPan(dt);
-
-    // --- Keyboard-driven cutaway ---
-    this.applyKeyboardCutaway(dt);
 
     // --- Damped interpolation ---
     this.theta += (this.targetTheta - this.theta) * this.damping;
@@ -111,9 +91,6 @@ export class OrbitCamera {
     const currentZoom = this.camera.zoom;
     this.camera.zoom += (this.targetZoom - currentZoom) * this.damping;
     this.camera.updateProjectionMatrix();
-
-    this.cutawayY += (this.targetCutawayY - this.cutawayY) * this.damping;
-    this.cutawayPlane.constant = this.cutawayY;
 
     this.updatePosition();
   }
@@ -140,7 +117,6 @@ export class OrbitCamera {
     this.targetPhi = DEFAULT_PHI;
     this.targetZoom = DEFAULT_ZOOM;
     this.targetCenter.set(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
-    this.targetCutawayY = MAX_CUTAWAY_Y;
   }
 
   /** Notify that a key was pressed */
@@ -151,16 +127,6 @@ export class OrbitCamera {
   /** Notify that a key was released */
   keyUp(key: string): void {
     this.keys.delete(key.toLowerCase());
-  }
-
-  /** Get the current cutaway Y level (for UI display) */
-  getCutawayZ(): number {
-    return this.cutawayY;
-  }
-
-  /** Whether cutaway is active (not at maximum) */
-  isCutawayActive(): boolean {
-    return this.targetCutawayY < MAX_CUTAWAY_Y - 0.5;
   }
 
   /** Handle window resize */
@@ -212,17 +178,6 @@ export class OrbitCamera {
       // Clamp to grid bounds with some padding (X and Z are horizontal)
       this.targetCenter.x = Math.max(-10, Math.min(GRID_X + 10, this.targetCenter.x));
       this.targetCenter.z = Math.max(-10, Math.min(GRID_Y + 10, this.targetCenter.z));
-    }
-  }
-
-  private applyKeyboardCutaway(dt: number): void {
-    const move = CUTAWAY_SPEED * dt;
-
-    if (this.keys.has('q')) {
-      this.targetCutawayY = Math.max(MIN_CUTAWAY_Y, this.targetCutawayY - move);
-    }
-    if (this.keys.has('e')) {
-      this.targetCutawayY = Math.min(MAX_CUTAWAY_Y, this.targetCutawayY + move);
     }
   }
 

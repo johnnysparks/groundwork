@@ -73,19 +73,19 @@ impl VoxelGrid {
     /// that poke through the surface near edges.
     fn is_stone_outcrop(x: usize, y: usize, z: usize) -> bool {
         let surface = Self::surface_height(x, y);
-        let spread = crate::scale::meters_to_voxels(1.0).max(1);
-        if z > surface + spread || z + spread < surface {
+        // Low boulders: poke 0.1m above surface, extend 0.5m below
+        let above = crate::scale::meters_to_voxels(0.1).max(1);
+        let below = crate::scale::meters_to_voxels(0.5).max(1);
+        if z > surface + above || z + below < surface {
             return false;
         }
         // Cluster positions as fractions of grid dimensions.
-        // (8/60, 12/60), (50/60, 8/60), (12/60, 48/60)
-        // Radii: fraction of grid extent squared, converted to voxels-squared.
-        // Each cluster spans roughly 3-4% of the grid diameter.
+        // Wider radii (8-10%) so outcrops look like boulders, not pillars.
         let grid_extent = GRID_X.min(GRID_Y) as f64;
         let clusters: [(f64, f64, f64); 3] = [
-            (8.0 / 60.0, 12.0 / 60.0, (grid_extent * 0.04).powi(2)),
-            (50.0 / 60.0, 8.0 / 60.0, (grid_extent * 0.035).powi(2)),
-            (12.0 / 60.0, 48.0 / 60.0, (grid_extent * 0.045).powi(2)),
+            (8.0 / 60.0, 12.0 / 60.0, (grid_extent * 0.10).powi(2)),
+            (50.0 / 60.0, 8.0 / 60.0, (grid_extent * 0.08).powi(2)),
+            (12.0 / 60.0, 48.0 / 60.0, (grid_extent * 0.09).powi(2)),
         ];
         for (fx, fy, r_sq) in clusters {
             let cx = (fx * GRID_X as f64).round() as isize;
@@ -117,9 +117,10 @@ impl VoxelGrid {
                     }
                 }
 
-                // Stone outcrops: replace soil/air with stone
-                let out_spread = crate::scale::meters_to_voxels(1.0).max(1);
-                for z in (surface.saturating_sub(out_spread))..=(surface + out_spread).min(GRID_Z - 1) {
+                // Stone outcrops: low boulders near surface
+                let out_above = crate::scale::meters_to_voxels(0.1).max(1);
+                let out_below = crate::scale::meters_to_voxels(0.5).max(1);
+                for z in (surface.saturating_sub(out_below))..=(surface + out_above).min(GRID_Z - 1) {
                     if Self::is_stone_outcrop(x, y, z) {
                         let idx = Self::index(x, y, z);
                         cells[idx].material = Material::Stone;

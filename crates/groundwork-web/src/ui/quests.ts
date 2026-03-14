@@ -55,9 +55,9 @@ const QUEST_DEFS: QuestDef[] = [
   },
   {
     id: 'changeDepth',
-    name: 'Change cutaway depth',
+    name: 'Toggle x-ray view',
     chapter: 0,
-    detail: 'Your garden has layers. Press Q to slice deeper (roots, stone) and E to reveal more sky and canopy. The cutaway lets you peek underground.',
+    detail: 'Your garden has layers. Press Q to toggle x-ray mode — soil and stone become transparent so you can see roots, water channels, and underground structures.',
   },
   {
     id: 'orbitCamera',
@@ -121,7 +121,7 @@ const QUEST_DEFS: QuestDef[] = [
     id: 'viewUnderground',
     name: 'Go below surface',
     chapter: 4,
-    detail: 'Press Q to lower the cutaway plane below the surface. Underground you\u2019ll find soil layers, stone, water channels, and \u2014 once plants grow \u2014 roots spreading through the earth.',
+    detail: 'Press Q to toggle x-ray mode. Soil and stone become transparent, revealing underground layers, water channels, and \u2014 once plants grow \u2014 roots spreading through the earth.',
   },
   {
     id: 'findRoots',

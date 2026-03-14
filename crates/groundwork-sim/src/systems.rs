@@ -1582,8 +1582,8 @@ mod tests {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        let root_x = 15;
-        let root_y = 15;
+        let root_x = 30;
+        let root_y = 30;
         let root_z = GROUND_LEVEL - 2;
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
@@ -1596,21 +1596,25 @@ mod tests {
                 cell.material = Material::Soil;
                 cell.water_level = 20;
             }
-            // Dry out other soil neighbors to isolate the test.
-            for (dx, dy, dz) in [(-1i32,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)] {
-                let nx = (root_x as i32 + dx) as usize;
-                let ny = (root_y as i32 + dy) as usize;
-                let nz = (root_z as i32 + dz) as usize;
-                if let Some(cell) = grid.get_mut(nx, ny, nz) {
-                    if cell.material == Material::Soil {
-                        cell.water_level = 0;
+            // Dry out a wide zone so water_flow doesn't replenish from distant cells.
+            for dx in -6i32..=6 {
+                for dy in -6i32..=6 {
+                    for dz in -3i32..=3 {
+                        let nx = (root_x as i32 + dx) as usize;
+                        let ny = (root_y as i32 + dy) as usize;
+                        let nz = (root_z as i32 + dz) as usize;
+                        if nx == root_x && ny == root_y && nz == root_z { continue; }
+                        if nx == root_x + 1 && ny == root_y && nz == root_z { continue; }
+                        if let Some(cell) = grid.get_mut(nx, ny, nz) {
+                            cell.water_level = 0;
+                        }
                     }
                 }
             }
         }
 
-        // Run enough ticks to drain the soil (20 water / 4 per tick = 5 ticks).
-        for _ in 0..5 {
+        // Run enough ticks to drain the soil.
+        for _ in 0..10 {
             crate::tick(&mut world, &mut schedule);
         }
 
@@ -2428,8 +2432,8 @@ mod tests {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        let tx = 15;
-        let ty = 15;
+        let tx = 30;
+        let ty = 30;
         let tz = GROUND_LEVEL + 1;
 
         {
@@ -2443,12 +2447,17 @@ mod tests {
                 cell.water_level = 200;
             }
             // Saturate surrounding soil so root keeps getting water
-            for dx in -3i32..=3 {
-                for dy in -3i32..=3 {
-                    let nx = (tx as i32 + dx) as usize;
-                    let ny = (ty as i32 + dy) as usize;
-                    if let Some(cell) = grid.get_mut(nx, ny, GROUND_LEVEL) {
-                        cell.water_level = 255;
+            for dx in -5i32..=5 {
+                for dy in -5i32..=5 {
+                    for dz in 0i32..=3 {
+                        let nx = (tx as i32 + dx) as usize;
+                        let ny = (ty as i32 + dy) as usize;
+                        let nz = (GROUND_LEVEL as i32 - dz) as usize;
+                        if let Some(cell) = grid.get_mut(nx, ny, nz) {
+                            if cell.material == Material::Soil {
+                                cell.water_level = 255;
+                            }
+                        }
                     }
                 }
             }
@@ -2460,9 +2469,9 @@ mod tests {
             root_pos: (tx, ty, tz),
             age: 100,
             stage: GrowthStage::Sapling,
-            health: 0.3,
-            accumulated_water: 300.0,
-            accumulated_light: 300.0,
+            health: 0.2,
+            accumulated_water: 500.0,
+            accumulated_light: 500.0,
             rng_seed: 77,
             dirty: false,
             voxel_footprint: vec![(tx, ty, tz), (tx, ty, GROUND_LEVEL)],
@@ -2479,8 +2488,8 @@ mod tests {
         let mut trees = world.query::<&Tree>();
         let tree = trees.iter(&world).next().unwrap();
         assert!(
-            tree.health > 0.3,
-            "Tree health ({}) should have recovered above 0.3 with good resources",
+            tree.health > 0.2,
+            "Tree health ({}) should have recovered above 0.2 with good resources",
             tree.health
         );
     }

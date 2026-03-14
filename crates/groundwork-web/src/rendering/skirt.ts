@@ -82,9 +82,9 @@ export function buildSkirtMesh(): THREE.Mesh {
   geometry.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(norArr, 3));
 
-  // Warm earthy color — like a wooden planter box or stone retaining wall
+  // Dark earthy color — like a wooden planter box edge, darker than soil for contrast
   const material = new THREE.MeshLambertMaterial({
-    color: 0x8B7355, // warm tan/wood
+    color: 0x5C4A3A, // dark wood/earth
   });
 
   const mesh = new THREE.Mesh(geometry, material);
