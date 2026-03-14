@@ -40,7 +40,7 @@ export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 4
  * with a custom shader. Foliage (Leaf) is rendered as billboard sprites.
  */
 function isSolid(mat: number): boolean {
-  return mat !== Material.Air && mat !== Material.Water && mat !== Material.Leaf;
+  return mat !== Material.Air && mat !== Material.Water && mat !== Material.Leaf && mat !== Material.Seed;
 }
 
 /**
@@ -48,6 +48,13 @@ function isSolid(mat: number): boolean {
  */
 export function isFoliage(mat: number): boolean {
   return mat === Material.Leaf;
+}
+
+/**
+ * Check if a material is a seed (rendered as small transparent mound sprites).
+ */
+export function isSeed(mat: number): boolean {
+  return mat === Material.Seed;
 }
 
 /**
