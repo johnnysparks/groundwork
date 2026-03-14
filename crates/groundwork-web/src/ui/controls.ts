@@ -9,9 +9,11 @@ import * as THREE from 'three';
 import { ToolCode, type ToolCodeType, placeTool, isInitialized } from '../bridge';
 import { Hud, TOOLS } from './hud';
 import { raycastVoxel, type VoxelHit } from './raycaster';
+import type { QuestLog } from './quests';
 
 export interface ControlsConfig {
   hud: Hud;
+  questLog: QuestLog;
   camera: THREE.Camera;
   terrainGroup: THREE.Group;
   canvas: HTMLCanvasElement;
@@ -24,7 +26,7 @@ export interface ControlsConfig {
  * Returns a cleanup function to remove event listeners.
  */
 export function setupControls(config: ControlsConfig): () => void {
-  const { hud, camera, terrainGroup, canvas } = config;
+  const { hud, questLog, camera, terrainGroup, canvas } = config;
 
   // --- Mouse state (to distinguish clicks from drags) ---
   let mouseDownX = 0;
@@ -91,10 +93,12 @@ export function setupControls(config: ControlsConfig): () => void {
       case 'q':
       case 'Q':
         hud.cycleSpecies(-1);
+        questLog.recordCycleSpecies();
         break;
       case 'e':
       case 'E':
         hud.cycleSpecies(1);
+        questLog.recordCycleSpecies();
         break;
 
       // Auto-tick toggle is handled in main.ts (it owns the autoTick state)
