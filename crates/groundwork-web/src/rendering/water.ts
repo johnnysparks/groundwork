@@ -300,27 +300,28 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
 
   for (const quad of quads) {
     // Water surface sits at top of the water cell (z + 1), slightly inset
-    const z = quad.z + 1.0 - 0.05; // tiny offset below z+1 to avoid z-fighting with terrain edges
+    // Y-up swap: sim Z → Three.js Y, sim Y → Three.js Z
+    const threeY = quad.z + 1.0 - 0.05; // tiny offset below z+1 to avoid z-fighting
     const x0 = quad.x;
-    const y0 = quad.y;
+    const z0 = quad.y;  // sim Y → Three.js Z
     const x1 = quad.x + quad.w;
-    const y1 = quad.y + quad.h;
+    const z1 = quad.y + quad.h;
     const d = quad.depth;
 
-    // 4 corners: BL, BR, TR, TL
-    const corners: [number, number][] = [
-      [x0, y0], [x1, y0], [x1, y1], [x0, y1],
+    // 4 corners: BL, BR, TR, TL (on XZ plane at height threeY)
+    const corners: [number, number, number][] = [
+      [x0, threeY, z0], [x1, threeY, z0], [x1, threeY, z1], [x0, threeY, z1],
     ];
     const cornerUVs: [number, number][] = [
-      [x0, y0], [x1, y0], [x1, y1], [x0, y1],
+      [x0, z0], [x1, z0], [x1, z1], [x0, z1],
     ];
 
-    // Two triangles: 0-1-2, 0-2-3
-    const indices = [0, 1, 2, 0, 2, 3];
+    // Two triangles (reversed winding for Y↔Z handedness swap)
+    const indices = [0, 2, 1, 0, 3, 2];
     for (const ci of indices) {
       positions[vi * 3] = corners[ci][0];
       positions[vi * 3 + 1] = corners[ci][1];
-      positions[vi * 3 + 2] = z;
+      positions[vi * 3 + 2] = corners[ci][2];
 
       // UV = world position (for tiling ripple patterns)
       uvs[vi * 2] = cornerUVs[ci][0];
@@ -336,7 +337,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geometry.setAttribute('depth', new THREE.BufferAttribute(depths, 1));
 
-  // Compute a flat +Z normal for the water surface
+  // Compute a flat +Y normal for the water surface (Y-up)
   geometry.computeVertexNormals();
 
   // Create or reuse shader material

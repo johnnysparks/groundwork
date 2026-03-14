@@ -15,6 +15,7 @@ import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/wat
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
+import { buildSkirtMesh } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
@@ -93,6 +94,11 @@ async function main() {
       chunkMeshes.set(mesh.name, mesh);
     }
   }
+
+  // --- Ground skirt (hides underground cross-section) ---
+
+  const skirt = buildSkirtMesh();
+  scene.add(skirt);
 
   // --- Water surface ---
 

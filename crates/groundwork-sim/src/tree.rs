@@ -132,6 +132,8 @@ pub struct Species {
     pub max_height_m: f64,
     pub root_depth_m: f64,
     pub crown_radius_m: f64,
+    /// Trunk radius in meters. Trees get multi-voxel-wide trunks.
+    pub trunk_radius_m: f64,
     pub crown_shape: CrownShape,
     pub water_need: ResourceNeed,
     pub light_need: ResourceNeed,
@@ -162,6 +164,10 @@ impl Species {
     pub fn crown_radius(&self) -> u8 {
         crate::scale::meters_to_voxels(self.crown_radius_m) as u8
     }
+    /// Trunk radius in voxel units.
+    pub fn trunk_radius(&self) -> u8 {
+        crate::scale::meters_to_voxels(self.trunk_radius_m) as u8
+    }
     /// Whether this species uses space colonization branching.
     pub fn uses_skeleton(&self) -> bool {
         self.plant_type == PlantType::Tree
@@ -190,13 +196,15 @@ impl Default for SpeciesTable {
         Self {
             species: vec![
                 // --- Trees (indices 0-3) ---
-                // Diorama scale: canopy trees fill 20-28 voxels of 30 above-ground.
+                // Glen scale (4m×4m×5m): trees fill 40-50 of 60 voxels above ground.
+                // At 0.05m/voxel, oak trunk_radius 0.15m = 3 voxels → 7-voxel-wide trunk.
                 Species {
                     name: "Oak",
                     plant_type: PlantType::Tree,
-                    max_height_m: 12.0,
-                    root_depth_m: 6.0,
-                    crown_radius_m: 5.0,
+                    max_height_m: 2.5,
+                    root_depth_m: 1.5,
+                    crown_radius_m: 1.2,
+                    trunk_radius_m: 0.15,
                     crown_shape: CrownShape::Round,
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::Medium,
@@ -204,15 +212,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.3,
                     shade_tolerance: 80,
                     prune_threshold: 200,
-                    dispersal_distance_m: 6.0,
+                    dispersal_distance_m: 1.5,
                     dispersal_period: 100,
                 },
                 Species {
                     name: "Birch",
                     plant_type: PlantType::Tree,
-                    max_height_m: 10.0,
-                    root_depth_m: 4.0,
-                    crown_radius_m: 3.0,
+                    max_height_m: 2.0,
+                    root_depth_m: 1.0,
+                    crown_radius_m: 0.8,
+                    trunk_radius_m: 0.08,
                     crown_shape: CrownShape::Narrow,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::Medium,
@@ -220,15 +229,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.5,
                     shade_tolerance: 120,
                     prune_threshold: 100,
-                    dispersal_distance_m: 7.0,
+                    dispersal_distance_m: 1.5,
                     dispersal_period: 80,
                 },
                 Species {
                     name: "Willow",
                     plant_type: PlantType::Tree,
-                    max_height_m: 8.0,
-                    root_depth_m: 5.0,
-                    crown_radius_m: 6.0,
+                    max_height_m: 1.8,
+                    root_depth_m: 1.2,
+                    crown_radius_m: 1.5,
+                    trunk_radius_m: 0.1,
                     crown_shape: CrownShape::Wide,
                     water_need: ResourceNeed::High,
                     light_need: ResourceNeed::Low,
@@ -236,15 +246,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.2,
                     shade_tolerance: 60,
                     prune_threshold: 300,
-                    dispersal_distance_m: 5.0,
+                    dispersal_distance_m: 1.0,
                     dispersal_period: 120,
                 },
                 Species {
                     name: "Pine",
                     plant_type: PlantType::Tree,
-                    max_height_m: 14.0,
-                    root_depth_m: 7.0,
-                    crown_radius_m: 4.0,
+                    max_height_m: 2.8,
+                    root_depth_m: 1.5,
+                    crown_radius_m: 0.8,
+                    trunk_radius_m: 0.1,
                     crown_shape: CrownShape::Conical,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::High,
@@ -252,16 +263,17 @@ impl Default for SpeciesTable {
                     phototropism: 0.6,
                     shade_tolerance: 100,
                     prune_threshold: 150,
-                    dispersal_distance_m: 8.0,
+                    dispersal_distance_m: 1.5,
                     dispersal_period: 90,
                 },
                 // --- Shrubs (indices 4-6) ---
                 Species {
                     name: "Fern",
                     plant_type: PlantType::Shrub,
-                    max_height_m: 2.0,
-                    root_depth_m: 1.0,
-                    crown_radius_m: 2.0,
+                    max_height_m: 0.4,
+                    root_depth_m: 0.3,
+                    crown_radius_m: 0.3,
+                    trunk_radius_m: 0.03,
                     crown_shape: CrownShape::Wide,
                     water_need: ResourceNeed::High,
                     light_need: ResourceNeed::Low,
@@ -269,15 +281,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 30,
                     prune_threshold: 500,
-                    dispersal_distance_m: 2.0,
+                    dispersal_distance_m: 0.5,
                     dispersal_period: 60,
                 },
                 Species {
                     name: "Berry Bush",
                     plant_type: PlantType::Shrub,
-                    max_height_m: 3.0,
-                    root_depth_m: 2.0,
-                    crown_radius_m: 2.0,
+                    max_height_m: 0.6,
+                    root_depth_m: 0.4,
+                    crown_radius_m: 0.4,
+                    trunk_radius_m: 0.04,
                     crown_shape: CrownShape::Round,
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::Medium,
@@ -285,15 +298,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 80,
                     prune_threshold: 300,
-                    dispersal_distance_m: 4.0,
+                    dispersal_distance_m: 0.8,
                     dispersal_period: 80,
                 },
                 Species {
                     name: "Holly",
                     plant_type: PlantType::Shrub,
-                    max_height_m: 4.0,
-                    root_depth_m: 2.5,
-                    crown_radius_m: 2.0,
+                    max_height_m: 0.8,
+                    root_depth_m: 0.5,
+                    crown_radius_m: 0.4,
+                    trunk_radius_m: 0.05,
                     crown_shape: CrownShape::Conical,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::Low,
@@ -301,16 +315,17 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 40,
                     prune_threshold: 400,
-                    dispersal_distance_m: 3.0,
+                    dispersal_distance_m: 0.6,
                     dispersal_period: 100,
                 },
                 // --- Flowers (indices 7-8) ---
                 Species {
                     name: "Wildflower",
                     plant_type: PlantType::Flower,
-                    max_height_m: 1.5,
-                    root_depth_m: 1.0,
-                    crown_radius_m: 1.0,
+                    max_height_m: 0.25,
+                    root_depth_m: 0.15,
+                    crown_radius_m: 0.15,
+                    trunk_radius_m: 0.02,
                     crown_shape: CrownShape::Round,
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::High,
@@ -318,15 +333,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 150,
                     prune_threshold: 100,
-                    dispersal_distance_m: 3.0,
+                    dispersal_distance_m: 0.5,
                     dispersal_period: 40,
                 },
                 Species {
                     name: "Daisy",
                     plant_type: PlantType::Flower,
-                    max_height_m: 1.0,
-                    root_depth_m: 0.5,
-                    crown_radius_m: 1.0,
+                    max_height_m: 0.15,
+                    root_depth_m: 0.1,
+                    crown_radius_m: 0.15,
+                    trunk_radius_m: 0.02,
                     crown_shape: CrownShape::Narrow,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::High,
@@ -334,16 +350,17 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 160,
                     prune_threshold: 80,
-                    dispersal_distance_m: 2.0,
+                    dispersal_distance_m: 0.4,
                     dispersal_period: 30,
                 },
                 // --- Groundcover (indices 9-11) ---
                 Species {
                     name: "Moss",
                     plant_type: PlantType::Groundcover,
-                    max_height_m: 0.5,
-                    root_depth_m: 0.5,
-                    crown_radius_m: 2.0,
+                    max_height_m: 0.05,
+                    root_depth_m: 0.1,
+                    crown_radius_m: 0.3,
+                    trunk_radius_m: 0.0,
                     crown_shape: CrownShape::Wide,
                     water_need: ResourceNeed::High,
                     light_need: ResourceNeed::Low,
@@ -351,15 +368,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 20,
                     prune_threshold: 500,
-                    dispersal_distance_m: 1.5,
+                    dispersal_distance_m: 0.3,
                     dispersal_period: 25,
                 },
                 Species {
                     name: "Grass",
                     plant_type: PlantType::Groundcover,
-                    max_height_m: 0.5,
-                    root_depth_m: 0.5,
-                    crown_radius_m: 1.5,
+                    max_height_m: 0.1,
+                    root_depth_m: 0.1,
+                    crown_radius_m: 0.2,
+                    trunk_radius_m: 0.0,
                     crown_shape: CrownShape::Narrow,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::High,
@@ -367,15 +385,16 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 140,
                     prune_threshold: 100,
-                    dispersal_distance_m: 1.5,
+                    dispersal_distance_m: 0.3,
                     dispersal_period: 20,
                 },
                 Species {
                     name: "Clover",
                     plant_type: PlantType::Groundcover,
-                    max_height_m: 0.5,
-                    root_depth_m: 0.5,
-                    crown_radius_m: 1.5,
+                    max_height_m: 0.1,
+                    root_depth_m: 0.1,
+                    crown_radius_m: 0.2,
+                    trunk_radius_m: 0.0,
                     crown_shape: CrownShape::Round,
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::Medium,
@@ -383,7 +402,7 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 100,
                     prune_threshold: 150,
-                    dispersal_distance_m: 1.5,
+                    dispersal_distance_m: 0.3,
                     dispersal_period: 30,
                 },
             ],
@@ -470,23 +489,82 @@ impl TreeTemplate {
         Self { voxels }
     }
 
+    /// Fill a cylindrical trunk column of the given radius.
+    fn add_trunk_column(
+        voxels: &mut Vec<(isize, isize, isize, Material)>,
+        z_start: isize,
+        z_end: isize,
+        radius: u8,
+        material: Material,
+    ) {
+        let r = radius as isize;
+        let r_sq = r * r;
+        for z in z_start..z_end {
+            if r == 0 {
+                voxels.push((0, 0, z, material));
+            } else {
+                for dx in -r..=r {
+                    for dy in -r..=r {
+                        if dx * dx + dy * dy <= r_sq {
+                            voxels.push((dx, dy, z, material));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Fill a root column with lateral spread at depth.
+    fn add_root_column(
+        voxels: &mut Vec<(isize, isize, isize, Material)>,
+        depth: isize,
+        trunk_r: u8,
+        rng_seed: u64,
+    ) {
+        let r = trunk_r.max(1) as isize;
+        let r_sq = r * r;
+        for z in 1..=depth {
+            // Central root column at trunk radius (tapers with depth)
+            let taper = (r - z / 4).max(0);
+            let t_sq = taper * taper;
+            for dx in -taper..=taper {
+                for dy in -taper..=taper {
+                    if dx * dx + dy * dy <= t_sq {
+                        voxels.push((dx, dy, -z, Material::Root));
+                    }
+                }
+            }
+            // Lateral root spread at deeper levels
+            if z >= r_sq.max(2) {
+                for step in 0..3u64 {
+                    let h = tree_hash(rng_seed, z as u64 * 10 + step);
+                    let spread = (z / 2).max(1);
+                    let dx = (h % (spread as u64 * 2 + 1)) as isize - spread;
+                    let dy = ((h >> 8) % (spread as u64 * 2 + 1)) as isize - spread;
+                    if dx != 0 || dy != 0 {
+                        voxels.push((dx, dy, -z, Material::Root));
+                    }
+                }
+            }
+        }
+    }
+
     fn sapling(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
         let trunk_h = (species.max_height() / 3).max(2) as isize;
+        // Sapling trunk is half adult radius (at least 1)
+        let trunk_r = (species.trunk_radius() / 2).max(1);
 
         // Trunk
-        for z in 0..trunk_h {
-            voxels.push((0, 0, z, Material::Trunk));
-        }
+        Self::add_trunk_column(&mut voxels, 0, trunk_h, trunk_r, Material::Trunk);
 
         // Small leaf cap
-        Self::add_leaf_disc(&mut voxels, 0, 0, trunk_h, 1, rng_seed, 0);
+        let leaf_r = (species.crown_radius() / 3).max(1);
+        Self::add_leaf_disc(&mut voxels, 0, 0, trunk_h, leaf_r, rng_seed, 0);
 
         // Roots
         let root_d = (species.root_depth() / 2).max(1) as isize;
-        for z in 1..=root_d {
-            voxels.push((0, 0, -z, Material::Root));
-        }
+        Self::add_root_column(&mut voxels, root_d, trunk_r, rng_seed);
 
         Self { voxels }
     }
@@ -495,34 +573,25 @@ impl TreeTemplate {
         let mut voxels = Vec::new();
         let trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
         let crown_r = ((species.crown_radius() + 1) / 2).max(1);
+        // Young tree trunk is 2/3 adult radius
+        let trunk_r = (species.trunk_radius() * 2 / 3).max(1);
 
         // Trunk
-        for z in 0..trunk_h {
-            voxels.push((0, 0, z, Material::Trunk));
-        }
+        Self::add_trunk_column(&mut voxels, 0, trunk_h, trunk_r, Material::Trunk);
 
         // Crown (leaves first so branches can overwrite where they overlap)
         Self::add_crown(&mut voxels, trunk_h, crown_r, &species.crown_shape, rng_seed);
 
-        // Branches near the top
+        // Branches near the top — reach scales with crown radius
         let branch_z = trunk_h - 2;
+        let branch_reach = (crown_r / 2).max(1) as isize;
         if branch_z > 0 {
-            Self::add_branches(&mut voxels, branch_z, 1, rng_seed, 0);
+            Self::add_branches(&mut voxels, branch_z, branch_reach, rng_seed, 0);
         }
 
         // Roots
         let root_d = (species.root_depth() * 2 / 3).max(2) as isize;
-        for z in 1..=root_d {
-            voxels.push((0, 0, -z, Material::Root));
-            if z >= 2 {
-                let h = tree_hash(rng_seed, z as u64);
-                let dx = (h % 3) as isize - 1;
-                let dy = ((h >> 8) % 3) as isize - 1;
-                if dx != 0 || dy != 0 {
-                    voxels.push((dx, dy, -z, Material::Root));
-                }
-            }
-        }
+        Self::add_root_column(&mut voxels, root_d, trunk_r, rng_seed);
 
         Self { voxels }
     }
@@ -531,40 +600,32 @@ impl TreeTemplate {
         let mut voxels = Vec::new();
         let trunk_h = species.max_height() as isize;
         let crown_r = species.crown_radius();
+        let trunk_r = species.trunk_radius().max(1);
 
-        // Trunk
-        for z in 0..trunk_h {
-            voxels.push((0, 0, z, Material::Trunk));
-        }
+        // Trunk — full width
+        Self::add_trunk_column(&mut voxels, 0, trunk_h, trunk_r, Material::Trunk);
 
         // Crown (leaves first)
         Self::add_crown(&mut voxels, trunk_h, crown_r, &species.crown_shape, rng_seed);
 
-        // Branches at multiple levels (after leaves so they show through)
+        // Branches at multiple levels — reach scales with crown
         let branch_start = trunk_h / 2;
+        let branch_spacing = (trunk_h / 6).max(2);
         for i in 0..3 {
-            let bz = branch_start + i * 2;
+            let bz = branch_start + i * branch_spacing;
             if bz < trunk_h {
-                let reach = if i == 1 { 2 } else { 1 };
+                let reach = if i == 1 {
+                    (crown_r / 2).max(2) as isize
+                } else {
+                    (crown_r / 3).max(1) as isize
+                };
                 Self::add_branches(&mut voxels, bz, reach, rng_seed, i as u64);
             }
         }
 
         // Full roots with lateral spread
         let root_d = species.root_depth() as isize;
-        for z in 1..=root_d {
-            voxels.push((0, 0, -z, Material::Root));
-            if z >= 2 {
-                for step in 0..2u64 {
-                    let h = tree_hash(rng_seed, z as u64 * 10 + step);
-                    let dx = (h % 3) as isize - 1;
-                    let dy = ((h >> 8) % 3) as isize - 1;
-                    if dx != 0 || dy != 0 {
-                        voxels.push((dx, dy, -z, Material::Root));
-                    }
-                }
-            }
-        }
+        Self::add_root_column(&mut voxels, root_d, trunk_r, rng_seed);
 
         Self { voxels }
     }
@@ -572,22 +633,23 @@ impl TreeTemplate {
     fn dead(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
         let trunk_h = (species.max_height() / 2).max(1) as isize;
+        let trunk_r = (species.trunk_radius() * 2 / 3).max(1);
 
-        for z in 0..trunk_h {
-            voxels.push((0, 0, z, Material::DeadWood));
-        }
+        Self::add_trunk_column(&mut voxels, 0, trunk_h, trunk_r, Material::DeadWood);
 
         // A dead branch or two
         if trunk_h > 2 {
             let h = tree_hash(rng_seed, 0);
             let dx: isize = if h % 2 == 0 { 1 } else { -1 };
-            voxels.push((dx, 0, trunk_h - 1, Material::DeadWood));
+            let reach = (species.crown_radius() / 3).max(1) as isize;
+            for r in 1..=reach {
+                voxels.push((dx * r, 0, trunk_h - 1, Material::DeadWood));
+            }
         }
 
         // Remaining roots
-        for z in 1..=(species.root_depth() as isize / 2).max(1) {
-            voxels.push((0, 0, -z, Material::Root));
-        }
+        let root_d = (species.root_depth() / 2).max(1) as isize;
+        Self::add_root_column(&mut voxels, root_d, trunk_r, rng_seed);
 
         Self { voxels }
     }

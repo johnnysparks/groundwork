@@ -10,7 +10,7 @@ use crate::voxel::{Material, Voxel};
 use crate::{FocusState, ToolState, Tick};
 
 const MAGIC: [u8; 4] = *b"GWRK";
-const VERSION: u16 = 3;
+const VERSION: u16 = 4;
 const VOXEL_COUNT: usize = GRID_X * GRID_Y * GRID_Z;
 // V1: header(8) + tick(8) + voxels
 const V1_SIZE: usize = 8 + 8 + VOXEL_COUNT * 4;
@@ -79,7 +79,7 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState, O
         return Err(io::Error::new(io::ErrorKind::InvalidData, "bad magic bytes"));
     }
     let version = u16::from_le_bytes([data[4], data[5]]);
-    if version == 0 || version > 3 {
+    if version == 0 || version > 4 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!("unsupported version: {version}"),
@@ -89,7 +89,7 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState, O
     let expected_size = match version {
         1 => V1_SIZE,
         2 => V2_SIZE,
-        3 => V3_SIZE,
+        3 | 4 => V3_SIZE,
         _ => unreachable!(),
     };
     if data.len() != expected_size {

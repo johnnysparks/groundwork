@@ -10,6 +10,7 @@ use crate::voxel::Material;
 /// All fields are 0-255 proportions. Together they determine derived properties
 /// like drainage rate, water retention, and nutrient capacity.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[repr(C)]
 pub struct SoilComposition {
     /// Coarse particles. High sand = fast drainage, low nutrient retention.
     pub sand: u8,
@@ -123,21 +124,21 @@ impl SoilGrid {
                 for z in 0..GRID_Z {
                     let idx = VoxelGrid::index(x, y, z);
                     // Only populate soil layers (z=stone_top through surface)
-                    let stone_top = meters_to_voxels(5.0);
+                    let stone_top = meters_to_voxels(1.0);
                     if z < stone_top || z > surface {
                         continue;
                     }
 
                     // Depth below surface determines composition
                     let depth_below = surface.saturating_sub(z);
-                    let deep_thresh = meters_to_voxels(7.0);
+                    let deep_thresh = meters_to_voxels(1.4);
                     let comp = if depth_below >= surface.saturating_sub(deep_thresh) || z <= deep_thresh {
                         // Deep soil near stone: rocky
                         SoilComposition::rocky()
-                    } else if depth_below >= meters_to_voxels(5.0) {
+                    } else if depth_below >= meters_to_voxels(0.5) {
                         // Subsoil: clay-heavy
                         SoilComposition::clay()
-                    } else if depth_below >= meters_to_voxels(3.0) {
+                    } else if depth_below >= meters_to_voxels(0.3) {
                         // Transition: blend of clay and loam
                         SoilComposition {
                             sand: 70,
@@ -164,7 +165,7 @@ impl SoilGrid {
                 // Near spring or stream
                 let cx = GRID_X / 2;
                 let cy = GRID_Y / 2;
-                let spring_range = meters_to_voxels(4.0);
+                let spring_range = meters_to_voxels(0.3);
                 let near_spring = x >= cx.saturating_sub(spring_range) && x <= cx + spring_range - 1
                                && y >= cy.saturating_sub(spring_range) && y <= cy + spring_range - 1;
                 let near_stream = VoxelGrid::is_stream(x, y)
@@ -177,10 +178,10 @@ impl SoilGrid {
                     continue;
                 }
 
-                for z in meters_to_voxels(5.0)..=surface {
+                for z in meters_to_voxels(1.0)..=surface {
                     let idx = VoxelGrid::index(x, y, z);
                     let depth_below = surface.saturating_sub(z);
-                    let peat_strength = if depth_below <= meters_to_voxels(2.0) { 200u16 } else if depth_below <= meters_to_voxels(5.0) { 100 } else { 50 };
+                    let peat_strength = if depth_below <= meters_to_voxels(0.4) { 200u16 } else if depth_below <= meters_to_voxels(0.5) { 100 } else { 50 };
                     // Weaker peat along stream than at spring
                     let peat_strength = if near_spring { peat_strength } else { peat_strength / 2 };
                     let base = &cells[idx];
@@ -201,12 +202,12 @@ impl SoilGrid {
             for x in 0..GRID_X {
                 let surface = VoxelGrid::surface_height(x, y);
                 let edge_dist = x.min(y).min(GRID_X - 1 - x).min(GRID_Y - 1 - y);
-                let edge_band = meters_to_voxels(8.0);
+                let edge_band = meters_to_voxels(0.4);
                 if edge_dist >= edge_band {
                     continue;
                 }
-                for z in surface.saturating_sub(meters_to_voxels(2.0))..=surface {
-                    if z < meters_to_voxels(5.0) {
+                for z in surface.saturating_sub(meters_to_voxels(0.4))..=surface {
+                    if z < meters_to_voxels(1.0) {
                         continue;
                     }
                     let idx = VoxelGrid::index(x, y, z);
@@ -333,21 +334,24 @@ mod tests {
     #[test]
     fn soil_grid_new_has_depth_layers() {
         let soil = SoilGrid::new();
-        // Use a position far from edges/water to get standard layers
-        let tx = GRID_X / 2;
-        let ty = GRID_Y / 4; // far from spring, far from edges
+        // Position must be far from edges (edge_band = 8), outside peat zone
+        // (spring_range = 6 from center=40, so peat is [34..45]),
+        // and outside stream (requires x>=40 AND y>=40).
+        // (15, 15) works: edge_dist=15 >= 8, not in peat zone, not in stream.
+        let tx = 15;
+        let ty = 15;
         let surface = VoxelGrid::surface_height(tx, ty);
         // Deep layer (near stone) should be rocky
-        let deep_z = meters_to_voxels(5.0) + 1; // just above stone
+        let deep_z = meters_to_voxels(1.0) + 1; // just above stone
         let deep = soil.get(tx, ty, deep_z).unwrap();
         assert_eq!(deep.type_name(), "rocky");
-        // Subsoil should be clay (5+ meters below surface)
-        let sub_z = surface.saturating_sub(meters_to_voxels(6.0));
-        if sub_z > meters_to_voxels(7.0) { // only test if there's room
+        // Subsoil should be clay (0.5+ meters below surface)
+        let sub_z = surface.saturating_sub(meters_to_voxels(0.6));
+        if sub_z > meters_to_voxels(1.4) { // only test if there's room
             let sub = soil.get(tx, ty, sub_z).unwrap();
             assert_eq!(sub.type_name(), "clay");
         }
-        // Topsoil (top 1-2 layers) should be loam
+        // Topsoil (top layers) should be loam
         let top = soil.get(tx, ty, surface).unwrap();
         assert_eq!(top.type_name(), "loam");
     }

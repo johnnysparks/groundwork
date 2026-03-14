@@ -16,39 +16,37 @@ export interface Lights {
  * Create the default "golden hour" lighting setup.
  */
 export function createLighting(scene: THREE.Scene): Lights {
-  // Warm directional sun — golden hour angle
-  const sun = new THREE.DirectionalLight(0xffe4b5, 1.5); // moccasin warm
-  sun.position.set(GRID_X * 0.7, -GRID_Y * 0.3, GROUND_LEVEL + 50);
-  sun.target.position.set(GRID_X / 2, GRID_Y / 2, GROUND_LEVEL);
+  // Warm directional sun — golden hour side-light (Y-up)
+  const cx = GRID_X / 2;
+  const cz = GRID_Y / 2;
+  const sun = new THREE.DirectionalLight(0xffe4b5, 2.0); // warm, strong
+  sun.position.set(cx + 60, GROUND_LEVEL + 40, cz - 20);  // front-right, golden hour
+  sun.target.position.set(cx, GROUND_LEVEL, cz);
 
-  // Shadow setup
-  sun.castShadow = true;
-  sun.shadow.mapSize.width = 2048;
-  sun.shadow.mapSize.height = 2048;
-  const shadowSize = 80;
-  sun.shadow.camera.left = -shadowSize;
-  sun.shadow.camera.right = shadowSize;
-  sun.shadow.camera.top = shadowSize;
-  sun.shadow.camera.bottom = -shadowSize;
-  sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 200;
-  sun.shadow.bias = -0.001;
+  // Shadows disabled — they darken the diorama too much at this scale.
+  // Re-enable after shadow camera is properly tuned for the 120x120 grid.
+  sun.castShadow = false;
 
   scene.add(sun);
   scene.add(sun.target);
 
+  // Second fill light from the opposite side to reduce harsh contrast
+  const fill = new THREE.DirectionalLight(0xddc8a0, 0.6);
+  fill.position.set(cx - 40, GROUND_LEVEL + 20, cz + 30);
+  fill.target.position.set(cx, GROUND_LEVEL, cz);
+  scene.add(fill);
+  scene.add(fill.target);
+
   // Hemisphere light: warm from above, cool green from below
-  // Simulates light bouncing off vegetation
   const hemisphere = new THREE.HemisphereLight(
     0xffeedd, // warm sky
-    0x445533, // green-tinted ground bounce
-    0.6,
+    0x556644, // green-tinted ground bounce
+    1.0,      // strong fill
   );
   scene.add(hemisphere);
 
-  // Subtle ambient to ensure nothing is pitch black
-  // (tinted slightly blue-purple for cozy shadow color)
-  const ambient = new THREE.AmbientLight(0x8888aa, 0.15);
+  // Generous ambient — shadows should never be dark, just tinted
+  const ambient = new THREE.AmbientLight(0xaa99cc, 0.4);
   scene.add(ambient);
 
   return { sun, hemisphere, ambient };

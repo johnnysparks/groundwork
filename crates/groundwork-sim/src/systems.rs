@@ -12,7 +12,7 @@ pub fn water_spring(mut grid: ResMut<VoxelGrid>) {
     // Refill the 4x4 spring at center
     let cx = GRID_X / 2;
     let cy = GRID_Y / 2;
-    let pool_half = crate::scale::meters_to_voxels(2.0);
+    let pool_half = crate::scale::meters_to_voxels(0.2);
     for dy in (cy.saturating_sub(pool_half))..=(cy + pool_half - 1) {
         for dx in (cx.saturating_sub(pool_half))..=(cx + pool_half - 1) {
             let sz = VoxelGrid::surface_height(dx, dy);
@@ -1539,23 +1539,29 @@ mod tests {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        let root_x = 5;
-        let root_y = 5;
-        let root_z = GROUND_LEVEL - 1;
+        let root_x = 15;
+        let root_y = 15;
+        let root_z = GROUND_LEVEL - 2;
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
             if let Some(cell) = grid.get_mut(root_x, root_y, root_z) {
                 cell.material = Material::Root;
                 cell.water_level = 0;
             }
-            // Ensure adjacent soil is dry.
-            for (dx, dy, dz) in [(-1i32,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)] {
-                let nx = (root_x as i32 + dx) as usize;
-                let ny = (root_y as i32 + dy) as usize;
-                let nz = (root_z as i32 + dz) as usize;
-                if let Some(cell) = grid.get_mut(nx, ny, nz) {
-                    if cell.material == Material::Soil {
-                        cell.water_level = 0;
+            // Ensure all neighbors are bone-dry in a wide radius so no water
+            // can diffuse or flow into the root's immediate neighborhood.
+            for dx in -4i32..=4 {
+                for dy in -4i32..=4 {
+                    for dz in -4i32..=4 {
+                        if dx == 0 && dy == 0 && dz == 0 { continue; }
+                        let nx = root_x as i32 + dx;
+                        let ny = root_y as i32 + dy;
+                        let nz = root_z as i32 + dz;
+                        if nx < 0 || ny < 0 || nz < 0 { continue; }
+                        let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
+                        if let Some(cell) = grid.get_mut(nx, ny, nz) {
+                            cell.water_level = 0;
+                        }
                     }
                 }
             }
@@ -1964,53 +1970,62 @@ mod tests {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        // Use a position where (x+y+z) % 50 == 0 so weathering triggers
-        // Find such a position in the soil layer (interior, away from edges/water)
-        let base_x = GRID_X / 4;
-        let base_y = GRID_Y / 4;
-        let z = VoxelGrid::surface_height(base_x, base_y) - 1;
-        let mut test_x = base_x;
-        let mut test_y = base_y;
-        for x in base_x..GRID_X * 3 / 4 {
-            for y in base_y..GRID_Y * 3 / 4 {
+        // Find a position where (x+y+z) % 50 == 0 so weathering triggers.
+        // Use surface_height(x, y) - 1 for each candidate so z is always soil.
+        let mut test_x = 0;
+        let mut test_y = 0;
+        let mut test_z = 0;
+        let mut found = false;
+        'outer: for x in GRID_X / 4..GRID_X * 3 / 4 {
+            for y in GRID_Y / 4..GRID_Y * 3 / 4 {
+                let z = VoxelGrid::surface_height(x, y).saturating_sub(1);
                 if (x + y + z) % 50 == 0 {
                     test_x = x;
                     test_y = y;
-                    break;
+                    test_z = z;
+                    found = true;
+                    break 'outer;
                 }
             }
-            if test_x != base_x || test_y != base_y {
-                break;
-            }
         }
+        assert!(found, "Should find a (x+y+z)%50==0 position in soil layer");
 
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
-            if let Some(cell) = grid.get_mut(test_x, test_y, z) {
-                cell.water_level = 100; // Wet enough for weathering
+            if let Some(cell) = grid.get_mut(test_x, test_y, test_z) {
+                cell.water_level = 255; // Very wet to survive drainage
             }
         }
         let initial_rock;
         let initial_clay;
         {
             let mut soil = world.resource_mut::<SoilGrid>();
-            let comp = soil.get_mut(test_x, test_y, z).unwrap();
+            let comp = soil.get_mut(test_x, test_y, test_z).unwrap();
             comp.rock = 100;
             comp.clay = 50;
             initial_rock = comp.rock;
             initial_clay = comp.clay;
         }
 
-        // Run many ticks - weathering happens every tick at matching positions
-        for _ in 0..100 {
+        // Run many ticks — soil_evolution fires every 10 ticks, weathering
+        // requires water_level > 30. Refill water periodically to ensure
+        // the cell stays wet at the finer scale.
+        for i in 0..100 {
             crate::tick(&mut world, &mut schedule);
+            // Re-saturate every 5 ticks so the cell stays wet.
+            if i % 5 == 0 {
+                let mut grid = world.resource_mut::<VoxelGrid>();
+                if let Some(cell) = grid.get_mut(test_x, test_y, test_z) {
+                    cell.water_level = 255;
+                }
+            }
         }
 
         let soil = world.resource::<SoilGrid>();
-        let comp = soil.get(test_x, test_y, z).unwrap();
+        let comp = soil.get(test_x, test_y, test_z).unwrap();
         assert!(
             comp.rock < initial_rock,
-            "Rock should decrease via weathering at ({test_x},{test_y},{z}): initial={initial_rock}, final={}",
+            "Rock should decrease via weathering at ({test_x},{test_y},{test_z}): initial={initial_rock}, final={}",
             comp.rock
         );
         assert!(
@@ -2077,9 +2092,12 @@ mod tests {
         let loaded = crate::save::load_world(&path).unwrap();
         // Should have a SoilGrid generated from the voxel data
         let soil = loaded.resource::<SoilGrid>();
-        // Topsoil far from edges/water should be loam
-        let sx = GRID_X / 4;
-        let sy = GRID_Y / 4;
+        // Topsoil far from edges/water should be loam.
+        // edge_band = meters_to_voxels(1.6) = 32, peat zone starts at cx - spring_range = 34.
+        // Use position between edge band and peat zone.
+        let edge_band = crate::scale::meters_to_voxels(1.6);
+        let sx = edge_band + 1; // 33: inside interior, outside peat zone
+        let sy = edge_band + 1;
         let surface = VoxelGrid::surface_height(sx, sy);
         let comp = soil.get(sx, sy, surface).unwrap();
         assert_eq!(comp.type_name(), "loam", "V2 backward compat should generate loam topsoil");
@@ -2327,9 +2345,10 @@ mod tests {
     fn seed_dispersal_from_mature_tree() {
         use crate::tree::{GrowthStage, Tree};
 
-        // Place far from water spring (which is at 28..31, 28..31)
-        let tx = 10;
-        let ty = 10;
+        // Place at grid center for maximum landing area.
+        // At the 0.05m scale, dispersal distances are 15-44 voxels.
+        let tx = GRID_X / 2;
+        let ty = GRID_Y / 2;
         let tz = GROUND_LEVEL + 1;
 
         // Try multiple rng_seeds to find one that disperses successfully.
@@ -2369,29 +2388,26 @@ mod tests {
                 voxel_footprint: vec![(tx, ty, tz), (tx, ty, GROUND_LEVEL)],
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
-                skeleton_initialized: false,
+                skeleton_initialized: true,
             });
 
             crate::tick(&mut world, &mut schedule);
 
+            // Search the entire grid for a dispersed seed.
             let grid = world.resource::<VoxelGrid>();
-            for dy in -16i32..=16 {
-                for dx in -16i32..=16 {
-                    let sx = tx as i32 + dx;
-                    let sy = ty as i32 + dy;
-                    if sx < 0 || sy < 0 {
-                        continue;
-                    }
-                    let (sx, sy) = (sx as usize, sy as usize);
-                    if !VoxelGrid::in_bounds(sx, sy, 0) {
-                        continue;
-                    }
-                    if let Some(cell) = grid.get(sx, sy, GROUND_LEVEL + 1) {
+            for sy in 0..GRID_Y {
+                for sx in 0..GRID_X {
+                    if sx == tx && sy == ty { continue; }
+                    // Seeds land at surface + 1
+                    let sh = VoxelGrid::surface_height(sx, sy);
+                    let seed_z = sh + 1;
+                    if let Some(cell) = grid.get(sx, sy, seed_z) {
                         if cell.material == Material::Seed {
                             found_seed = true;
                         }
                     }
                 }
+                if found_seed { break; }
             }
 
             if found_seed {
@@ -2548,9 +2564,27 @@ mod tests {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        let tx = 25;
-        let ty = 25;
+        let tx = 15;
+        let ty = 15;
         let tz = VoxelGrid::surface_height(tx, ty) + 1;
+
+        // Ensure the root position is Soil and above is Air
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(tx, ty, tz - 1) {
+                cell.material = Material::Soil;
+                cell.water_level = 0;
+            }
+            for dz in 0..5 {
+                if let Some(cell) = grid.get_mut(tx, ty, tz + dz) {
+                    cell.material = Material::Air;
+                }
+            }
+            // Also ensure branch tip position is Air
+            if let Some(cell) = grid.get_mut(tx + 1, ty, tz + 2) {
+                cell.material = Material::Air;
+            }
+        }
 
         // Manually build a small skeleton
         let branches = vec![

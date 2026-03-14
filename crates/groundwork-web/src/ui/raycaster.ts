@@ -63,21 +63,23 @@ export function raycastVoxel(
 
   // The hit point is on a face surface. To find the voxel behind the face,
   // step slightly inward from the surface (opposite normal direction).
+  // COORDINATE SWAP: Three.js Y-up → sim Z-up.
+  //   Three.js (x, y, z) → sim (x, z, y)  i.e. sim_y = three_z, sim_z = three_y
   const epsilon = 0.01;
-  const hitVoxelX = Math.floor(point.x - normal.x * epsilon);
-  const hitVoxelY = Math.floor(point.y - normal.y * epsilon);
-  const hitVoxelZ = Math.floor(point.z - normal.z * epsilon);
+  const hitSimX = Math.floor(point.x - normal.x * epsilon);
+  const hitSimY = Math.floor(point.z - normal.z * epsilon);  // three Z → sim Y
+  const hitSimZ = Math.floor(point.y - normal.y * epsilon);  // three Y → sim Z
 
-  // Clamp to grid bounds
-  const hx = Math.max(0, Math.min(GRID_X - 1, hitVoxelX));
-  const hy = Math.max(0, Math.min(GRID_Y - 1, hitVoxelY));
-  const hz = Math.max(0, Math.min(GRID_Z - 1, hitVoxelZ));
+  // Clamp to grid bounds (sim coordinates)
+  const hx = Math.max(0, Math.min(GRID_X - 1, hitSimX));
+  const hy = Math.max(0, Math.min(GRID_Y - 1, hitSimY));
+  const hz = Math.max(0, Math.min(GRID_Z - 1, hitSimZ));
 
   if (placingMode) {
-    // Place on the adjacent voxel (step along normal)
+    // Place on the adjacent voxel (step along normal, swapped)
     const adjX = Math.max(0, Math.min(GRID_X - 1, hx + Math.round(normal.x)));
-    const adjY = Math.max(0, Math.min(GRID_Y - 1, hy + Math.round(normal.y)));
-    const adjZ = Math.max(0, Math.min(GRID_Z - 1, hz + Math.round(normal.z)));
+    const adjY = Math.max(0, Math.min(GRID_Y - 1, hy + Math.round(normal.z)));  // three Z → sim Y
+    const adjZ = Math.max(0, Math.min(GRID_Z - 1, hz + Math.round(normal.y)));  // three Y → sim Z
     return { x: adjX, y: adjY, z: adjZ, hitX: hx, hitY: hy, hitZ: hz, normal };
   }
 

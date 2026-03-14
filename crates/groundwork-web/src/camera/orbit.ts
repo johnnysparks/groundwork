@@ -1,6 +1,10 @@
 /**
  * Orthographic orbit camera with WASD fly, underground cutaway, and smooth transitions.
  *
+ * Coordinate convention: Three.js Y-up.
+ *   Sim (x, y, z) where Z=up  →  Three.js (x, z, y) where Y=up.
+ *   The camera and terrain renderer both use Y-up.
+ *
  * Controls:
  *   WASD / Arrow keys  — Pan camera across the garden
  *   Scroll wheel       — Zoom in/out
@@ -13,13 +17,13 @@
 import * as THREE from 'three';
 import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL } from '../bridge';
 
-/** Default camera state */
+/** Default camera state (Y-up: sim Z → Three.js Y, sim Y → Three.js Z) */
 const DEFAULT_THETA = Math.PI / 4;      // 45 deg azimuth
 const DEFAULT_PHI = Math.PI / 3;        // 60 deg diorama elevation
 const DEFAULT_ZOOM = 1.0;
 const DEFAULT_CENTER_X = GRID_X / 2;
-const DEFAULT_CENTER_Y = GRID_Y / 2;
-const DEFAULT_CENTER_Z = GROUND_LEVEL;
+const DEFAULT_CENTER_Y = GROUND_LEVEL;  // Three.js Y = sim Z (vertical)
+const DEFAULT_CENTER_Z = GRID_Y / 2;    // Three.js Z = sim Y (horizontal)
 
 /** Camera limits */
 const MIN_ZOOM = 0.3;
@@ -31,9 +35,9 @@ const MAX_PHI = Math.PI / 2 - 0.05;
 const PAN_SPEED = 30;
 const PAN_SPEED_FAST = 60;
 
-/** Cutaway depth range */
-const MIN_CUTAWAY_Z = 0;
-const MAX_CUTAWAY_Z = GRID_Z;
+/** Cutaway depth range (Three.js Y axis = sim Z) */
+const MIN_CUTAWAY_Y = 0;
+const MAX_CUTAWAY_Y = GRID_Z;
 const CUTAWAY_SPEED = 20; // voxels per second
 
 export class OrbitCamera {
@@ -55,12 +59,12 @@ export class OrbitCamera {
   /** Smoothed center */
   private center = new THREE.Vector3(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
 
-  /** Cutaway depth: everything above this Z gets clipped. GRID_Z = no cutaway. */
-  private targetCutawayZ = MAX_CUTAWAY_Z;
-  private cutawayZ = MAX_CUTAWAY_Z;
+  /** Cutaway depth: everything above this Y gets clipped. GRID_Z = no cutaway. */
+  private targetCutawayY = MAX_CUTAWAY_Y;
+  private cutawayY = MAX_CUTAWAY_Y;
 
   /** Camera distance from center */
-  private distance = 80;
+  private distance = 100;
 
   /** Damping factor (lower = smoother, 0.08 = ~12 frames to settle) */
   private damping = 0.08;
@@ -68,8 +72,8 @@ export class OrbitCamera {
   /** Currently pressed keys (for continuous movement) */
   private keys = new Set<string>();
 
-  /** Frustum half-size (for resize) */
-  private frustumSize = 60;
+  /** Frustum half-size (for resize) — sized for 80×80×100 glen */
+  private frustumSize = 80;
 
   constructor(aspect: number) {
     this.camera = new THREE.OrthographicCamera(
@@ -81,9 +85,9 @@ export class OrbitCamera {
       500,
     );
 
-    // Cutaway clipping plane: normal pointing down (-Z), clips everything above cutawayZ
-    // Plane equation: -z + cutawayZ >= 0, i.e. z <= cutawayZ
-    this.cutawayPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), MAX_CUTAWAY_Z);
+    // Cutaway clipping plane: normal pointing down (-Y), clips everything above cutawayY
+    // Plane equation: -y + cutawayY >= 0, i.e. y <= cutawayY
+    this.cutawayPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), MAX_CUTAWAY_Y);
 
     this.updatePosition();
   }
@@ -108,8 +112,8 @@ export class OrbitCamera {
     this.camera.zoom += (this.targetZoom - currentZoom) * this.damping;
     this.camera.updateProjectionMatrix();
 
-    this.cutawayZ += (this.targetCutawayZ - this.cutawayZ) * this.damping;
-    this.cutawayPlane.constant = this.cutawayZ;
+    this.cutawayY += (this.targetCutawayY - this.cutawayY) * this.damping;
+    this.cutawayPlane.constant = this.cutawayY;
 
     this.updatePosition();
   }
@@ -136,7 +140,7 @@ export class OrbitCamera {
     this.targetPhi = DEFAULT_PHI;
     this.targetZoom = DEFAULT_ZOOM;
     this.targetCenter.set(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
-    this.targetCutawayZ = MAX_CUTAWAY_Z;
+    this.targetCutawayY = MAX_CUTAWAY_Y;
   }
 
   /** Notify that a key was pressed */
@@ -149,14 +153,14 @@ export class OrbitCamera {
     this.keys.delete(key.toLowerCase());
   }
 
-  /** Get the current cutaway Z level (for UI display) */
+  /** Get the current cutaway Y level (for UI display) */
   getCutawayZ(): number {
-    return this.cutawayZ;
+    return this.cutawayY;
   }
 
   /** Whether cutaway is active (not at maximum) */
   isCutawayActive(): boolean {
-    return this.targetCutawayZ < MAX_CUTAWAY_Z - 0.5;
+    return this.targetCutawayY < MAX_CUTAWAY_Y - 0.5;
   }
 
   /** Handle window resize */
@@ -168,20 +172,20 @@ export class OrbitCamera {
     this.camera.updateProjectionMatrix();
   }
 
-  /** Compute forward/right directions projected onto the XY ground plane */
+  /** Compute forward/right directions projected onto the XZ ground plane (Y-up) */
   private getViewDirections(): { forward: THREE.Vector3; right: THREE.Vector3 } {
-    // Forward = direction the camera is looking at, projected onto XY plane
+    // Forward = direction the camera is looking at, projected onto XZ plane
     const forward = new THREE.Vector3(
       -Math.cos(this.theta),
-      -Math.sin(this.theta),
       0,
+      -Math.sin(this.theta),
     ).normalize();
 
-    // Right = perpendicular to forward on XY plane
+    // Right = perpendicular to forward on XZ plane (cross product: up × forward)
     const right = new THREE.Vector3(
-      -Math.sin(this.theta),
-      Math.cos(this.theta),
+      Math.sin(this.theta),
       0,
+      -Math.cos(this.theta),
     ).normalize();
 
     return { forward, right };
@@ -205,9 +209,9 @@ export class OrbitCamera {
 
     if (delta.lengthSq() > 0) {
       this.targetCenter.add(delta);
-      // Clamp to grid bounds with some padding
+      // Clamp to grid bounds with some padding (X and Z are horizontal)
       this.targetCenter.x = Math.max(-10, Math.min(GRID_X + 10, this.targetCenter.x));
-      this.targetCenter.y = Math.max(-10, Math.min(GRID_Y + 10, this.targetCenter.y));
+      this.targetCenter.z = Math.max(-10, Math.min(GRID_Y + 10, this.targetCenter.z));
     }
   }
 
@@ -215,17 +219,18 @@ export class OrbitCamera {
     const move = CUTAWAY_SPEED * dt;
 
     if (this.keys.has('q')) {
-      this.targetCutawayZ = Math.max(MIN_CUTAWAY_Z, this.targetCutawayZ - move);
+      this.targetCutawayY = Math.max(MIN_CUTAWAY_Y, this.targetCutawayY - move);
     }
     if (this.keys.has('e')) {
-      this.targetCutawayZ = Math.min(MAX_CUTAWAY_Z, this.targetCutawayZ + move);
+      this.targetCutawayY = Math.min(MAX_CUTAWAY_Y, this.targetCutawayY + move);
     }
   }
 
+  /** Spherical coords (Y-up): Y = vertical axis */
   private updatePosition(): void {
     const x = this.center.x + this.distance * Math.sin(this.phi) * Math.cos(this.theta);
-    const y = this.center.y + this.distance * Math.sin(this.phi) * Math.sin(this.theta);
-    const z = this.center.z + this.distance * Math.cos(this.phi);
+    const y = this.center.y + this.distance * Math.cos(this.phi);
+    const z = this.center.z + this.distance * Math.sin(this.phi) * Math.sin(this.theta);
 
     this.camera.position.set(x, y, z);
     this.camera.lookAt(this.center);

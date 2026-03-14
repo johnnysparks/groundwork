@@ -30,9 +30,9 @@ export interface MeshQuad {
 
 /** Chunk dimensions */
 export const CHUNK_SIZE = 16;
-export const CHUNKS_X = Math.ceil(GRID_X / CHUNK_SIZE); // 8
-export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE); // 8
-export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 4
+export const CHUNKS_X = Math.ceil(GRID_X / CHUNK_SIZE); // 5
+export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE); // 5
+export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 7
 
 /**
  * Check if a voxel is solid (not air, water, or foliage).
@@ -312,17 +312,18 @@ export function meshChunk(
 
 /**
  * Generate a mock voxel grid for testing the mesher without WASM.
- * Creates flat ground at GROUND_LEVEL with a water pool and small hill.
+ * Glen scale: 80×80×100 at 5cm/voxel. Fat tree with detailed canopy.
  */
 export function createMockGrid(): Uint8Array {
   const size = GRID_X * GRID_Y * GRID_Z * VOXEL_BYTES;
   const grid = new Uint8Array(size);
 
+  // Stone below z=20, soil up to GROUND_LEVEL, air above
   for (let z = 0; z < GRID_Z; z++) {
     for (let y = 0; y < GRID_Y; y++) {
       for (let x = 0; x < GRID_X; x++) {
         const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
-        if (z < 10) {
+        if (z < 20) {
           grid[idx] = Material.Stone;
         } else if (z <= GROUND_LEVEL) {
           grid[idx] = Material.Soil;
@@ -333,103 +334,79 @@ export function createMockGrid(): Uint8Array {
     }
   }
 
-  // Water pond at center — carved basin with varying depth
+  // Water pond at center — carved basin
   const cx = GRID_X / 2, cy = GRID_Y / 2;
-  const pondRadius = 8;
+  const pondRadius = 10;
   for (let dy = -pondRadius; dy <= pondRadius; dy++) {
     for (let dx = -pondRadius; dx <= pondRadius; dx++) {
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > pondRadius) continue;
-
-      // Depth increases toward center: 1 at edges, up to 4 at center
       const depthFactor = 1.0 - dist / pondRadius;
-      const waterDepth = Math.max(1, Math.round(depthFactor * 4));
-
-      // Carve basin into soil and fill with water
+      const waterDepth = Math.max(1, Math.round(depthFactor * 6));
       for (let d = 0; d < waterDepth; d++) {
         const z = GROUND_LEVEL - d;
         const idx = ((cx + dx) + (cy + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
         grid[idx] = Material.Water;
-        grid[idx + 1] = 255; // water_level
+        grid[idx + 1] = 255;
       }
     }
   }
 
-  // Small stream flowing from pond (shallow water, 1 deep)
-  for (let sx = cx + pondRadius; sx < cx + pondRadius + 12; sx++) {
-    for (let sy = cy - 1; sy <= cy + 1; sy++) {
-      if (sx < GRID_X) {
-        const idx = (sx + sy * GRID_X + GROUND_LEVEL * GRID_X * GRID_Y) * VOXEL_BYTES;
-        grid[idx] = Material.Water;
-        grid[idx + 1] = 200;
-      }
-    }
-  }
+  // A fat oak tree — 3-voxel-radius trunk (7 voxels wide!)
+  const tx = 25, ty = 25;
+  const trunkHeight = 50; // 2.5m at 5cm/voxel
+  const trunkRadius = 3;
 
-  // Small hill
-  for (let dy = -3; dy <= 3; dy++) {
-    for (let dx = -3; dx <= 3; dx++) {
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const height = Math.max(0, Math.floor(3 - dist));
-      for (let h = 0; h < height; h++) {
-        const z = GROUND_LEVEL + 1 + h;
-        if (z < GRID_Z) {
-          const idx = ((30 + dx) + (30 + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
-          grid[idx] = Material.Soil;
+  // Trunk: circular cross-section
+  for (let h = 0; h < trunkHeight; h++) {
+    const z = GROUND_LEVEL + 1 + h;
+    if (z >= GRID_Z) break;
+    for (let dx = -trunkRadius; dx <= trunkRadius; dx++) {
+      for (let dy = -trunkRadius; dy <= trunkRadius; dy++) {
+        if (dx * dx + dy * dy <= trunkRadius * trunkRadius) {
+          const idx = ((tx + dx) + (ty + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+          grid[idx] = Material.Trunk;
         }
       }
     }
   }
 
-  // --- Trees and vegetation ---
-
-  // Helper: place a tree with trunk and leaf canopy
-  function placeTree(tx: number, ty: number, trunkHeight: number, canopyRadius: number): void {
-    // Trunk
-    for (let h = 0; h < trunkHeight; h++) {
-      const z = GROUND_LEVEL + 1 + h;
-      if (z >= GRID_Z) break;
-      const idx = (tx + ty * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
-      grid[idx] = Material.Trunk;
-    }
-    // Canopy (sphere of leaves at top of trunk)
-    const canopyZ = GROUND_LEVEL + trunkHeight - 1;
-    for (let dz = -1; dz <= canopyRadius; dz++) {
-      for (let dy = -canopyRadius; dy <= canopyRadius; dy++) {
-        for (let dx = -canopyRadius; dx <= canopyRadius; dx++) {
-          if (dx === 0 && dy === 0 && dz <= 0) continue; // don't overwrite trunk
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-          if (dist <= canopyRadius + 0.3) {
-            const z = canopyZ + dz;
-            const x = tx + dx;
-            const y = ty + dy;
-            if (z >= 0 && z < GRID_Z && x >= 0 && x < GRID_X && y >= 0 && y < GRID_Y) {
-              const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
-              if (grid[idx] === Material.Air) {
-                grid[idx] = Material.Leaf;
-              }
-            }
+  // Canopy: big round crown of leaf voxels
+  const canopyCenterZ = GROUND_LEVEL + 1 + trunkHeight;
+  const crownRadius = 20; // 1m radius at 5cm/voxel
+  const crownHeight = 15;
+  for (let dz = -crownHeight / 2; dz <= crownHeight / 2; dz++) {
+    const z = Math.floor(canopyCenterZ + dz);
+    if (z < 0 || z >= GRID_Z) continue;
+    // Radius tapers at top and bottom
+    const zFrac = Math.abs(dz) / (crownHeight / 2);
+    const layerR = Math.floor(crownRadius * (1.0 - zFrac * 0.6));
+    for (let dx = -layerR; dx <= layerR; dx++) {
+      for (let dy = -layerR; dy <= layerR; dy++) {
+        if (dx * dx + dy * dy <= layerR * layerR) {
+          const idx = ((tx + dx) + (ty + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (idx >= 0 && idx < grid.length && grid[idx] === Material.Air) {
+            grid[idx] = Material.Leaf;
           }
         }
       }
     }
   }
 
-  // Original tree
-  placeTree(40, 40, 6, 3);
-
-  // More trees for a small grove
-  placeTree(50, 45, 8, 4);    // taller oak-like
-  placeTree(35, 55, 5, 2);    // small tree
-  placeTree(55, 55, 7, 3);    // medium tree
-  placeTree(45, 35, 4, 2);    // short tree
-  placeTree(65, 50, 9, 4);    // tall tree
-  placeTree(70, 65, 6, 3);    // tree near edge
-
-  // A few shrubs (short trunk + small canopy)
-  placeTree(42, 50, 2, 1);
-  placeTree(48, 42, 2, 1);
-  placeTree(58, 48, 2, 1);
+  // Roots spreading underground
+  for (let depth = 1; depth <= 20; depth++) {
+    const z = GROUND_LEVEL - depth;
+    if (z < 0) break;
+    const rootR = Math.max(0, trunkRadius - Math.floor(depth / 5));
+    for (let dx = -rootR; dx <= rootR; dx++) {
+      for (let dy = -rootR; dy <= rootR; dy++) {
+        if (dx * dx + dy * dy <= rootR * rootR) {
+          const idx = ((tx + dx) + (ty + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+          grid[idx] = Material.Root;
+        }
+      }
+    }
+  }
 
   return grid;
 }

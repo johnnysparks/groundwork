@@ -2,12 +2,13 @@ use bevy_ecs::prelude::Resource;
 
 use crate::voxel::{Material, Voxel};
 
-pub const GRID_X: usize = 120;
-pub const GRID_Y: usize = 120;
-pub const GRID_Z: usize = 60;
+pub const GRID_X: usize = 80;
+pub const GRID_Y: usize = 80;
+pub const GRID_Z: usize = 100;
 
-/// Z level where underground meets the surface (~15m real depth).
-pub const GROUND_LEVEL: usize = 30;
+/// Z level where underground meets the surface (~2m real depth).
+/// 60 voxels above ground = 3m of sky and canopy.
+pub const GROUND_LEVEL: usize = 40;
 
 /// The voxel grid is the central data structure of the simulation.
 /// Flat array indexed by x + y*GRID_X + z*GRID_X*GRID_Y.
@@ -26,7 +27,7 @@ impl VoxelGrid {
     }
 
     /// Height map value for position (x, y). Returns a surface elevation
-    /// ranging from ~13 to ~17, creating rolling hills.
+    /// creating gentle rolling ground for the glen.
     pub fn surface_height(x: usize, y: usize) -> usize {
         // Two overlapping sine waves for gentle, natural-looking hills.
         // Frequencies normalized to grid size; amplitudes in meters converted to voxels.
@@ -37,16 +38,16 @@ impl VoxelGrid {
         let freq_y1 = 6.0 / GRID_Y as f64;
         let freq_x2 = 4.2 / GRID_X as f64;
         let freq_y2 = 5.4 / GRID_Y as f64;
-        let phase_x = 20.0 / 60.0 * GRID_X as f64;
-        let phase_y = 15.0 / 60.0 * GRID_Y as f64;
-        // Amplitudes: 1.5m and 0.8m of terrain variation
-        let amp1 = 1.5 / VOXEL_SIZE_M;
-        let amp2 = 0.8 / VOXEL_SIZE_M;
+        let phase_x = 0.33 * GRID_X as f64;
+        let phase_y = 0.25 * GRID_Y as f64;
+        // Small glen: gentle undulation (0.15m and 0.08m)
+        let amp1 = 0.15 / VOXEL_SIZE_M;
+        let amp2 = 0.08 / VOXEL_SIZE_M;
         let h1 = (fx * freq_x1).sin() * (fy * freq_y1).sin() * amp1;
         let h2 = ((fx + phase_x) * freq_x2).cos() * ((fy + phase_y) * freq_y2).cos() * amp2;
         let base = GROUND_LEVEL as f64 + h1 + h2;
-        // Clamp to ±2m from GROUND_LEVEL
-        let range = (2.0 / VOXEL_SIZE_M) as usize;
+        // Clamp to ±0.3m from GROUND_LEVEL
+        let range = (0.3 / VOXEL_SIZE_M) as usize;
         (base.round() as usize).clamp(GROUND_LEVEL - range, GROUND_LEVEL + range)
     }
 
@@ -62,9 +63,9 @@ impl VoxelGrid {
         let dx = x as f64 - cx as f64;
         let dy = y as f64 - cy as f64;
         let dist = (dx - dy).abs() / 1.414;
-        // Stream width ~1.2m, exclusion zone ~2m (in voxel units)
-        let width = 1.2 / crate::scale::VOXEL_SIZE_M;
-        let exclusion = 2.0 / crate::scale::VOXEL_SIZE_M;
+        // Stream width ~0.06m, exclusion zone ~0.1m (in voxel units)
+        let width = 0.06 / crate::scale::VOXEL_SIZE_M;
+        let exclusion = 0.1 / crate::scale::VOXEL_SIZE_M;
         dist <= width && (dx + dy) > exclusion
     }
 
@@ -78,12 +79,13 @@ impl VoxelGrid {
         }
         // Cluster positions as fractions of grid dimensions.
         // (8/60, 12/60), (50/60, 8/60), (12/60, 48/60)
-        // Radii in meters-squared, converted to voxels-squared
-        let r_scale = 1.0 / (crate::scale::VOXEL_SIZE_M * crate::scale::VOXEL_SIZE_M);
+        // Radii: fraction of grid extent squared, converted to voxels-squared.
+        // Each cluster spans roughly 3-4% of the grid diameter.
+        let grid_extent = GRID_X.min(GRID_Y) as f64;
         let clusters: [(f64, f64, f64); 3] = [
-            (8.0 / 60.0, 12.0 / 60.0, 10.0 * r_scale),
-            (50.0 / 60.0, 8.0 / 60.0, 8.0 * r_scale),
-            (12.0 / 60.0, 48.0 / 60.0, 12.0 * r_scale),
+            (8.0 / 60.0, 12.0 / 60.0, (grid_extent * 0.04).powi(2)),
+            (50.0 / 60.0, 8.0 / 60.0, (grid_extent * 0.035).powi(2)),
+            (12.0 / 60.0, 48.0 / 60.0, (grid_extent * 0.045).powi(2)),
         ];
         for (fx, fy, r_sq) in clusters {
             let cx = (fx * GRID_X as f64).round() as isize;
@@ -105,7 +107,7 @@ impl VoxelGrid {
                 for z in 0..GRID_Z {
                     let idx = Self::index(x, y, z);
 
-                    let stone_top = crate::scale::meters_to_voxels(5.0);
+                    let stone_top = crate::scale::meters_to_voxels(1.0);
                     if z < stone_top {
                         cells[idx].material = Material::Stone;
                     } else if z <= surface {
@@ -140,10 +142,10 @@ impl VoxelGrid {
             }
         }
 
-        // Water spring at center — a ~4m×4m pool at surface level
+        // Water spring at center — a small pool at surface level
         let cx = GRID_X / 2;
         let cy = GRID_Y / 2;
-        let pool_half = crate::scale::meters_to_voxels(2.0);
+        let pool_half = crate::scale::meters_to_voxels(0.2);
         let spring_z = Self::surface_height(cx, cy);
         for dy in (cy.saturating_sub(pool_half))..=(cy + pool_half - 1) {
             for dx in (cx.saturating_sub(pool_half))..=(cx + pool_half - 1) {
@@ -245,9 +247,10 @@ mod tests {
         let grid = VoxelGrid::new();
         // Z=0 is stone
         assert_eq!(grid.get(0, 0, 0).unwrap().material, Material::Stone);
-        // Mid-depth is soil (z = GROUND_LEVEL/2, always below any surface)
-        let mid = GROUND_LEVEL / 2;
-        assert_eq!(grid.get(0, 0, mid).unwrap().material, Material::Soil);
+        // Midway between stone top and surface is soil
+        let stone_top = crate::scale::meters_to_voxels(1.0);
+        let soil_mid = (stone_top + GROUND_LEVEL) / 2;
+        assert_eq!(grid.get(0, 0, soil_mid).unwrap().material, Material::Soil);
         // Surface height varies — check that surface is soil and above is air
         let sh = VoxelGrid::surface_height(0, 0);
         assert_eq!(grid.get(0, 0, sh).unwrap().material, Material::Soil);

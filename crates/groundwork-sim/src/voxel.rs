@@ -129,6 +129,7 @@ mod tests {
 /// A single cell in the voxel grid.
 /// Kept small (4 bytes) so the full 60×60×30 grid fits in ~324 KB.
 #[derive(Clone, Copy, Debug, Default)]
+#[repr(C)]
 pub struct Voxel {
     pub material: Material,
     pub water_level: u8,

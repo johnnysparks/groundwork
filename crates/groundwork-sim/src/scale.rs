@@ -1,6 +1,7 @@
 /// Side length of one voxel in meters.
-/// 0.5m gives 2x resolution: flower stems ≈ 1 voxel, tree detail in ~16-18 voxels.
-pub const VOXEL_SIZE_M: f64 = 0.5;
+/// 0.05m (5cm) gives fine detail: oak trunks ~6 voxels wide, rich canopy structure.
+/// The grid represents a small glen (~4m × 4m × 5m).
+pub const VOXEL_SIZE_M: f64 = 0.05;
 
 pub use crate::grid::{GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 
@@ -47,17 +48,19 @@ pub fn grid_center_y() -> usize {
 }
 
 /// Scale factor for light attenuation per voxel layer.
-/// Smaller voxels = each layer attenuates less.
+/// Uses sqrt(VOXEL_SIZE_M) for a gentler reduction at small voxel sizes,
+/// keeping gameplay responsive while still scaling with resolution.
 #[inline]
 pub fn scale_attenuation(base: u8) -> u8 {
-    let scaled = base as f64 * VOXEL_SIZE_M;
+    let scaled = base as f64 * VOXEL_SIZE_M.sqrt();
     (scaled.round() as u8).max(if base > 0 { 1 } else { 0 })
 }
 
 /// Scale a u8 transfer amount by voxel size.
+/// Uses sqrt(VOXEL_SIZE_M) — see scale_attenuation.
 #[inline]
 pub fn scale_transfer(base: u8) -> u8 {
-    let scaled = base as f64 * VOXEL_SIZE_M;
+    let scaled = base as f64 * VOXEL_SIZE_M.sqrt();
     (scaled.round() as u8).max(if base > 0 { 1 } else { 0 })
 }
 
@@ -87,11 +90,11 @@ mod tests {
 
     #[test]
     fn scale_proportional() {
-        // Attenuation and transfer scale linearly with voxel size
+        // Attenuation and transfer scale with sqrt of voxel size
         let a30 = scale_attenuation(30);
-        assert_eq!(a30, (30.0 * VOXEL_SIZE_M).round() as u8);
+        assert_eq!(a30, (30.0 * VOXEL_SIZE_M.sqrt()).round() as u8);
         let t32 = scale_transfer(32);
-        assert_eq!(t32, (32.0 * VOXEL_SIZE_M).round() as u8);
+        assert_eq!(t32, (32.0 * VOXEL_SIZE_M.sqrt()).round() as u8);
         assert_eq!(scale_attenuation(0), 0);
     }
 

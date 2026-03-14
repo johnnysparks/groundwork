@@ -137,8 +137,8 @@ const ColorGradeShader = {
 const VignetteShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    darkness: { value: 0.35 },   // max darkening at corners
-    offset: { value: 1.2 },      // distance from center where darkening begins
+    darkness: { value: 0.2 },    // gentle darkening at corners
+    offset: { value: 1.4 },      // starts further from center
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -200,11 +200,11 @@ export function createPostProcessing(
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 
-  // 2. SSAO — contact shadows and depth perception
+  // 2. SSAO — very subtle contact shadows (keep it light for diorama)
   const ssaoPass = new SSAOPass(scene, camera, width, height);
-  ssaoPass.kernelRadius = 4;
-  ssaoPass.minDistance = 0.001;
-  ssaoPass.maxDistance = 0.15;
+  ssaoPass.kernelRadius = 2;
+  ssaoPass.minDistance = 0.002;
+  ssaoPass.maxDistance = 0.08;
   ssaoPass.output = SSAOPass.OUTPUT.Default;
   composer.addPass(ssaoPass);
 

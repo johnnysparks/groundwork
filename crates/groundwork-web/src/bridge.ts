@@ -9,11 +9,11 @@
 let wasmModule: any = null;
 let wasmMemory: WebAssembly.Memory | null = null;
 
-/** Grid dimensions (constants from Rust) */
-export const GRID_X = 120;
-export const GRID_Y = 120;
-export const GRID_Z = 60;
-export const GROUND_LEVEL = 30;
+/** Grid dimensions (constants from Rust — glen scale: 4m×4m×5m at 5cm/voxel) */
+export const GRID_X = 80;
+export const GRID_Y = 80;
+export const GRID_Z = 100;
+export const GROUND_LEVEL = 40;
 
 /** Voxel byte layout: [material, water_level, light_level, nutrient_level] */
 export const VOXEL_BYTES = 4;
@@ -56,10 +56,18 @@ export async function initSim(): Promise<boolean> {
   // Dynamic import — the WASM module is built by wasm-pack.
   // Fails gracefully if WASM hasn't been built yet (mock data mode).
   try {
-    const wasm = await import(/* @vite-ignore */ '../wasm/groundwork_sim.js');
+    const wasmUrl = new URL(/* @vite-ignore */ '../wasm/groundwork_sim.js', import.meta.url);
+    const resp = await fetch(wasmUrl, { method: 'HEAD' }).catch(() => null);
+    if (!resp || !resp.ok) {
+      console.warn('WASM module not found — running in mock data mode');
+      return false;
+    }
+    const wasm = await import(/* @vite-ignore */ wasmUrl.href);
+    // default() initializes the WASM module and returns InitOutput (instance.exports)
     const initOutput = await wasm.default();
-    wasm.init();
+    wasm.init(); // Create bevy_ecs World + Schedule
     wasmModule = wasm;
+    // Memory lives on the InitOutput (instance.exports), not the ES module
     wasmMemory = initOutput.memory;
     return true;
   } catch (e) {
