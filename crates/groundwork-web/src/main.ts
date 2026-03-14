@@ -27,6 +27,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
+renderer.localClippingEnabled = true; // Required for cutaway clipping planes
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -57,8 +58,11 @@ scene.add(terrainGroup);
 // Map from chunk key to Three.js mesh
 const chunkMeshes = new Map<string, THREE.Mesh>();
 
+// Cutaway clipping planes array (shared reference — plane constant updates each frame)
+const clippingPlanes = [orbit.cutawayPlane];
+
 for (const chunk of updatedChunks) {
-  const mesh = buildChunkMesh(chunk);
+  const mesh = buildChunkMesh(chunk, clippingPlanes);
   if (mesh) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -186,13 +190,25 @@ renderer.domElement.addEventListener('wheel', (e) => {
   orbit.zoom(e.deltaY > 0 ? 0.9 : 1.1);
 }, { passive: false });
 
+// Keyboard: WASD/arrows for pan, Q/E for cutaway depth, R for reset, Space for auto-tick
 document.addEventListener('keydown', (e) => {
-  switch (e.key) {
+  // Pass to camera for continuous movement keys
+  orbit.keyDown(e.key);
+
+  switch (e.key.toLowerCase()) {
     case ' ':
+      e.preventDefault();
       autoTick = !autoTick;
       hud.setAutoTick(autoTick);
       break;
+    case 'r':
+      orbit.reset();
+      break;
   }
+});
+
+document.addEventListener('keyup', (e) => {
+  orbit.keyUp(e.key);
 });
 
 // --- Resize ---
@@ -215,11 +231,11 @@ const clock = new THREE.Clock();
 function animate(): void {
   requestAnimationFrame(animate);
 
-  const delta = clock.getDelta() * 1000; // ms
+  const dt = clock.getDelta(); // seconds
 
   // Auto-tick simulation
   if (autoTick) {
-    tickAccumulator += delta;
+    tickAccumulator += dt * 1000;
     while (tickAccumulator >= TICK_INTERVAL_MS) {
       tickAccumulator -= TICK_INTERVAL_MS;
       // When WASM is connected: tick(1) then re-mesh dirty chunks
@@ -229,7 +245,7 @@ function animate(): void {
   // Animate water ripples
   updateWaterTime(clock.elapsedTime);
 
-  orbit.update();
+  orbit.update(dt);
   postProcessing.composer.render();
 }
 
@@ -241,6 +257,8 @@ console.log(
 );
 console.log(
   `Grid: ${GRID_X}x${GRID_Y}x${GRID_Z} | ` +
-  `Chunks: ${chunkMeshes.size} active | ` +
-  `1-5: tools, Q/E: species, drag: orbit, scroll: zoom, space: auto-tick`,
+  `Chunks: ${chunkMeshes.size} active`,
+);
+console.log(
+  'Controls: 1-5=tools, WASD/Arrows=pan, Q/E=cutaway, R=reset, drag=orbit, scroll=zoom, space=auto-tick',
 );
