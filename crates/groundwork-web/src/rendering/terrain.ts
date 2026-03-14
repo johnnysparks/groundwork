@@ -29,6 +29,9 @@ const MATERIAL_COLORS: Record<number, THREE.Color> = {
   [Material.DeadWood]: new THREE.Color(0.48, 0.40, 0.28), // faded wood
 };
 
+/** Grass-tinted soil for top faces near/above ground level */
+const SOIL_GRASS = new THREE.Color(0.28, 0.40, 0.18); // mossy green-brown
+
 const DEFAULT_COLOR = new THREE.Color(1, 0, 1); // magenta = unmapped material
 
 /** AO darkening factors: 0=no occlusion (bright), 3=full occlusion (dark) */
@@ -118,7 +121,9 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
   let vi = 0;
 
   for (const quad of quads) {
-    const baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
+    // Top-facing soil near ground level gets a grass tint
+    const isGrass = quad.material === Material.Soil && quad.face === 4 && quad.z >= GROUND_LEVEL - 1;
+    const baseColor = isGrass ? SOIL_GRASS : (MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR);
     const [nx, ny, nz] = FACE_NORMALS[quad.face];
     const corners = getQuadCorners(quad);
     const ao = quad.ao;
