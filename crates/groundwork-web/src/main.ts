@@ -10,6 +10,7 @@ import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL } from './bridge';
 import { createMockGrid } from './mesher/greedy';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh } from './rendering/terrain';
+import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
@@ -62,6 +63,18 @@ for (const chunk of updatedChunks) {
     chunkMeshes.set(mesh.name, mesh);
   }
 }
+
+// --- Water surface ---
+
+const waterMesh = buildWaterMesh(grid);
+if (waterMesh) {
+  scene.add(waterMesh);
+}
+
+// Sync sun direction to water shader
+const sunDir = new THREE.Vector3();
+sunDir.subVectors(lights.sun.target.position, lights.sun.position).negate();
+updateWaterSun(sunDir, lights.sun.intensity);
 
 // --- Post-processing ---
 
@@ -140,6 +153,9 @@ function animate(): void {
       // When WASM is connected: tick(1) then re-mesh dirty chunks
     }
   }
+
+  // Animate water ripples
+  updateWaterTime(clock.elapsedTime);
 
   orbit.update();
   postProcessing.composer.render();

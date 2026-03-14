@@ -35,11 +35,12 @@ export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE); // 8
 export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 4
 
 /**
- * Check if a voxel is solid (not air).
- * Air voxels don't generate faces.
+ * Check if a voxel is solid (not air or water).
+ * Air and water voxels don't generate terrain faces.
+ * Water is rendered separately with a custom shader.
  */
 function isSolid(mat: number): boolean {
-  return mat !== Material.Air;
+  return mat !== Material.Air && mat !== Material.Water;
 }
 
 /**
@@ -318,13 +319,36 @@ export function createMockGrid(): Uint8Array {
     }
   }
 
-  // Water pool at center
+  // Water pond at center — carved basin with varying depth
   const cx = GRID_X / 2, cy = GRID_Y / 2;
-  for (let dy = -4; dy <= 4; dy++) {
-    for (let dx = -4; dx <= 4; dx++) {
-      const idx = ((cx + dx) + (cy + dy) * GRID_X + GROUND_LEVEL * GRID_X * GRID_Y) * VOXEL_BYTES;
-      grid[idx] = Material.Water;
-      grid[idx + 1] = 255; // water_level
+  const pondRadius = 8;
+  for (let dy = -pondRadius; dy <= pondRadius; dy++) {
+    for (let dx = -pondRadius; dx <= pondRadius; dx++) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > pondRadius) continue;
+
+      // Depth increases toward center: 1 at edges, up to 4 at center
+      const depthFactor = 1.0 - dist / pondRadius;
+      const waterDepth = Math.max(1, Math.round(depthFactor * 4));
+
+      // Carve basin into soil and fill with water
+      for (let d = 0; d < waterDepth; d++) {
+        const z = GROUND_LEVEL - d;
+        const idx = ((cx + dx) + (cy + dy) * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+        grid[idx] = Material.Water;
+        grid[idx + 1] = 255; // water_level
+      }
+    }
+  }
+
+  // Small stream flowing from pond (shallow water, 1 deep)
+  for (let sx = cx + pondRadius; sx < cx + pondRadius + 12; sx++) {
+    for (let sy = cy - 1; sy <= cy + 1; sy++) {
+      if (sx < GRID_X) {
+        const idx = (sx + sy * GRID_X + GROUND_LEVEL * GRID_X * GRID_Y) * VOXEL_BYTES;
+        grid[idx] = Material.Water;
+        grid[idx + 1] = 200;
+      }
     }
   }
 
