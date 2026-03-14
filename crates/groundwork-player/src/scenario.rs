@@ -127,6 +127,40 @@ impl ScenarioBuilder {
         self
     }
 
+    // --- Camera ---
+
+    /// Orbit camera to specific angles.
+    pub fn orbit(mut self, theta_deg: f64, phi_deg: f64) -> Self {
+        self.actions.push(Action::CameraOrbit { theta_deg, phi_deg });
+        self
+    }
+
+    /// Pan camera to center on a world position (sim coords).
+    pub fn pan(mut self, x: f64, y: f64, z: f64) -> Self {
+        self.actions.push(Action::CameraPan { x, y, z });
+        self
+    }
+
+    /// Zoom camera. 1.0 = default, >1 = closer, <1 = further.
+    pub fn zoom(mut self, level: f64) -> Self {
+        self.actions.push(Action::CameraZoom { level });
+        self
+    }
+
+    /// Set cutaway depth for underground viewing (sim Z coordinate).
+    pub fn cutaway(mut self, z: f64) -> Self {
+        self.actions.push(Action::CameraCutaway { z });
+        self
+    }
+
+    /// Reset camera to default diorama view.
+    pub fn camera_reset(mut self) -> Self {
+        self.actions.push(Action::CameraReset);
+        self
+    }
+
+    // --- Probes & Evaluators ---
+
     /// Add a voxel probe coordinate for oracle snapshots.
     pub fn probe(mut self, x: usize, y: usize, z: usize) -> Self {
         self.probes.push((x, y, z));

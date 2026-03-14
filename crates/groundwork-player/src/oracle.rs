@@ -18,6 +18,40 @@ pub struct OracleSnapshot {
     pub material_counts: MaterialCounts,
     /// Sampled voxel values at specific coordinates (set by the scenario).
     pub probes: Vec<VoxelProbe>,
+    /// Camera state at this moment (for evaluating player perspective).
+    pub camera: CameraState,
+}
+
+/// Camera state — where the player is looking.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CameraState {
+    /// Azimuth angle in degrees (0-360).
+    pub theta_deg: f64,
+    /// Elevation angle in degrees (11-85).
+    pub phi_deg: f64,
+    /// Zoom level (1.0 = default).
+    pub zoom: f64,
+    /// Look-at center in sim coordinates (x, y horizontal; z vertical).
+    pub center_x: f64,
+    pub center_y: f64,
+    pub center_z: f64,
+    /// Cutaway depth in sim Z. GRID_Z = no cutaway; <GROUND_LEVEL = underground.
+    pub cutaway_z: f64,
+}
+
+impl Default for CameraState {
+    fn default() -> Self {
+        use groundwork_sim::grid::{GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
+        Self {
+            theta_deg: 45.0,
+            phi_deg: 60.0,
+            zoom: 1.0,
+            center_x: GRID_X as f64 / 2.0,
+            center_y: GRID_Y as f64 / 2.0,
+            center_z: GROUND_LEVEL as f64,
+            cutaway_z: GRID_Z as f64, // no cutaway
+        }
+    }
 }
 
 /// Counts of each material type in the grid.
@@ -61,12 +95,12 @@ pub struct VoxelProbe {
 }
 
 /// Take an oracle snapshot of the current world state.
-pub fn snapshot(world: &World) -> OracleSnapshot {
-    snapshot_with_probes(world, &[])
+pub fn snapshot(world: &World, camera: &CameraState) -> OracleSnapshot {
+    snapshot_with_probes(world, &[], camera)
 }
 
 /// Take an oracle snapshot with specific voxel probes.
-pub fn snapshot_with_probes(world: &World, probe_coords: &[(usize, usize, usize)]) -> OracleSnapshot {
+pub fn snapshot_with_probes(world: &World, probe_coords: &[(usize, usize, usize)], camera: &CameraState) -> OracleSnapshot {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 
@@ -110,5 +144,6 @@ pub fn snapshot_with_probes(world: &World, probe_coords: &[(usize, usize, usize)
         tick,
         material_counts: counts,
         probes,
+        camera: camera.clone(),
     }
 }

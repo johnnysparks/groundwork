@@ -3,33 +3,36 @@
 //! Tests that planting multiple species near each other produces
 //! emergent ecological behavior (e.g., water competition, light shading).
 
+use groundwork_sim::grid::{GRID_X, GRID_Y, GROUND_LEVEL};
+
 use crate::evaluator::{Custom, MaterialMinimum, NoCrash, Verdict};
 use crate::scenario::Scenario;
 
 /// Plant a small garden with diverse species and verify ecosystem health.
 pub fn diverse_garden() -> Scenario {
-    let seed_z = 40;
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
 
     Scenario::new("diverse_garden")
         .description("Plant a diverse garden near water and verify ecosystem emerges")
         .checkpoint("start")
-        // Prepare soil: add extra water for a larger growing area
-        .fill("water", 55, 55, 35, 65, 65, 35)
+        // Add extra water for a larger growing area
+        .fill("water", cx - 5, cy - 5, GROUND_LEVEL + 5, cx + 5, cy + 5, GROUND_LEVEL + 5)
         // Plant a variety of species
-        .plant("oak", 56, 58, seed_z)
-        .plant("birch", 64, 58, seed_z)
-        .plant("fern", 58, 62, seed_z)
-        .plant("moss", 60, 60, seed_z)
-        .plant("grass", 62, 62, seed_z)
-        .plant("wildflower", 58, 58, seed_z)
+        .plant("oak", cx - 4, cy - 2, seed_z)
+        .plant("birch", cx + 4, cy - 2, seed_z)
+        .plant("fern", cx - 2, cy + 2, seed_z)
+        .plant("moss", cx, cy, seed_z)
+        .plant("grass", cx + 2, cy + 2, seed_z)
+        .plant("wildflower", cx - 2, cy - 2, seed_z)
         // Let the ecosystem develop
         .tick(300)
         .checkpoint("end")
         .status()
         .eval(NoCrash)
-        // After 300 ticks, we should see some plant diversity
         .eval(MaterialMinimum::new("plant", 3))
-        // Custom evaluator: verify the garden isn't dead
+        // Custom: verify the garden isn't dead
         .eval(Custom {
             name: "garden_not_dead".into(),
             f: Box::new(|trace| {

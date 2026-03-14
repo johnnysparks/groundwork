@@ -253,6 +253,66 @@ impl Evaluator for NoCrash {
     }
 }
 
+/// Checks that the camera visited a specific cutaway depth during the run.
+/// Used to verify the player explored underground.
+pub struct CameraWentUnderground {
+    pub name: String,
+    /// Maximum cutaway Z to count as "underground" (default: GROUND_LEVEL = 30).
+    pub max_z: f64,
+}
+
+impl CameraWentUnderground {
+    pub fn new() -> Self {
+        Self {
+            name: "camera_went_underground".into(),
+            max_z: groundwork_sim::grid::GROUND_LEVEL as f64,
+        }
+    }
+
+    pub fn below(z: f64) -> Self {
+        Self {
+            name: format!("camera_below_z{z:.0}"),
+            max_z: z,
+        }
+    }
+}
+
+impl Evaluator for CameraWentUnderground {
+    fn evaluate(&self, trace: &Trace) -> Verdict {
+        let went_under = trace.steps.iter().any(|s| s.oracle.camera.cutaway_z <= self.max_z);
+        Verdict {
+            evaluator: self.name.clone(),
+            passed: went_under,
+            reason: if went_under {
+                format!("camera went below z={:.0}", self.max_z)
+            } else {
+                format!("camera never went below z={:.0}", self.max_z)
+            },
+            score: Some(if went_under { 1.0 } else { 0.0 }),
+        }
+    }
+}
+
+/// Checks that the camera orbited (changed angle) during the run.
+pub struct CameraOrbited;
+
+impl Evaluator for CameraOrbited {
+    fn evaluate(&self, trace: &Trace) -> Verdict {
+        let thetas: Vec<f64> = trace.steps.iter().map(|s| s.oracle.camera.theta_deg).collect();
+        let orbited = thetas.windows(2).any(|w| (w[1] - w[0]).abs() > 1.0);
+        Verdict {
+            evaluator: "camera_orbited".into(),
+            passed: orbited,
+            reason: if orbited {
+                "camera angle changed during run".into()
+            } else {
+                "camera angle stayed fixed".into()
+            },
+            score: Some(if orbited { 1.0 } else { 0.0 }),
+        }
+    }
+}
+
 /// Custom evaluator from a closure.
 pub struct Custom {
     pub name: String,

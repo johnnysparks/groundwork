@@ -2,17 +2,19 @@
 //!
 //! The runner creates a fresh world, executes actions in order, records
 //! observations and oracle snapshots, and returns a complete trace.
+//! Camera state is tracked alongside sim state so evaluators can assess
+//! what the player was looking at.
 
 use bevy_ecs::prelude::*;
 
-use groundwork_sim::grid::VoxelGrid;
+use groundwork_sim::grid::{VoxelGrid, GRID_Z, GROUND_LEVEL};
 use groundwork_sim::tree::{SeedSpeciesMap, species_name_to_id};
 use groundwork_sim::voxel::Material;
 
 use crate::action::Action;
 use crate::evaluator::Verdict;
 use crate::observer::{self, Observation};
-use crate::oracle;
+use crate::oracle::{self, CameraState};
 use crate::scenario::Scenario;
 use crate::trace::Trace;
 
@@ -60,14 +62,15 @@ impl RunResult {
 pub fn run(scenario: &Scenario) -> RunResult {
     let mut world = groundwork_sim::create_world();
     let mut schedule = groundwork_sim::create_schedule();
+    let mut camera = CameraState::default();
 
     let mut trace_builder = Trace::builder(&scenario.name);
 
     for action in &scenario.actions {
         trace_builder.begin_step();
 
-        let observation = execute_action(&mut world, &mut schedule, action);
-        let oracle_snapshot = oracle::snapshot_with_probes(&world, &scenario.probes);
+        let observation = execute_action(&mut world, &mut schedule, &mut camera, action);
+        let oracle_snapshot = oracle::snapshot_with_probes(&world, &scenario.probes, &camera);
 
         trace_builder.record(action.clone(), observation, oracle_snapshot);
     }
@@ -87,6 +90,7 @@ pub fn run(scenario: &Scenario) -> RunResult {
 fn execute_action(
     world: &mut World,
     schedule: &mut bevy_ecs::schedule::Schedule,
+    camera: &mut CameraState,
     action: &Action,
 ) -> Observation {
     match action {
@@ -98,7 +102,6 @@ fn execute_action(
             let after = count_materials(world);
             let tick = world.resource::<groundwork_sim::Tick>().0;
 
-            // Produce CLI-like output
             let mut changes = Vec::new();
             let names = [
                 "air", "soil", "stone", "water", "root", "seed", "trunk", "branch", "leaf",
@@ -137,7 +140,6 @@ fn execute_action(
             let text = match result {
                 Some(landing_z) => {
                     drop(grid);
-                    // Register species for seeds
                     if mat == Material::Seed {
                         let mut seed_map = world.resource_mut::<SeedSpeciesMap>();
                         seed_map.map.insert((*x, *y, landing_z), species_id);
@@ -205,6 +207,69 @@ fn execute_action(
             Observation { text, tick }
         }
 
+        // --- Camera actions ---
+
+        Action::CameraOrbit { theta_deg, phi_deg } => {
+            let tick = world.resource::<groundwork_sim::Tick>().0;
+            camera.theta_deg = *theta_deg;
+            camera.phi_deg = phi_deg.clamp(11.0, 85.0);
+            Observation {
+                text: format!(
+                    "Camera orbit: azimuth {:.0}°, elevation {:.0}°",
+                    camera.theta_deg, camera.phi_deg
+                ),
+                tick,
+            }
+        }
+
+        Action::CameraPan { x, y, z } => {
+            let tick = world.resource::<groundwork_sim::Tick>().0;
+            camera.center_x = *x;
+            camera.center_y = *y;
+            camera.center_z = *z;
+            Observation {
+                text: format!("Camera pan to ({:.0}, {:.0}, {:.0})", x, y, z),
+                tick,
+            }
+        }
+
+        Action::CameraZoom { level } => {
+            let tick = world.resource::<groundwork_sim::Tick>().0;
+            camera.zoom = level.clamp(0.3, 4.0);
+            Observation {
+                text: format!("Camera zoom: {:.1}x", camera.zoom),
+                tick,
+            }
+        }
+
+        Action::CameraCutaway { z } => {
+            let tick = world.resource::<groundwork_sim::Tick>().0;
+            camera.cutaway_z = z.clamp(0.0, GRID_Z as f64);
+            let gl = GROUND_LEVEL as f64;
+            let label = if camera.cutaway_z >= GRID_Z as f64 - 0.5 {
+                "no cutaway (full view)".to_string()
+            } else if camera.cutaway_z >= gl - 0.5 {
+                format!("surface + {:.0} above", camera.cutaway_z - gl)
+            } else {
+                format!("{:.0} below surface", gl - camera.cutaway_z)
+            };
+            Observation {
+                text: format!("Camera cutaway: z={:.0} ({})", camera.cutaway_z, label),
+                tick,
+            }
+        }
+
+        Action::CameraReset => {
+            let tick = world.resource::<groundwork_sim::Tick>().0;
+            *camera = CameraState::default();
+            Observation {
+                text: "Camera reset to default diorama view".to_string(),
+                tick,
+            }
+        }
+
+        // --- Observations ---
+
         Action::Inspect { x, y, z } => observer::observe_inspect(world, *x, *y, *z),
 
         Action::Status => observer::observe_status(world),
@@ -240,11 +305,10 @@ fn parse_tool_material(name: &str) -> (Material, usize) {
         "stone" => (Material::Stone, 0),
         "seed" => (Material::Seed, 0),
         other => {
-            // Try species name
             if let Some(id) = species_name_to_id(other) {
                 (Material::Seed, id)
             } else {
-                (Material::Seed, 0) // default to oak
+                (Material::Seed, 0)
             }
         }
     }
@@ -258,7 +322,6 @@ fn apply_tool(grid: &mut VoxelGrid, mat: Material, x: usize, y: usize, z: usize)
     }
 
     if mat == Material::Air {
-        // Shovel: dig
         let voxel = grid.get(x, y, z)?;
         if voxel.material == Material::Air {
             return None;
@@ -267,19 +330,16 @@ fn apply_tool(grid: &mut VoxelGrid, mat: Material, x: usize, y: usize, z: usize)
         return Some(z);
     }
 
-    // Check target is air
     let voxel = grid.get(x, y, z)?;
     if voxel.material != Material::Air {
         return None;
     }
 
-    // Gravity for non-stone
     let landing_z = match mat {
         Material::Stone => z,
         _ => grid.find_landing_z(x, y, z),
     };
 
-    // Check landing is air
     let landing_voxel = grid.get(x, y, landing_z)?;
     if landing_voxel.material != Material::Air {
         return None;

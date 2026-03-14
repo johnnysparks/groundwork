@@ -5,7 +5,7 @@
 //! that needs updating.
 
 use groundwork_player::runner;
-use groundwork_player::scenarios::{basic_growth, ecosystem, water_system};
+use groundwork_player::scenarios::{basic_growth, camera_exploration, ecosystem, water_system};
 
 fn run_and_assert(scenario_fn: fn() -> groundwork_player::scenario::Scenario) {
     let scenario = scenario_fn();
@@ -48,6 +48,16 @@ fn scenario_water_flow_and_absorption() {
 #[test]
 fn scenario_diverse_garden() {
     run_and_assert(ecosystem::diverse_garden);
+}
+
+#[test]
+fn scenario_explore_above_and_below() {
+    run_and_assert(camera_exploration::explore_above_and_below);
+}
+
+#[test]
+fn scenario_camera_edge_cases() {
+    run_and_assert(camera_exploration::camera_edge_cases);
 }
 
 /// Verify that traces are serializable (important for artifact storage).
