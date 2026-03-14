@@ -12,9 +12,10 @@ use groundwork_sim::tree::{SeedSpeciesMap, species_name_to_id};
 use groundwork_sim::voxel::Material;
 
 use crate::action::Action;
-use crate::evaluator::Verdict;
+use crate::evaluator::{Evaluator, Verdict};
 use crate::observer::{self, Observation};
 use crate::oracle::{self, CameraState};
+use crate::planner::{ObservationEntry, Planner};
 use crate::scenario::Scenario;
 use crate::trace::Trace;
 
@@ -86,8 +87,62 @@ pub fn run(scenario: &Scenario) -> RunResult {
     RunResult { trace, verdicts }
 }
 
+/// Run an autonomous session driven by a planner.
+///
+/// The planner chooses actions based on observation history. It never sees
+/// oracle snapshots — only the text a human player would get.
+pub fn run_autonomous(
+    planner: &mut dyn Planner,
+    probes: &[(usize, usize, usize)],
+    evaluators: &[Box<dyn Evaluator>],
+    max_steps: usize,
+) -> RunResult {
+    let mut world = groundwork_sim::create_world();
+    let mut schedule = groundwork_sim::create_schedule();
+    let mut camera = CameraState::default();
+
+    let mut trace_builder = Trace::builder("autonomous");
+    let mut history: Vec<ObservationEntry> = Vec::new();
+    let mut step_count = 0usize;
+
+    loop {
+        if step_count >= max_steps || planner.should_stop(&history) {
+            break;
+        }
+
+        let batch = planner.plan(&history);
+        if batch.is_empty() {
+            break;
+        }
+
+        for action in batch {
+            if step_count >= max_steps {
+                break;
+            }
+
+            trace_builder.begin_step();
+            let observation = execute_action(&mut world, &mut schedule, &mut camera, &action);
+            let oracle_snapshot = oracle::snapshot_with_probes(&world, probes, &camera);
+
+            history.push(ObservationEntry {
+                action: action.clone(),
+                observation: observation.clone(),
+                step_index: step_count,
+            });
+
+            trace_builder.record(action, observation, oracle_snapshot);
+            step_count += 1;
+        }
+    }
+
+    let trace = trace_builder.finish();
+    let verdicts: Vec<Verdict> = evaluators.iter().map(|e| e.evaluate(&trace)).collect();
+
+    RunResult { trace, verdicts }
+}
+
 /// Execute a single action against the sim and return the actor-visible observation.
-fn execute_action(
+pub fn execute_action(
     world: &mut World,
     schedule: &mut bevy_ecs::schedule::Schedule,
     camera: &mut CameraState,
