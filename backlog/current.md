@@ -1,6 +1,6 @@
 # Backlog — Groundwork
 
-_Last updated: 2026-03-13 by Manager_
+_Last updated: 2026-03-14 by Maintenance sweep_
 
 ## TL;DR — Where We Are
 
@@ -46,58 +46,23 @@ _Last updated: 2026-03-13 by Manager_
 - ✓ Mock data mode (terrain, water pool, hill, tree)
 - ✓ WASM bridge design (bridge.ts with zero-copy typed arrays)
 
+### Web Features (Sprint 6)
+- ✓ WEB-01: WASM bridge — sim connected to browser
+- ✓ WEB-02: Tool interaction — raycasting, tool palette, species picker
+- ✓ WEB-03: Camera controls — fly, zoom, orbit, underground cutaway
+- ✓ WEB-04: HUD and status panel
+- ✓ WEB-05: Water surface renderer
+- ✓ WEB-06: Post-processing (SSAO, bloom, color grading)
+- ✓ WEB-07: Foliage billboard sprites
+- ✓ WEB-08: Wind sway animation
+- ✓ WEB-09: Growth particles
+
 ### Performance
 - ✓ Simulation profiling + optimization
 
 ---
 
-## P0 — Blocks core proof
-
-### WEB-01: WASM bridge — connect sim to browser
-Add `wasm-bindgen` exports to `groundwork-sim`. Compile to `cdylib`. Wire up `bridge.ts` to real sim data instead of mock grid.
-- Add `crate-type = ["rlib", "cdylib"]` to sim Cargo.toml
-- Export: `init()`, `tick(n)`, `grid_ptr()`, `grid_len()`, `place_tool()`, `get_tick()`
-- `#[cfg(target_arch = "wasm32")]` guard on all wasm-bindgen code
-- Install wasm-pack, verify `npm run wasm` builds
-- **Done when:** `npm run dev` renders the real sim grid in browser, not mock data
-
-### WEB-02: Tool interaction — click to place
-Raycasting from mouse click to voxel grid. Select tools, place materials.
-- Three.js Raycaster → world coords → nearest voxel
-- Tool palette UI (HTML overlay or Three.js sprites)
-- Species picker for seed bag
-- Call `place_tool()` via WASM bridge
-- **Done when:** can plant seeds, pour water, dig with shovel by clicking in browser
-
----
-
 ## P1 — Strongly improves clarity, feel, or core loop
-
-### WEB-03: Camera controls
-- WASD/arrow fly, scroll zoom, right-drag orbit
-- Smooth damped transitions (ease-out on everything)
-- Underground cutaway: slide depth plane to see below surface
-- Reset view hotkey
-- **Done when:** can freely navigate above and below ground in browser
-
-### WEB-04: HUD and status panel
-- Tick counter + auto-tick toggle
-- Tool selection with keyboard shortcuts
-- Inspect panel (hover/click a voxel to see material, water, light, nutrients)
-- Species display when seed bag selected
-- **Done when:** essential game info visible without guessing
-
-### WEB-05: Water surface shader
-- Separate flat mesh for water surface (not voxel cubes)
-- Scrolling normal maps for subtle ripples
-- Depth-based opacity (shallow = clear, deep = opaque)
-- **Done when:** water looks inviting, not like blue cubes
-
-### WEB-06: Post-processing basics
-- SSAO for depth perception and contact shadows
-- Subtle bloom on sunlit edges
-- Warm color grading
-- **Done when:** scene has visual depth and warmth
 
 ### GAME-04: Water depth visual
 Different rendering for water at different depths. Low effort, high readability.
@@ -105,15 +70,6 @@ Different rendering for water at different depths. Low effort, high readability.
 ---
 
 ## P2 — Valuable but not required for MVP
-
-### WEB-07: Foliage rendering
-Replace leaf/flower voxel cubes with billboard sprites or low-poly mesh clusters. Species-specific appearances.
-
-### WEB-08: Wind sway animation
-Gentle vertex displacement on vegetation (sine wave, offset by world position).
-
-### WEB-09: Growth particles
-Green/golden particle burst when a plant advances a growth stage.
 
 ### WEB-10: Time-of-day cycle
 Dawn, noon, golden hour, blue hour. Lerp between 4 light presets.
