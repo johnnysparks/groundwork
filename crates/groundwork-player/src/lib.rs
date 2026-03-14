@@ -38,5 +38,6 @@ pub mod batch;
 pub mod clustering;
 pub mod regression;
 pub mod report;
+pub mod session;
 pub mod skills;
 pub mod task_setter;

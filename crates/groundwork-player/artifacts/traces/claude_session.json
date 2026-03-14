@@ -1,0 +1,2521 @@
+{
+  "scenario_name": "claude_session",
+  "steps": [
+    {
+      "action": "Status",
+      "observation": {
+        "text": "Tick: 0\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 376166\n  soil: 129383\n  stone: 134279\n  water: 172\n  root: 0\n  seed: 0\n  trunk: 0\n  branch: 0\n  leaf: 0\n  deadwood: 0\n  wet soil: 0",
+        "tick": 0
+      },
+      "oracle": {
+        "tick": 0,
+        "material_counts": {
+          "air": 376166,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 172,
+          "root": 0,
+          "seed": 0,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 0
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 45.0,
+          "phi_deg": 60.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 9
+    },
+    {
+      "action": {
+        "CameraOrbit": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0
+        }
+      },
+      "observation": {
+        "text": "Camera orbit: azimuth 0°, elevation 55°",
+        "tick": 0
+      },
+      "oracle": {
+        "tick": 0,
+        "material_counts": {
+          "air": 376166,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 172,
+          "root": 0,
+          "seed": 0,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 0
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Fill": {
+          "tool": "water",
+          "x1": 37,
+          "y1": 37,
+          "z1": 45,
+          "x2": 43,
+          "y2": 43,
+          "z2": 45
+        }
+      },
+      "observation": {
+        "text": "Fill water (37,37,45)→(43,43,45): 49 placed, 0 skipped",
+        "tick": 0
+      },
+      "oracle": {
+        "tick": 0,
+        "material_counts": {
+          "air": 376117,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 221,
+          "root": 0,
+          "seed": 0,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 0
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Fill": {
+          "tool": "water",
+          "x1": 44,
+          "y1": 40,
+          "z1": 45,
+          "x2": 50,
+          "y2": 42,
+          "z2": 45
+        }
+      },
+      "observation": {
+        "text": "Fill water (44,40,45)→(50,42,45): 21 placed, 0 skipped",
+        "tick": 0
+      },
+      "oracle": {
+        "tick": 0,
+        "material_counts": {
+          "air": 376096,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 0,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 0
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 0,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Tick": {
+          "n": 5
+        }
+      },
+      "observation": {
+        "text": "Tick: 5 (+5)  (no material changes)",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376096,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 0,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 694
+    },
+    {
+      "action": "Status",
+      "observation": {
+        "text": "Tick: 5\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 376096\n  soil: 129383\n  stone: 134279\n  water: 242\n  root: 0\n  seed: 0\n  trunk: 0\n  branch: 0\n  leaf: 0\n  deadwood: 0\n  wet soil: 5",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376096,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 0,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 9
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 35,
+          "y": 40,
+          "z": 50,
+          "species": "oak"
+        }
+      },
+      "observation": {
+        "text": "Placed oak at (35, 40, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376095,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 1,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 45,
+          "y": 40,
+          "z": 50,
+          "species": "birch"
+        }
+      },
+      "observation": {
+        "text": "Placed birch at (45, 40, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376094,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 2,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 40,
+          "y": 35,
+          "z": 50,
+          "species": "pine"
+        }
+      },
+      "observation": {
+        "text": "Placed pine at (40, 35, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376093,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 3,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 36,
+          "y": 38,
+          "z": 50,
+          "species": "fern"
+        }
+      },
+      "observation": {
+        "text": "Placed fern at (36, 38, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376092,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 4,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 44,
+          "y": 42,
+          "z": 50,
+          "species": "holly"
+        }
+      },
+      "observation": {
+        "text": "Placed holly at (44, 42, 50) → landed at z=43",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376091,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 5,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 38,
+          "y": 36,
+          "z": 50,
+          "species": "moss"
+        }
+      },
+      "observation": {
+        "text": "Placed moss at (38, 36, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376090,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 6,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 42,
+          "y": 44,
+          "z": 50,
+          "species": "grass"
+        }
+      },
+      "observation": {
+        "text": "Placed grass at (42, 44, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376089,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 7,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 40,
+          "y": 45,
+          "z": 50,
+          "species": "wildflower"
+        }
+      },
+      "observation": {
+        "text": "Placed wildflower at (40, 45, 50) → landed at z=42",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376088,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 8,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 4
+    },
+    {
+      "action": {
+        "Place": {
+          "tool": "seed",
+          "x": 40,
+          "y": 37,
+          "z": 50,
+          "species": "daisy"
+        }
+      },
+      "observation": {
+        "text": "Placed daisy at (40, 37, 50) → landed at z=43",
+        "tick": 5
+      },
+      "oracle": {
+        "tick": 5,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 5
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 0,
+            "light_level": 171,
+            "nutrient_level": 2
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 51,
+            "light_level": 188,
+            "nutrient_level": 2
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Tick": {
+          "n": 50
+        }
+      },
+      "observation": {
+        "text": "Tick: 55 (+50)  (no material changes)",
+        "tick": 55
+      },
+      "oracle": {
+        "tick": 55,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 351
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 22,
+            "light_level": 171,
+            "nutrient_level": 7
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 147,
+            "light_level": 188,
+            "nutrient_level": 17
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 6602
+    },
+    {
+      "action": "Status",
+      "observation": {
+        "text": "Tick: 55\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 376087\n  soil: 129383\n  stone: 134279\n  water: 242\n  root: 0\n  seed: 9\n  trunk: 0\n  branch: 0\n  leaf: 0\n  deadwood: 0\n  wet soil: 351",
+        "tick": 55
+      },
+      "oracle": {
+        "tick": 55,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 351
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 22,
+            "light_level": 171,
+            "nutrient_level": 7
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 147,
+            "light_level": 188,
+            "nutrient_level": 17
+          }
+        ],
+        "camera": {
+          "theta_deg": 0.0,
+          "phi_deg": 55.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 10
+    },
+    {
+      "action": {
+        "CameraOrbit": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0
+        }
+      },
+      "observation": {
+        "text": "Camera orbit: azimuth 90°, elevation 45°",
+        "tick": 55
+      },
+      "oracle": {
+        "tick": 55,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 351
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 22,
+            "light_level": 171,
+            "nutrient_level": 7
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 147,
+            "light_level": 188,
+            "nutrient_level": 17
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.0,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "CameraZoom": {
+          "level": 1.5
+        }
+      },
+      "observation": {
+        "text": "Camera zoom: 1.5x",
+        "tick": 55
+      },
+      "oracle": {
+        "tick": 55,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 351
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 22,
+            "light_level": 171,
+            "nutrient_level": 7
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 147,
+            "light_level": 188,
+            "nutrient_level": 17
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 40.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "CameraPan": {
+          "x": 40.0,
+          "y": 40.0,
+          "z": 41.0
+        }
+      },
+      "observation": {
+        "text": "Camera pan to (40, 40, 41)",
+        "tick": 55
+      },
+      "oracle": {
+        "tick": 55,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 351
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 22,
+            "light_level": 171,
+            "nutrient_level": 7
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 147,
+            "light_level": 188,
+            "nutrient_level": 17
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 4
+    },
+    {
+      "action": {
+        "Inspect": {
+          "x": 35,
+          "y": 40,
+          "z": 41
+        }
+      },
+      "observation": {
+        "text": "Voxel at (35, 40, 41) [above +1]:\n  material: soil\n  water_level: 73/255\n  light_level: 190/255\n  nutrient_level: 12/255\n\n  soil type: peaty\n  sand:  52  clay:  48  organic: 189",
+        "tick": 55
+      },
+      "oracle": {
+        "tick": 55,
+        "material_counts": {
+          "air": 376087,
+          "soil": 129383,
+          "stone": 134279,
+          "water": 242,
+          "root": 0,
+          "seed": 9,
+          "trunk": 0,
+          "branch": 0,
+          "leaf": 0,
+          "deadwood": 0,
+          "wet_soil": 351
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 22,
+            "light_level": 171,
+            "nutrient_level": 7
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "soil",
+            "water_level": 147,
+            "light_level": 188,
+            "nutrient_level": 17
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Tick": {
+          "n": 100
+        }
+      },
+      "observation": {
+        "text": "Tick: 155 (+100)  Changes: air: -163, soil: -90, water: -14, root: +77, seed: -9, trunk: +148, branch: +2, leaf: +49",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 13245
+    },
+    {
+      "action": "Status",
+      "observation": {
+        "text": "Tick: 155\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 375924\n  soil: 129293\n  stone: 134279\n  water: 228\n  root: 77\n  seed: 0\n  trunk: 148\n  branch: 2\n  leaf: 49\n  deadwood: 0\n  wet soil: 888",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 9
+    },
+    {
+      "action": {
+        "CameraCutaway": {
+          "z": 35.0
+        }
+      },
+      "observation": {
+        "text": "Camera cutaway: z=35 (5 below surface)",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 90.0,
+          "phi_deg": 45.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 35.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "CameraOrbit": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0
+        }
+      },
+      "observation": {
+        "text": "Camera orbit: azimuth 180°, elevation 40°",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 35.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Inspect": {
+          "x": 35,
+          "y": 40,
+          "z": 38
+        }
+      },
+      "observation": {
+        "text": "Voxel at (35, 40, 38) [below -2]:\n  material: root\n  water_level: 176/255\n  light_level: 0/255\n  nutrient_level: 5/255",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 35.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "CameraCutaway": {
+          "z": 25.0
+        }
+      },
+      "observation": {
+        "text": "Camera cutaway: z=25 (15 below surface)",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 25.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Inspect": {
+          "x": 40,
+          "y": 40,
+          "z": 30
+        }
+      },
+      "observation": {
+        "text": "Voxel at (40, 40, 30) [below -10]:\n  material: soil\n  water_level: 0/255\n  light_level: 115/255\n  nutrient_level: 0/255\n\n  soil type: clay\n  sand:  31  clay: 168  organic:  43",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 25.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "CameraCutaway": {
+          "z": 100.0
+        }
+      },
+      "observation": {
+        "text": "Camera cutaway: z=100 (no cutaway (full view))",
+        "tick": 155
+      },
+      "oracle": {
+        "tick": 155,
+        "material_counts": {
+          "air": 375924,
+          "soil": 129293,
+          "stone": 134279,
+          "water": 228,
+          "root": 77,
+          "seed": 0,
+          "trunk": 148,
+          "branch": 2,
+          "leaf": 49,
+          "deadwood": 0,
+          "wet_soil": 888
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 195,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 40,
+            "light_level": 171,
+            "nutrient_level": 17
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 230,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "Tick": {
+          "n": 150
+        }
+      },
+      "observation": {
+        "text": "Tick: 305 (+150)  Changes: air: +66, soil: -90, water: -50, root: +90, seed: +4, trunk: -2, branch: -2, leaf: -22, deadwood: +6",
+        "tick": 305
+      },
+      "oracle": {
+        "tick": 305,
+        "material_counts": {
+          "air": 375990,
+          "soil": 129203,
+          "stone": 134279,
+          "water": 178,
+          "root": 167,
+          "seed": 4,
+          "trunk": 146,
+          "branch": 0,
+          "leaf": 27,
+          "deadwood": 6,
+          "wet_soil": 1506
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 11,
+            "light_level": 173,
+            "nutrient_level": 32
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 225,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 19853
+    },
+    {
+      "action": "Status",
+      "observation": {
+        "text": "Tick: 305\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 375990\n  soil: 129203\n  stone: 134279\n  water: 178\n  root: 167\n  seed: 4\n  trunk: 146\n  branch: 0\n  leaf: 27\n  deadwood: 6\n  wet soil: 1506",
+        "tick": 305
+      },
+      "oracle": {
+        "tick": 305,
+        "material_counts": {
+          "air": 375990,
+          "soil": 129203,
+          "stone": 134279,
+          "water": 178,
+          "root": 167,
+          "seed": 4,
+          "trunk": 146,
+          "branch": 0,
+          "leaf": 27,
+          "deadwood": 6,
+          "wet_soil": 1506
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 11,
+            "light_level": 173,
+            "nutrient_level": 32
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 225,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 180.0,
+          "phi_deg": 40.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 9
+    },
+    {
+      "action": {
+        "CameraOrbit": {
+          "theta_deg": 270.0,
+          "phi_deg": 60.0
+        }
+      },
+      "observation": {
+        "text": "Camera orbit: azimuth 270°, elevation 60°",
+        "tick": 305
+      },
+      "oracle": {
+        "tick": 305,
+        "material_counts": {
+          "air": 375990,
+          "soil": 129203,
+          "stone": 134279,
+          "water": 178,
+          "root": 167,
+          "seed": 4,
+          "trunk": 146,
+          "branch": 0,
+          "leaf": 27,
+          "deadwood": 6,
+          "wet_soil": 1506
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 11,
+            "light_level": 173,
+            "nutrient_level": 32
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 225,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 270.0,
+          "phi_deg": 60.0,
+          "zoom": 1.5,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    },
+    {
+      "action": {
+        "CameraZoom": {
+          "level": 0.8
+        }
+      },
+      "observation": {
+        "text": "Camera zoom: 0.8x",
+        "tick": 305
+      },
+      "oracle": {
+        "tick": 305,
+        "material_counts": {
+          "air": 375990,
+          "soil": 129203,
+          "stone": 134279,
+          "water": 178,
+          "root": 167,
+          "seed": 4,
+          "trunk": 146,
+          "branch": 0,
+          "leaf": 27,
+          "deadwood": 6,
+          "wet_soil": 1506
+        },
+        "probes": [
+          {
+            "x": 40,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 255,
+            "light_level": 197,
+            "nutrient_level": 0
+          },
+          {
+            "x": 40,
+            "y": 40,
+            "z": 38,
+            "material": "soil",
+            "water_level": 11,
+            "light_level": 173,
+            "nutrient_level": 32
+          },
+          {
+            "x": 36,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 253,
+            "light_level": 177,
+            "nutrient_level": 0
+          },
+          {
+            "x": 44,
+            "y": 40,
+            "z": 41,
+            "material": "water",
+            "water_level": 225,
+            "light_level": 177,
+            "nutrient_level": 0
+          }
+        ],
+        "camera": {
+          "theta_deg": 270.0,
+          "phi_deg": 60.0,
+          "zoom": 0.8,
+          "center_x": 40.0,
+          "center_y": 40.0,
+          "center_z": 41.0,
+          "cutaway_z": 100.0
+        }
+      },
+      "duration": 3
+    }
+  ],
+  "total_duration": 40535
+}
