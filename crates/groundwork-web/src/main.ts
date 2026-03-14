@@ -13,6 +13,7 @@ import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
+import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
@@ -110,6 +111,12 @@ async function main() {
   scene.add(foliage.group);
   foliage.rebuild(grid);
 
+  // --- Seeds (tiny mound sprites) ---
+
+  const seeds = new SeedRenderer();
+  scene.add(seeds.group);
+  seeds.rebuild(grid);
+
   // --- Growth particles ---
 
   const particles = new GrowthParticles();
@@ -174,8 +181,9 @@ async function main() {
         chunkMeshes.set(mesh.name, mesh);
       }
     }
-    // Rebuild foliage and detect growth after grid changes
+    // Rebuild foliage, seeds, and detect growth after grid changes
     foliage.rebuild(freshGrid);
+    seeds.rebuild(freshGrid);
     particles.detectGrowth(freshGrid);
   }
 
@@ -329,7 +337,8 @@ async function main() {
     `Grid: ${GRID_X}x${GRID_Y}x${GRID_Z} | ` +
     `Mode: ${wasmReady ? 'WASM sim' : 'Mock data'} | ` +
     `Chunks: ${chunkMeshes.size} active | ` +
-    `Foliage: ${foliage.count} sprites`,
+    `Foliage: ${foliage.count} sprites | ` +
+    `Seeds: ${seeds.count} sprites`,
   );
   console.log(
     'Controls: 1-5=tools, WASD/Arrows=pan, Q/E=cutaway, R=reset, T=tick, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle',
