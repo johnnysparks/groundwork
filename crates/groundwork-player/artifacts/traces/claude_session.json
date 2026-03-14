@@ -383,7 +383,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 694
+      "duration": 711
     },
     {
       "action": "Status",
@@ -1086,7 +1086,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 4
+      "duration": 3
     },
     {
       "action": {
@@ -1240,7 +1240,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 6602
+      "duration": 6633
     },
     {
       "action": "Status",
@@ -1311,7 +1311,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 10
+      "duration": 9
     },
     {
       "action": {
@@ -1539,7 +1539,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 4
+      "duration": 3
     },
     {
       "action": {
@@ -1691,7 +1691,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 13245
+      "duration": 13339
     },
     {
       "action": "Status",
@@ -1913,7 +1913,7 @@
           "cutaway_z": 35.0
         }
       },
-      "duration": 3
+      "duration": 4
     },
     {
       "action": {
@@ -2292,7 +2292,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 19853
+      "duration": 20137
     },
     {
       "action": "Status",
@@ -2363,7 +2363,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 9
+      "duration": 8
     },
     {
       "action": {
@@ -2517,5 +2517,5 @@
       "duration": 3
     }
   ],
-  "total_duration": 40535
+  "total_duration": 40959
 }
