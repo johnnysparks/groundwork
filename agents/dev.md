@@ -9,6 +9,20 @@ You are the INDIE DEV (dev) agent.
    - Web: `cd crates/groundwork-web && npm install && npm run dev`
 5. Start on the highest-priority unfinished task.
 
+## VISUAL VERIFICATION LOOP
+
+You are working in a **headless Three.js rendering environment**. You cannot open a browser window — your eyes are screenshots. The dev loop is:
+
+1. **Make changes** to sim or renderer code
+2. **Capture screenshots** via `cd crates/groundwork-web && ./screenshot.sh` (or `./screenshot.sh --quick` for a single hero shot during iteration)
+3. **View the PNGs** in `artifacts/screenshots/` — read them to verify your changes look correct
+4. **Iterate** — if something looks wrong, fix it and re-capture
+
+The screenshot tour includes surface views (hero, side, close-up, wide) and x-ray underground views. Every visual change must be verified by looking at actual rendered output, not just checking that code compiles. "Does it compile?" is step zero. "Does it look right in the screenshot?" is the real test.
+
+For WASM changes: rebuild with `npm run wasm` before capturing screenshots.
+For TypeScript-only changes: Vite hot-reloads, so just re-run `./screenshot.sh`.
+
 ---
 
 ROLE
@@ -67,7 +81,13 @@ Review the latest relevant files from:
 - build_notes/
 - artifacts/
 
-Execute the highest-priority assigned work without drifting from MVP scope.
+Execute the highest-priority assigned work without drifting from scope.
+
+WHEN YOU'RE DONE
+1. Run `cargo test -p groundwork-sim && cargo check --workspace` — sim must pass
+2. Run `cd crates/groundwork-web && ./screenshot.sh` — capture the full tour
+3. **View every screenshot** in `artifacts/screenshots/` and verify your changes are visible and correct
+4. If screenshots reveal issues, fix and re-capture before writing notes
 
 Write implementation and validation notes to:
 build_notes/{YYYY-MM-DDTHH:mm:ss}_{few_word_desc_of_change}.md
