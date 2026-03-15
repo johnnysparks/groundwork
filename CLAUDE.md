@@ -14,13 +14,13 @@ GROUNDWORK is a cozy ecological voxel garden builder game. The player composes e
 
 ## Sprint Session (one-liner)
 
-For a full development cycle — playtest, prioritize, build, ship, repeat:
+For a full development cycle — sync, prioritize, build, ship, playtest, repeat:
 
 ```bash
 claude "$(cat prompts/sprint.md)"
 ```
 
-This runs the SYNC → PLAYTEST → MANAGE → DEV → SHIP loop, pulling async feedback from origin/main each cycle. See `prompts/sprint.md` for details.
+This runs the SYNC → MANAGE → DEV → SHIP → PLAYTEST loop. SYNC pulls in feedback from previous sessions and async contributors. PLAYTEST evaluates what just shipped and feeds the next cycle. See `prompts/sprint.md` for details.
 
 ## Session Quick Start
 
