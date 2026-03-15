@@ -70,7 +70,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 7
+      "duration": 8
     },
     {
       "action": {
@@ -383,7 +383,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 569
+      "duration": 550
     },
     {
       "action": "Status",
@@ -454,7 +454,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 7
+      "duration": 8
     },
     {
       "action": {
@@ -1174,23 +1174,23 @@
         }
       },
       "observation": {
-        "text": "Tick: 55 (+50)  (no material changes)",
+        "text": "Tick: 55 (+50)  Changes: soil: -10, root: +10, seed: -8, trunk: +8",
         "tick": 55
       },
       "oracle": {
         "tick": 55,
         "material_counts": {
           "air": 376087,
-          "soil": 129383,
+          "soil": 129373,
           "stone": 134279,
           "water": 242,
-          "root": 0,
-          "seed": 9,
-          "trunk": 0,
+          "root": 10,
+          "seed": 1,
+          "trunk": 8,
           "branch": 0,
           "leaf": 0,
           "deadwood": 0,
-          "wet_soil": 351
+          "wet_soil": 342
         },
         "probes": [
           {
@@ -1240,28 +1240,28 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 5431
+      "duration": 5248
     },
     {
       "action": "Status",
       "observation": {
-        "text": "Tick: 55\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 376087\n  soil: 129383\n  stone: 134279\n  water: 242\n  root: 0\n  seed: 9\n  trunk: 0\n  branch: 0\n  leaf: 0\n  deadwood: 0\n  wet soil: 351",
+        "text": "Tick: 55\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 376087\n  soil: 129373\n  stone: 134279\n  water: 242\n  root: 10\n  seed: 1\n  trunk: 8\n  branch: 0\n  leaf: 0\n  deadwood: 0\n  wet soil: 342",
         "tick": 55
       },
       "oracle": {
         "tick": 55,
         "material_counts": {
           "air": 376087,
-          "soil": 129383,
+          "soil": 129373,
           "stone": 134279,
           "water": 242,
-          "root": 0,
-          "seed": 9,
-          "trunk": 0,
+          "root": 10,
+          "seed": 1,
+          "trunk": 8,
           "branch": 0,
           "leaf": 0,
           "deadwood": 0,
-          "wet_soil": 351
+          "wet_soil": 342
         },
         "probes": [
           {
@@ -1328,16 +1328,16 @@
         "tick": 55,
         "material_counts": {
           "air": 376087,
-          "soil": 129383,
+          "soil": 129373,
           "stone": 134279,
           "water": 242,
-          "root": 0,
-          "seed": 9,
-          "trunk": 0,
+          "root": 10,
+          "seed": 1,
+          "trunk": 8,
           "branch": 0,
           "leaf": 0,
           "deadwood": 0,
-          "wet_soil": 351
+          "wet_soil": 342
         },
         "probes": [
           {
@@ -1403,16 +1403,16 @@
         "tick": 55,
         "material_counts": {
           "air": 376087,
-          "soil": 129383,
+          "soil": 129373,
           "stone": 134279,
           "water": 242,
-          "root": 0,
-          "seed": 9,
-          "trunk": 0,
+          "root": 10,
+          "seed": 1,
+          "trunk": 8,
           "branch": 0,
           "leaf": 0,
           "deadwood": 0,
-          "wet_soil": 351
+          "wet_soil": 342
         },
         "probes": [
           {
@@ -1480,16 +1480,16 @@
         "tick": 55,
         "material_counts": {
           "air": 376087,
-          "soil": 129383,
+          "soil": 129373,
           "stone": 134279,
           "water": 242,
-          "root": 0,
-          "seed": 9,
-          "trunk": 0,
+          "root": 10,
+          "seed": 1,
+          "trunk": 8,
           "branch": 0,
           "leaf": 0,
           "deadwood": 0,
-          "wet_soil": 351
+          "wet_soil": 342
         },
         "probes": [
           {
@@ -1550,23 +1550,23 @@
         }
       },
       "observation": {
-        "text": "Voxel at (35, 40, 41) [above +1]:\n  material: soil\n  water_level: 73/255\n  light_level: 190/255\n  nutrient_level: 12/255\n\n  soil type: peaty\n  sand:  52  clay:  48  organic: 189",
+        "text": "Voxel at (35, 40, 41) [above +1]:\n  material: root\n  water_level: 9/255\n  light_level: 184/255\n  nutrient_level: 18/255",
         "tick": 55
       },
       "oracle": {
         "tick": 55,
         "material_counts": {
           "air": 376087,
-          "soil": 129383,
+          "soil": 129373,
           "stone": 134279,
           "water": 242,
-          "root": 0,
-          "seed": 9,
-          "trunk": 0,
+          "root": 10,
+          "seed": 1,
+          "trunk": 8,
           "branch": 0,
           "leaf": 0,
           "deadwood": 0,
-          "wet_soil": 351
+          "wet_soil": 342
         },
         "probes": [
           {
@@ -1625,23 +1625,23 @@
         }
       },
       "observation": {
-        "text": "Tick: 155 (+100)  Changes: air: -154, soil: -251, water: -14, root: +249, seed: -9, trunk: +98, branch: +21, leaf: +60",
+        "text": "Tick: 155 (+100)  Changes: air: -2579, soil: -456, water: -12, root: +454, trunk: +1436, branch: +32, leaf: +1124, deadwood: +1",
         "tick": 155
       },
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -1650,17 +1650,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -1668,7 +1668,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -1676,9 +1676,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -1691,28 +1691,28 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 10942
+      "duration": 10627
     },
     {
       "action": "Status",
       "observation": {
-        "text": "Tick: 155\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 375933\n  soil: 129132\n  stone: 134279\n  water: 228\n  root: 249\n  seed: 0\n  trunk: 98\n  branch: 21\n  leaf: 60\n  deadwood: 0\n  wet soil: 745",
+        "text": "Tick: 155\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 373508\n  soil: 128917\n  stone: 134279\n  water: 230\n  root: 464\n  seed: 1\n  trunk: 1444\n  branch: 32\n  leaf: 1124\n  deadwood: 1\n  wet soil: 705",
         "tick": 155
       },
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -1721,17 +1721,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -1739,7 +1739,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -1747,9 +1747,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -1762,7 +1762,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 7
+      "duration": 8
     },
     {
       "action": {
@@ -1777,17 +1777,17 @@
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -1796,17 +1796,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -1814,7 +1814,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -1822,9 +1822,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -1853,17 +1853,17 @@
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -1872,17 +1872,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -1890,7 +1890,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -1898,9 +1898,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -1924,23 +1924,23 @@
         }
       },
       "observation": {
-        "text": "Voxel at (35, 40, 38) [below -2]:\n  material: root\n  water_level: 4/255\n  light_level: 0/255\n  nutrient_level: 0/255",
+        "text": "Voxel at (35, 40, 38) [below -2]:\n  material: root\n  water_level: 0/255\n  light_level: 0/255\n  nutrient_level: 0/255",
         "tick": 155
       },
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -1949,17 +1949,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -1967,7 +1967,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -1975,9 +1975,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2005,17 +2005,17 @@
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -2024,17 +2024,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2042,7 +2042,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2050,9 +2050,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2076,23 +2076,23 @@
         }
       },
       "observation": {
-        "text": "Voxel at (40, 40, 30) [below -10]:\n  material: soil\n  water_level: 0/255\n  light_level: 115/255\n  nutrient_level: 0/255\n\n  soil type: clay\n  sand:  31  clay: 168  organic:  43",
+        "text": "Voxel at (40, 40, 30) [below -10]:\n  material: soil\n  water_level: 0/255\n  light_level: 25/255\n  nutrient_level: 0/255\n\n  soil type: clay\n  sand:  31  clay: 168  organic:  43",
         "tick": 155
       },
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -2101,17 +2101,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2119,7 +2119,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2127,9 +2127,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2157,17 +2157,17 @@
       "oracle": {
         "tick": 155,
         "material_counts": {
-          "air": 375933,
-          "soil": 129132,
+          "air": 373508,
+          "soil": 128917,
           "stone": 134279,
-          "water": 228,
-          "root": 249,
-          "seed": 0,
-          "trunk": 98,
-          "branch": 21,
-          "leaf": 60,
-          "deadwood": 0,
-          "wet_soil": 745
+          "water": 230,
+          "root": 464,
+          "seed": 1,
+          "trunk": 1444,
+          "branch": 32,
+          "leaf": 1124,
+          "deadwood": 1,
+          "wet_soil": 705
         },
         "probes": [
           {
@@ -2176,17 +2176,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 195,
+            "light_level": 105,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 25,
-            "light_level": 171,
-            "nutrient_level": 17
+            "material": "root",
+            "water_level": 63,
+            "light_level": 81,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2194,7 +2194,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 167,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2202,9 +2202,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 178,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 0,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2226,23 +2226,23 @@
         }
       },
       "observation": {
-        "text": "Tick: 305 (+150)  Changes: air: -648, soil: -176, water: -4, root: +176, seed: +6, trunk: +36, branch: +31, leaf: +520, deadwood: +59",
+        "text": "Tick: 305 (+150)  Changes: air: -930, soil: -124, water: -3, root: +124, seed: +11, trunk: +19, branch: +11, leaf: +868, deadwood: +24",
         "tick": 305
       },
       "oracle": {
         "tick": 305,
         "material_counts": {
-          "air": 375285,
-          "soil": 128956,
+          "air": 372578,
+          "soil": 128793,
           "stone": 134279,
-          "water": 224,
-          "root": 425,
-          "seed": 6,
-          "trunk": 134,
-          "branch": 52,
-          "leaf": 580,
-          "deadwood": 59,
-          "wet_soil": 1204
+          "water": 227,
+          "root": 588,
+          "seed": 12,
+          "trunk": 1463,
+          "branch": 43,
+          "leaf": 1992,
+          "deadwood": 25,
+          "wet_soil": 1136
         },
         "probes": [
           {
@@ -2251,17 +2251,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 145,
+            "light_level": 65,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 5,
-            "light_level": 121,
-            "nutrient_level": 20
+            "material": "root",
+            "water_level": 73,
+            "light_level": 41,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2269,7 +2269,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 101,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2277,9 +2277,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 141,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 2,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2292,28 +2292,28 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 16282
+      "duration": 15872
     },
     {
       "action": "Status",
       "observation": {
-        "text": "Tick: 305\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 375285\n  soil: 128956\n  stone: 134279\n  water: 224\n  root: 425\n  seed: 6\n  trunk: 134\n  branch: 52\n  leaf: 580\n  deadwood: 59\n  wet soil: 1204",
+        "text": "Tick: 305\nGrid: 80x80x100 (640000 voxels)\nMaterials:\n  air: 372578\n  soil: 128793\n  stone: 134279\n  water: 227\n  root: 588\n  seed: 12\n  trunk: 1463\n  branch: 43\n  leaf: 1992\n  deadwood: 25\n  wet soil: 1136",
         "tick": 305
       },
       "oracle": {
         "tick": 305,
         "material_counts": {
-          "air": 375285,
-          "soil": 128956,
+          "air": 372578,
+          "soil": 128793,
           "stone": 134279,
-          "water": 224,
-          "root": 425,
-          "seed": 6,
-          "trunk": 134,
-          "branch": 52,
-          "leaf": 580,
-          "deadwood": 59,
-          "wet_soil": 1204
+          "water": 227,
+          "root": 588,
+          "seed": 12,
+          "trunk": 1463,
+          "branch": 43,
+          "leaf": 1992,
+          "deadwood": 25,
+          "wet_soil": 1136
         },
         "probes": [
           {
@@ -2322,17 +2322,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 145,
+            "light_level": 65,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 5,
-            "light_level": 121,
-            "nutrient_level": 20
+            "material": "root",
+            "water_level": 73,
+            "light_level": 41,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2340,7 +2340,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 101,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2348,9 +2348,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 141,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 2,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2363,7 +2363,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 7
+      "duration": 8
     },
     {
       "action": {
@@ -2379,17 +2379,17 @@
       "oracle": {
         "tick": 305,
         "material_counts": {
-          "air": 375285,
-          "soil": 128956,
+          "air": 372578,
+          "soil": 128793,
           "stone": 134279,
-          "water": 224,
-          "root": 425,
-          "seed": 6,
-          "trunk": 134,
-          "branch": 52,
-          "leaf": 580,
-          "deadwood": 59,
-          "wet_soil": 1204
+          "water": 227,
+          "root": 588,
+          "seed": 12,
+          "trunk": 1463,
+          "branch": 43,
+          "leaf": 1992,
+          "deadwood": 25,
+          "wet_soil": 1136
         },
         "probes": [
           {
@@ -2398,17 +2398,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 145,
+            "light_level": 65,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 5,
-            "light_level": 121,
-            "nutrient_level": 20
+            "material": "root",
+            "water_level": 73,
+            "light_level": 41,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2416,7 +2416,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 101,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2424,9 +2424,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 141,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 2,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2454,17 +2454,17 @@
       "oracle": {
         "tick": 305,
         "material_counts": {
-          "air": 375285,
-          "soil": 128956,
+          "air": 372578,
+          "soil": 128793,
           "stone": 134279,
-          "water": 224,
-          "root": 425,
-          "seed": 6,
-          "trunk": 134,
-          "branch": 52,
-          "leaf": 580,
-          "deadwood": 59,
-          "wet_soil": 1204
+          "water": 227,
+          "root": 588,
+          "seed": 12,
+          "trunk": 1463,
+          "branch": 43,
+          "leaf": 1992,
+          "deadwood": 25,
+          "wet_soil": 1136
         },
         "probes": [
           {
@@ -2473,17 +2473,17 @@
             "z": 41,
             "material": "water",
             "water_level": 255,
-            "light_level": 145,
+            "light_level": 65,
             "nutrient_level": 0
           },
           {
             "x": 40,
             "y": 40,
             "z": 38,
-            "material": "soil",
-            "water_level": 5,
-            "light_level": 121,
-            "nutrient_level": 20
+            "material": "root",
+            "water_level": 73,
+            "light_level": 41,
+            "nutrient_level": 59
           },
           {
             "x": 36,
@@ -2491,7 +2491,7 @@
             "z": 41,
             "material": "water",
             "water_level": 253,
-            "light_level": 101,
+            "light_level": 0,
             "nutrient_level": 0
           },
           {
@@ -2499,9 +2499,9 @@
             "y": 40,
             "z": 41,
             "material": "root",
-            "water_level": 4,
-            "light_level": 141,
-            "nutrient_level": 2
+            "water_level": 0,
+            "light_level": 2,
+            "nutrient_level": 0
           }
         ],
         "camera": {
@@ -2517,5 +2517,5 @@
       "duration": 3
     }
   ],
-  "total_duration": 33351
+  "total_duration": 32425
 }
