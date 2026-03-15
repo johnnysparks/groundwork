@@ -10,11 +10,13 @@ import * as THREE from 'three';
 import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool } from './bridge';
 import { createMockGrid, CHUNK_SIZE } from './mesher/greedy';
 import { ChunkManager } from './mesher/chunk';
-import { buildChunkMesh, setXrayMode } from './rendering/terrain';
+import { buildChunkMesh, setXrayMode, adjustCutawayDepth } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
+import { FaunaRenderer } from './rendering/fauna';
+import { EcologyParticles } from './rendering/ecology';
 import { buildSkirtMesh } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
@@ -87,7 +89,7 @@ async function main() {
   let xrayActive = false;
 
   for (const chunk of updatedChunks) {
-    const { solidMesh, soilMesh } = buildChunkMesh(chunk);
+    const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk);
     if (solidMesh) {
       solidMesh.castShadow = true;
       solidMesh.receiveShadow = true;
@@ -99,6 +101,12 @@ async function main() {
       soilMesh.receiveShadow = true;
       terrainGroup.add(soilMesh);
       chunkMeshes.set(soilMesh.name, soilMesh);
+    }
+    if (rootMesh) {
+      rootMesh.castShadow = true;
+      rootMesh.receiveShadow = true;
+      terrainGroup.add(rootMesh);
+      chunkMeshes.set(rootMesh.name, rootMesh);
     }
   }
 
@@ -131,12 +139,22 @@ async function main() {
   scene.add(seeds.group);
   seeds.rebuild(grid);
 
+  // --- Fauna (ecological creature sprites) ---
+
+  const fauna = new FaunaRenderer();
+  scene.add(fauna.group);
+
   // --- Growth particles ---
 
   const particles = new GrowthParticles();
   scene.add(particles.points);
   // Initial detection pass (no bursts on first load)
   particles.detectGrowth(grid);
+
+  // --- Ecology interaction particles ---
+
+  const ecology = new EcologyParticles();
+  scene.add(ecology.points);
 
   // --- Post-processing ---
 
@@ -181,10 +199,11 @@ async function main() {
     chunkManager.detectChanges(freshGrid);
     const rebuilt = chunkManager.rebuildDirty(freshGrid);
     for (const chunk of rebuilt) {
-      // Remove old solid and soil meshes for this chunk
+      // Remove old solid, soil, and root meshes for this chunk
       const solidName = `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
       const soilName = `soil_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
-      for (const name of [solidName, soilName]) {
+      const rootName = `root_${chunk.cx}_${chunk.cy}_${chunk.cz}`;
+      for (const name of [solidName, soilName, rootName]) {
         const old = chunkMeshes.get(name);
         if (old) {
           terrainGroup.remove(old);
@@ -192,7 +211,7 @@ async function main() {
           chunkMeshes.delete(name);
         }
       }
-      const { solidMesh, soilMesh } = buildChunkMesh(chunk);
+      const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk);
       if (solidMesh) {
         solidMesh.castShadow = true;
         solidMesh.receiveShadow = true;
@@ -204,6 +223,12 @@ async function main() {
         soilMesh.receiveShadow = true;
         terrainGroup.add(soilMesh);
         chunkMeshes.set(soilMesh.name, soilMesh);
+      }
+      if (rootMesh) {
+        rootMesh.castShadow = true;
+        rootMesh.receiveShadow = true;
+        terrainGroup.add(rootMesh);
+        chunkMeshes.set(rootMesh.name, rootMesh);
       }
     }
     // Rebuild foliage, seeds, and detect growth after grid changes
@@ -270,7 +295,12 @@ async function main() {
 
   renderer.domElement.addEventListener('wheel', (e) => {
     e.preventDefault();
-    orbit.zoom(e.deltaY > 0 ? 0.9 : 1.1);
+    if (xrayActive && e.shiftKey) {
+      // Shift+scroll in x-ray mode: adjust cutaway depth
+      adjustCutawayDepth(e.deltaY > 0 ? -1 : 1);
+    } else {
+      orbit.zoom(e.deltaY > 0 ? 0.9 : 1.1);
+    }
   }, { passive: false });
 
   // Keyboard: WASD/arrows for pan, Q for x-ray toggle, R for reset, Space for auto-tick
@@ -383,8 +413,15 @@ async function main() {
     // Animate foliage wind sway
     foliage.update(elapsed);
 
+    // Update fauna positions and animation
+    fauna.update(elapsed);
+
     // Animate growth particles
     particles.update(dt);
+
+    // Ecology interaction indicators
+    const freshGridForEco = isInitialized() ? getGridView() : grid;
+    ecology.update(dt, freshGridForEco);
 
     orbit.update(dt);
     postProcessing.composer.render();
@@ -401,7 +438,8 @@ async function main() {
     `Mode: ${wasmReady ? 'WASM sim' : 'Mock data'} | ` +
     `Chunks: ${chunkMeshes.size} active | ` +
     `Foliage: ${foliage.count} sprites | ` +
-    `Seeds: ${seeds.count} sprites`,
+    `Seeds: ${seeds.count} sprites | ` +
+    `Fauna: ${fauna.count} creatures`,
   );
   console.log(
     'Controls: 1-5=tools, WASD/Arrows=pan, Q=x-ray, R=reset, T=tick, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle, F2=screenshot',

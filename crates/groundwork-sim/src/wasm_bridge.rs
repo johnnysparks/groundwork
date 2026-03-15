@@ -10,6 +10,7 @@
 
 use wasm_bindgen::prelude::*;
 
+use crate::fauna::FaunaList;
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use crate::soil::SoilGrid;
 use crate::tree::{SeedSpeciesMap, SpeciesTable};
@@ -353,4 +354,25 @@ pub fn set_selected_species(idx: usize) {
 #[wasm_bindgen]
 pub fn get_selected_species() -> usize {
     SELECTED_SPECIES.with(|cell| *cell.borrow())
+}
+
+// --- Fauna data ---
+
+/// Number of active fauna creatures.
+#[wasm_bindgen]
+pub fn fauna_count() -> usize {
+    with_sim(|sim| sim.world.resource::<FaunaList>().count())
+}
+
+/// Pointer to packed fauna data in WASM linear memory.
+/// Each fauna is 16 bytes: [type: u8, state: u8, _pad: u8, _pad: u8, x: f32, y: f32, z: f32].
+#[wasm_bindgen]
+pub fn fauna_ptr() -> *const u8 {
+    with_sim(|sim| sim.world.resource::<FaunaList>().export_ptr())
+}
+
+/// Length of fauna data in bytes.
+#[wasm_bindgen]
+pub fn fauna_len() -> usize {
+    with_sim(|sim| sim.world.resource::<FaunaList>().export_len())
 }

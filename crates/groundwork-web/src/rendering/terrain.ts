@@ -57,6 +57,13 @@ function isSoilOrStone(mat: number): boolean {
 /** Shared material for soil/stone meshes — toggled transparent for x-ray */
 let soilMaterial: THREE.MeshLambertMaterial | null = null;
 
+/** X-ray state — tracks cutaway depth and mode */
+let xrayState = {
+  active: false,
+  /** Cutaway depth level (0 = surface, negative = deeper underground) */
+  cutawayY: GROUND_LEVEL,
+};
+
 /** Get or create the shared soil material */
 export function getSoilMaterial(): THREE.MeshLambertMaterial {
   if (!soilMaterial) {
@@ -72,31 +79,96 @@ export function getSoilMaterial(): THREE.MeshLambertMaterial {
 
 /** Set x-ray mode: make soil/stone transparent to see roots underground */
 export function setXrayMode(active: boolean): void {
+  xrayState.active = active;
+  if (!active) {
+    xrayState.cutawayY = GROUND_LEVEL;
+  }
   const mat = getSoilMaterial();
   mat.opacity = active ? 0.12 : 1.0;
   mat.depthWrite = !active;
   mat.needsUpdate = true;
+
+  // Update clipping plane on root glow material
+  updateRootGlowClip(active);
 }
 
-export interface ChunkMeshPair {
+/** Adjust cutaway depth (for scroll-based depth exploration in x-ray mode) */
+export function adjustCutawayDepth(delta: number): void {
+  if (!xrayState.active) return;
+  xrayState.cutawayY = Math.max(0, Math.min(GROUND_LEVEL + 5, xrayState.cutawayY + delta));
+  const mat = getSoilMaterial();
+  // Soil below cutaway is more transparent; soil above is less
+  // This creates a "slicing" effect
+  mat.opacity = 0.08 + (xrayState.cutawayY / GROUND_LEVEL) * 0.08;
+  mat.needsUpdate = true;
+}
+
+/** Get current x-ray state */
+export function getXrayState() {
+  return xrayState;
+}
+
+// --- Root glow material ---
+// When x-ray is active, roots get a warm emissive glow to make them
+// visible through transparent soil — the signature "X-Ray Garden" effect.
+
+let rootGlowMaterial: THREE.MeshLambertMaterial | null = null;
+
+/** Get or create the root glow material */
+export function getRootGlowMaterial(): THREE.MeshLambertMaterial {
+  if (!rootGlowMaterial) {
+    rootGlowMaterial = new THREE.MeshLambertMaterial({
+      vertexColors: true,
+      emissive: new THREE.Color(0.0, 0.0, 0.0),
+      emissiveIntensity: 0.0,
+    });
+  }
+  return rootGlowMaterial;
+}
+
+/** Toggle root glow when x-ray mode changes */
+function updateRootGlowClip(xrayActive: boolean): void {
+  const mat = getRootGlowMaterial();
+  if (xrayActive) {
+    // Warm amber glow makes roots visible through soil
+    mat.emissive = new THREE.Color(0.6, 0.35, 0.1);
+    mat.emissiveIntensity = 0.8;
+  } else {
+    mat.emissive = new THREE.Color(0.0, 0.0, 0.0);
+    mat.emissiveIntensity = 0.0;
+  }
+  mat.needsUpdate = true;
+}
+
+export interface ChunkMeshResult {
   solidMesh: THREE.Mesh | null;
   soilMesh: THREE.Mesh | null;
+  rootMesh: THREE.Mesh | null;
 }
+
+// Keep backwards-compatible export
+export type ChunkMeshPair = ChunkMeshResult;
 
 /**
  * Build Three.js meshes for a chunk's greedy-meshed quads.
- * Returns two meshes: solid (always opaque) and soil (toggleable transparency).
+ * Returns three meshes:
+ * - solid: trunks, branches, dead wood — always opaque
+ * - soil: soil + stone — toggleable transparency for x-ray
+ * - root: root voxels — get emissive glow in x-ray mode
  */
-export function buildChunkMesh(chunk: ChunkMesh): ChunkMeshPair {
+export function buildChunkMesh(chunk: ChunkMesh): ChunkMeshResult {
   const { quads } = chunk;
-  if (quads.length === 0) return { solidMesh: null, soilMesh: null };
+  if (quads.length === 0) return { solidMesh: null, soilMesh: null, rootMesh: null };
 
-  // Split quads into soil/stone and everything else
+  // Split quads into soil/stone, roots, and everything else
   const soilQuads: MeshQuad[] = [];
+  const rootQuads: MeshQuad[] = [];
   const solidQuads: MeshQuad[] = [];
   for (const quad of quads) {
     if (isSoilOrStone(quad.material)) {
       soilQuads.push(quad);
+    } else if (quad.material === Material.Root) {
+      rootQuads.push(quad);
     } else {
       solidQuads.push(quad);
     }
@@ -106,8 +178,10 @@ export function buildChunkMesh(chunk: ChunkMesh): ChunkMeshPair {
     new THREE.MeshLambertMaterial({ vertexColors: true }));
   const soilMesh = buildMeshFromQuads(soilQuads, `soil_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
     getSoilMaterial());
+  const rootMesh = buildMeshFromQuads(rootQuads, `root_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
+    getRootGlowMaterial());
 
-  return { solidMesh, soilMesh };
+  return { solidMesh, soilMesh, rootMesh };
 }
 
 function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Material): THREE.Mesh | null {
