@@ -56,6 +56,24 @@ const SOIL_WET = new THREE.Color(0.20, 0.14, 0.10);   // saturated dark mud
 const SOIL_GRASS_DAMP = new THREE.Color(0.18, 0.32, 0.14); // darker wet grass
 const SOIL_GRASS_WET = new THREE.Color(0.12, 0.25, 0.10);  // very dark wet grass
 
+/** Species-specific root colors for x-ray differentiation.
+ *  Warmer/darker versions of trunk colors so different root systems
+ *  are visually distinguishable underground. */
+const SPECIES_ROOT: THREE.Color[] = [
+  new THREE.Color(0.55, 0.35, 0.15),  // Oak: warm amber
+  new THREE.Color(0.60, 0.55, 0.40),  // Birch: pale gold
+  new THREE.Color(0.45, 0.40, 0.25),  // Willow: olive
+  new THREE.Color(0.40, 0.25, 0.12),  // Pine: dark russet
+  new THREE.Color(0.45, 0.30, 0.18),  // Fern
+  new THREE.Color(0.50, 0.35, 0.20),  // Berry Bush
+  new THREE.Color(0.40, 0.28, 0.16),  // Holly
+  new THREE.Color(0.55, 0.40, 0.25),  // Wildflower
+  new THREE.Color(0.55, 0.45, 0.20),  // Daisy
+  new THREE.Color(0.42, 0.32, 0.18),  // Moss
+  new THREE.Color(0.48, 0.38, 0.20),  // Grass
+  new THREE.Color(0.50, 0.38, 0.22),  // Clover
+];
+
 const DEFAULT_COLOR = new THREE.Color(1, 0, 1); // magenta = unmapped material
 const _scratchColor = new THREE.Color();
 
@@ -204,7 +222,7 @@ export function buildChunkMesh(chunk: ChunkMesh, grid?: Uint8Array): ChunkMeshRe
   const soilMesh = buildMeshFromQuads(soilQuads, `soil_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
     getSoilMaterial());
   const rootMesh = buildMeshFromQuads(rootQuads, `root_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
-    getRootGlowMaterial());
+    getRootGlowMaterial(), grid);
 
   return { solidMesh, soilMesh, rootMesh };
 }
@@ -231,18 +249,21 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
       } else {
         baseColor = isGrass ? SOIL_GRASS : MATERIAL_COLORS[Material.Soil];
       }
-    } else if (grid && (quad.material === Material.Trunk || quad.material === Material.Branch)) {
-      // Look up species_id from voxel byte 3 for species-specific bark color
+    } else if (grid && (quad.material === Material.Trunk || quad.material === Material.Branch || quad.material === Material.Root)) {
+      // Look up species_id from voxel byte 3 for species-specific colors
       const vIdx = (quad.x + quad.y * GRID_X + quad.z * GRID_X * GRID_Y) * VOXEL_BYTES;
       const speciesId = grid[vIdx + 3] ?? 0;
-      const speciesColor = SPECIES_TRUNK[speciesId];
-      if (speciesColor) {
-        // Branches slightly lighter than trunk
-        baseColor = quad.material === Material.Branch
-          ? _scratchColor.copy(speciesColor).multiplyScalar(1.15)
-          : speciesColor;
+      if (quad.material === Material.Root) {
+        baseColor = SPECIES_ROOT[speciesId] ?? MATERIAL_COLORS[Material.Root];
       } else {
-        baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
+        const speciesColor = SPECIES_TRUNK[speciesId];
+        if (speciesColor) {
+          baseColor = quad.material === Material.Branch
+            ? _scratchColor.copy(speciesColor).multiplyScalar(1.15)
+            : speciesColor;
+        } else {
+          baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
+        }
       }
     } else {
       baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
