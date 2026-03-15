@@ -119,6 +119,16 @@ export class OrbitCamera {
     this.targetCenter.set(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
   }
 
+  /** Snap camera instantly to current targets (skip damping animation) */
+  snap(): void {
+    this.theta = this.targetTheta;
+    this.phi = this.targetPhi;
+    this.center.copy(this.targetCenter);
+    this.camera.zoom = this.targetZoom;
+    this.camera.updateProjectionMatrix();
+    this.updatePosition();
+  }
+
   /** Notify that a key was pressed */
   keyDown(key: string): void {
     this.keys.add(key.toLowerCase());

@@ -146,12 +146,11 @@ export function initAgentAPI(config: AgentAPIConfig): void {
 
 /** Execute a single action against the sim + renderer */
 async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
-  if (!isInitialized()) {
-    return { action: JSON.stringify(action), tick: 0 };
-  }
+  const currentTick = isInitialized() ? Number(getTick()) : 0;
 
   switch (action.type) {
     case 'Tick': {
+      if (!isInitialized()) return { action: `tick ${action.n} (mock — no-op)`, tick: 0 };
       simTick(action.n);
       _remeshDirty?.();
       const tick = Number(getTick());
@@ -159,6 +158,11 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
     }
 
     case 'Place': {
+      if (!isInitialized()) {
+        // In mock mode, apply directly to grid via the remeshDirty path
+        // (the mock grid tool application is handled by main.ts's applyToolToMockGrid)
+        return { action: `place ${action.species || action.tool} (mock — no-op)`, tick: 0 };
+      }
       const speciesIdx = resolveSpeciesIndex(action.species || action.tool);
       setSelectedSpecies(speciesIdx);
       const toolCode = resolveToolCode(action.species ? 'seed' : action.tool);
@@ -168,6 +172,7 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
     }
 
     case 'Fill': {
+      if (!isInitialized()) return { action: `fill ${action.tool} (mock — no-op)`, tick: 0 };
       const toolCode = resolveToolCode(action.tool);
       fillTool(toolCode, action.x1, action.y1, action.z1, action.x2, action.y2, action.z2);
       _remeshDirty?.();
@@ -184,36 +189,40 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
         const defaultTheta = Math.PI / 4; // 45 deg
         const defaultPhi = Math.PI / 3;   // 60 deg
         _orbitCamera.rotate(targetTheta - defaultTheta, targetPhi - defaultPhi);
+        _orbitCamera.snap(); // Apply instantly for headless/automated use
       }
-      return { action: `camera orbit ${action.theta_deg}° ${action.phi_deg}°`, tick: Number(getTick()) };
+      return { action: `camera orbit ${action.theta_deg}° ${action.phi_deg}°`, tick: currentTick };
     }
 
     case 'CameraPan': {
       if (_orbitCamera) {
         // Sim coords (x, y, z) → Three.js Y-up (x, z_sim, y_sim)
         _orbitCamera.setCenter(action.x, action.z, action.y);
+        _orbitCamera.snap();
       }
-      return { action: `camera pan (${action.x},${action.y},${action.z})`, tick: Number(getTick()) };
+      return { action: `camera pan (${action.x},${action.y},${action.z})`, tick: currentTick };
     }
 
     case 'CameraZoom': {
       if (_orbitCamera) {
         // zoom() takes a factor; to set absolute, reset first then scale
         _orbitCamera.zoom(action.level);
+        _orbitCamera.snap();
       }
-      return { action: `camera zoom ${action.level}x`, tick: Number(getTick()) };
+      return { action: `camera zoom ${action.level}x`, tick: currentTick };
     }
 
     case 'CameraCutaway': {
       // TODO: integrate with x-ray / cutaway system when available
-      return { action: `camera cutaway z=${action.z}`, tick: Number(getTick()) };
+      return { action: `camera cutaway z=${action.z}`, tick: currentTick };
     }
 
     case 'CameraReset': {
       if (_orbitCamera) {
         _orbitCamera.reset();
+        _orbitCamera.snap();
       }
-      return { action: 'camera reset', tick: Number(getTick()) };
+      return { action: 'camera reset', tick: currentTick };
     }
 
     case 'Screenshot': {
@@ -223,7 +232,7 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
       const blob = await captureScreenshot();
       return {
         action: `screenshot "${action.label}"`,
-        tick: Number(getTick()),
+        tick: currentTick,
         screenshotBlob: blob ?? undefined,
         screenshotLabel: action.label,
       };
@@ -235,9 +244,9 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
     case 'Checkpoint':
       // These are observation-only actions handled by the Rust side.
       // In browser mode they're no-ops (info already visible in the renderer).
-      return { action: action.type, tick: Number(getTick()) };
+      return { action: action.type, tick: currentTick };
 
     default:
-      return { action: 'unknown', tick: Number(getTick()) };
+      return { action: 'unknown', tick: currentTick };
   }
 }
