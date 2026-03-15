@@ -252,7 +252,7 @@ async function main() {
         applyToolToMockGrid(hud.state.activeTool, hit.x, hit.y, hit.z);
       }
       // Record tool use for quest tracking
-      const speciesIdx = SPECIES.findIndex(s => s.id === hud.state.activeSpecies);
+      const speciesIdx = SPECIES.findIndex(s => s.index === hud.state.activeSpeciesIndex);
       questLog.recordToolUse(hud.state.activeTool, speciesIdx);
       questLog.recordClick(hit.x, hit.y, hit.z);
       // Check quests against updated grid
