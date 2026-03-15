@@ -101,7 +101,7 @@ const QUEST_DEFS: QuestDef[] = [
     id: 'changeSpecies',
     name: 'Try a different species',
     chapter: 2,
-    detail: 'Press Q and E to cycle through 12 species: trees, shrubs, flowers, and groundcover. Or click the species panel when the seed tool is active. Each has unique height, water needs, and growth rate.',
+    detail: 'Press Z and C to cycle through 12 species: trees, shrubs, flowers, and groundcover. Or click the species panel when the seed tool is active. Each has unique height, water needs, and growth rate.',
   },
   // Chapter 3: Time Control
   {

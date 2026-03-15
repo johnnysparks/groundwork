@@ -233,7 +233,7 @@ const HUD_HTML = `
     <div id="species-list"></div>
   </div>
   <div id="hud-status"></div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Q/E: species | F2: screenshot</div>
+  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | F2: screenshot</div>
   <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
   <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
 `;

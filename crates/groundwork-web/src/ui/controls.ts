@@ -89,14 +89,14 @@ export function setupControls(config: ControlsConfig): () => void {
         break;
       }
 
-      // Species cycling: Q/E
-      case 'q':
-      case 'Q':
+      // Species cycling: Z/C (Q is x-ray toggle in main.ts)
+      case 'z':
+      case 'Z':
         hud.cycleSpecies(-1);
         questLog.recordCycleSpecies();
         break;
-      case 'e':
-      case 'E':
+      case 'c':
+      case 'C':
         hud.cycleSpecies(1);
         questLog.recordCycleSpecies();
         break;
