@@ -70,6 +70,14 @@ pub enum Action {
     /// View a Z-slice (actor-visible observation).
     View { z: usize },
 
+    // --- Visual capture ---
+
+    /// Capture a screenshot at this point.
+    /// In headless Rust mode, this records the intent (label + camera state).
+    /// In browser mode (Playwright harness), this captures an actual PNG from the
+    /// Three.js renderer and saves it to the artifacts directory.
+    Screenshot { label: String },
+
     // --- Meta ---
 
     /// A labeled checkpoint for trace readability.
@@ -101,6 +109,7 @@ impl std::fmt::Display for Action {
             Action::Inspect { x, y, z } => write!(f, "inspect {x} {y} {z}"),
             Action::Status => write!(f, "status"),
             Action::View { z } => write!(f, "view --z {z}"),
+            Action::Screenshot { label } => write!(f, "screenshot \"{label}\""),
             Action::Checkpoint { label } => write!(f, "# {label}"),
         }
     }

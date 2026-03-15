@@ -27,6 +27,7 @@ import { QuestLog } from './ui/quests';
 import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
+import { initAgentAPI } from './agent-api';
 
 async function main() {
   // --- WASM init ---
@@ -260,6 +261,14 @@ async function main() {
       questLog.check(freshGrid);
       remeshDirty();
     },
+  });
+
+  // --- Agent API (for Playwright screenshot harness) ---
+
+  initAgentAPI({
+    orbitCamera: orbit,
+    remeshDirty: remeshDirty,
+    dayCycle: dayCycle,
   });
 
   // --- Sim state ---
