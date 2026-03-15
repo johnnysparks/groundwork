@@ -9,7 +9,7 @@
  * This is the bridge between the Rust player agent and the visual renderer.
  */
 
-import { isInitialized, tick as simTick, placeTool, fillTool, setSelectedSpecies, getGridView, getTick, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, SPECIES, ToolCode } from './bridge';
+import { isInitialized, tick as simTick, placeTool, fillTool, setSelectedSpecies, getGridView, getTick, getFaunaCount, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, SPECIES, ToolCode } from './bridge';
 import { captureScreenshot } from './ui/screenshot';
 
 /** Action types matching groundwork-player's Action enum */
@@ -79,12 +79,14 @@ let _orbitCamera: any = null;
 let _remeshDirty: (() => void) | null = null;
 let _dayCycle: any = null;
 let _setXrayMode: ((active: boolean) => void) | null = null;
+let _setTickCount: ((count: number) => void) | null = null;
 
 export interface AgentAPIConfig {
   orbitCamera: any;
   remeshDirty: () => void;
   dayCycle?: any;
   setXrayMode?: (active: boolean) => void;
+  setTickCount?: (count: number) => void;
 }
 
 /** Initialize the agent API with references to scene objects */
@@ -93,6 +95,7 @@ export function initAgentAPI(config: AgentAPIConfig): void {
   _remeshDirty = config.remeshDirty;
   _dayCycle = config.dayCycle;
   _setXrayMode = config.setXrayMode ?? null;
+  _setTickCount = config.setTickCount ?? null;
 
   const api = {
     /** Check if sim is ready */
@@ -103,6 +106,9 @@ export function initAgentAPI(config: AgentAPIConfig): void {
 
     /** Get grid info */
     getGridInfo: () => ({ width: GRID_X, height: GRID_Y, depth: GRID_Z, groundLevel: GROUND_LEVEL }),
+
+    /** Get fauna count */
+    getFaunaCount: () => getFaunaCount(),
 
     /** Execute a single action and return the result */
     executeAction: async (action: AgentAction): Promise<ActionResult> => {
@@ -157,6 +163,7 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
       simTick(action.n);
       _remeshDirty?.();
       const tick = Number(getTick());
+      _setTickCount?.(tick);
       return { action: `tick ${action.n}`, tick };
     }
 

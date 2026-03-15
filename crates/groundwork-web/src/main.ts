@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, getTick } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { createPlantDemoGrid } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -174,6 +174,7 @@ async function main() {
   // --- HUD & Controls ---
 
   const hud = new Hud();
+  if (isInitialized()) hud.setTickCount(Number(getTick()));
   const questLog = new QuestLog();
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
@@ -283,6 +284,7 @@ async function main() {
       xrayActive = active;
       setXrayMode(xrayActive);
     },
+    setTickCount: (count: number) => hud.setTickCount(count),
   });
 
   // --- Sim state ---
@@ -351,6 +353,7 @@ async function main() {
         // Manual single tick
         if (isInitialized()) {
           simTick(1);
+          hud.setTickCount(Number(getTick()));
           questLog.recordStepManually();
           const freshGrid = getGridView();
           questLog.check(freshGrid);
@@ -418,6 +421,7 @@ async function main() {
         ticked = true;
       }
       if (ticked) {
+        hud.setTickCount(Number(getTick()));
         const freshGrid = getGridView();
         questLog.check(freshGrid);
       }

@@ -286,6 +286,25 @@ async function main() {
       const api = window.agentAPI; if (api) await api.executeAction(a);
     }, action);
 
+    // Advance sim so fauna can spawn and growth can progress
+    if (wasmReady) {
+      // Plant some flowers for pollinators before ticking
+      await exec({ type: 'Place', tool: 'seed', x: 42, y: 42, z: 50, species: 'wildflower' });
+      await exec({ type: 'Place', tool: 'seed', x: 38, y: 42, z: 50, species: 'wildflower' });
+      await exec({ type: 'Place', tool: 'seed', x: 40, y: 38, z: 50, species: 'daisy' });
+      await exec({ type: 'Place', tool: 'seed', x: 42, y: 38, z: 50, species: 'clover' });
+      await exec({ type: 'Place', tool: 'seed', x: 38, y: 38, z: 50, species: 'moss' });
+      console.log('Advancing sim 200 ticks for fauna/growth...');
+      await exec({ type: 'Tick', n: 200 });
+      await page.waitForTimeout(200);
+      const info = await page.evaluate(() => {
+        const api = window.agentAPI;
+        if (!api) return 'no api';
+        return `tick=${api.getTick()}, fauna=${api.getFaunaCount()}`;
+      });
+      console.log(`  ${info}`);
+    }
+
     const snap = async (name) => {
       await page.evaluate(async () => {
         for (let i = 0; i < 3; i++) await new Promise(r => requestAnimationFrame(r));
