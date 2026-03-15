@@ -890,11 +890,12 @@ pub fn generate_attraction_points(
         _ => species.crown_radius() as isize,
     };
 
-    // Number of attraction points scales with crown volume
+    // Number of attraction points scales with crown volume.
+    // Must be large enough that branch growth doesn't exhaust them instantly.
     let num_points = match stage {
-        GrowthStage::YoungTree => 20,
-        GrowthStage::Mature => 40,
-        GrowthStage::OldGrowth => 50,
+        GrowthStage::YoungTree => 60,
+        GrowthStage::Mature => 120,
+        GrowthStage::OldGrowth => 160,
         _ => return vec![],
     };
 
