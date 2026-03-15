@@ -135,13 +135,14 @@ const FAUNA_COLORS: Record<number, THREE.Color> = {
   [FaunaType.Beetle]: new THREE.Color(0.35, 0.25, 0.15),     // dark brown
 };
 
-/** Fauna sprite sizes */
+/** Fauna sprite sizes — deliberately oversized for diorama readability.
+ *  These are "character presence" sizes, not anatomical accuracy. */
 const FAUNA_SIZES: Record<number, number> = {
-  [FaunaType.Bee]: 0.5,
-  [FaunaType.Butterfly]: 0.8,
-  [FaunaType.Bird]: 1.2,
-  [FaunaType.Worm]: 0.4,
-  [FaunaType.Beetle]: 0.45,
+  [FaunaType.Bee]: 1.5,
+  [FaunaType.Butterfly]: 2.0,
+  [FaunaType.Bird]: 3.0,
+  [FaunaType.Worm]: 1.0,
+  [FaunaType.Beetle]: 1.2,
 };
 
 export class FaunaRenderer {
