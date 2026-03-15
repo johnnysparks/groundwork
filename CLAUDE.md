@@ -210,6 +210,24 @@ These principles define what makes the game *engaging over time*, not just legib
 
 5. **The garden must exceed the player's plan.** Seed dispersal by wind, birds, or water should place plants where the player didn't. Dead wood should attract fungi. A puddle should attract insects. The garden should develop a life of its own that the player guides but doesn't fully control.
 
+6. **The game must feel cozy, warm, and generous.** This is a place the player *wants to be*. Golden light, gentle particle effects, soft growth animations, ambient sounds of life. Mistakes don't punish — the garden recovers, pioneer species colonize bare patches, life finds a way. The emotional register is wonder, not stress.
+
+7. **Idle time must be rewarding.** A player who stops clicking and just watches should see a living painting: pollinators drifting, light shifting, leaves swaying, worms working soil, slow growth unfolding. If the garden looks the same after 100 idle ticks, it's a screensaver. If it's visibly *different* — new fauna, shifted light, a seedling that appeared — it's alive.
+
+8. **Recovery is a feature, not a failure state.** When the player floods, over-digs, or crowds, the response should be visible organic recovery — pioneer species, nutrient cycling, gradual recolonization. The garden's resilience teaches the player that experimentation is safe, making them bolder and more creative.
+
+## Autonomous Simulation Loop
+
+The LLM player agent loop (Phases 1-3 in `groundwork-player`) exists to make these principles *reliable and measurable*. See `decisions/2026-03-15T12:00:00_llm_simulation_experiential_vision.md` and Target Moments in `AGENTS.md`.
+
+**Loop goal:** After a thousand autonomous runs, a new player should experience the full discovery arc — from "seeds need water" to "I'm designing self-sustaining ecosystems that surprise me" — reliably, warmly, and with delight at every stage.
+
+**Key shifts from mechanical to experiential evaluation:**
+- Evaluators must measure *delight* (unplanned-but-beneficial events, causal chain length, idle-period activity, discovery count) — not just material counts
+- Skill extraction should capture *discoveries* ("clover near oak = faster growth") not just *techniques* ("place water at z=45")
+- The LLM planner should be *curious*, not optimal — a planner that investigates surprises is more valuable than one that maximizes coverage
+- Failure is redefined: a run where the garden dies but the planner discovers root competition is a *success* for the discovery arc
+
 ## Key Constraints
 
 - **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~120×120×60 voxel garden bed (60m×60m×30m at 0.5m/voxel), continuous above/below-ground camera

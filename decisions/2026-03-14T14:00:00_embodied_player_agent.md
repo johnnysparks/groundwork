@@ -17,6 +17,9 @@ The player agent needs to be **embodied**: acting through the same interfaces a 
 5. **Scripted embodiment first** — a weak actor inside a strong evaluation harness is still progress
 6. **Slow planner over fast actor** — long-horizon reasoning and low-latency control are different jobs
 7. **Failures become code changes** — broken behavior becomes regression coverage
+8. **Optimize for delight, not just correctness** — a mechanically perfect garden with no surprises is a failed test. Evaluators must measure emergent events, causal chain formation, discovery moments, and idle-time activity — not just material counts.
+9. **The planner should feel wonder** — the LLM planner's prompt should encourage curiosity, exploration, and reaction to beauty. A planner that investigates a surprise is more valuable than one that achieves 100% coverage. Skill extraction should capture *discoveries* (symbiosis, fauna triggers, diagnostic revelations) not just *techniques* (action coordinates).
+10. **Discovery is success; predictability is failure** — a run where the planner learns something new about the ecology (even if plants die) is a better outcome than a run where everything grows perfectly but nothing unexpected happens. The loop should converge toward gardens that reliably surprise, not gardens that reliably optimize.
 
 ## Architecture
 
@@ -74,3 +77,10 @@ The **oracle** (evaluators) can read full sim state: material counts, specific v
 - Failure clustering: groups similar failures for batch fixes
 - Regression pipeline: failed scenarios become permanent tests
 - Skill extraction: successful action patterns become reusable plans
+
+#### Phase 4: Experiential Evaluation (see `decisions/2026-03-15T12:00:00_llm_simulation_experiential_vision.md`)
+- Evaluators that measure Target Moments: First Gasp, Underground Revelation, The Gift, Chain Reaction, Living Painting, Recovery, Seasonal Shift
+- Delight metrics tracked across batches: longest causal chain, unplanned-but-beneficial events, discovery count, idle-period activity, recovery instances
+- Planner prompt evolution: curiosity-driven exploration over optimization
+- Skill extraction captures discoveries (symbiosis, fauna triggers) not just techniques (action sequences)
+- Loop convergence target: a new player reliably experiences the full discovery arc from "seeds need water" through "I'm designing self-sustaining ecosystems that surprise me"

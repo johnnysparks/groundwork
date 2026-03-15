@@ -47,6 +47,37 @@ This is stronger than mere legibility. A game where cause-and-effect is perfectl
 
 If a task does not help answer that, challenge it.
 
+## EXPERIENTIAL NORTH STAR
+
+The autonomous simulation loop exists to make the game feel like this for a new player:
+
+- **Minute 1:** Place soil, water, a seed. It sprouts in golden light. Warm, clear, satisfying. You smile.
+- **Minute 5:** Multiple species growing at different speeds. Tiny particles drift between wildflowers. What are those? Lean forward.
+- **Minute 15:** Dip underground for the first time. Roots spreading like fingers. A worm trail. Back up top — a wildflower appeared where you didn't plant one. Where did it come from?
+- **Minute 30:** Diagnose a struggling birch by looking at the oak's root network underground. Replant it with space. It thrives. You feel clever — you *observed* your way to understanding.
+- **Hour 1:** Stop playing. Just watch. Light shifts. Pollinators move. A bird drops a seed. Your garden is making itself better without you. Pride and wonder.
+- **Hour 3:** Third garden. You know clover-first for nitrogen, flowers-near-water for pollinators. But a moss carpet spreads under the oak canopy, ferns follow, and a shaded undergrowth micro-ecosystem forms that you didn't design. Beautiful.
+- **Hour 10:** You design gardens like a landscape architect. Every plant has a role. But the garden still surprises you. You start your eleventh garden not because you haven't "won" but because you want to see what *this* combination will create.
+
+Every feature, system, and polish pass should be measured against these moments. If it doesn't enable at least one of them, question why it exists.
+
+## TARGET MOMENTS
+
+These are the specific feelings the game must reliably produce. Reference them by name in evaluators, feedback, and task definitions.
+
+| Moment | Feeling | Example |
+|--------|---------|---------|
+| **The First Gasp** | "It did that on its own?" | Pollinators appear between flowers the player placed — unsummoned, emergent |
+| **The Underground Revelation** | "Oh. *That's* why." | Camera dips below; oak roots have stolen the birch's water |
+| **The Slow Bloom** | "This garden is better than my last" | Third garden thrives faster because the player *understands ecology now* |
+| **The Gift** | "I didn't plant that there" | A bird carries a seed; a perfect tree grows where the player never touched |
+| **The Living Painting** | "I just want to watch" | Golden hour, drifting pollinators, breathing garden — peace |
+| **The Chain Reaction** | "One thing led to another" | One wildflower → bees → pollination spread → butterflies → nesting bird → new seedling |
+| **The Recovery** | "It came back" | Over-watered section recovers: pioneer moss, then grass, then life returns |
+| **The Seasonal Shift** | "Same garden, new world" | Autumn transforms the canopy; different fauna appear; the garden reinvents itself |
+
+See `decisions/2026-03-15T12:00:00_llm_simulation_experiential_vision.md` for full descriptions and evaluator directions.
+
 ---
 
 ## SESSION LOOP
@@ -148,6 +179,14 @@ Escalate to Manager immediately when: two solutions conflict with the vision, a 
 - One "I didn't expect that!" moment over ten predictable ones.
 - Fauna that shows ecological role (bee pollinating, worm aerating) over fauna that's just decoration.
 - A garden that surprises the player at tick 500 over a garden fully understood at tick 50.
+
+## COZY BLOCKBUSTER PRINCIPLES
+These define the *personality* of solutions when the loop reveals problems:
+- **Generosity over punishment.** When players fail, make the garden more forgiving and recoverable — don't add tutorials. A garden that bounces back teaches better than one that dies.
+- **Warmth over precision.** When interactions are hard to see, add warm visual feedback (golden particles for pollination, gentle sounds, cozy light shifts) — not data overlays or stat panels.
+- **Invitation over instruction.** When players miss underground mechanics, add something beckoning from below (root glow, worm movement at the surface, a plant wiggling as roots spread) — not a "press C" prompt.
+- **Abundance over scarcity.** When gardens feel empty, add more ambient life, particles, subtle animations — a world *teeming* with tiny activity. Not bigger plants or more species.
+- **Surprise over predictability.** When experienced players achieve perfect scores, add more variance — rare fauna, weather events, lucky dispersals. The hundredth garden should still contain a moment you didn't expect.
 
 ---
 
