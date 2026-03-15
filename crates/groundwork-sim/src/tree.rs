@@ -52,21 +52,21 @@ impl GrowthStage {
                 }
             }
             GrowthStage::Sapling => {
-                if accumulated_water >= 1500.0 && accumulated_light >= 1500.0 {
+                if accumulated_water >= 800.0 && accumulated_light >= 800.0 {
                     Some(GrowthStage::YoungTree)
                 } else {
                     None
                 }
             }
             GrowthStage::YoungTree => {
-                if accumulated_water >= 6000.0 && accumulated_light >= 6000.0 {
+                if accumulated_water >= 3000.0 && accumulated_light >= 3000.0 {
                     Some(GrowthStage::Mature)
                 } else {
                     None
                 }
             }
             GrowthStage::Mature => {
-                if age >= 2000 {
+                if age >= 1200 {
                     Some(GrowthStage::OldGrowth)
                 } else {
                     None
@@ -891,7 +891,7 @@ pub fn generate_attraction_points(
     };
 
     // Number of attraction points scales with crown volume.
-    // Must be large enough that branch growth doesn't exhaust them instantly.
+    // Dense sampling fills the crown envelope so branches reach all regions.
     let num_points = match stage {
         GrowthStage::YoungTree => 60,
         GrowthStage::Mature => 120,

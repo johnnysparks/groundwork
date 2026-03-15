@@ -18,7 +18,7 @@ import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
 import { FaunaRenderer } from './rendering/fauna';
 import { EcologyParticles } from './rendering/ecology';
-import { buildSkirtMesh } from './rendering/skirt';
+import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
@@ -47,10 +47,9 @@ async function main() {
   initScreenshot(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87CEEB); // sky blue
-
-  // Fog for depth — lighter density for larger demo grids
-  scene.fog = new THREE.FogExp2(0x87CEEB, 0.002);
+  // Very light fog for subtle depth. The sky dome paints the full landscape
+  // backdrop, so fog only needs to soften the 3D tree ring slightly.
+  scene.fog = new THREE.FogExp2(0xc8ddb8, 0.001);
 
   // Camera
   const orbit = new OrbitCamera(window.innerWidth / window.innerHeight);
@@ -114,8 +113,14 @@ async function main() {
 
   // --- Ground skirt (hides underground cross-section) ---
 
-  const skirt = buildSkirtMesh();
+  const { group: skirt, walls: skirtWalls } = buildSkirtMesh();
   scene.add(skirt);
+
+  // --- Decorative forest ring (pure Three.js scenery, no sim cost) ---
+
+  const forestRing = buildForestRing();
+  scene.add(forestRing);
+  const meadowGround = forestRing.getObjectByName('meadow_ground')!;
 
   // --- Water surface ---
 
@@ -434,15 +439,43 @@ async function main() {
     ecology.update(dt, freshGridForEco);
 
     orbit.update(dt);
+    updateForestCulling(forestRing, orbit.getTheta());
+
+    // X-ray culling — same dot-product math as tree culling.
+    // Hide camera-facing skirt walls and the meadow ground plane so
+    // underground is visible.
+    {
+      const theta = orbit.getTheta();
+      const camDirX = Math.cos(theta);
+      const camDirZ = Math.sin(theta);
+      for (const wall of skirtWalls) {
+        if (!xrayActive) {
+          wall.mesh.visible = true;
+        } else {
+          const dot = camDirX * wall.normalXZ[0] + camDirZ * wall.normalXZ[1];
+          wall.mesh.visible = dot < 0.5;
+        }
+      }
+      meadowGround.visible = !xrayActive;
+    }
+
     postProcessing.composer.render();
   }
 
   animate();
 
+  // Build stamp — visible on screen so we can confirm code is live
+  const BUILD_STAMP = `build:${Date.now().toString(36)}`;
+  const stampEl = document.createElement('div');
+  stampEl.textContent = BUILD_STAMP;
+  stampEl.style.cssText = 'position:fixed;bottom:2px;left:2px;color:#fff;font:10px monospace;opacity:0.5;pointer-events:none;z-index:9999';
+  document.body.appendChild(stampEl);
+
   console.log(
     '%c🌱 Groundwork Web',
     'color: #4a7; font-size: 16px; font-weight: bold',
   );
+  console.log(`Build: ${BUILD_STAMP}`);
   console.log(
     `Grid: ${GRID_X}x${GRID_Y}x${GRID_Z} | ` +
     `Mode: ${wasmReady ? 'WASM sim' : 'Mock data'} | ` +

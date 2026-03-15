@@ -21,9 +21,7 @@ uniform vec3 topColor;
 uniform vec3 bottomColor;
 varying vec3 vWorldPosition;
 void main() {
-  // Normalize height to 0..1 (Three.js Y=up: bottom at y=-1, top at y=1 on unit sphere)
   float h = normalize(vWorldPosition).y * 0.5 + 0.5;
-  // Smooth step for a softer blend near the horizon
   h = smoothstep(0.0, 1.0, h);
   gl_FragColor = vec4(mix(bottomColor, topColor, h), 1.0);
 }
@@ -41,8 +39,8 @@ export interface SkyUniforms {
  */
 export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
   const uniforms: SkyUniforms = {
-    topColor: { value: new THREE.Color(0x5577aa) },    // golden hour default
-    bottomColor: { value: new THREE.Color(0xffddbb) },
+    topColor: { value: new THREE.Color(0x5599dd) },    // bright sky blue
+    bottomColor: { value: new THREE.Color(0x2A2826) },  // dark bedrock — below-ground view blends with underground floor
   };
 
   const skyMat = new THREE.ShaderMaterial({
@@ -51,6 +49,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     uniforms,
     side: THREE.BackSide,
     depthWrite: false,
+    fog: false, // Sky dome must not be affected by scene fog
   });
 
   const skyGeo = new THREE.SphereGeometry(2000, 32, 16);

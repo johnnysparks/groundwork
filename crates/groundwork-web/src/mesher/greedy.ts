@@ -26,6 +26,8 @@ export interface MeshQuad {
   material: MaterialType;
   /** Average ambient occlusion at the 4 corners (0-3 each, packed) */
   ao: [number, number, number, number];
+  /** Water level bucket for soil voxels (0=dry, 1=damp, 2=wet). 0 for non-soil. */
+  wetness: number;
 }
 
 /** Chunk dimensions — counts are computed from live grid dimensions */
@@ -63,6 +65,20 @@ function readMaterial(grid: Uint8Array, x: number, y: number, z: number): number
   }
   const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
   return grid[idx];
+}
+
+/** Read water level from the grid. Returns 0 for out-of-bounds. */
+function readWaterLevel(grid: Uint8Array, x: number, y: number, z: number): number {
+  if (x < 0 || x >= GRID_X || y < 0 || y >= GRID_Y || z < 0 || z >= GRID_Z) return 0;
+  const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+  return grid[idx + 1];
+}
+
+/** Bucket water level into wetness classes: 0=dry, 1=damp, 2=wet */
+function wetnessBucket(waterLevel: number): number {
+  if (waterLevel >= 80) return 2;  // wet
+  if (waterLevel >= 30) return 1;  // damp
+  return 0;                         // dry
 }
 
 /**
@@ -193,8 +209,9 @@ export function meshChunk(
     const aSize = aEnd - aStart;
     const bSize = bEnd - bStart;
 
-    // Mask: which cells in this slice need a face
-    const mask = new Int8Array(aSize * bSize);   // material (0 = no face)
+    // Mask: which cells in this slice need a face.
+    // For soil, encodes material | (wetness << 4) so wet/dry soil won't merge.
+    const mask = new Int8Array(aSize * bSize);   // material + wetness (0 = no face)
     const aoMask = new Int32Array(aSize * bSize); // packed AO for greedy compare
 
     for (let s = sStart; s < sEnd; s++) {
@@ -223,7 +240,13 @@ export function meshChunk(
           const isRootBoundary = mat === Material.Root
             && (neighborMat === Material.Soil || neighborMat === Material.Stone);
           if (isSolid(mat) && (!isSolid(neighborMat) || isRootBoundary)) {
-            mask[mi] = mat;
+            // For soil, encode wetness bucket so wet/dry don't greedy-merge
+            if (mat === Material.Soil) {
+              const wl = readWaterLevel(grid, x, y, z);
+              mask[mi] = mat | (wetnessBucket(wl) << 4);
+            } else {
+              mask[mi] = mat;
+            }
             const ao = computeFaceAO(grid, x, y, z, face);
             aoMask[mi] = ao[0] | (ao[1] << 4) | (ao[2] << 8) | (ao[3] << 12);
           } else {
@@ -293,12 +316,17 @@ export function meshChunk(
             (ao >> 12) & 0xf,
           ];
 
+          // Extract real material and wetness from packed mask value
+          const realMat = (mat & 0x0F) as MaterialType;
+          const wetness = (mat >> 4) & 0x03;
+
           quads.push({
             x: qx, y: qy, z: qz,
             w: qw, h: qh,
             face,
-            material: mat as MaterialType,
+            material: realMat,
             ao: unpackedAO,
+            wetness,
           });
 
           a += w;

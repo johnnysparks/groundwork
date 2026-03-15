@@ -61,7 +61,7 @@ fn voxel_char(mat: Material, water_level: u8, light_level: u8, nutrient_level: u
 
 pub fn cmd_new(args: &[String]) -> std::io::Result<()> {
     let path = state_path(args);
-    let world = groundwork_sim::create_world();
+    let world = groundwork_sim::create_world_with_garden();
     groundwork_sim::save::save_world(&world, &path)?;
     println!("Created new world at {}", path.display());
     println!("Tick: 0  Grid: {GRID_X}x{GRID_Y}x{GRID_Z}");

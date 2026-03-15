@@ -42,7 +42,7 @@ fn with_sim<R>(f: impl FnOnce(&mut SimState) -> R) -> R {
 #[wasm_bindgen]
 pub fn init() {
     console_error_panic_hook::set_once();
-    let world = crate::create_world();
+    let world = crate::create_world_with_garden();
     let schedule = crate::create_schedule();
     SIM.with(|cell| {
         *cell.borrow_mut() = Some(SimState { world, schedule });

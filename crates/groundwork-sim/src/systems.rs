@@ -268,7 +268,7 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
 
             if !blocked_by_compaction {
                 let soil_bonus = (best_nutrient as u16 * 5 / 255) as u8;
-                let growth_rate = 3 + soil_bonus;
+                let growth_rate = 5 + soil_bonus;
                 if let Some(cell) = grid.get_mut(x, y, z) {
                     cell.nutrient_level = cell.nutrient_level.saturating_add(growth_rate);
                     if cell.nutrient_level >= 200 {
@@ -620,10 +620,10 @@ pub fn branch_growth(
             }
         }
 
-        // Grow up to 5 new nodes per tick for visible canopy development
+        // Grow up to 6 new nodes per tick for denser branching
         let mut grown = 0u32;
         for (ti, &tip_idx) in tips.iter().enumerate() {
-            if grown >= 5 {
+            if grown >= 6 {
                 break;
             }
             let (dx, dy, dz, count) = tip_directions[ti];
@@ -932,19 +932,12 @@ pub fn tree_rasterize(
                 }
             }
 
+            // Trunk inflation radius — species trunk_radius, tapered with height
+            let trunk_r = species.trunk_radius().max(1) as isize;
+            let trunk_h = species.max_height() as isize;
+
             for (i, node) in tree.branches.iter().enumerate() {
                 if !node.alive && node.material != Material::DeadWood {
-                    continue;
-                }
-
-                let ax = rx as isize + node.pos.0;
-                let ay = ry as isize + node.pos.1;
-                let az = rz as isize + node.pos.2;
-                if ax < 0 || ay < 0 || az < 0 {
-                    continue;
-                }
-                let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
-                if !VoxelGrid::in_bounds(ax, ay, az) {
                     continue;
                 }
 
@@ -955,47 +948,94 @@ pub fn tree_rasterize(
                     node.material
                 };
 
-                if let Some(cell) = grid.get_mut(ax, ay, az) {
-                    let can_place = match mat {
-                        Material::Root => {
-                            cell.material == Material::Soil || cell.material == Material::Root
+                // Trunk nodes get inflated to a cylinder; branches/leaves stay 1-wide
+                let inflate_r = if mat == Material::Trunk {
+                    // Taper: full radius at base, 1 at top
+                    let height_frac = node.pos.2 as f32 / trunk_h.max(1) as f32;
+                    let tapered = trunk_r as f32 * (1.0 - height_frac * 0.6);
+                    tapered.round().max(1.0) as isize
+                } else if mat == Material::Root {
+                    // Roots taper with depth
+                    let depth = (-node.pos.2).max(0) as f32;
+                    let root_r = trunk_r as f32 * (1.0 - depth * 0.15).max(0.3);
+                    root_r.round().max(0.0) as isize
+                } else {
+                    0 // branches/leaves: single voxel
+                };
+
+                let r_sq = inflate_r * inflate_r;
+                for ddx in -inflate_r..=inflate_r {
+                    for ddy in -inflate_r..=inflate_r {
+                        if ddx * ddx + ddy * ddy > r_sq {
+                            continue;
                         }
-                        _ => {
-                            cell.material == Material::Air
-                                || cell.material == Material::Trunk
-                                || cell.material == Material::Branch
-                                || cell.material == Material::Leaf
-                                || cell.material == Material::DeadWood
+                        let ax = rx as isize + node.pos.0 + ddx;
+                        let ay = ry as isize + node.pos.1 + ddy;
+                        let az = rz as isize + node.pos.2;
+                        if ax < 0 || ay < 0 || az < 0 {
+                            continue;
                         }
-                    };
-                    if can_place {
-                        cell.set_material(mat);
-                        new_footprint.push((ax, ay, az));
+                        let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
+                        if !VoxelGrid::in_bounds(ax, ay, az) {
+                            continue;
+                        }
+
+                        if let Some(cell) = grid.get_mut(ax, ay, az) {
+                            let can_place = match mat {
+                                Material::Root => {
+                                    cell.material == Material::Soil || cell.material == Material::Root
+                                }
+                                _ => {
+                                    cell.material == Material::Air
+                                        || cell.material == Material::Trunk
+                                        || cell.material == Material::Branch
+                                        || cell.material == Material::Leaf
+                                        || cell.material == Material::DeadWood
+                                }
+                            };
+                            if can_place {
+                                cell.set_material(mat);
+                                new_footprint.push((ax, ay, az));
+                            }
+                        }
                     }
                 }
             }
 
-            // Add leaf shells around alive tips for fuller canopy
+            // Dense spherical leaf shells around alive tips for full canopy
+            let leaf_r: isize = match tree.stage {
+                GrowthStage::YoungTree => 2,
+                GrowthStage::Mature | GrowthStage::OldGrowth => 3,
+                _ => 1,
+            };
+            let leaf_r_sq = leaf_r * leaf_r;
             for (i, node) in tree.branches.iter().enumerate() {
                 if !node.alive || has_child[i] || node.material == Material::Root {
                     continue;
                 }
-                // Place leaves in cardinal neighbors of tips
-                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                    let ax = rx as isize + node.pos.0 + dx;
-                    let ay = ry as isize + node.pos.1 + dy;
-                    let az = rz as isize + node.pos.2;
-                    if ax < 0 || ay < 0 || az < 0 {
-                        continue;
-                    }
-                    let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
-                    if !VoxelGrid::in_bounds(ax, ay, az) {
-                        continue;
-                    }
-                    if let Some(cell) = grid.get_mut(ax, ay, az) {
-                        if cell.material == Material::Air {
-                            cell.set_material(Material::Leaf);
-                            new_footprint.push((ax, ay, az));
+                // Fill a sphere of radius leaf_r around each tip
+                for ddx in -leaf_r..=leaf_r {
+                    for ddy in -leaf_r..=leaf_r {
+                        for ddz in -leaf_r..=leaf_r {
+                            if ddx * ddx + ddy * ddy + ddz * ddz > leaf_r_sq {
+                                continue;
+                            }
+                            let ax = rx as isize + node.pos.0 + ddx;
+                            let ay = ry as isize + node.pos.1 + ddy;
+                            let az = rz as isize + node.pos.2 + ddz;
+                            if ax < 0 || ay < 0 || az < 0 {
+                                continue;
+                            }
+                            let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
+                            if !VoxelGrid::in_bounds(ax, ay, az) {
+                                continue;
+                            }
+                            if let Some(cell) = grid.get_mut(ax, ay, az) {
+                                if cell.material == Material::Air {
+                                    cell.set_material(Material::Leaf);
+                                    new_footprint.push((ax, ay, az));
+                                }
+                            }
                         }
                     }
                 }
@@ -2594,18 +2634,24 @@ mod tests {
         }
 
         let mut trees = world.query::<&Tree>();
-        let tree = trees.iter(&world).next().unwrap();
+        let tree = trees.iter(&world)
+            .find(|t| t.root_pos == (tx, ty, tz))
+            .expect("Test tree should exist at expected position");
         assert!(
             tree.branches.len() > initial_branch_count,
             "Branch growth should add nodes: initial={}, current={}",
             initial_branch_count,
             tree.branches.len()
         );
-        // Should have consumed some attraction points (started with 60 for YoungTree)
+        // Should have consumed some attraction points
+        let initial_points = crate::tree::generate_attraction_points(
+            &crate::tree::SpeciesTable::default().species[0],
+            &GrowthStage::YoungTree,
+            42,
+        ).len();
         assert!(
-            tree.attraction_points.len() < 60,
-            "Some attraction points should have been consumed: current={}",
-            tree.attraction_points.len()
+            tree.attraction_points.len() < initial_points,
+            "Some attraction points should have been consumed"
         );
     }
 

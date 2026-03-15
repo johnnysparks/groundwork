@@ -32,6 +32,12 @@ const MATERIAL_COLORS: Record<number, THREE.Color> = {
 /** Grass-tinted soil for top faces near/above ground level */
 const SOIL_GRASS = new THREE.Color(0.28, 0.40, 0.18); // mossy green-brown
 
+/** Wet soil colors — darker and bluer as moisture increases */
+const SOIL_DAMP = new THREE.Color(0.28, 0.19, 0.12);  // dark moist earth
+const SOIL_WET = new THREE.Color(0.20, 0.14, 0.10);   // saturated dark mud
+const SOIL_GRASS_DAMP = new THREE.Color(0.18, 0.32, 0.14); // darker wet grass
+const SOIL_GRASS_WET = new THREE.Color(0.12, 0.25, 0.10);  // very dark wet grass
+
 const DEFAULT_COLOR = new THREE.Color(1, 0, 1); // magenta = unmapped material
 
 /** AO darkening factors: 0=no occlusion (bright), 3=full occlusion (dark) */
@@ -195,9 +201,20 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
   let vi = 0;
 
   for (const quad of quads) {
-    // Top-facing soil near ground level gets a grass tint
-    const isGrass = quad.material === Material.Soil && quad.face === 4 && quad.z >= GROUND_LEVEL - 1;
-    const baseColor = isGrass ? SOIL_GRASS : (MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR);
+    // Soil color depends on wetness and whether it's a top face (grass)
+    let baseColor: THREE.Color;
+    if (quad.material === Material.Soil) {
+      const isGrass = quad.face === 4 && quad.z >= GROUND_LEVEL - 1;
+      if (quad.wetness >= 2) {
+        baseColor = isGrass ? SOIL_GRASS_WET : SOIL_WET;
+      } else if (quad.wetness >= 1) {
+        baseColor = isGrass ? SOIL_GRASS_DAMP : SOIL_DAMP;
+      } else {
+        baseColor = isGrass ? SOIL_GRASS : MATERIAL_COLORS[Material.Soil];
+      }
+    } else {
+      baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
+    }
     const [nx, ny, nz] = FACE_NORMALS[quad.face];
     const corners = getQuadCorners(quad);
     const ao = quad.ao;

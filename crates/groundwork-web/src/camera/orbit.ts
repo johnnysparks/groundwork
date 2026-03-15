@@ -22,7 +22,7 @@ const DEFAULT_PHI = Math.PI / 3;        // 60 deg diorama elevation
 const DEFAULT_ZOOM = 1.0;
 
 /** Camera limits */
-const MIN_ZOOM = 0.15;
+const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 4.0;
 const MIN_PHI = 0.2;
 const MAX_PHI = Math.PI / 2 - 0.05;
@@ -79,7 +79,7 @@ export class OrbitCamera {
       this.frustumSize / 2,
       -this.frustumSize / 2,
       0.1,
-      this.distance * 3,
+      this.distance * 10,
     );
 
     this.updatePosition();
@@ -147,6 +147,11 @@ export class OrbitCamera {
   /** Notify that a key was released */
   keyUp(key: string): void {
     this.keys.delete(key.toLowerCase());
+  }
+
+  /** Current azimuth angle (for forest culling) */
+  getTheta(): number {
+    return this.theta;
   }
 
   /** Handle window resize */

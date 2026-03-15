@@ -192,7 +192,7 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         Self {
-            world: groundwork_sim::create_world(),
+            world: groundwork_sim::create_world_with_garden(),
             schedule: groundwork_sim::create_schedule(),
             running: true,
             auto_tick: false,
