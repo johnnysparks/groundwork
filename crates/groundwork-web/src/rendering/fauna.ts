@@ -112,27 +112,37 @@ const FAUNA_FRAG = /* glsl */ `
       alpha = 1.0 - smoothstep(0.25, 0.5, beetleDist * 2.0);
     }
 
-    if (alpha < 0.05) discard;
+    // Outer glow halo — makes fauna visible from any distance
+    float halo = 1.0 - smoothstep(0.0, 1.0, dist);
+    float haloAlpha = halo * 0.35;
+
+    // Combine body + halo
+    float finalAlpha = max(alpha, haloAlpha);
+    if (finalAlpha < 0.03) discard;
 
     // Leaving state: fade out
     if (vState > 2.5) {
-      alpha *= 0.5;
+      finalAlpha *= 0.5;
     }
 
-    // Acting state: slight glow
-    float glow = vState > 1.5 && vState < 2.5 ? 1.2 : 1.0;
+    // Brighten body, softer halo
+    float bodyMask = step(0.1, alpha);
+    float brightness = mix(0.8, 1.5, bodyMask);
 
-    gl_FragColor = vec4(vColor * glow, alpha * 0.9);
+    // Acting state: extra glow
+    if (vState > 1.5 && vState < 2.5) brightness *= 1.3;
+
+    gl_FragColor = vec4(vColor * brightness, finalAlpha);
   }
 `;
 
-/** Fauna type colors */
+/** Fauna type colors — bright for additive glow visibility */
 const FAUNA_COLORS: Record<number, THREE.Color> = {
-  [FaunaType.Bee]: new THREE.Color(0.95, 0.80, 0.20),       // golden yellow
-  [FaunaType.Butterfly]: new THREE.Color(0.85, 0.45, 0.65),  // warm pink-purple
-  [FaunaType.Bird]: new THREE.Color(0.25, 0.22, 0.30),       // dark silhouette
-  [FaunaType.Worm]: new THREE.Color(0.75, 0.55, 0.50),       // pinkish brown
-  [FaunaType.Beetle]: new THREE.Color(0.35, 0.25, 0.15),     // dark brown
+  [FaunaType.Bee]: new THREE.Color(1.0, 0.85, 0.25),         // bright golden
+  [FaunaType.Butterfly]: new THREE.Color(0.90, 0.50, 0.70),   // bright pink
+  [FaunaType.Bird]: new THREE.Color(0.40, 0.35, 0.50),        // soft purple-gray
+  [FaunaType.Worm]: new THREE.Color(0.80, 0.60, 0.45),        // warm tan
+  [FaunaType.Beetle]: new THREE.Color(0.50, 0.35, 0.20),      // amber brown
 };
 
 /** Fauna sprite sizes — deliberately oversized for diorama readability.
@@ -171,6 +181,7 @@ export class FaunaRenderer {
       },
       transparent: true,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
     });
 
