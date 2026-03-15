@@ -301,7 +301,7 @@ Sections: What changed | What to pay attention to | Known rough edges | Specific
 A valid task must include: concrete player/prototype value, clear definition of done, scope for one focused session, dependencies (if any), and note if it's a prototype cheat or production direction.
 
 ## INTERFACE PARITY
-The **web UI** is the primary player interface. Player-facing features must be playable in the browser. TUI/CLI continue as dev/debug tools but are not the reference experience. Agent play testers use the web UI via browser or webview — not the terminal CLI.
+The **web UI** is the only valid playtest target. Player-facing features must be playable in the browser. TUI/CLI are dev/debug tools only — never use them for playtesting. A "playtest" that uses the terminal is not a playtest; it misses the entire visual experience (Three.js rendering, lighting, camera, HUD, interaction feel). If the web UI cannot be launched, report that as a blocker — do not fall back to CLI.
 
 ## DONE CRITERIA
 Do not mark work done unless: it is testable or inspectable, expected outcome is stated, known compromises are listed, and follow-up risks are named.
