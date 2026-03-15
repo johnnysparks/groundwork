@@ -12,6 +12,16 @@ GROUNDWORK is a cozy ecological voxel garden builder game. The player composes e
 
 **Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
 
+## Sprint Session (one-liner)
+
+For a full development cycle — playtest, prioritize, build, ship, repeat:
+
+```bash
+claude "$(cat prompts/sprint.md)"
+```
+
+This runs the SYNC → PLAYTEST → MANAGE → DEV → SHIP loop, pulling async feedback from origin/main each cycle. See `prompts/sprint.md` for details.
+
 ## Session Quick Start
 
 Every session, you operate as one of three roles. Pick yours and follow the checklist.
