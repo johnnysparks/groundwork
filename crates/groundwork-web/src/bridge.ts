@@ -324,3 +324,59 @@ export function gridIndex(x: number, y: number, z: number): number {
 export function isInitialized(): boolean {
   return wasmModule !== null;
 }
+
+// --- Fauna data ---
+
+/** Fauna export record: 16 bytes per fauna.
+ *  [type: u8, state: u8, _pad: u8, _pad: u8, x: f32, y: f32, z: f32] */
+export const FAUNA_BYTES = 16;
+
+/** Fauna type enum (matches Rust FaunaType repr(u8)) */
+export const FaunaType = {
+  Bee: 0,
+  Butterfly: 1,
+  Bird: 2,
+  Worm: 3,
+  Beetle: 4,
+} as const;
+
+/** Fauna state enum (matches Rust FaunaState repr(u8)) */
+export const FaunaState = {
+  Idle: 0,
+  Seeking: 1,
+  Acting: 2,
+  Leaving: 3,
+} as const;
+
+/** Get number of active fauna creatures */
+export function getFaunaCount(): number {
+  if (!wasmModule?.fauna_count) return 0;
+  return wasmModule.fauna_count();
+}
+
+/** Get a live DataView of the fauna data buffer */
+export function getFaunaView(): DataView | null {
+  if (!wasmModule?.fauna_ptr || !wasmMemory) return null;
+  const ptr = wasmModule.fauna_ptr();
+  const len = wasmModule.fauna_len();
+  if (len === 0) return null;
+  return new DataView(wasmMemory.buffer, ptr, len);
+}
+
+/** Read a fauna record from the packed buffer */
+export function readFauna(view: DataView, index: number): {
+  type: number;
+  state: number;
+  x: number;
+  y: number;
+  z: number;
+} {
+  const off = index * FAUNA_BYTES;
+  return {
+    type: view.getUint8(off),
+    state: view.getUint8(off + 1),
+    x: view.getFloat32(off + 4, true),
+    y: view.getFloat32(off + 8, true),
+    z: view.getFloat32(off + 12, true),
+  };
+}
