@@ -13,7 +13,9 @@
 
 ## Top-Line Verdict
 
-Every session that reached gameplay said the same thing: **the first 100 ticks are magical, then the garden freezes.** The simulation foundations work — water flow, root hydrotropism, wet soil gradients, seed dispersal — but the garden never becomes an *ecosystem*. Zero fauna, zero species interactions, zero visible relationship chains across all 4 sessions combined.
+> **Manager note (2026-03-15T13:15):** The growth stall (themes #1, #2) and water spring (#5) are now **fixed**. Branch kill distance scaled, attraction points regenerate, stage transitions paced, water spring refills every tick. The remaining blockers are: **no visible fauna in the renderer** (sim spawns fauna but web doesn't show it) and **no species interactions** (nitrogen handshake etc. not implemented). These are the two things that would flip "would you come back?" from no to yes.
+
+~~Every session that reached gameplay said the same thing: **the first 100 ticks are magical, then the garden freezes.**~~ *(Fixed — see manager note above.)* The simulation foundations work — water flow, root hydrotropism, wet soil gradients, seed dispersal — but the garden never becomes an *ecosystem*. Zero fauna, zero species interactions, zero visible relationship chains across all 4 sessions combined.
 
 The web renderer is gorgeous. The visual identity (warm amber terrain, golden-hour lighting, isometric cross-section) is strong. The missing piece is not graphics — it's **life**.
 
@@ -100,41 +102,43 @@ WASM MIME type error + WebGL context creation failure = permanent loading screen
 
 ## What to Fix (Priority Order)
 
-1. **Fix branch growth** (P0) — Scale kill distance to crown radius. Generate 100+ attraction points, not 20. Regenerate periodically. Goal: visible branches connecting trunk to canopy.
+> **Manager note (2026-03-15T13:15):** Items 1, 2, 5 are **fixed**. Remaining priorities renumbered. See `backlog/current.md` for the canonical task list.
 
-2. **Add continuous growth** (P0) — Trees must visibly change between stage transitions. Root extension, trunk widening, canopy expansion should be gradual, not burst-then-stop.
+1. ~~**Fix branch growth** (P0)~~ — **FIXED.** Kill distance scaled to 0.3× crown radius, attraction points tripled + continuous regeneration.
 
-3. **Spawn fauna** (P0) — Even simple particle bees near flowers, worm trails in wet soil, bird silhouettes near berry bushes. The ecological *role* matters more than fidelity.
+2. ~~**Add continuous growth** (P0)~~ — **FIXED.** sqrt() accumulation, stage transitions paced at 2/15/60 ticks.
 
-4. **Implement species interactions** (P0) — Start with one: nitrogen handshake (clover near oak = faster growth). Make it visible. Then pollinator bridge, then root competition.
+3. **Spawn fauna** (P0) — Fauna spawns in the sim every 20 ticks. **Web renderer needs to display them.** See backlog SIM-02.
 
-5. **Persistent water spring** (P1) — Regenerate water each tick so the garden doesn't dehydrate.
+4. **Implement species interactions** (P0) — Start with nitrogen handshake (clover near oak = faster growth). No code for this exists yet. See backlog SIM-01.
 
-6. **Faster soil absorption** (P1) — Wet soil visible within 20-50 ticks, not 400+.
+5. ~~**Persistent water spring** (P1)~~ — **FIXED.** `water_spring` refills 4×4 center to 255 every tick.
 
-7. **Growth speed / canvas ratio** (P1) — Either 3-5x faster growth or smaller effective garden area.
+6. **Faster soil absorption** (P1) — May be improved now that spring is persistent. Needs verification.
 
-8. **Web error handling** (P1) — Detect WebGL/WASM failures and show actionable error instead of infinite loading.
+7. **Growth speed / canvas ratio** (P1) — See backlog SIM-04. May be improved by branch growth fix.
+
+8. **Web error handling** (P2) — See backlog WEB-16.
 
 ---
 
 ## Bugs Across Sessions (Deduplicated)
 
-| Bug | Severity | Sessions | Status |
-|-----|----------|----------|--------|
-| Branch kill distance >> crown radius, 0 branches ever | P0 | 2 | Open |
-| Growth stalls after ~200 ticks | P0 | 3 | Partially fixed |
-| No fauna spawns or renders | P0 | 4 | Open |
-| `load_world()` missing resources (SpeciesTable, FaunaList) | P0 | 2 | Fixed |
-| Water spring dries up by tick 200 | P1 | 1 | Open |
-| Wet soil takes 400+ ticks | P1 | 1 | Open |
-| Web loading blocked (WASM MIME + WebGL) | P1 | 1 | Open |
-| Seed inspect "no light" before first tick | Minor | 2 | Open |
-| HUD tick counter doesn't update via agentAPI | Minor | 1 | Open |
-| Quest log doesn't advance | Minor | 1 | Open |
-| Grid size mismatch in docs | Minor | 1 | Open |
-| Seed-on-stone generic message | Minor | 1 | Open |
-| 404 errors on page load | Minor | 1 | Open |
+| Bug | Severity | Sessions | Status | Notes (2026-03-15T13:15) |
+|-----|----------|----------|--------|--------------------------|
+| Branch kill distance >> crown radius, 0 branches ever | P0 | 2 | **Fixed** | Kill dist scaled to 0.3× crown radius, attraction points tripled + regeneration added |
+| Growth stalls after ~200 ticks | P0 | 3 | **Fixed** | sqrt() accumulation, stage transitions now 2/15/60 ticks |
+| No fauna spawns or renders | P0 | 4 | **Sim fixed, renderer open** | `fauna_spawn` runs every 20 ticks in sim. Web renderer doesn't display fauna visibly. See SIM-02 |
+| `load_world()` missing resources (SpeciesTable, FaunaList) | P0 | 2 | **Fixed** | |
+| Water spring dries up by tick 200 | P1 | 1 | **Fixed** | `water_spring` system refills 4×4 center to 255 every tick |
+| Wet soil takes 400+ ticks | P1 | 1 | Open | Needs verification — may be improved by persistent spring |
+| Web loading blocked (WASM MIME + WebGL) | P1 | 1 | Open | Environment-specific (no WebGL2). See WEB-16 (P2) |
+| Seed inspect "no light" before first tick | Minor | 2 | Open | |
+| HUD tick counter doesn't update via agentAPI | Minor | 1 | Open | `setTickCount()` exists but never called. See SIM-03 |
+| Quest log doesn't advance | Minor | 1 | Open | May work with mouse input, fails via agentAPI |
+| Grid size mismatch in docs | Minor | 1 | Open | CLAUDE.md says 120×120×60, actual is 80×80×100 |
+| Seed-on-stone generic message | Minor | 1 | Open | |
+| 404 errors on page load | Minor | 1 | Open | Unidentified resource |
 
 ---
 

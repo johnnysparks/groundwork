@@ -279,6 +279,10 @@ async function main() {
     orbitCamera: orbit,
     remeshDirty: remeshDirty,
     dayCycle: dayCycle,
+    setXrayMode: (active: boolean) => {
+      xrayActive = active;
+      setXrayMode(xrayActive);
+    },
   });
 
   // --- Sim state ---

@@ -78,11 +78,13 @@ function resolveSpeciesIndex(name?: string): number {
 let _orbitCamera: any = null;
 let _remeshDirty: (() => void) | null = null;
 let _dayCycle: any = null;
+let _setXrayMode: ((active: boolean) => void) | null = null;
 
 export interface AgentAPIConfig {
   orbitCamera: any;
   remeshDirty: () => void;
   dayCycle?: any;
+  setXrayMode?: (active: boolean) => void;
 }
 
 /** Initialize the agent API with references to scene objects */
@@ -90,6 +92,7 @@ export function initAgentAPI(config: AgentAPIConfig): void {
   _orbitCamera = config.orbitCamera;
   _remeshDirty = config.remeshDirty;
   _dayCycle = config.dayCycle;
+  _setXrayMode = config.setXrayMode ?? null;
 
   const api = {
     /** Check if sim is ready */
@@ -213,7 +216,10 @@ async function executeAgentAction(action: AgentAction): Promise<ActionResult> {
     }
 
     case 'CameraCutaway': {
-      // TODO: integrate with x-ray / cutaway system when available
+      if (_setXrayMode) {
+        // z > 0 enables x-ray mode, z === 0 disables it
+        _setXrayMode(action.z > 0);
+      }
       return { action: `camera cutaway z=${action.z}`, tick: currentTick };
     }
 

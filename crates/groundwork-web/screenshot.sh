@@ -86,26 +86,40 @@ BROWSER_PATH=""
 BROWSER_SOURCE=""
 
 find_browser() {
+  # 0. Explicit override via env var
+  if [ -n "${BROWSER_PATH:-}" ] && [ -x "$BROWSER_PATH" ]; then
+    BROWSER_SOURCE="env"
+    return 0
+  fi
+
   # 3a. Playwright cache (any version)
-  if [ -d "$HOME/.cache/ms-playwright" ]; then
-    local found
-    found=$(find "$HOME/.cache/ms-playwright" -name "chrome" -path "*/chrome-linux/*" -type f 2>/dev/null | head -1)
-    if [ -n "$found" ] && [ -x "$found" ]; then
-      BROWSER_PATH="$found"
-      BROWSER_SOURCE="playwright-cache"
-      return 0
+  # macOS: ~/Library/Caches/ms-playwright, Linux: ~/.cache/ms-playwright
+  local pw_cache_dirs=()
+  if [ "$(uname)" = "Darwin" ]; then
+    pw_cache_dirs+=("$HOME/Library/Caches/ms-playwright")
+  else
+    pw_cache_dirs+=("$HOME/.cache/ms-playwright")
+    # CI/agent environments often run as root
+    if [ "$HOME" != "/root" ] && [ -d "/root/.cache/ms-playwright" ]; then
+      pw_cache_dirs+=("/root/.cache/ms-playwright")
     fi
   fi
-  # Also check /root/.cache if running as non-root but root installed it
-  if [ -d "/root/.cache/ms-playwright" ] && [ "$HOME" != "/root" ]; then
-    local found
-    found=$(find "/root/.cache/ms-playwright" -name "chrome" -path "*/chrome-linux/*" -type f 2>/dev/null | head -1)
-    if [ -n "$found" ] && [ -x "$found" ]; then
-      BROWSER_PATH="$found"
-      BROWSER_SOURCE="playwright-cache-root"
-      return 0
+
+  for pw_dir in "${pw_cache_dirs[@]}"; do
+    if [ -d "$pw_dir" ]; then
+      local found=""
+      if [ "$(uname)" = "Darwin" ]; then
+        found=$(find "$pw_dir" -name "Chromium" -path "*/Chromium.app/Contents/MacOS/*" -type f 2>/dev/null | head -1)
+      else
+        found=$(find "$pw_dir" -name "chrome" -path "*/chrome-linux/*" -type f 2>/dev/null | head -1)
+      fi
+      if [ -n "$found" ] && [ -x "$found" ]; then
+        BROWSER_PATH="$found"
+        BROWSER_SOURCE="playwright-cache"
+        return 0
+      fi
     fi
-  fi
+  done
 
   # 3b. System chromium/chrome
   for cmd in chromium-browser chromium google-chrome-stable google-chrome; do
@@ -292,23 +306,37 @@ async function main() {
     } else if (QUICK) {
       angles = [{ name: 'hero', theta: 45, phi: 60 }];
     } else {
-      angles = [
-        { name: '01-initial-view',    theta: 45,  phi: 60 },
-        { name: '02-side-view',       theta: 120, phi: 35 },
-        { name: '03-top-down',        theta: 45,  phi: 80 },
-        { name: '04-close-up',        theta: 30,  phi: 50, zoom: 2.0 },
-        { name: '05-low-angle',       theta: 200, phi: 25 },
-        { name: '06-opposite-corner', theta: 225, phi: 55 },
-        { name: '07-hero-shot',       theta: 45,  phi: 60 },  // reset
+      // Standard tour: surface views, then x-ray underground views
+      const shots = [
+        // --- Surface ---
+        { name: '01-hero',           theta: 45,  phi: 60 },
+        { name: '02-side',           theta: 120, phi: 35 },
+        { name: '03-close-up',       theta: 30,  phi: 50, zoom: 2.0 },
+        { name: '04-wide',           theta: 45,  phi: 85, zoom: 0.3 },
+        // --- X-ray underground ---
+        { name: '05-xray-hero',      theta: 45,  phi: 60, xray: true },
+        { name: '06-xray-side',      theta: 120, phi: 35, xray: true },
+        { name: '07-xray-close',     theta: 30,  phi: 50, zoom: 2.0, xray: true },
       ];
+      angles = shots;
     }
 
+    let xrayOn = false;
     for (const a of angles) {
+      // Toggle x-ray mode if needed
+      const wantXray = !!a.xray;
+      if (wantXray !== xrayOn) {
+        await exec({ type: 'CameraCutaway', z: wantXray ? 1 : 0 });
+        xrayOn = wantXray;
+        await page.waitForTimeout(200); // let transparency settle
+      }
       await exec({ type: 'CameraOrbit', theta_deg: a.theta, phi_deg: a.phi });
       if (a.zoom) await exec({ type: 'CameraZoom', level: a.zoom });
       else if (angles.indexOf(a) > 0) await exec({ type: 'CameraZoom', level: 1.0 });
       await snap(a.name);
     }
+    // Disable x-ray if left on
+    if (xrayOn) await exec({ type: 'CameraCutaway', z: 0 });
 
     console.log(`\nDone: ${angles.length} screenshots → ${SCREENSHOT_DIR}`);
   } finally {
