@@ -149,3 +149,70 @@ After a thousand runs of this loop, a new player sits down and experiences:
 4. **Failure in the loop should be redefined.** A run where the garden dies but the planner says "I learned that oak roots steal water from birch" is a *success* for discovery, even if the growth evaluator scores zero. The loop must optimize for learning and surprise, not just material counts.
 
 5. **The batch runner should track delight metrics across runs**: longest causal chain, count of unplanned-but-beneficial events, discovery count, idle-period activity level, recovery instances. These are the numbers that tell us whether we're building the right game.
+
+## What the Loop Must Concretely Discover and Amplify
+
+The vibe is the compass, but vibes don't ship. The loop's most important job is finding the **3-5 specific interactions that make this game magical** — and then amplifying them 1000x while cutting everything that competes.
+
+### What "Amplify 1000x" Means in Practice
+
+When the loop discovers an interaction that reliably produces delight:
+
+1. **Name it.** Give it a memorable label. "The Nitrogen Handshake." "The Bird Express." "The Root War." Names make ideas sticky across sessions.
+2. **Measure it.** Specific evaluator. How often does it occur? How many ticks to trigger? Does the planner notice it?
+3. **Make it gorgeous.** Particles, lighting shifts, subtle camera attention, animation polish. If pollination is a winner, the pollen trail should be the most beautiful particle effect in the game.
+4. **Protect it.** Regression test. If a code change breaks this interaction, the build fails.
+5. **Build adjacent.** What other interactions connect to this one? Same principle, new chain, compound delight.
+6. **Cut competitors.** If a feature distracts from a winner or makes it less visible — cut the feature. Winners are rare.
+
+### Concrete Interactions the Loop Should Probe
+
+These are specific, implementable interaction chains. The loop should test whether they produce the Target Moments, measure the delight, and surface which ones are winners.
+
+**Nitrogen Handshake (Clover + Oak Symbiosis)**
+- Clover roots fix nitrogen → soil nutrient level increases in radius → oak growing in that radius grows 30-50% faster
+- Visual: warm glow in soil around clover roots (underground view). Oak roots visibly thicken in the enriched zone.
+- Test: plant oak alone vs. oak near clover. Is the difference visible and significant? Does the planner discover it?
+- If winner: add more symbiosis pairs. Fungi connecting tree roots. Moss retaining moisture for fern.
+
+**The Pollinator Bridge (Wildflower → Bee → Daisy Spread)**
+- 3+ wildflowers near water → pollinators spawn → pollinators visit daisies → daisies produce 2x seeds → daisy population explodes
+- Visual: golden particle-sprites traveling between flowers. Subtle trail. Pollinated flowers pulse briefly.
+- Test: isolated flowers vs. clustered flowers near water. Does the cluster produce fauna? Does fauna produce spread?
+- If winner: add butterfly species attracted to density. Add pollinator-preference by flower color/type.
+
+**The Root War (Oak vs. Birch Competition)**
+- Two trees planted 5-8 voxels apart → roots grow toward same water → faster-growing species (oak) absorbs more → slower species (birch) wilts
+- Visual: underground view shows two root networks meeting. One retreats. Surface plant shows stress (yellowing, slower growth).
+- Test: does the planner notice surface stress → investigate underground → diagnose competition → replant? This is the core discovery loop.
+- If winner: add root-avoidance strategies. Deep-rooted vs. shallow-rooted species. Rocks as natural root barriers.
+
+**The Bird Express (Berry Bush → Bird → Long-Range Seed)**
+- Berry bush fruits → bird silhouette arrives → bird flies 20-50 voxels → drops seed near a tall tree → new seedling
+- Visual: bird flight path visible briefly. Seed drop has a tiny sparkle. Seedling appears next tick.
+- Test: does the planner notice a plant they didn't place? Can they trace it to the bird? Is the placement often *good* (near water, appropriate light)?
+- If winner: add multiple bird species with different perch preferences. Some carry oak acorns, some carry berry seeds. Flight distance varies.
+
+**Pioneer Succession (Bare Soil → Moss → Grass → Wildflower → Shrub)**
+- Cleared area auto-colonizes: moss first (5-10 ticks), then grass (15-25), then wildflowers (30-50), then shrubs (100+)
+- Visual: visible wave of green spreading across bare soil, shifting in color/height over time. Time-lapse feeling.
+- Test: does the planner notice succession happening? Does it change their strategy (clearing ground intentionally to trigger succession)?
+- If winner: make succession rates depend on neighbor species. A cleared area near a flower garden recovers differently than one near a pine forest.
+
+**The Canopy Effect (Tall Trees → Shade → Fern/Moss Undergrowth)**
+- Oak canopy blocks 60-80% of light → ground-level light drops → sun-loving species (grass, wildflower) struggle → shade-tolerant species (fern, moss) thrive
+- Visual: dynamic shadow rendering on the ground. Fern/moss visibly spreading in shaded areas. Grass yellowing in shadow.
+- Test: does the planner learn to layer — tall canopy above, shade-lovers below? Does the underground view show different root patterns in shaded vs. sunny areas?
+- If winner: add canopy gap dynamics. When a branch falls, a light shaft appears and sun-loving species colonize the gap temporarily.
+
+### What the Loop Should Concretely Cut
+
+Equally important — the loop should identify ideas that *don't produce delight* and kill them quickly:
+
+- If a species never participates in interaction chains → simplify or remove it
+- If an underground visual doesn't help the planner diagnose anything → it's clutter, not information
+- If a fauna type never changes planner behavior → it's decoration, not gameplay
+- If an interaction is too subtle for the planner to notice in observations → it needs visual amplification or it's not real
+- If a mechanic produces the same result every time → it needs variance or it's solved
+
+The loop's nos are as valuable as its yeses. A thousand runs should produce a sharp, focused game with 5 deep interactions — not a broad, shallow game with 50 weak ones.

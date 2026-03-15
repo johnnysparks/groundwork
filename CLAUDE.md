@@ -218,15 +218,26 @@ These principles define what makes the game *engaging over time*, not just legib
 
 ## Autonomous Simulation Loop
 
-The LLM player agent loop (Phases 1-3 in `groundwork-player`) exists to make these principles *reliable and measurable*. See `decisions/2026-03-15T12:00:00_llm_simulation_experiential_vision.md` and Target Moments in `AGENTS.md`.
+The LLM player agent loop (Phases 1-3 in `groundwork-player`) exists to make these principles *reliable and measurable*. See `decisions/2026-03-15T12:00:00_llm_simulation_experiential_vision.md`, Target Moments and Big Yeses/Nos in `AGENTS.md`.
 
-**Loop goal:** After a thousand autonomous runs, a new player should experience the full discovery arc — from "seeds need water" to "I'm designing self-sustaining ecosystems that surprise me" — reliably, warmly, and with delight at every stage.
+**Loop goal:** After a thousand autonomous runs, surface the **3-5 specific interactions that make this game magical** — then amplify them 1000x while cutting everything that doesn't serve them.
 
-**Key shifts from mechanical to experiential evaluation:**
+**What the loop must concretely test** (see AGENTS.md Big Yeses for full specs):
+- Does the Nitrogen Handshake work? (clover near oak → visible faster growth, discoverable by planner)
+- Does the Pollinator Bridge form? (flower cluster → fauna spawn → cross-pollination → population spread)
+- Does the Root War read clearly? (competing trees → underground diagnosis → behavioral change)
+- Does the Bird Express deliver gifts? (berry bush → bird → seed drop → unplanned beneficial plant)
+- Does Pioneer Succession unfold? (bare soil → moss → grass → wildflower → shrub, autonomously)
+- Does the Canopy Effect create niches? (tall tree shade → undergrowth layer of shade-loving species)
+
+**When a winner surfaces:** Name it. Measure it. Make it gorgeous. Protect it with a regression test. Build adjacent interactions. Cut anything that competes for attention.
+
+**Key evaluation shifts:**
 - Evaluators must measure *delight* (unplanned-but-beneficial events, causal chain length, idle-period activity, discovery count) — not just material counts
 - Skill extraction should capture *discoveries* ("clover near oak = faster growth") not just *techniques* ("place water at z=45")
 - The LLM planner should be *curious*, not optimal — a planner that investigates surprises is more valuable than one that maximizes coverage
 - Failure is redefined: a run where the garden dies but the planner discovers root competition is a *success* for the discovery arc
+- The loop's nos are as important as its yeses: if a species never participates in chains, a fauna type never changes behavior, or a mechanic produces the same result every time — cut it
 
 ## Key Constraints
 
