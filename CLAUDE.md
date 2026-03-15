@@ -41,8 +41,10 @@ Every session, you operate as one of three roles. Pick yours and follow the chec
 ### Player — start here
 1. Read `agents/player.md` (your role definition)
 2. Read latest file in `handoffs/manager_to_player/` (what to test and specific questions)
-3. Launch: `cd crates/groundwork-web && npm run dev` then open http://localhost:5173
-4. Play a session and write feedback + player→manager handoff.
+3. **Capture actual rendered frames** — you MUST see the game visually:
+   - Browser: `cd crates/groundwork-web && npm run dev` then open http://localhost:5173
+   - LLM agent: run `npm run playtest` (Playwright harness captures PNGs to `artifacts/screenshots/`)
+4. Play a session with visual evidence and write feedback + player→manager handoff.
 
 All roles: read `AGENTS.md` for the full operating framework (vision, handoff formats, priority definitions, workspace rules).
 
