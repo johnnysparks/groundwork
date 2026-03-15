@@ -41,10 +41,12 @@ cd crates/groundwork-web && ./screenshot.sh --quick
 
 ### 3. Minimal installs (only if probe says needed)
 
+Playwright is **not** in the base `npm install` — it's only needed for screenshots. This keeps `npm install` fast for dev/build/doc work.
+
 | Probe says | Run |
 |---|---|
 | npm deps missing | `npm install` |
-| Browser missing | `npm run playtest:install` |
+| Playwright missing | `npm run playtest:install` (installs Playwright + browser) |
 | Both missing | `npm install && npm run playtest:install` |
 | Node missing | **Blocked.** Install Node 18+ first. |
 

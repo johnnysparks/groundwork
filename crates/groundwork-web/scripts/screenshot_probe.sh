@@ -39,13 +39,21 @@ else
   MISSING+=("node")
 fi
 
-# --- npm deps ---
-if [ -d "$WEB_DIR/node_modules/three" ] && [ -d "$WEB_DIR/node_modules/playwright-core" ]; then
-  HAS_DEPS=true
+# --- npm deps (core) ---
+if [ -d "$WEB_DIR/node_modules/three" ]; then
   echo "npm deps:  installed ✓"
 else
   echo "npm deps:  NOT INSTALLED ✗"
   MISSING+=("npm-deps")
+fi
+
+# --- Playwright (screenshot dep, not in base npm install) ---
+if [ -d "$WEB_DIR/node_modules/@playwright/test" ]; then
+  HAS_DEPS=true
+  echo "playwright: installed ✓"
+else
+  echo "playwright: not installed (run: npm run playtest:install)"
+  MISSING+=("playwright")
 fi
 
 # --- Browser (check in order of likelihood) ---
@@ -121,10 +129,13 @@ echo ""
 echo "=== Recommended Path ==="
 echo ""
 
-if [ ${#MISSING[@]} -eq 0 ]; then
+if [[ " ${MISSING[*]} " == *" node "* ]]; then
+  echo "BLOCKED: No Node.js found. Cannot capture screenshots."
+  echo "Install Node.js 18+ first."
+elif [ ${#MISSING[@]} -eq 0 ]; then
   echo "READY TO GO. Run:"
   echo ""
-  echo "  npm run playtest"
+  echo "  xvfb-run -a npm run playtest     # or just: npm run playtest"
   echo ""
   echo "Or for a quick single shot:"
   echo ""
@@ -135,24 +146,21 @@ if [ ${#MISSING[@]} -eq 0 ]; then
   else
     echo "Mode: Mock data (full renderer, static scene)"
   fi
-elif [[ " ${MISSING[*]} " == *" npm-deps "* ]] && [ ${#MISSING[@]} -eq 1 ]; then
-  echo "Just need deps. Run:"
+else
+  # Build the install command chain
+  STEPS=""
+  if [[ " ${MISSING[*]} " == *" npm-deps "* ]]; then
+    STEPS="npm install"
+  fi
+  if [[ " ${MISSING[*]} " == *" playwright "* ]] || [[ " ${MISSING[*]} " == *" browser "* ]]; then
+    [ -n "$STEPS" ] && STEPS="$STEPS && "
+    STEPS="${STEPS}npm run playtest:install"
+  fi
+  echo "Install needed. Run:"
   echo ""
-  echo "  npm install && npm run playtest"
+  echo "  $STEPS && xvfb-run -a npm run playtest"
   echo ""
-elif [[ " ${MISSING[*]} " == *" browser "* ]] && [ ${#MISSING[@]} -eq 1 ]; then
-  echo "Just need a browser. Run:"
-  echo ""
-  echo "  npm run playtest:install && npm run playtest"
-  echo ""
-elif [[ " ${MISSING[*]} " == *" browser "* ]] && [[ " ${MISSING[*]} " == *" npm-deps "* ]]; then
-  echo "Need deps + browser. Run:"
-  echo ""
-  echo "  npm install && npm run playtest:install && npm run playtest"
-  echo ""
-elif [[ " ${MISSING[*]} " == *" node "* ]]; then
-  echo "BLOCKED: No Node.js found. Cannot capture screenshots."
-  echo "Install Node.js 18+ first."
+  echo "(Playwright is NOT in base npm install — only added when you need screenshots)"
 fi
 
 echo "---"
