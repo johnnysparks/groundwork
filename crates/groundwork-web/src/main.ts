@@ -91,7 +91,7 @@ async function main() {
   let xrayActive = false;
 
   for (const chunk of updatedChunks) {
-    const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk);
+    const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk, grid);
     if (solidMesh) {
       solidMesh.castShadow = true;
       solidMesh.receiveShadow = true;
@@ -223,7 +223,7 @@ async function main() {
           chunkMeshes.delete(name);
         }
       }
-      const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk);
+      const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk, freshGrid);
       if (solidMesh) {
         solidMesh.castShadow = true;
         solidMesh.receiveShadow = true;

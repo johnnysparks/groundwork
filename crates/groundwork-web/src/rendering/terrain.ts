@@ -12,7 +12,7 @@
  */
 
 import * as THREE from 'three';
-import { Material, GROUND_LEVEL, type MaterialType } from '../bridge';
+import { Material, GROUND_LEVEL, GRID_X, GRID_Y, VOXEL_BYTES, type MaterialType } from '../bridge';
 import type { MeshQuad } from '../mesher/greedy';
 import type { ChunkMesh } from '../mesher/chunk';
 
@@ -29,6 +29,24 @@ const MATERIAL_COLORS: Record<number, THREE.Color> = {
   [Material.DeadWood]: new THREE.Color(0.48, 0.40, 0.28), // faded wood
 };
 
+/** Species-specific trunk colors (indexed by species_id in voxel byte 3).
+ *  0=Oak, 1=Birch, 2=Willow, 3=Pine, 4=Fern, 5=Berry Bush, 6=Holly,
+ *  7=Wildflower, 8=Daisy, 9=Moss, 10=Grass, 11=Clover */
+const SPECIES_TRUNK: THREE.Color[] = [
+  new THREE.Color(0.32, 0.22, 0.12),  // Oak: dark brown bark
+  new THREE.Color(0.75, 0.72, 0.65),  // Birch: white/cream bark
+  new THREE.Color(0.40, 0.38, 0.30),  // Willow: gray-green bark
+  new THREE.Color(0.30, 0.18, 0.10),  // Pine: dark reddish-brown
+  new THREE.Color(0.30, 0.22, 0.14),  // Fern: brown stem
+  new THREE.Color(0.38, 0.28, 0.18),  // Berry Bush: medium brown
+  new THREE.Color(0.28, 0.22, 0.16),  // Holly: dark bark
+  new THREE.Color(0.35, 0.40, 0.20),  // Wildflower: green stem
+  new THREE.Color(0.35, 0.38, 0.22),  // Daisy: green stem
+  new THREE.Color(0.30, 0.25, 0.15),  // Moss: brown
+  new THREE.Color(0.32, 0.35, 0.18),  // Grass: greenish
+  new THREE.Color(0.30, 0.28, 0.16),  // Clover: brown-green
+];
+
 /** Grass-tinted soil for top faces near/above ground level */
 const SOIL_GRASS = new THREE.Color(0.28, 0.40, 0.18); // mossy green-brown
 
@@ -39,6 +57,7 @@ const SOIL_GRASS_DAMP = new THREE.Color(0.18, 0.32, 0.14); // darker wet grass
 const SOIL_GRASS_WET = new THREE.Color(0.12, 0.25, 0.10);  // very dark wet grass
 
 const DEFAULT_COLOR = new THREE.Color(1, 0, 1); // magenta = unmapped material
+const _scratchColor = new THREE.Color();
 
 /** AO darkening factors: 0=no occlusion (bright), 3=full occlusion (dark) */
 const AO_CURVE = [1.0, 0.82, 0.65, 0.50];
@@ -162,7 +181,7 @@ export type ChunkMeshPair = ChunkMeshResult;
  * - soil: soil + stone — toggleable transparency for x-ray
  * - root: root voxels — get emissive glow in x-ray mode
  */
-export function buildChunkMesh(chunk: ChunkMesh): ChunkMeshResult {
+export function buildChunkMesh(chunk: ChunkMesh, grid?: Uint8Array): ChunkMeshResult {
   const { quads } = chunk;
   if (quads.length === 0) return { solidMesh: null, soilMesh: null, rootMesh: null };
 
@@ -181,7 +200,7 @@ export function buildChunkMesh(chunk: ChunkMesh): ChunkMeshResult {
   }
 
   const solidMesh = buildMeshFromQuads(solidQuads, `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
-    new THREE.MeshLambertMaterial({ vertexColors: true }));
+    new THREE.MeshLambertMaterial({ vertexColors: true }), grid);
   const soilMesh = buildMeshFromQuads(soilQuads, `soil_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
     getSoilMaterial());
   const rootMesh = buildMeshFromQuads(rootQuads, `root_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
@@ -190,7 +209,7 @@ export function buildChunkMesh(chunk: ChunkMesh): ChunkMeshResult {
   return { solidMesh, soilMesh, rootMesh };
 }
 
-function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Material): THREE.Mesh | null {
+function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Material, grid?: Uint8Array): THREE.Mesh | null {
   if (quads.length === 0) return null;
 
   const vertCount = quads.length * 6;
@@ -211,6 +230,19 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
         baseColor = isGrass ? SOIL_GRASS_DAMP : SOIL_DAMP;
       } else {
         baseColor = isGrass ? SOIL_GRASS : MATERIAL_COLORS[Material.Soil];
+      }
+    } else if (grid && (quad.material === Material.Trunk || quad.material === Material.Branch)) {
+      // Look up species_id from voxel byte 3 for species-specific bark color
+      const vIdx = (quad.x + quad.y * GRID_X + quad.z * GRID_X * GRID_Y) * VOXEL_BYTES;
+      const speciesId = grid[vIdx + 3] ?? 0;
+      const speciesColor = SPECIES_TRUNK[speciesId];
+      if (speciesColor) {
+        // Branches slightly lighter than trunk
+        baseColor = quad.material === Material.Branch
+          ? _scratchColor.copy(speciesColor).multiplyScalar(1.15)
+          : speciesColor;
+      } else {
+        baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
       }
     } else {
       baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
