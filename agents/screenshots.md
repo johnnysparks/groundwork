@@ -1,143 +1,102 @@
-# Screenshot Capture — Agent Instructions
+# Screenshot TTS (Time-to-Screenshot)
 
-> **Goal:** Capture Three.js rendered PNGs from headless Chromium as fast as possible.
-> Every environment is slightly different. Your job is to sniff what's available and pick the shortest path.
+Use this when a session needs **visual evidence of the Three.js scene** on a PR.
 
-## Why This Matters
-
-Visual evaluation is non-negotiable. The renderer is the game — if we can't see it, we can't ship it. Screenshots go on PRs, in feedback, in handoffs. Time-to-screenshot (TTS) matters because every minute spent fighting tooling is a minute not evaluating the actual scene.
-
-## Mental Model
-
-The screenshot pipeline has exactly three links:
+## Flow
 
 ```
-  Vite dev server  →  Headless browser + WebGL  →  page.screenshot() → PNG
+1) Probe  →  2) Capture  →  3) Attach to PR
 ```
 
-Vite is always available (it's a devDep). The browser is the variable. Your job is finding one.
-
-## Environment Detection — Decision Tree
-
-Run these checks **in order**. Stop at the first hit.
-
-### 1. Playwright cache (TTS: ~15s, zero install)
+### 1. Environment probe (no installs)
 
 ```bash
-find ~/.cache/ms-playwright /root/.cache/ms-playwright -name "chrome" -path "*/chrome-linux/*" -type f 2>/dev/null | head -1
+cd crates/groundwork-web && ./scripts/screenshot_probe.sh
 ```
 
-**Why check first:** Claude Code environments, CI runners, and dev machines that have ever run `npx playwright install` will have a chromium binary cached here. This is the most common case. It doesn't need to match the installed `@playwright/test` version — `playwright-core` (our devDep) can drive any chromium.
+Copy the output into your notes. Follow its recommended path. Do not install `wasm-pack` unless real-sim visuals are strictly required for this task.
 
-**Gotcha:** The version in the cache may not match what `@playwright/test` expects. The `npx playwright test` runner will refuse it. That's why we use `playwright-core` directly (the `chromium.launch({ executablePath })` API), not the test runner. Version mismatch doesn't matter for `launch()`.
+### 2. Capture — fastest path first
 
-### 2. System chromium (TTS: ~15s, zero install)
+**Primary (one command, ~50s):**
+```bash
+cd crates/groundwork-web && xvfb-run -a npm run playtest
+```
+This starts Vite automatically, launches headless Chromium, captures 6 screenshots from multiple camera angles, and saves them to `artifacts/screenshots/`.
+
+If `xvfb-run` is unavailable and `$DISPLAY` is set, drop it:
+```bash
+npm run playtest
+```
+
+**Quick single shot (~15s):**
+```bash
+cd crates/groundwork-web && ./screenshot.sh --quick
+```
+
+**Custom angles (theta,phi pairs):**
+```bash
+./screenshot.sh --angles "45,60 120,35 225,55"
+```
+
+### 3. Minimal installs (only if probe says needed)
+
+| Probe says | Run |
+|---|---|
+| npm deps missing | `npm install` |
+| Browser missing | `npm run playtest:install` |
+| Both missing | `npm install && npm run playtest:install` |
+| Node missing | **Blocked.** Install Node 18+ first. |
+
+Avoid `wasm-pack` by default. The app screenshots in mock mode — same renderer, static scene.
+
+### 4. When real simulation visuals are mandatory
+
+Only if the task specifically requires live growth, fauna, or ecological interactions:
 
 ```bash
-which chromium-browser || which chromium || which google-chrome-stable || which google-chrome
-# Also check: /usr/bin/chromium-browser, /snap/bin/chromium
+cd crates/groundwork-web && npm run wasm && xvfb-run -a npm run playtest
 ```
 
-**Why:** Some environments have system chromium from apt/snap/brew. Works identically to Playwright's — just pass the path to `executablePath`.
+### 5. PR requirements
 
-### 3. Puppeteer's bundled chromium (TTS: ~15s, zero install)
+In the PR body or a comment:
+- State the mode: `WASM sim` or `Mock data`
+- Upload at least 1 screenshot PNG from `artifacts/screenshots/`
+- Include one observation about what's visible in the scene (e.g. "water pond visible with translucent shader, oak trunk and foliage rendering, golden hour lighting active")
+- Include the command you ran
 
-```bash
-find /usr/lib/node_modules /usr/local/lib/node_modules -path "*/puppeteer*/.local-chromium/*/chrome" 2>/dev/null | head -1
-```
+### 6. Done condition
 
-**Why:** Some environments pre-install puppeteer globally. Its bundled chromium works fine with playwright-core.
+At least one screenshot is attached to the PR. A reviewer can visually evaluate the scene without running code.
 
-### 4. Install chromium (TTS: ~60-120s)
+---
 
-Only if 1-3 all fail. Try in order:
+## Why this flow works
 
-```bash
-npx playwright install chromium          # Downloads ~130MB, installs to cache
-# OR if network to playwright CDN fails:
-apt-get install -y chromium-browser      # Uses OS package manager
-```
+- The web client has a **mock fallback** when WASM isn't built — full Three.js renderer, static scene. Screenshot capture works without `wasm-pack`.
+- `npm run playtest` is a one-command path: Vite dev server + Playwright browser automation + PNG output.
+- `playwright.config.ts` auto-detects any available Chromium (Playwright cache, system, puppeteer) via `findChromium()`. Version mismatches don't block it.
+- The Playwright browser binary is usually the only missing piece — `npm run playtest:install` fixes it in ~60s.
 
-**Gotcha:** Network may be restricted (DNS failures, firewalls). If `playwright install` fails, try apt. If both fail, you cannot capture screenshots — say so clearly in your handoff rather than making excuses.
+## How the detection works (for debugging)
 
-## Display Server
+The probe checks four places for a browser, in order:
 
-Headless Chromium with SwiftShader still needs an X server for WebGL context creation.
+1. **Playwright cache** (`~/.cache/ms-playwright/`) — most CI and Claude Code environments have this from a previous `npx playwright install`. Zero install time.
+2. **System chromium** — `chromium-browser`, `chromium`, `google-chrome` on PATH. Zero install time.
+3. **Puppeteer bundle** — some environments pre-install puppeteer with a bundled chromium.
+4. **Install** — `npx playwright install chromium` downloads ~130MB. Last resort.
 
-```bash
-# Preferred: xvfb-run wraps the entire command
-which xvfb-run && echo "use: xvfb-run -a <command>"
+Display server: `xvfb-run` (preferred) > existing `$DISPLAY` > manual `Xvfb :99` > hope headless works without it.
 
-# Fallback: start Xvfb manually
-which Xvfb && Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99
+## Common failures
 
-# Already have a display? (e.g. desktop environment, existing Xvfb)
-echo $DISPLAY  # if set, you're fine
-```
-
-If none of these work, try running anyway — some newer headless Chrome versions don't need X. Worst case it fails with a clear error.
-
-## The Capture Itself
-
-Once you have a browser path, the capture is straightforward. Use `screenshot.sh` in `crates/groundwork-web/`:
-
-```bash
-cd crates/groundwork-web
-./screenshot.sh --quick              # Single hero shot (~15s)
-./screenshot.sh                       # 7 angles (~25s)
-./screenshot.sh --angles "45,60 120,35 225,55"  # Custom theta,phi pairs
-```
-
-The script handles Vite startup, browser launch, and cleanup. It outputs to `artifacts/screenshots/`.
-
-### What the script does (so you can adapt if it breaks)
-
-1. Starts Vite on port 5174 (or reuses if already running)
-2. Launches chromium via `playwright-core` with `--use-gl=angle --use-angle=swiftshader --no-sandbox`
-3. Navigates to the app — WASM will fail (that's fine), mock grid loads automatically
-4. Uses `window.agentAPI.executeAction()` to control camera angles
-5. Calls `page.screenshot()` at each angle
-6. Saves PNGs to `artifacts/screenshots/`
-
-### If the script fails
-
-The most common failures and fixes:
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `ERR_MODULE_NOT_FOUND: playwright-core` | node_modules not installed | `npm install` first |
-| `Xvfb failed to start` | Stale X lock file | `rm -f /tmp/.X*-lock` then retry |
-| Port in use | Stale Vite from previous run | `pkill -f vite` or use `--port 5175` |
-| Black/blank screenshots | SwiftShader not working | Check chrome args include `--use-gl=angle --use-angle=swiftshader` |
-| All screenshots identical | Camera not snapping | Agent API bug — check `snap()` is called after camera commands |
-| `Cannot find chrome` | None of the 4 paths found a browser | See detection tree above |
-
-## Mock Mode vs WASM
-
-The app has two rendering paths:
-
-- **WASM mode**: Real Rust sim compiled to WASM, full ecological simulation, growth, fauna
-- **Mock mode**: JS-generated voxel grid with a static oak tree, water pond, soil layers
-
-Both use the **exact same rendering pipeline** — meshing, materials, lighting, shaders, post-processing. Mock mode is what you'll get in most agent environments (no wasm-pack installed). The screenshots are real rendered frames of the actual production renderer.
-
-If WASM *is* available (someone ran `npm run wasm`), the screenshots will show a live sim with growth and fauna. Better, but not required.
-
-## What to Do With Screenshots
-
-- **PR comments:** Upload PNGs directly to GitHub PR comments/descriptions
-- **Handoffs:** Reference the files in `artifacts/screenshots/` — they're committed to the branch
-- **Feedback:** "Here's what I see" beats "I couldn't get screenshots working" every time
-- **Evaluation:** Look at the renders critically. Is the terrain readable? Is lighting warm? Are there obvious rendering bugs? A screenshot is only useful if you actually evaluate it.
-
-## Quick Reference
-
-```bash
-# Full sequence from zero (assumes node + npm available)
-cd crates/groundwork-web
-npm install                    # once
-./screenshot.sh --quick        # fastest path to one screenshot
-ls artifacts/screenshots/      # verify output
-```
-
-The goal is a PNG on the PR. Everything else is implementation detail.
+| Symptom | Fix |
+|---|---|
+| `No tests found` | Check `@types/node` is installed: `npm install` |
+| `Executable doesn't exist` | Playwright can't find browser — run `./scripts/screenshot_probe.sh` to see what's available |
+| `Xvfb failed to start` | Stale lock: `rm -f /tmp/.X*-lock` |
+| Port in use | `pkill -f vite` or set `VITE_PORT=5175` |
+| All screenshots identical | Camera snap not working — check `agent-api.ts` calls `_orbitCamera.snap()` |
+| Blank/black screenshots | SwiftShader issue — verify chrome args include `--use-gl=angle --use-angle=swiftshader` |
