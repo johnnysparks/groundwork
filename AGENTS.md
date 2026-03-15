@@ -6,16 +6,17 @@
 ## GAME VISION
 GROUNDWORK is a cozy ecological builder where the player grows a self-sustaining garden by shaping soil, water, light, and plant relationships above and below ground.
 
-**Core fantasy:** Build a living miniature world that becomes more beautiful, resilient, and alive every season.
+**Core fantasy:** Build a living miniature world that becomes more beautiful, resilient, surprising, and alive every season — a world that develops its own momentum and exceeds your plan.
 
-**Player experience:** The player is composing an ecosystem, not managing units in a spreadsheet. Every choice changes the conditions for what grows next. A thriving garden should feel earned.
+**Player experience:** The player is composing an ecosystem, not managing units in a spreadsheet. Every choice changes the conditions for what grows next. A thriving garden should feel *earned* — and then it should surprise you. The oak you planted attracts a bird that carries a seed to the far corner. The wildflowers you grew near water attract pollinators that make your berry bush fruit. The garden develops relationships you didn't design but can understand once you see them.
 
 ## CORE PLAY
 - **Plant:** choose species and place seeds
 - **Sculpt:** shape terrain to influence water and space
 - **Prune:** cut, weed, thin, deadhead, redirect growth
 - **Irrigate:** route water and place structures that shift ecology
-- **Adapt:** respond as seasons and maturing plants reshape the system
+- **Observe:** notice emergent interactions — pollinators linking flowers, roots competing for water, fungi colonizing dead wood — and learn what the garden is telling you
+- **Adapt:** respond as fauna, seasons, and maturing plants reshape the system in ways you didn't fully plan
 
 ## SIGNATURE FEATURE
 The player can dip the camera below the surface with no mode switch. Same world, same simulation. The surface shows beauty. The underground reveals why it works.
@@ -23,6 +24,8 @@ The player can dip the camera below the surface with no mode switch. Same world,
 ## MVP TARGET
 - One temperate biome, 12-20 species (canopy/shrub/groundcover)
 - Four systems: light, water, roots, ecology
+- Fauna as visible ecological agents: pollinators, decomposers, seed-dispersing birds, soil organisms — even as simple visual representations (particles, sprites, trails). Fidelity can be low; ecological *role* must be clear.
+- Species interaction web: pollination, competition, symbiosis, decomposition, shelter — plants affect each other, not just respond to abiotic conditions
 - One garden bed (~120×120×60 voxels, 60m×60m×30m at 0.5m/voxel)
 - Continuous above/below-ground camera
 - Terrain sculpting, seed placement, basic tending tools
@@ -32,11 +35,16 @@ The player can dip the camera below the surface with no mode switch. Same world,
 - Player delight over simulation purity
 - Small, shippable systems over broad ambition
 - Expression from ecological choices, not cosmetic overlays
-- Create "one more seed" curiosity
+- Create "one more seed" curiosity — through discovery and surprise, not just legibility
+- Reward observation: the player who watches closely should notice things the player who clicks fast misses
+- Interaction depth over independent systems: one chain of species affecting each other is worth ten that grow alone
 
 ## CANONICAL QUESTION
 All agents should keep testing against this:
-> *Can visible ecological cause-and-effect drive satisfying "one more seed" play?*
+> *Can ecological discovery — visible interactions, emergent surprises, and layered understanding — drive "one more garden" play?*
+
+This is stronger than mere legibility. A game where cause-and-effect is perfectly visible but fully predictable gets exhausted in 20 minutes. The goal is a garden that teaches you something new each session, where each garden you build makes the next one richer because you understand more about how species, fauna, and systems connect.
+
 If a task does not help answer that, challenge it.
 
 ---
@@ -53,14 +61,17 @@ If a task does not help answer that, challenge it.
 - Do not optimize for realism over readability.
 - Do not add systems that hide cause-and-effect.
 - Do not turn the game into survival, farming grind, crafting, or narrative adventure.
-- If a proposal weakens "one more seed" curiosity, challenge it.
+- Do not build systems where species grow in isolation — every new species or system should connect to the interaction web.
+- Do not make the garden fully predictable — if the player can foresee every outcome, there's no reason to observe, experiment, or come back.
+- If a proposal weakens "one more seed" curiosity or removes surprise, challenge it.
 - Any new biome, economy, multiplayer feature, narrative layer, or major content pipeline is automatically **P3**.
 
 ## DEFAULT DECISION RULE
 If uncertain, choose the option that:
 1. makes ecological cause-and-effect more readable,
-2. keeps the build smaller,
-3. increases player delight sooner.
+2. rewards player observation with surprise or discovery,
+3. keeps the build smaller,
+4. increases player delight sooner.
 
 ## SOURCE OF TRUTH
 When sources disagree: game vision > Manager backlog > player feedback > build notes > older discussion.
@@ -134,6 +145,9 @@ Escalate to Manager immediately when: two solutions conflict with the vision, a 
 - Fake-but-readable over accurate-but-murky.
 - One convincing bed over a broad shallow game.
 - One visible interaction chain over many weak systems.
+- One "I didn't expect that!" moment over ten predictable ones.
+- Fauna that shows ecological role (bee pollinating, worm aerating) over fauna that's just decoration.
+- A garden that surprises the player at tick 500 over a garden fully understood at tick 50.
 
 ---
 
