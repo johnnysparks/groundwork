@@ -442,8 +442,11 @@ pub fn tree_growth(
             }
         }
 
-        tree.accumulated_water += water_intake * species.growth_rate;
-        tree.accumulated_light += light_intake * species.growth_rate;
+        // Use diminishing returns so more roots/light don't trivially blast
+        // through all growth stages in a single tick. sqrt gives gentle scaling:
+        // 100 water_intake → +10, 10000 → +100, 50000 → +224
+        tree.accumulated_water += water_intake.sqrt() * species.growth_rate;
+        tree.accumulated_light += light_intake.sqrt() * species.growth_rate;
 
         // Health declines without resources, recovers when well-supplied
         let water_ok = water_intake >= species.water_need.threshold();
@@ -534,7 +537,7 @@ pub fn branch_growth(
         if !species.uses_skeleton() {
             continue;
         }
-        if tree.branches.is_empty() || tree.attraction_points.is_empty() {
+        if tree.branches.is_empty() {
             continue;
         }
         if matches!(tree.stage, GrowthStage::Dead) {
@@ -542,6 +545,22 @@ pub fn branch_growth(
         }
         // Only grow every 3 ticks
         if tree.age % 3 != 0 {
+            continue;
+        }
+
+        // Regenerate attraction points when running low — ensures continuous
+        // branch growth instead of stalling after initial points are consumed.
+        if tree.attraction_points.len() < 10 && matches!(
+            tree.stage,
+            GrowthStage::YoungTree | GrowthStage::Mature | GrowthStage::OldGrowth
+        ) {
+            let new_points = crate::tree::generate_attraction_points(
+                species, &tree.stage, tree.rng_seed.wrapping_add(tree.age as u64),
+            );
+            tree.attraction_points.extend(new_points);
+        }
+
+        if tree.attraction_points.is_empty() {
             continue;
         }
 
@@ -568,10 +587,12 @@ pub fn branch_growth(
             continue;
         }
 
-        let influence_v = crate::scale::meters_to_voxels_f64(4.0);
-        let kill_v = crate::scale::meters_to_voxels_f64(2.0);
-        let influence_dist_sq = (influence_v * influence_v) as isize;
-        let kill_dist_sq = (kill_v * kill_v) as isize;
+        // Scale influence and kill distances to crown radius so branch growth
+        // works correctly regardless of voxel size. Kill distance should be
+        // a small fraction of crown radius to prevent premature point exhaustion.
+        let cr = species.crown_radius().max(2) as f64;
+        let influence_dist_sq = (cr * cr * 4.0) as isize; // 2× crown radius
+        let kill_dist_sq = (cr * 0.3 * cr * 0.3).max(1.0) as isize; // 0.3× crown radius
 
         // Associate each attraction point with its nearest tip
         let mut tip_directions: Vec<(isize, isize, isize, u32)> = vec![(0, 0, 0, 0); tips.len()];
@@ -599,10 +620,10 @@ pub fn branch_growth(
             }
         }
 
-        // Grow up to 3 new nodes per tick
+        // Grow up to 5 new nodes per tick for visible canopy development
         let mut grown = 0u32;
         for (ti, &tip_idx) in tips.iter().enumerate() {
-            if grown >= 3 {
+            if grown >= 5 {
                 break;
             }
             let (dx, dy, dz, count) = tip_directions[ti];
@@ -859,10 +880,31 @@ pub fn tree_rasterize(
 
         let species = &species_table.species[tree.species_id];
 
-        // Clear old footprint
+        // Collect dynamic root positions (from root_growth, not in skeleton)
+        // to preserve them through rasterization.
+        let skeleton_root_positions: std::collections::HashSet<(usize, usize, usize)> =
+            tree.branches.iter()
+                .filter(|b| b.material == Material::Root)
+                .map(|b| {
+                    let (rx, ry, rz) = tree.root_pos;
+                    (
+                        (rx as isize + b.pos.0) as usize,
+                        (ry as isize + b.pos.1) as usize,
+                        (rz as isize + b.pos.2) as usize,
+                    )
+                })
+                .collect();
+
+        let mut dynamic_roots: Vec<(usize, usize, usize)> = Vec::new();
+
+        // Clear old footprint, preserving dynamic roots
         for &(x, y, z) in &tree.voxel_footprint {
             if let Some(cell) = grid.get_mut(x, y, z) {
                 match cell.material {
+                    Material::Root if !skeleton_root_positions.contains(&(x, y, z)) => {
+                        // This is a dynamic root — keep it
+                        dynamic_roots.push((x, y, z));
+                    }
                     Material::Trunk | Material::Branch | Material::Leaf
                     | Material::Root | Material::DeadWood => {
                         if z <= GROUND_LEVEL {
@@ -876,7 +918,7 @@ pub fn tree_rasterize(
             }
         }
 
-        let mut new_footprint = Vec::new();
+        let mut new_footprint = dynamic_roots;
         let (rx, ry, rz) = tree.root_pos;
 
         if !tree.branches.is_empty() {
@@ -2505,12 +2547,12 @@ mod tests {
         let ty = 30;
         let tz = GROUND_LEVEL + 1;
 
-        // Clear area above ground
+        // Clear area above ground — must be larger than crown radius
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
-            for dz in 0..15 {
-                for dx in -5i32..=5 {
-                    for dy in -5i32..=5 {
+            for dz in 0..60 {
+                for dx in -30i32..=30 {
+                    for dy in -30i32..=30 {
                         let ax = (tx as i32 + dx) as usize;
                         let ay = (ty as i32 + dy) as usize;
                         let az = tz + dz;
@@ -2559,10 +2601,11 @@ mod tests {
             initial_branch_count,
             tree.branches.len()
         );
-        // Should have consumed some attraction points
+        // Should have consumed some attraction points (started with 60 for YoungTree)
         assert!(
-            tree.attraction_points.len() < 20,
-            "Some attraction points should have been consumed"
+            tree.attraction_points.len() < 60,
+            "Some attraction points should have been consumed: current={}",
+            tree.attraction_points.len()
         );
     }
 
