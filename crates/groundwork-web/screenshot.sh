@@ -325,17 +325,22 @@ async function main() {
     } else if (QUICK) {
       angles = [{ name: 'hero', theta: 45, phi: 60 }];
     } else {
-      // Standard tour: surface views, then x-ray underground views
+      // Standard tour: surface views, lighting, x-ray
       const shots = [
-        // --- Surface ---
+        // --- Surface (golden hour default) ---
         { name: '01-hero',           theta: 45,  phi: 60 },
         { name: '02-side',           theta: 120, phi: 35 },
         { name: '03-close-up',       theta: 30,  phi: 50, zoom: 2.0 },
         { name: '04-wide',           theta: 45,  phi: 85, zoom: 0.3 },
-        // --- X-ray underground ---
-        { name: '05-xray-hero',      theta: 45,  phi: 60, xray: true },
-        { name: '06-xray-side',      theta: 120, phi: 35, xray: true },
-        { name: '07-xray-close',     theta: 30,  phi: 50, zoom: 2.0, xray: true },
+        // --- Day cycle: 4 times of day from same angle ---
+        { name: '05-dawn',           theta: 45,  phi: 60, time: 0.25 },
+        { name: '06-noon',           theta: 45,  phi: 60, time: 0.5 },
+        { name: '07-golden',         theta: 45,  phi: 60, time: 0.75 },
+        { name: '08-blue-hour',      theta: 45,  phi: 60, time: 0.0 },
+        // --- X-ray underground (reset to golden hour) ---
+        { name: '09-xray-hero',      theta: 45,  phi: 60, xray: true, time: 0.75 },
+        { name: '10-xray-side',      theta: 120, phi: 35, xray: true },
+        { name: '11-xray-close',     theta: 30,  phi: 50, zoom: 2.0, xray: true },
       ];
       angles = shots;
     }
@@ -348,6 +353,15 @@ async function main() {
         await exec({ type: 'CameraCutaway', z: wantXray ? 1 : 0 });
         xrayOn = wantXray;
         await page.waitForTimeout(200); // let transparency settle
+      }
+      // Set time of day if specified
+      if (a.time !== undefined) {
+        await page.evaluate((t) => { window.agentAPI?.setTimeOfDay(t); }, a.time);
+        // Need a frame for lighting to update
+        await page.evaluate(async () => {
+          for (let i = 0; i < 5; i++) await new Promise(r => requestAnimationFrame(r));
+        });
+        await page.waitForTimeout(100);
       }
       await exec({ type: 'CameraOrbit', theta_deg: a.theta, phi_deg: a.phi });
       if (a.zoom) await exec({ type: 'CameraZoom', level: a.zoom });

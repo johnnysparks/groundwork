@@ -110,6 +110,9 @@ export function initAgentAPI(config: AgentAPIConfig): void {
     /** Get fauna count */
     getFaunaCount: () => getFaunaCount(),
 
+    /** Set time of day (0–1): 0.25=dawn, 0.5=noon, 0.75=golden, 0.0=blue hour */
+    setTimeOfDay: (t: number) => { if (_dayCycle) _dayCycle.setTime(t); },
+
     /** Execute a single action and return the result */
     executeAction: async (action: AgentAction): Promise<ActionResult> => {
       return executeAgentAction(action);

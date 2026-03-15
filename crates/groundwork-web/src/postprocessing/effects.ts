@@ -90,7 +90,7 @@ const TiltShiftShader = {
 const ColorGradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    warmth: { value: 0.06 },       // red/yellow shift amount
+    warmth: { value: 0.02 },       // red/yellow shift — subtle, lets day cycle colors through
     contrast: { value: 1.08 },     // contrast multiplier around mid-gray
     saturation: { value: 1.12 },   // saturation multiplier
   },
