@@ -1029,6 +1029,8 @@ pub fn tree_rasterize(
                             };
                             if can_place {
                                 cell.set_material(mat);
+                                // Tag with species_id for renderer color differentiation
+                                cell.nutrient_level = tree.species_id as u8;
                                 new_footprint.push((ax, ay, az));
                             }
                         }
@@ -1067,6 +1069,7 @@ pub fn tree_rasterize(
                             if let Some(cell) = grid.get_mut(ax, ay, az) {
                                 if cell.material == Material::Air {
                                     cell.set_material(Material::Leaf);
+                                    cell.nutrient_level = tree.species_id as u8;
                                     new_footprint.push((ax, ay, az));
                                 }
                             }
@@ -1105,6 +1108,7 @@ pub fn tree_rasterize(
                     };
                     if can_place {
                         cell.set_material(mat);
+                        cell.nutrient_level = tree.species_id as u8;
                         new_footprint.push((ax, ay, az));
                     }
                 }

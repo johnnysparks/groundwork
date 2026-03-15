@@ -90,6 +90,25 @@ const LEAF_COLORS = [
   new THREE.Color(0.28, 0.48, 0.22), // deeper green
 ];
 
+/** Species-specific foliage color palettes.
+ *  Index matches species_id stored in voxel nutrient_level byte.
+ *  0=Oak, 1=Birch, 2=Willow, 3=Pine, 4=Fern, 5=Berry Bush, 6=Holly,
+ *  7=Wildflower, 8=Daisy, 9=Moss, 10=Grass, 11=Clover */
+const SPECIES_FOLIAGE: THREE.Color[] = [
+  new THREE.Color(0.28, 0.50, 0.18),  // Oak: deep forest green
+  new THREE.Color(0.40, 0.62, 0.25),  // Birch: bright lime green
+  new THREE.Color(0.30, 0.55, 0.28),  // Willow: muted sage green
+  new THREE.Color(0.15, 0.38, 0.15),  // Pine: dark conifer green
+  new THREE.Color(0.22, 0.55, 0.30),  // Fern: blue-green
+  new THREE.Color(0.35, 0.50, 0.22),  // Berry Bush: warm green
+  new THREE.Color(0.18, 0.42, 0.18),  // Holly: dark green
+  new THREE.Color(0.65, 0.45, 0.55),  // Wildflower: pink-purple
+  new THREE.Color(0.70, 0.65, 0.30),  // Daisy: warm yellow
+  new THREE.Color(0.25, 0.48, 0.22),  // Moss: muted green
+  new THREE.Color(0.35, 0.58, 0.20),  // Grass: bright green
+  new THREE.Color(0.30, 0.55, 0.25),  // Clover: green with yellow tint
+];
+
 export class FoliageRenderer {
   readonly group: THREE.Group;
 
@@ -160,9 +179,11 @@ export class FoliageRenderer {
           this.dummy.updateMatrix();
           this.mesh.setMatrixAt(count, this.dummy.matrix);
 
-          // Pick color with slight variation
-          const colorIdx = hash % LEAF_COLORS.length;
-          const baseColor = LEAF_COLORS[colorIdx];
+          // Pick color based on species (nutrient_level byte = species_id)
+          const speciesId = grid[idx + 3];
+          const baseColor = speciesId < SPECIES_FOLIAGE.length
+            ? SPECIES_FOLIAGE[speciesId]
+            : LEAF_COLORS[hash % LEAF_COLORS.length];
           // Add subtle per-instance brightness variation
           const brightness = 0.9 + ((hash >> 4) & 0xf) / 15.0 * 0.2;
           this.colorAttr.setXYZ(
