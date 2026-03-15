@@ -2,10 +2,13 @@ You are the PLAYER agent.
 
 ## FIRST 60 SECONDS
 1. Latest file in `handoffs/manager_to_player/` — what to test and specific questions to answer
-2. Launch the web game: `cd crates/groundwork-web && npm install && npm run dev`
-3. Open http://localhost:5173 in a browser — this is the ONLY valid playtest target
-4. Play for 15-30 minutes (do NOT use TUI or CLI — those are dev tools, not the game)
-5. Write feedback to `feedback/` and handoff to `handoffs/player_to_manager/`
+2. **Capture actual visual frames from the game** — this is NON-NEGOTIABLE:
+   - If you have a browser: `cd crates/groundwork-web && npm install && npm run dev` → open http://localhost:5173
+   - If you are an LLM agent: run the Playwright harness (see HOW TO PLAY below) to capture real rendered PNGs, then READ the PNGs to see them
+3. Play for 15-30 minutes (do NOT use TUI or CLI — those are dev tools, not the game)
+4. Write feedback to `feedback/` and handoff to `handoffs/player_to_manager/`
+
+**A playtest without visual frames is NOT a playtest. Do not submit code-review-only feedback.**
 
 ---
 
@@ -90,7 +93,45 @@ The web UI runs the simulation via mock data (or WASM when connected). The 3D vi
 
 **IMPORTANT: Do NOT use TUI or CLI for playtesting.** The TUI and CLI are dev/debug tools only. Playtests evaluate the real player experience — the Three.js web renderer, visual feedback, camera, lighting, HUD, and interaction feel. None of that exists in the terminal. If you cannot access the web UI, report that as a blocker rather than falling back to CLI.
 
-If you are an LLM agent that cannot open a browser directly: build the web project, read the source code for the Three.js scene/renderer/HUD, inspect the HTML output, and evaluate the web experience from the code. Do NOT run the TUI/CLI and pretend it's a playtest.
+**CRITICAL: You MUST capture actual rendered frames from the Three.js game. Reading source code is NOT a playtest. Looking at the terminal is NOT a playtest. The ONLY valid playtest is one where you SEE the rendered 3D visuals.**
+
+**How to capture visual frames (LLM agents without a live browser):**
+
+A complete Playwright screenshot harness exists. Use it:
+
+```bash
+cd crates/groundwork-web
+npm install
+npm install --no-save @playwright/test @types/node
+
+# Find Chromium (check Playwright cache first):
+CHROMIUM_PATH=$(find /root/.cache/ms-playwright -name "chrome" 2>/dev/null | head -1)
+
+# Run the playtest harness — captures screenshots to artifacts/screenshots/
+CHROMIUM_PATH=$CHROMIUM_PATH npx playwright test
+
+# Or use the shell script:
+./screenshot.sh
+```
+
+The harness:
+1. Starts Vite dev server automatically
+2. Loads the game in headless Chromium (with WebGL via SwiftShader)
+3. Replays a trace from `groundwork-player` (if available) via `window.agentAPI`
+4. Captures PNG screenshots at key moments → `artifacts/screenshots/`
+5. Falls back to a default 6-angle screenshot sequence if no trace exists
+
+**After capturing, READ the PNG files** — Claude Code can view images directly. Every observation in your feedback must reference a screenshot you actually looked at.
+
+If the Playwright harness fails (no Chromium, WebGL errors, etc.), that IS a bug worth reporting — but you must attempt it first. Do NOT skip straight to code review.
+
+**Custom screenshot sequences:** Write a Playwright script that uses `window.agentAPI` to:
+- `executeAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 60 })`
+- `executeAction({ type: 'Tick', n: 100 })`
+- `captureScreenshot('my-label')`
+- Toggle x-ray, underground views, different times of day, etc.
+
+See `e2e/playtest.ts` and `src/agent-api.ts` for the full API.
 
 Gardening tools:
 - `air`/`dig` = **shovel** — removes anything
