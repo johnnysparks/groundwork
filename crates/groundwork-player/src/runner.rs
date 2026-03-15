@@ -331,6 +331,18 @@ pub fn execute_action(
 
         Action::View { z } => observer::observe_view(world, *z),
 
+        Action::Screenshot { label } => {
+            let tick = world.resource::<groundwork_sim::Tick>().0;
+            // In headless mode, record the screenshot intent.
+            // The Playwright harness replays the trace and captures actual PNGs
+            // from the Three.js renderer at these points.
+            Observation {
+                text: format!("[screenshot: {label}] camera: theta={:.0}° phi={:.0}° zoom={:.1}x cutaway_z={:.0}",
+                    camera.theta_deg, camera.phi_deg, camera.zoom, camera.cutaway_z),
+                tick,
+            }
+        }
+
         Action::Checkpoint { label } => {
             let tick = world.resource::<groundwork_sim::Tick>().0;
             Observation {

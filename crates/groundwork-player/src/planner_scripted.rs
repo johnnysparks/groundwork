@@ -38,12 +38,15 @@ impl ScriptedPlanner {
         let water_z = 45usize; // above ground so water falls down
 
         let batches = vec![
-            // Batch 0: Initial survey
+            // Batch 0: Initial survey — screenshot the empty garden
             vec![
                 Action::Status,
                 Action::CameraOrbit {
-                    theta_deg: 0.0,
+                    theta_deg: 45.0,
                     phi_deg: 60.0,
+                },
+                Action::Screenshot {
+                    label: "01-initial-empty-garden".into(),
                 },
             ],
             // Batch 1: Place water (high up, it falls to surface)
@@ -59,6 +62,9 @@ impl ScriptedPlanner {
                 },
                 Action::Tick { n: 5 },
                 Action::Status,
+                Action::Screenshot {
+                    label: "02-water-placed".into(),
+                },
             ],
             // Batch 2: Plant seeds near water (high up, seeds fall to surface)
             vec![
@@ -90,8 +96,11 @@ impl ScriptedPlanner {
                     z: seed_z,
                     species: Some("wildflower".into()),
                 },
+                Action::Screenshot {
+                    label: "03-seeds-planted".into(),
+                },
             ],
-            // Batch 3: Tick and observe
+            // Batch 3: Early growth — tick 50 and capture
             vec![
                 Action::Tick { n: 50 },
                 Action::Status,
@@ -100,8 +109,11 @@ impl ScriptedPlanner {
                     y: cy,
                     z: 41,
                 },
+                Action::Screenshot {
+                    label: "04-early-growth-tick50".into(),
+                },
             ],
-            // Batch 4: Orbit camera to see from different angle
+            // Batch 4: Orbit camera for different angle — visual check
             vec![
                 Action::CameraOrbit {
                     theta_deg: 90.0,
@@ -113,13 +125,19 @@ impl ScriptedPlanner {
                     y: cy as f64,
                     z: 41.0,
                 },
+                Action::Screenshot {
+                    label: "05-side-angle-closeup".into(),
+                },
             ],
-            // Batch 5: More growth (seeds need ~40 ticks to mature, trees grow after)
+            // Batch 5: More growth — tick 150 total, capture progress
             vec![
                 Action::Tick { n: 100 },
                 Action::Status,
+                Action::Screenshot {
+                    label: "06-mid-growth-tick150".into(),
+                },
             ],
-            // Batch 6: Explore underground
+            // Batch 6: Underground view — the X-ray garden
             vec![
                 Action::CameraCutaway { z: 35.0 },
                 Action::CameraOrbit {
@@ -129,17 +147,45 @@ impl ScriptedPlanner {
                 Action::Inspect {
                     x: cx - 1,
                     y: cy,
-                    z: 38, // below ground
+                    z: 38,
+                },
+                Action::Screenshot {
+                    label: "07-underground-roots".into(),
                 },
             ],
-            // Batch 7: More growth and final survey
+            // Batch 7: Back above ground, more growth
             vec![
-                Action::CameraCutaway { z: 100.0 }, // back to full view
+                Action::CameraCutaway { z: 100.0 },
                 Action::Tick { n: 100 },
                 Action::Status,
                 Action::CameraOrbit {
                     theta_deg: 270.0,
                     phi_deg: 60.0,
+                },
+                Action::Screenshot {
+                    label: "08-mature-garden-tick250".into(),
+                },
+            ],
+            // Batch 8: Golden hour beauty shot — zoom out, low angle
+            vec![
+                Action::CameraOrbit {
+                    theta_deg: 315.0,
+                    phi_deg: 30.0,
+                },
+                Action::CameraZoom { level: 0.8 },
+                Action::Screenshot {
+                    label: "09-golden-hour-wide".into(),
+                },
+            ],
+            // Batch 9: Final top-down overview
+            vec![
+                Action::CameraOrbit {
+                    theta_deg: 45.0,
+                    phi_deg: 80.0,
+                },
+                Action::CameraZoom { level: 0.6 },
+                Action::Screenshot {
+                    label: "10-final-overview-topdown".into(),
                 },
             ],
         ];

@@ -229,6 +229,7 @@ fn action_type_name(action: &crate::action::Action) -> String {
         Action::Inspect { .. } => "inspect".into(),
         Action::Status => "status".into(),
         Action::View { .. } => "view".into(),
+        Action::Screenshot { .. } => "screenshot".into(),
         Action::Checkpoint { .. } => "checkpoint".into(),
     }
 }
