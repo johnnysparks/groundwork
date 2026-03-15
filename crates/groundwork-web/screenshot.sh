@@ -286,16 +286,36 @@ async function main() {
       const api = window.agentAPI; if (api) await api.executeAction(a);
     }, action);
 
-    // Advance sim so fauna can spawn and growth can progress
+    // Plant a diverse garden and advance sim for a lush screenshot
     if (wasmReady) {
-      // Plant some flowers for pollinators before ticking
-      await exec({ type: 'Place', tool: 'seed', x: 42, y: 42, z: 50, species: 'wildflower' });
-      await exec({ type: 'Place', tool: 'seed', x: 38, y: 42, z: 50, species: 'wildflower' });
-      await exec({ type: 'Place', tool: 'seed', x: 40, y: 38, z: 50, species: 'daisy' });
-      await exec({ type: 'Place', tool: 'seed', x: 42, y: 38, z: 50, species: 'clover' });
-      await exec({ type: 'Place', tool: 'seed', x: 38, y: 38, z: 50, species: 'moss' });
-      console.log('Advancing sim 200 ticks for fauna/growth...');
-      await exec({ type: 'Tick', n: 200 });
+      // Water basin near center for root access
+      await exec({ type: 'Fill', tool: 'water', x1: 30, y1: 30, z1: 50, x2: 50, y2: 50, z2: 50 });
+
+      // Trees: spread across the garden bed
+      await exec({ type: 'Place', tool: 'seed', x: 35, y: 35, z: 55, species: 'oak' });
+      await exec({ type: 'Place', tool: 'seed', x: 45, y: 35, z: 55, species: 'birch' });
+      await exec({ type: 'Place', tool: 'seed', x: 35, y: 45, z: 55, species: 'pine' });
+      await exec({ type: 'Place', tool: 'seed', x: 45, y: 45, z: 55, species: 'willow' });
+
+      // Shrubs: between trees
+      await exec({ type: 'Place', tool: 'seed', x: 40, y: 33, z: 55, species: 'fern' });
+      await exec({ type: 'Place', tool: 'seed', x: 33, y: 40, z: 55, species: 'berry-bush' });
+      await exec({ type: 'Place', tool: 'seed', x: 47, y: 40, z: 55, species: 'holly' });
+
+      // Flowers: clusters for pollinators
+      await exec({ type: 'Place', tool: 'seed', x: 38, y: 38, z: 55, species: 'wildflower' });
+      await exec({ type: 'Place', tool: 'seed', x: 42, y: 38, z: 55, species: 'wildflower' });
+      await exec({ type: 'Place', tool: 'seed', x: 38, y: 42, z: 55, species: 'daisy' });
+      await exec({ type: 'Place', tool: 'seed', x: 42, y: 42, z: 55, species: 'daisy' });
+
+      // Groundcover: nitrogen-fixing clover near oaks, moss for moisture
+      await exec({ type: 'Place', tool: 'seed', x: 36, y: 36, z: 55, species: 'clover' });
+      await exec({ type: 'Place', tool: 'seed', x: 44, y: 36, z: 55, species: 'clover' });
+      await exec({ type: 'Place', tool: 'seed', x: 37, y: 43, z: 55, species: 'moss' });
+      await exec({ type: 'Place', tool: 'seed', x: 43, y: 43, z: 55, species: 'grass' });
+
+      console.log('Planted 16 species, advancing 300 ticks...');
+      await exec({ type: 'Tick', n: 300 });
       await page.waitForTimeout(200);
       const info = await page.evaluate(() => {
         const api = window.agentAPI;
