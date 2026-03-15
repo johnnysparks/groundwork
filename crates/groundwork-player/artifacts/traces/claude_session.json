@@ -383,7 +383,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 474
+      "duration": 534
     },
     {
       "action": "Status",
@@ -1240,7 +1240,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 4508
+      "duration": 4859
     },
     {
       "action": "Status",
@@ -1691,7 +1691,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 9012
+      "duration": 9591
     },
     {
       "action": "Status",
@@ -1762,7 +1762,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 6
+      "duration": 7
     },
     {
       "action": {
@@ -2292,7 +2292,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 13578
+      "duration": 14174
     },
     {
       "action": "Status",
@@ -2363,7 +2363,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 7
+      "duration": 6
     },
     {
       "action": {
@@ -2517,5 +2517,5 @@
       "duration": 3
     }
   ],
-  "total_duration": 27684
+  "total_duration": 29273
 }
