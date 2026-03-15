@@ -36,7 +36,7 @@ const ECO_VERT = /* glsl */ `
     vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
     // Size: small, gentle glow
     float sizeCurve = sin(vLife * 3.14159) * 0.7 + 0.3;
-    gl_PointSize = sizeCurve * 4.0;
+    gl_PointSize = sizeCurve * 8.0;
     gl_Position = projectionMatrix * mvPos;
   }
 `;
@@ -143,13 +143,13 @@ export class EcologyParticles {
         const f = readFauna(faunaView, i);
         if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) {
           // Golden pollen trail behind pollinator
-          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.pollination, 2);
+          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.pollination, 5);
         } else if (f.type === FaunaType.Worm) {
           // Nutrient particles rising from worm activity (underground)
-          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.nutrient, 1);
+          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.nutrient, 3);
         } else if (f.type === FaunaType.Beetle) {
           // Decomposition particles near beetles
-          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.decomposition, 1);
+          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.decomposition, 3);
         }
       }
     }
@@ -165,7 +165,7 @@ export class EcologyParticles {
           if (mat === Material.Root && water > 30) {
             // Water being absorbed by roots — blue particles
             // Coordinate swap: sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
-            this.emitTrail(sx + 0.5, sz + 0.5, sy + 0.5, INTERACTION_COLORS.waterAbsorb, 1);
+            this.emitTrail(sx + 0.5, sz + 0.5, sy + 0.5, INTERACTION_COLORS.waterAbsorb, 3);
           }
         }
       }

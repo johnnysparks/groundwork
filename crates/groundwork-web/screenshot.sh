@@ -326,8 +326,9 @@ async function main() {
     }
 
     const snap = async (name) => {
+      // Let render loop run for ~1s so ecology particles and fauna animations accumulate
       await page.evaluate(async () => {
-        for (let i = 0; i < 3; i++) await new Promise(r => requestAnimationFrame(r));
+        for (let i = 0; i < 30; i++) await new Promise(r => requestAnimationFrame(r));
       });
       await page.waitForTimeout(100);
       const fp = path.join(SCREENSHOT_DIR, `${name}.png`);
