@@ -7,6 +7,10 @@
 
 import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized } from '../bridge';
 
+/** Re-export SPECIES so other UI modules can import from hud */
+export { BRIDGE_SPECIES as SPECIES };
+import { captureScreenshot } from './screenshot';
+
 /** Tool UI definition (extends bridge ToolDef with display properties) */
 export interface ToolUIDef {
   code: ToolCodeType;
@@ -130,6 +134,13 @@ export class Hud {
       this.notify();
     });
 
+    // Screenshot button
+    const screenshotBtn = this.container.querySelector('#screenshot-btn')!;
+    screenshotBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      captureScreenshot();
+    });
+
     // Set initial state
     this.render();
   }
@@ -222,8 +233,9 @@ const HUD_HTML = `
     <div id="species-list"></div>
   </div>
   <div id="hud-status"></div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Q/E: species</div>
+  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Q/E: species | F2: screenshot</div>
   <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
+  <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
 `;
 
 // --- CSS ---
@@ -389,6 +401,27 @@ const HUD_CSS = `
   transition: all 0.12s ease;
 }
 #tick-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e8d8b8;
+}
+
+/* --- Screenshot button (top-left, below tick toggle) --- */
+#screenshot-btn {
+  position: absolute;
+  top: 58px;
+  left: 12px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(20, 18, 15, 0.7);
+  color: #b8a88a;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  pointer-events: auto;
+  transition: all 0.12s ease;
+}
+#screenshot-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e8d8b8;
 }

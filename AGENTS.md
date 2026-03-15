@@ -77,6 +77,8 @@ When sources disagree: game vision > Manager backlog > player feedback > build n
 ### Player → Manager
 Sections: Observed | Felt | Bugs | Confusions | What made me want to keep playing | What made me want to stop | Requests
 
+**Screenshots required:** Each key observation should include a screenshot (F2 or Snap button in web UI). Attach 1-10 screenshots per session to the PR — do not commit image files to the repo. Reference screenshots inline in feedback (e.g. "see screenshot: overgrown-oak.png").
+
 ### Manager → Dev
 Sections: Goal | Why now | Tasks | Acceptance checks | Risks / constraints | Open questions
 

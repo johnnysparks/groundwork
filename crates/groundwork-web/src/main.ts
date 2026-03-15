@@ -22,6 +22,7 @@ import { createPostProcessing } from './postprocessing/effects';
 import { Hud, SPECIES } from './ui/hud';
 import { setupControls } from './ui/controls';
 import { QuestLog } from './ui/quests';
+import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 
@@ -31,7 +32,7 @@ async function main() {
 
   // --- Scene setup ---
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
@@ -39,6 +40,7 @@ async function main() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   document.body.appendChild(renderer.domElement);
+  initScreenshot(renderer.domElement);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87CEEB); // sky blue
@@ -319,6 +321,10 @@ async function main() {
       case '\\':
         dayCycle.toggleAuto();
         break;
+      case 'f2':
+        e.preventDefault();
+        captureScreenshot();
+        break;
     }
   });
 
@@ -398,7 +404,7 @@ async function main() {
     `Seeds: ${seeds.count} sprites`,
   );
   console.log(
-    'Controls: 1-5=tools, WASD/Arrows=pan, Q=x-ray, R=reset, T=tick, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle',
+    'Controls: 1-5=tools, WASD/Arrows=pan, Q=x-ray, R=reset, T=tick, drag=orbit, scroll=zoom, space=auto-tick, []=time, \\=auto-cycle, F2=screenshot',
   );
 }
 

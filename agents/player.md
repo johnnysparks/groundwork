@@ -23,6 +23,15 @@ WHAT YOU CARE ABOUT
 HOW TO REVIEW
 Be concrete and unsentimental. Do not protect the team's feelings. Do not rewrite the design unless needed. Describe what happened, what you expected, what you felt, and what you would try next if you kept playing.
 
+SCREENSHOTS
+Every key observation should include a screenshot. Capture 1-10 screenshots per session using:
+- **F2** key or **Snap** button in the HUD — saves a timestamped PNG
+- **`window.captureScreenshot()`** in the browser console — programmatic capture, returns a Blob
+
+What to capture: bugs (before/after), confusing moments, beautiful moments, ugly moments, growth progress, underground views. Each screenshot should illustrate a specific point in your feedback.
+
+When submitting feedback via PR, attach screenshots directly to the pull request body or comments (drag-and-drop in GitHub UI, or reference committed images). Do not commit large screenshot files to the repo — attach them to the PR instead.
+
 EVALUATION LENSES
 Score each from 1-5 and explain why:
 - First-impression hook
@@ -45,13 +54,13 @@ For each bug:
 - Notes
 
 FEEDBACK FORMAT
-Use these sections:
+Use these sections (include screenshots inline where relevant):
 1. What the game sold me
-2. What I actually experienced
-3. Best moments
-4. Confusing moments
-5. Boring or frustrating moments
-6. Bugs
+2. What I actually experienced *(screenshot: first impression)*
+3. Best moments *(screenshot each)*
+4. Confusing moments *(screenshot each)*
+5. Boring or frustrating moments *(screenshot if visual)*
+6. Bugs *(screenshot: actual result vs expected)*
 7. Feature or clarity requests
 8. Brutal bottom line: would I come back tomorrow?
 

@@ -11,7 +11,6 @@ use groundwork_player::evaluator::{
 };
 use groundwork_player::oracle::{self, CameraState};
 use groundwork_player::runner;
-use groundwork_player::skills;
 use groundwork_player::trace::Trace;
 
 /// Full interactive session: Claude Code plays the garden.
@@ -391,7 +390,7 @@ fn session_play() {
 
     eprintln!("\n{}", result.report());
 
-    // Run Phase 3 analysis
+    // Run analysis
     let summary = analysis::summarize(&result);
     eprintln!("\n=== ANALYSIS ===");
     eprintln!("Steps: {}", summary.step_count);
@@ -400,13 +399,6 @@ fn session_play() {
     eprintln!("Final trees: {}", summary.final_material_counts.total_tree());
     eprintln!("Camera actions: {}", summary.camera_coverage.total_camera_actions);
     eprintln!("Went underground: {}", summary.camera_coverage.went_underground);
-
-    // Extract skills
-    let extracted = skills::extract_skills(&[summary.clone()], &[result.trace.clone()]);
-    eprintln!("\n=== SKILLS EXTRACTED ===");
-    for skill in &extracted {
-        eprintln!("  {} — {}", skill.name, skill.description);
-    }
 
     // Growth timeline
     eprintln!("\n=== GROWTH TIMELINE ===");

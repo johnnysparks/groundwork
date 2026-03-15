@@ -3,15 +3,8 @@ name = "groundwork-player"
 version.workspace = true
 edition.workspace = true
 
-[features]
-llm = ["dep:reqwest", "dep:tokio"]
-
 [dependencies]
 groundwork-sim = { path = "../groundwork-sim" }
 bevy_ecs = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
-# Optional LLM dependencies (behind "llm" feature flag)
-reqwest = { version = "0.12", features = ["json", "blocking"], optional = true }
-tokio = { version = "1", features = ["rt", "macros"], optional = true }

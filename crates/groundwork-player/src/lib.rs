@@ -12,10 +12,10 @@
 //! - **Evaluator**: judges a trace and produces verdicts
 //! - **Scenario**: scripted action sequence + evaluators
 //!
-//! The actor (scenario or future LLM) only sees Observations.
+//! The actor (scenario or interactive session agent) only sees Observations.
 //! Evaluators use OracleSnapshots for ground truth scoring.
 
-// --- Core modules (Phase 1) ---
+// --- Core modules ---
 pub mod action;
 pub mod evaluator;
 pub mod observer;
@@ -25,19 +25,10 @@ pub mod scenario;
 pub mod scenarios;
 pub mod trace;
 
-// --- Planner modules (Phase 2) ---
+// --- Planner modules ---
 pub mod planner;
 pub mod planner_scripted;
 
-#[cfg(feature = "llm")]
-pub mod planner_llm;
-
-// --- Self-improvement loop (Phase 3) ---
+// --- Interactive session ---
 pub mod analysis;
-pub mod batch;
-pub mod clustering;
-pub mod regression;
-pub mod report;
 pub mod session;
-pub mod skills;
-pub mod task_setter;
