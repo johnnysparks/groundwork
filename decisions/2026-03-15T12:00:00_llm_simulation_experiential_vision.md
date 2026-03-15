@@ -10,6 +10,16 @@
 
 The answer should not be "robust" or "bug-free." It should be: **the coziest, most surprising, most joyful garden sim ever made.** A game where every session teaches you something, every garden exceeds your plan, and you can't stop starting "just one more."
 
+## The Replayability Engine
+
+Long-term replay is driven by two pillars (see `decisions/2026-03-15T18:00:00_replayability_model.md`):
+
+1. **Knowledge Transfer** — Each garden teaches something that changes how you start the next. Not unlocks — understanding. The player's tenth garden is different from their first because they *plant differently based on what they learned*.
+
+2. **Biome Variety** — Each biome is both a content pack (new species, fauna, interactions, visual identity) and a difficulty curve (different ecological principles). Biomes are unordered — start anywhere. Mastery doesn't transfer cleanly: systemic intuition carries, specific recipes don't. Visual identity is a pull motivator — the player wants to *see and feel* each biome's world.
+
+The loop must validate both pillars: does knowledge transfer produce measurably better gardens over time? And does the sim architecture support biome variation so that each biome can discover its own 3-5 magical interactions?
+
 ## Experiential Convergence Goals
 
 These are not mechanical targets. They're the *feelings* and *moments* the loop must optimize toward. Every evaluator, every skill extraction, every regression test exists to make these moments more frequent, more reliable, and more varied.
@@ -136,7 +146,15 @@ After a thousand runs of this loop, a new player sits down and experiences:
 
 **Hour 10:** They're designing gardens like a landscape architect thinks about ecosystems. Every plant has a role. Every placement considers neighbors, light, water, and the fauna it will attract. But the garden still surprises them — a rare interaction, an unexpected recovery from drought, a seed dispersal that creates a perfect composition no algorithm would design. They start their eleventh garden not because they haven't "won," but because they want to see what this combination of species will create that they can't predict.
 
-**This is the game.** Not a toy you exhaust in twenty minutes. Not a puzzle with a solution. A living world you get better at composing, that always composes something back at you that you didn't expect. Warm, generous, surprising, and endlessly inviting.
+**This is one biome.** Not the whole game. After mastering temperate:
+
+**Hour 15:** The player notices the desert biome. The art preview stops them — stark dawn light, sand and stone, unfamiliar silhouettes. They start a desert garden. Suddenly they're a beginner again. There's no clover. Water is precious. But they know to look underground, to watch fauna, to space plants carefully. They know *how to learn*. The discovery arc reignites with entirely different organisms and rules.
+
+**Hour 25:** Third desert garden. They've found the desert's nitrogen-fixer, its seed disperser, its version of the canopy effect. Going back to temperate, they notice they use water more intentionally now — desert taught them conservation they never thought about before. The biomes cross-pollinate their understanding.
+
+**Hour 50:** The player thinks in terms of ecological *roles* — nitrogen-fixer, pioneer colonizer, canopy-maker, dispersal agent — not species names. Every biome has these roles, but the organisms that fill them are different. Starting a new biome isn't "more content" — it's a new puzzle where your ecological intuition helps but your specific knowledge doesn't. And each biome's visual world — its light, its palette, its atmosphere — is itself a reason to begin.
+
+**This is the game.** Not a toy you exhaust in twenty minutes. Not a puzzle with a solution. A living world you get better at composing, that always composes something back at you that you didn't expect. Warm, generous, surprising, and endlessly inviting. And when you've mastered one world — there's another waiting, with its own beauty and its own secrets.
 
 ## Implications for Development
 
@@ -216,3 +234,14 @@ Equally important — the loop should identify ideas that *don't produce delight
 - If a mechanic produces the same result every time → it needs variance or it's solved
 
 The loop's nos are as valuable as its yeses. A thousand runs should produce a sharp, focused game with 5 deep interactions — not a broad, shallow game with 50 weak ones.
+
+## Per-Biome Loop Design
+
+The autonomous loop runs independently per biome. Each biome surfaces its own winners:
+
+- **Temperate:** The Nitrogen Handshake, The Root War, The Pollinator Bridge — symbiosis and competition in a forgiving environment.
+- **Desert (future):** Water economy interactions. Cactus reservoirs. Nocturnal pollinators. Shade as survival, not just niche creation. Spacing as the primary design constraint.
+- **Wetland (future):** Nutrient cycling through water. Flood/drain dynamics. Amphibian fauna. Root systems adapted to saturated soil. Decomposition accelerated by moisture.
+- **Boreal (future):** Slow succession. Cold resilience. Lichen as pioneer. Mycorrhizal networks as the dominant interaction web. Snow as water storage.
+
+Each biome discovers and *names* its own 3-5 magical interactions. Cross-biome analysis tests whether systemic intuition (not recipes) transfers — validating the replayability model's core claim that mastery doesn't transfer cleanly but ecological thinking does.

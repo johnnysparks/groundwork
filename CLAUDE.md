@@ -8,6 +8,8 @@ GROUNDWORK is a cozy ecological voxel garden builder game. The player composes e
 
 **What makes it sticky:** The garden is not just plants and physics — it's an interconnected web of life. Fauna (insects, birds, worms, pollinators) create visible relationships between plants. Ecological discovery unfolds in layers: first you learn mechanics, then competition, then synergy, then you design self-sustaining loops. The game rewards observation with surprise — consequences you didn't plan but can trace backward.
 
+**What makes it replayable:** Two pillars drive "one more garden" across hundreds of hours. First, *knowledge transfer* — each garden teaches something that changes how you start the next one. Your tenth garden looks different from your first not because of unlocks, but because you *understand ecology now*. Second, *biome variety* — each biome is a complete ecosystem with its own species, interactions, fauna, and visual identity. Mastering temperate doesn't prepare you for desert. Systemic intuition transfers; specific recipes don't. And each biome's art, lighting, and atmosphere is a pull motivator on its own — you want to see what that world *looks and feels like*. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
+
 **Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
 
 ## Session Quick Start
@@ -216,11 +218,21 @@ These principles define what makes the game *engaging over time*, not just legib
 
 8. **Recovery is a feature, not a failure state.** When the player floods, over-digs, or crowds, the response should be visible organic recovery — pioneer species, nutrient cycling, gradual recolonization. The garden's resilience teaches the player that experimentation is safe, making them bolder and more creative.
 
+## Replayability Model
+
+Replayability comes from two pillars working in concert:
+
+1. **Knowledge Transfer** — Each garden teaches something that changes how you start the next one. The player's tenth garden is better not because of unlocks but because they *understand ecology*. Within a biome, this is the hour-to-hour "one more garden" hook.
+
+2. **Biome Variety** — Each biome is both a content pack (new species, fauna, interactions, visual identity) and a difficulty curve (different ecological principles to master). Biomes are not ordered — any can be first, any can be last. Mastery doesn't transfer cleanly: systemic intuition carries over, but specific recipes don't. A temperate expert is a curious beginner in the desert. Visual identity is a pull motivator — the player wants to *see and feel* each biome's world.
+
+The interplay: within a biome, knowledge transfer drives replay. Across biomes, variety drives replay. Cross-biome learning deepens overall ecological intuition. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
+
 ## Autonomous Simulation Loop
 
 The LLM player agent loop (Phases 1-3 in `groundwork-player`) exists to make these principles *reliable and measurable*. See `decisions/2026-03-15T12:00:00_llm_simulation_experiential_vision.md`, Target Moments and Big Yeses/Nos in `AGENTS.md`.
 
-**Loop goal:** After a thousand autonomous runs, surface the **3-5 specific interactions that make this game magical** — then amplify them 1000x while cutting everything that doesn't serve them.
+**Loop goal:** After a thousand autonomous runs *per biome*, surface the **3-5 specific interactions that make each biome magical** — then amplify them 1000x while cutting everything that doesn't serve them.
 
 **What the loop must concretely test** (see AGENTS.md Big Yeses for full specs):
 - Does the Nitrogen Handshake work? (clover near oak → visible faster growth, discoverable by planner)
@@ -242,9 +254,10 @@ The LLM player agent loop (Phases 1-3 in `groundwork-player`) exists to make the
 ## Key Constraints
 
 - **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~120×120×60 voxel garden bed (60m×60m×30m at 0.5m/voxel), continuous above/below-ground camera
+- **Biome-ready architecture**: MVP ships temperate only, but sim architecture (species rosters, interaction rules, fauna triggers, visual palettes) must be data-driven and biome-parameterized — so adding a new biome is a content task, not a rewrite. Biomes are a core replayability pillar, not a P3 afterthought. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
 - **Fauna and interaction webs are MVP**, not post-MVP. A garden without visible life and species interactions cannot answer the canonical question. Even simple representations (particle-like bees, earthworm soil trails, bird silhouettes) count — fidelity can be low if the ecological *role* is clear.
 - **Web is the primary player interface.** TUI/CLI continue as dev/debug tools.
-- **Do not** expand beyond MVP, add biomes/economies/multiplayer/narrative (auto-P3), optimize realism over readability, or hide cause-and-effect
+- **Do not** expand beyond MVP, add economies/multiplayer/narrative (auto-P3), optimize realism over readability, or hide cause-and-effect
 - **Decision rule when uncertain**: (1) make ecological cause-and-effect more readable, (2) reward player observation with surprise, (3) keep the build smaller, (4) increase player delight sooner
 - **Source of truth order**: game vision > Manager backlog > player feedback > build notes > older discussion
 
