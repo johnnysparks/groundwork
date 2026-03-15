@@ -8,3 +8,4 @@ pub mod basic_growth;
 pub mod camera_exploration;
 pub mod water_system;
 pub mod ecosystem;
+pub mod autonomous;

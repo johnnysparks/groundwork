@@ -15,6 +15,7 @@
 //! The actor (scenario or future LLM) only sees Observations.
 //! Evaluators use OracleSnapshots for ground truth scoring.
 
+// --- Core modules (Phase 1) ---
 pub mod action;
 pub mod evaluator;
 pub mod observer;
@@ -23,3 +24,20 @@ pub mod runner;
 pub mod scenario;
 pub mod scenarios;
 pub mod trace;
+
+// --- Planner modules (Phase 2) ---
+pub mod planner;
+pub mod planner_scripted;
+
+#[cfg(feature = "llm")]
+pub mod planner_llm;
+
+// --- Self-improvement loop (Phase 3) ---
+pub mod analysis;
+pub mod batch;
+pub mod clustering;
+pub mod regression;
+pub mod report;
+pub mod session;
+pub mod skills;
+pub mod task_setter;
