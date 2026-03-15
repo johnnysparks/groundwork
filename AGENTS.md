@@ -260,7 +260,9 @@ When sources disagree: game vision > Manager backlog > player feedback > build n
 ### Player → Manager
 Sections: Observed | Felt | Bugs | Confusions | What made me want to keep playing | What made me want to stop | Requests
 
-**Screenshots required:** Each key observation should include a screenshot (F2 or Snap button in web UI). Attach 1-10 screenshots per session to the PR — do not commit image files to the repo. Reference screenshots inline in feedback (e.g. "see screenshot: overgrown-oak.png").
+**Screenshots required:** Each key observation should include a screenshot (F2 or Snap button in web UI). Attach 1-10 screenshots per session to the PR (or PR tool body) and keep images out of git history — **do not commit screenshot files to the repo**. Reference screenshots inline in feedback using artifact links/labels so reviewers can connect each observation to evidence (e.g. "see screenshot: overgrown-oak.png").
+
+**Preferred pattern for agents:** keep screenshot references in the playtest summary + PR description/body (artifact URLs), not as committed image assets.
 
 ### Manager → Dev
 Sections: Goal | Why now | Tasks | Acceptance checks | Risks / constraints | Open questions

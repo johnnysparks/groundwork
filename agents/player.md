@@ -34,7 +34,9 @@ Every key observation should include a screenshot. Capture 1-10 screenshots per 
 
 What to capture: bugs (before/after), confusing moments, beautiful moments, ugly moments, growth progress, underground views. Each screenshot should illustrate a specific point in your feedback.
 
-When submitting feedback via PR, attach screenshots directly to the pull request body or comments (drag-and-drop in GitHub UI, or reference committed images). Do not commit large screenshot files to the repo — attach them to the PR instead.
+When submitting feedback via PR, attach screenshots directly to the pull request body or comments (drag-and-drop in GitHub UI, or artifact links from browser automation). Do not commit screenshot files to the repo; keep them as PR-attached/artifact evidence only.
+
+Preferred delivery: include a short screenshot list in the feedback summary and mirror that same list in the PR description/body.
 
 EVALUATION LENSES
 Score each from 1-5 and explain why:
