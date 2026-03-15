@@ -90,8 +90,8 @@ export class SeedRenderer {
 
           if (!isSeed(mat)) continue;
 
-          // Position at bottom of voxel (sitting on soil surface)
-          this.dummy.position.set(x + 0.5, y + 0.5, z);
+          // Position at bottom of voxel (sim Y↔Z swap: sim Z=up → Three.js Y=up)
+          this.dummy.position.set(x + 0.5, z, y + 0.5);
           this.dummy.scale.setScalar(1);
           this.dummy.rotation.set(0, 0, 0);
           this.dummy.updateMatrix();

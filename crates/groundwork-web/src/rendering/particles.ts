@@ -140,12 +140,12 @@ export class GrowthParticles {
       p.y = worldY + (Math.random() - 0.5) * 0.8;
       p.z = worldZ + (Math.random() - 0.5) * 0.8;
 
-      // Velocity: rise upward with outward spread
+      // Velocity: rise upward with outward spread (Three.js Y = up)
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.3 + Math.random() * 0.5;
       p.vx = Math.cos(angle) * speed;
-      p.vy = Math.sin(angle) * speed;
-      p.vz = 0.8 + Math.random() * 0.6; // mostly upward
+      p.vy = 0.8 + Math.random() * 0.6; // mostly upward (Three.js Y)
+      p.vz = Math.sin(angle) * speed;
 
       // Random color from palette
       const c = BURST_COLORS[Math.floor(Math.random() * BURST_COLORS.length)];
@@ -172,7 +172,8 @@ export class GrowthParticles {
 
             // If this is a new vegetation voxel, emit particles
             if (!this.prevLeafPositions.has(posKey)) {
-              this.emit(x + 0.5, y + 0.5, z + 0.5);
+              // Sim Y↔Z swap: sim Z=up → Three.js Y=up
+              this.emit(x + 0.5, z + 0.5, y + 0.5);
             }
           }
         }
@@ -206,8 +207,8 @@ export class GrowthParticles {
         continue;
       }
 
-      // Gravity-lite: particles slow down and drift
-      p.vz -= 0.3 * dt; // gentle gravity
+      // Gravity-lite: particles slow down and drift (Three.js Y = up)
+      p.vy -= 0.3 * dt; // gentle gravity
       p.vx *= 0.98;
       p.vy *= 0.98;
 

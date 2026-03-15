@@ -20,12 +20,9 @@ import { GRID_X, GRID_Y, GROUND_LEVEL } from '../bridge';
 const DEFAULT_THETA = Math.PI / 4;      // 45 deg azimuth
 const DEFAULT_PHI = Math.PI / 3;        // 60 deg diorama elevation
 const DEFAULT_ZOOM = 1.0;
-const DEFAULT_CENTER_X = GRID_X / 2;
-const DEFAULT_CENTER_Y = GROUND_LEVEL;  // Three.js Y = sim Z (vertical)
-const DEFAULT_CENTER_Z = GRID_Y / 2;    // Three.js Z = sim Y (horizontal)
 
 /** Camera limits */
-const MIN_ZOOM = 0.3;
+const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 4.0;
 const MIN_PHI = 0.2;
 const MAX_PHI = Math.PI / 2 - 0.05;
@@ -45,10 +42,10 @@ export class OrbitCamera {
   private targetTheta = DEFAULT_THETA;
   private targetPhi = DEFAULT_PHI;
   private targetZoom = DEFAULT_ZOOM;
-  private targetCenter = new THREE.Vector3(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
+  private targetCenter = new THREE.Vector3();
 
   /** Smoothed center */
-  private center = new THREE.Vector3(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
+  private center = new THREE.Vector3();
 
   /** Camera distance from center */
   private distance = 100;
@@ -59,17 +56,30 @@ export class OrbitCamera {
   /** Currently pressed keys (for continuous movement) */
   private keys = new Set<string>();
 
-  /** Frustum half-size (for resize) — sized for 80×80×100 glen */
+  /** Frustum half-size (for resize) — scales with grid dimensions */
   private frustumSize = 80;
 
   constructor(aspect: number) {
+    // Compute defaults from live grid dimensions (may have been overridden by demo grid)
+    const cx = GRID_X / 2;
+    const cy = GROUND_LEVEL;
+    const cz = GRID_Y / 2;
+    this.center.set(cx, cy, cz);
+    this.targetCenter.set(cx, cy, cz);
+
+    // For small grids (WASM 80×80), use grid size as frustum.
+    // For large demo grids, cap at 100 so individual trees are visible.
+    const maxDim = Math.max(GRID_X, GRID_Y);
+    this.frustumSize = maxDim <= 100 ? maxDim : 100;
+    this.distance = Math.max(100, maxDim * 0.5);
+
     this.camera = new THREE.OrthographicCamera(
       -this.frustumSize * aspect / 2,
       this.frustumSize * aspect / 2,
       this.frustumSize / 2,
       -this.frustumSize / 2,
       0.1,
-      500,
+      this.distance * 3,
     );
 
     this.updatePosition();
@@ -116,7 +126,7 @@ export class OrbitCamera {
     this.targetTheta = DEFAULT_THETA;
     this.targetPhi = DEFAULT_PHI;
     this.targetZoom = DEFAULT_ZOOM;
-    this.targetCenter.set(DEFAULT_CENTER_X, DEFAULT_CENTER_Y, DEFAULT_CENTER_Z);
+    this.targetCenter.set(GRID_X / 2, GROUND_LEVEL, GRID_Y / 2);
   }
 
   /** Snap camera instantly to current targets (skip damping animation) */

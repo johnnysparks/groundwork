@@ -13,7 +13,7 @@ import {
   GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES,
   Material, ToolCode, type ToolCodeType,
 } from '../bridge';
-import { SPECIES } from './hud';
+import { SPECIES } from '../bridge';
 
 // ---------------------------------------------------------------------------
 // Quest definitions

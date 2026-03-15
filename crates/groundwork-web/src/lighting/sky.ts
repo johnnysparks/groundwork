@@ -21,8 +21,8 @@ uniform vec3 topColor;
 uniform vec3 bottomColor;
 varying vec3 vWorldPosition;
 void main() {
-  // Normalize height to 0..1 (hemisphere: bottom at y=0, top at y=1 on unit sphere)
-  float h = normalize(vWorldPosition).z * 0.5 + 0.5;
+  // Normalize height to 0..1 (Three.js Y=up: bottom at y=-1, top at y=1 on unit sphere)
+  float h = normalize(vWorldPosition).y * 0.5 + 0.5;
   // Smooth step for a softer blend near the horizon
   h = smoothstep(0.0, 1.0, h);
   gl_FragColor = vec4(mix(bottomColor, topColor, h), 1.0);
@@ -53,7 +53,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     depthWrite: false,
   });
 
-  const skyGeo = new THREE.SphereGeometry(400, 32, 16);
+  const skyGeo = new THREE.SphereGeometry(2000, 32, 16);
   const skyMesh = new THREE.Mesh(skyGeo, skyMat);
   skyMesh.renderOrder = -1; // render behind everything
   scene.add(skyMesh);

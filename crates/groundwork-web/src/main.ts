@@ -8,7 +8,8 @@
 
 import * as THREE from 'three';
 import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool } from './bridge';
-import { createMockGrid, CHUNK_SIZE } from './mesher/greedy';
+import { CHUNK_SIZE } from './mesher/greedy';
+import { createPlantDemoGrid } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
@@ -21,7 +22,7 @@ import { buildSkirtMesh } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
-import { Hud, SPECIES } from './ui/hud';
+import { Hud } from './ui/hud';
 import { setupControls } from './ui/controls';
 import { QuestLog } from './ui/quests';
 import { initScreenshot, captureScreenshot } from './ui/screenshot';
@@ -48,8 +49,8 @@ async function main() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87CEEB); // sky blue
 
-  // Fog for depth
-  scene.fog = new THREE.FogExp2(0x87CEEB, 0.005);
+  // Fog for depth — lighter density for larger demo grids
+  scene.fog = new THREE.FogExp2(0x87CEEB, 0.002);
 
   // Camera
   const orbit = new OrbitCamera(window.innerWidth / window.innerHeight);
@@ -72,7 +73,7 @@ async function main() {
     simTick(5);
     grid = getGridView();
   } else {
-    grid = createMockGrid();
+    grid = createPlantDemoGrid();
   }
 
   const chunkManager = new ChunkManager();
@@ -253,7 +254,7 @@ async function main() {
         applyToolToMockGrid(hud.state.activeTool, hit.x, hit.y, hit.z);
       }
       // Record tool use for quest tracking
-      const speciesIdx = SPECIES.findIndex(s => s.index === hud.state.activeSpeciesIndex);
+      const speciesIdx = hud.state.activeSpeciesIndex;
       questLog.recordToolUse(hud.state.activeTool, speciesIdx);
       questLog.recordClick(hit.x, hit.y, hit.z);
       // Check quests against updated grid

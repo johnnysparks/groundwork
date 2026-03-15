@@ -13,11 +13,19 @@
 let wasmModule: any = null;
 let wasmMemory: WebAssembly.Memory | null = null;
 
-/** Grid dimensions — populated from WASM engine at init, fallback for mock mode */
+/** Grid dimensions — populated from WASM engine at init, or overridden by demo grid */
 export let GRID_X = 80;
 export let GRID_Y = 80;
 export let GRID_Z = 100;
 export let GROUND_LEVEL = 40;
+
+/** Override grid dimensions (used by demo/mock grids that need more space) */
+export function setGridDimensions(x: number, y: number, z: number, groundLevel: number): void {
+  GRID_X = x;
+  GRID_Y = y;
+  GRID_Z = z;
+  GROUND_LEVEL = groundLevel;
+}
 
 /** Voxel byte layout: [material, water_level, light_level, nutrient_level] */
 export const VOXEL_BYTES = 4;

@@ -200,13 +200,14 @@ export function createPostProcessing(
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 
-  // 2. SSAO — very subtle contact shadows (keep it light for diorama)
-  const ssaoPass = new SSAOPass(scene, camera, width, height);
-  ssaoPass.kernelRadius = 2;
-  ssaoPass.minDistance = 0.002;
-  ssaoPass.maxDistance = 0.08;
-  ssaoPass.output = SSAOPass.OUTPUT.Default;
-  composer.addPass(ssaoPass);
+  // 2. SSAO — disabled: creates dark halo artifacts at larger grid scales.
+  // TODO: re-tune kernelRadius/minDistance/maxDistance for variable grid sizes.
+  // const ssaoPass = new SSAOPass(scene, camera, width, height);
+  // ssaoPass.kernelRadius = 2;
+  // ssaoPass.minDistance = 0.002;
+  // ssaoPass.maxDistance = 0.08;
+  // ssaoPass.output = SSAOPass.OUTPUT.Default;
+  // composer.addPass(ssaoPass);
 
   // 3. Bloom — subtle warm glow on sunlit edges
   const bloomPass = new UnrealBloomPass(

@@ -40,11 +40,11 @@ const FOLIAGE_VERT = /* glsl */ `
     vec4 worldPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
 
     // Wind sway: sine wave offset by world position for natural variation
-    // Height above ground increases sway amplitude
-    float heightFactor = max(0.0, (worldPos.z - ${GROUND_LEVEL.toFixed(1)}) * 0.04);
-    float swayX = sin(uTime * 1.2 + worldPos.x * 0.7 + worldPos.y * 0.3) * uWindStrength * heightFactor;
-    float swayY = cos(uTime * 0.9 + worldPos.y * 0.5 + worldPos.x * 0.4) * uWindStrength * heightFactor * 0.6;
-    float swayZ = sin(uTime * 0.7 + worldPos.x * 0.3 + worldPos.y * 0.6) * uWindStrength * heightFactor * 0.2;
+    // Height above ground increases sway amplitude (Three.js Y = up)
+    float heightFactor = max(0.0, (worldPos.y - ${GROUND_LEVEL.toFixed(1)}) * 0.04);
+    float swayX = sin(uTime * 1.2 + worldPos.x * 0.7 + worldPos.z * 0.3) * uWindStrength * heightFactor;
+    float swayY = cos(uTime * 0.9 + worldPos.z * 0.5 + worldPos.x * 0.4) * uWindStrength * heightFactor * 0.6;
+    float swayZ = sin(uTime * 0.7 + worldPos.x * 0.3 + worldPos.z * 0.6) * uWindStrength * heightFactor * 0.2;
 
     // Billboard: orient quad to face camera
     // Keep local vertex position (quad corners), but orient in camera space
@@ -147,8 +147,8 @@ export class FoliageRenderer {
 
           if (!isFoliage(mat)) continue;
 
-          // Position at voxel center
-          this.dummy.position.set(x + 0.5, y + 0.5, z + 0.5);
+          // Position at voxel center (sim Y↔Z swap: sim Z=up → Three.js Y=up)
+          this.dummy.position.set(x + 0.5, z + 0.5, y + 0.5);
 
           // Slight random scale variation based on position hash
           const hash = (x * 73856093 ^ y * 19349663 ^ z * 83492791) & 0xffff;

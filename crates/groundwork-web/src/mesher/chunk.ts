@@ -7,7 +7,7 @@ import {
   GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES,
 } from '../bridge';
 import {
-  CHUNK_SIZE, CHUNKS_X, CHUNKS_Y, CHUNKS_Z,
+  CHUNK_SIZE, chunksX, chunksY, chunksZ,
   meshChunk, type MeshQuad,
 } from './greedy';
 
@@ -23,12 +23,17 @@ export interface ChunkMesh {
 export class ChunkManager {
   private chunks: ChunkMesh[];
   private prevSnapshot: Uint8Array | null = null;
+  private nx: number;
+  private ny: number;
 
   constructor() {
+    const nx = chunksX(), ny = chunksY(), nz = chunksZ();
+    this.nx = nx;
+    this.ny = ny;
     this.chunks = [];
-    for (let cz = 0; cz < CHUNKS_Z; cz++) {
-      for (let cy = 0; cy < CHUNKS_Y; cy++) {
-        for (let cx = 0; cx < CHUNKS_X; cx++) {
+    for (let cz = 0; cz < nz; cz++) {
+      for (let cy = 0; cy < ny; cy++) {
+        for (let cx = 0; cx < nx; cx++) {
           this.chunks.push({ cx, cy, cz, quads: [], dirty: true });
         }
       }
@@ -37,7 +42,7 @@ export class ChunkManager {
 
   /** Get chunk index from chunk coordinates */
   private chunkIndex(cx: number, cy: number, cz: number): number {
-    return cx + cy * CHUNKS_X + cz * CHUNKS_X * CHUNKS_Y;
+    return cx + cy * this.nx + cz * this.nx * this.ny;
   }
 
   /** Mark all chunks as dirty (for initial mesh or full rebuild) */
@@ -77,15 +82,15 @@ export class ChunkManager {
         // (face culling depends on neighbors across chunk borders)
         if (x % CHUNK_SIZE === 0 && cx > 0)
           this.chunks[this.chunkIndex(cx - 1, cy, cz)].dirty = true;
-        if (x % CHUNK_SIZE === CHUNK_SIZE - 1 && cx < CHUNKS_X - 1)
+        if (x % CHUNK_SIZE === CHUNK_SIZE - 1 && cx < this.nx - 1)
           this.chunks[this.chunkIndex(cx + 1, cy, cz)].dirty = true;
         if (y % CHUNK_SIZE === 0 && cy > 0)
           this.chunks[this.chunkIndex(cx, cy - 1, cz)].dirty = true;
-        if (y % CHUNK_SIZE === CHUNK_SIZE - 1 && cy < CHUNKS_Y - 1)
+        if (y % CHUNK_SIZE === CHUNK_SIZE - 1 && cy < this.ny - 1)
           this.chunks[this.chunkIndex(cx, cy + 1, cz)].dirty = true;
         if (z % CHUNK_SIZE === 0 && cz > 0)
           this.chunks[this.chunkIndex(cx, cy, cz - 1)].dirty = true;
-        if (z % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < CHUNKS_Z - 1)
+        if (z % CHUNK_SIZE === CHUNK_SIZE - 1 && cz < chunksZ() - 1)
           this.chunks[this.chunkIndex(cx, cy, cz + 1)].dirty = true;
       }
     }

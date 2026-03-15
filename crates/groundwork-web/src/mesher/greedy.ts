@@ -28,11 +28,15 @@ export interface MeshQuad {
   ao: [number, number, number, number];
 }
 
-/** Chunk dimensions */
+/** Chunk dimensions — counts are computed from live grid dimensions */
 export const CHUNK_SIZE = 16;
-export const CHUNKS_X = Math.ceil(GRID_X / CHUNK_SIZE); // 5
-export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE); // 5
-export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE); // 7
+export function chunksX(): number { return Math.ceil(GRID_X / CHUNK_SIZE); }
+export function chunksY(): number { return Math.ceil(GRID_Y / CHUNK_SIZE); }
+export function chunksZ(): number { return Math.ceil(GRID_Z / CHUNK_SIZE); }
+// Legacy aliases (frozen at import time — only safe for WASM grids)
+export const CHUNKS_X = Math.ceil(GRID_X / CHUNK_SIZE);
+export const CHUNKS_Y = Math.ceil(GRID_Y / CHUNK_SIZE);
+export const CHUNKS_Z = Math.ceil(GRID_Z / CHUNK_SIZE);
 
 /** Delegates to engine-defined material classification. */
 function isSolid(mat: number): boolean {
@@ -213,8 +217,12 @@ export function meshChunk(
           const mat = readMaterial(grid, x, y, z);
           const neighborMat = readMaterial(grid, x + nx, y + ny, z + nz);
 
-          // Emit face if this voxel is solid and neighbor in normal direction is air
-          if (isSolid(mat) && !isSolid(neighborMat)) {
+          // Emit face if this voxel is solid and neighbor is non-solid,
+          // OR if this voxel is a root and neighbor is soil/stone
+          // (so roots are visible underground when soil goes transparent in x-ray)
+          const isRootBoundary = mat === Material.Root
+            && (neighborMat === Material.Soil || neighborMat === Material.Stone);
+          if (isSolid(mat) && (!isSolid(neighborMat) || isRootBoundary)) {
             mask[mi] = mat;
             const ao = computeFaceAO(grid, x, y, z, face);
             aoMask[mi] = ao[0] | (ao[1] << 4) | (ao[2] << 8) | (ao[3] << 12);
