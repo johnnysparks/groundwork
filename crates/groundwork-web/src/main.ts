@@ -41,6 +41,7 @@ async function main() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.localClippingEnabled = true;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   document.body.appendChild(renderer.domElement);
@@ -120,7 +121,10 @@ async function main() {
 
   const forestRing = buildForestRing();
   scene.add(forestRing);
-  const meadowGround = forestRing.getObjectByName('meadow_ground')!;
+  const meadowGround = forestRing.getObjectByName('meadow_ground') as THREE.Mesh;
+  const meadowClipPlane = new THREE.Plane();
+  // Attach clip plane to meadow material — updated each frame when x-ray is active
+  (meadowGround.material as THREE.MeshLambertMaterial).clippingPlanes = [meadowClipPlane];
 
   // --- Water surface ---
 
@@ -442,8 +446,8 @@ async function main() {
     updateForestCulling(forestRing, orbit.getTheta());
 
     // X-ray culling — same dot-product math as tree culling.
-    // Hide camera-facing skirt walls and the meadow ground plane so
-    // underground is visible.
+    // Skirt walls: hide camera-facing walls.
+    // Meadow: clip the camera-facing half with a plane through garden center.
     {
       const theta = orbit.getTheta();
       const camDirX = Math.cos(theta);
@@ -456,7 +460,19 @@ async function main() {
           wall.mesh.visible = dot < 0.5;
         }
       }
-      meadowGround.visible = !xrayActive;
+      // Clip plane slices the meadow: normal points away from camera,
+      // plane passes through garden center. Camera-side half is clipped.
+      if (xrayActive) {
+        const cx = GRID_X / 2;
+        const cz = GRID_Y / 2;
+        meadowClipPlane.set(
+          new THREE.Vector3(-camDirX, 0, -camDirZ),
+          camDirX * cx + camDirZ * cz,
+        );
+      } else {
+        // Move plane far away so nothing is clipped
+        meadowClipPlane.set(new THREE.Vector3(0, -1, 0), 9999);
+      }
     }
 
     postProcessing.composer.render();
@@ -465,10 +481,10 @@ async function main() {
   animate();
 
   // Build stamp — visible on screen so we can confirm code is live
-  const BUILD_STAMP = `build:${Date.now().toString(36)}`;
+  const BUILD_STAMP = `build:${Date.now().toString(36)} t=${dayCycle.getTime().toFixed(2)}`;
   const stampEl = document.createElement('div');
   stampEl.textContent = BUILD_STAMP;
-  stampEl.style.cssText = 'position:fixed;bottom:2px;left:2px;color:#fff;font:10px monospace;opacity:0.5;pointer-events:none;z-index:9999';
+  stampEl.style.cssText = 'position:fixed;bottom:2px;left:2px;color:#fff;font:12px monospace;opacity:0.7;pointer-events:none;z-index:9999;background:rgba(0,0,0,0.5);padding:2px 6px';
   document.body.appendChild(stampEl);
 
   console.log(

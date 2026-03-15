@@ -24,7 +24,7 @@ const DEFAULT_ZOOM = 1.0;
 /** Camera limits */
 const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 4.0;
-const MIN_PHI = 0.2;
+const MIN_PHI = 0.55; // ~32° from horizon — prevents seeing under the garden
 const MAX_PHI = Math.PI / 2 - 0.05;
 
 /** Pan speed (voxels per second at zoom 1.0) */

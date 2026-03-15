@@ -41,11 +41,11 @@ export function buildSkirtMesh(): SkirtResult {
   const cx = gx / 2;
   const cz = gz / 2;
 
-  // Soil strata colors
-  const topsoil = [0.36, 0.26, 0.16];   // dark brown
-  const subsoil = [0.42, 0.30, 0.18];   // lighter brown
-  const clay    = [0.48, 0.35, 0.22];   // reddish clay
-  const bedrock = [0.32, 0.30, 0.28];   // dark gray stone
+  // Soil strata colors (warm earth tones, visible even in shadow)
+  const topsoil = [0.40, 0.30, 0.18];   // rich brown
+  const subsoil = [0.48, 0.36, 0.22];   // lighter brown
+  const clay    = [0.52, 0.38, 0.26];   // warm clay
+  const bedrock = [0.42, 0.36, 0.30];   // warm stone
 
   function strataColor(y: number): [number, number, number] {
     const t = (y - deep) / (top - deep); // 0 = bottom, 1 = top
@@ -80,7 +80,12 @@ export function buildSkirtMesh(): SkirtResult {
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
     geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(norms), 3));
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const mat = new THREE.MeshLambertMaterial({
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      emissive: new THREE.Color(0x3A2A1A),
+      emissiveIntensity: 0.4,
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
     return mesh;
@@ -109,14 +114,14 @@ export function buildSkirtMesh(): SkirtResult {
   capGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(capVerts), 3));
   capGeo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(capNorms), 3));
   capGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(capColors), 3));
-  const capMesh = new THREE.Mesh(capGeo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const capMesh = new THREE.Mesh(capGeo, new THREE.MeshBasicMaterial({ vertexColors: true }));
   capMesh.receiveShadow = true;
   group.add(capMesh);
 
   // --- Underground floor plane (extends beyond the grid edges) ---
   const underRadius = 400;
   const underGeo = new THREE.CircleGeometry(underRadius, 32);
-  const underMat = new THREE.MeshLambertMaterial({ color: 0x2A2826 }); // dark bedrock
+  const underMat = new THREE.MeshBasicMaterial({ color: 0x4A3A2E }); // warm earth, unlit so always visible
   const underMesh = new THREE.Mesh(underGeo, underMat);
   underMesh.rotation.x = -Math.PI / 2;
   underMesh.position.set(cx, deep, cz);

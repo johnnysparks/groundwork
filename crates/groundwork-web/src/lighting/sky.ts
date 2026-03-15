@@ -40,7 +40,7 @@ export interface SkyUniforms {
 export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
   const uniforms: SkyUniforms = {
     topColor: { value: new THREE.Color(0x5599dd) },    // bright sky blue
-    bottomColor: { value: new THREE.Color(0x2A2826) },  // dark bedrock — below-ground view blends with underground floor
+    bottomColor: { value: new THREE.Color(0x5C4A3A) },  // warm earth — below-horizon blends with underground
   };
 
   const skyMat = new THREE.ShaderMaterial({
@@ -52,7 +52,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     fog: false, // Sky dome must not be affected by scene fog
   });
 
-  const skyGeo = new THREE.SphereGeometry(2000, 32, 16);
+  const skyGeo = new THREE.SphereGeometry(500, 32, 16);
   const skyMesh = new THREE.Mesh(skyGeo, skyMat);
   skyMesh.renderOrder = -1; // render behind everything
   scene.add(skyMesh);

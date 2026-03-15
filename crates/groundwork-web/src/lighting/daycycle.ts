@@ -45,7 +45,7 @@ const PRESETS: LightPreset[] = [
     ambientColor: new THREE.Color(0x9988aa),
     ambientIntensity: 0.2,
     skyTop: new THREE.Color(0x4466aa),
-    skyBottom: new THREE.Color(0xffccaa),
+    skyBottom: new THREE.Color(0x6A5040),
     fogColor: new THREE.Color(0xddccbb),
     fogDensity: 0.001,
   },
@@ -62,7 +62,7 @@ const PRESETS: LightPreset[] = [
     ambientColor: new THREE.Color(0x99aacc),
     ambientIntensity: 0.15,
     skyTop: new THREE.Color(0x4488cc),
-    skyBottom: new THREE.Color(0xaaccee),
+    skyBottom: new THREE.Color(0x5C4A3A),
     fogColor: new THREE.Color(0xccddcc),
     fogDensity: 0.0008,
   },
@@ -79,7 +79,7 @@ const PRESETS: LightPreset[] = [
     ambientColor: new THREE.Color(0x8899aa),
     ambientIntensity: 0.2,
     skyTop: new THREE.Color(0x5599dd),
-    skyBottom: new THREE.Color(0x6AAF40),
+    skyBottom: new THREE.Color(0x5C4A3A),
     fogColor: new THREE.Color(0x88bb66),
     fogDensity: 0.001,
   },
@@ -96,7 +96,7 @@ const PRESETS: LightPreset[] = [
     ambientColor: new THREE.Color(0x667799),
     ambientIntensity: 0.25,
     skyTop: new THREE.Color(0x1a1a3a),
-    skyBottom: new THREE.Color(0x445577),
+    skyBottom: new THREE.Color(0x3A3030),
     fogColor: new THREE.Color(0x445566),
     fogDensity: 0.002,
   },
@@ -120,7 +120,7 @@ function lerp(a: number, b: number, t: number): number {
 
 export class DayCycle {
   /** Normalized time of day: 0.0–1.0 */
-  private time = 0.75; // Start at golden hour (the cozy default)
+  private time = 0.5; // Start at noon — bright blue sky
   private autoCycle = false;
 
   /** Scratch colors to avoid allocation in the loop. */
