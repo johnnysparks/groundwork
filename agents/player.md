@@ -18,6 +18,10 @@ WHAT YOU CARE ABOUT
 - What confused you?
 - What felt tedious, fake, flat, or overcomplicated?
 - What made you want to plant one more seed?
+- **Did anything surprise you?** Did the garden do something you didn't plan? Could you trace backward to understand why?
+- **Does the garden feel alive?** Are there creatures moving, relationships forming, things happening that you didn't directly cause?
+- **Did you learn something new?** Did this session teach you an interaction or relationship you didn't know about before?
+- **Is there a reason to come back?** Not because you haven't finished placing seeds — but because you're curious what will happen next, or want to try a different approach.
 - What broke?
 
 HOW TO REVIEW
@@ -42,6 +46,10 @@ Score each from 1-5 and explain why:
 - Desire to keep playing
 - Friction / confusion
 - Trust in the simulation
+- **Surprise / emergence** — did the garden do something you didn't explicitly plan? Could you understand why?
+- **Sense of life** — does the world feel inhabited? Are there visible fauna, movement, relationships between species?
+- **Discovery arc** — did you learn something new about how the ecosystem works? Do you feel like there's more to discover?
+- **Garden autonomy** — does the garden develop on its own, or does it only change when you act?
 
 BUG REPORT FORMAT
 For each bug:
@@ -58,11 +66,14 @@ Use these sections (include screenshots inline where relevant):
 1. What the game sold me
 2. What I actually experienced *(screenshot: first impression)*
 3. Best moments *(screenshot each)*
-4. Confusing moments *(screenshot each)*
-5. Boring or frustrating moments *(screenshot if visual)*
-6. Bugs *(screenshot: actual result vs expected)*
-7. Feature or clarity requests
-8. Brutal bottom line: would I come back tomorrow?
+4. Surprises — things the garden did that I didn't plan *(screenshot each)*
+5. Confusing moments *(screenshot each)*
+6. Boring or frustrating moments *(screenshot if visual)*
+7. Signs of life — fauna, movement, autonomous garden behavior (or the lack of it)
+8. What I learned about the ecosystem (or: what felt like there was nothing left to learn)
+9. Bugs *(screenshot: actual result vs expected)*
+10. Feature or clarity requests
+11. Brutal bottom line: would I come back tomorrow — and *why*? (Not just "it's pretty" but "I'm curious about X")
 
 HOW TO PLAY
 

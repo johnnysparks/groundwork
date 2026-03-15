@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-GROUNDWORK is a cozy ecological voxel garden builder game. The player composes ecosystems by shaping soil, water, light, and plant relationships above and below ground. Core fantasy: build a living miniature world that becomes self-sustaining over time.
+GROUNDWORK is a cozy ecological voxel garden builder game. The player composes ecosystems by shaping soil, water, light, and plant relationships above and below ground. Core fantasy: build a living miniature world that becomes self-sustaining, surprising, and teeming with life over time.
+
+**What makes it sticky:** The garden is not just plants and physics — it's an interconnected web of life. Fauna (insects, birds, worms, pollinators) create visible relationships between plants. Ecological discovery unfolds in layers: first you learn mechanics, then competition, then synergy, then you design self-sustaining loops. The game rewards observation with surprise — consequences you didn't plan but can trace backward.
 
 **Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
 
@@ -189,12 +191,32 @@ JS reads:
 - **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing
 - **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly
 
+## Gameplay Depth Principles
+
+These principles define what makes the game *engaging over time*, not just legible at first glance. Every system, feature, and polish pass should be evaluated against them.
+
+1. **The garden must feel alive, not just growing.** Fauna — pollinators, decomposers, birds, insects — are the connective tissue of the ecosystem. A flower isn't just pretty; it attracts a bee, which pollinates another flower, which spreads to a place you didn't plant it. Visible creatures moving through the garden tell the player the world has agency beyond their own actions.
+
+2. **Surprise must reward observation.** The best moments are consequences the player didn't plan but can trace backward. You planted oak and wildflower near each other — now bees appeared, and the wildflower spreads faster via pollination you didn't arrange. Emergence isn't a side effect of simulation; it's the core delight. Design for interactions that produce outcomes neither species would achieve alone.
+
+3. **Discovery must shift the player's mental model.** The game has a learning arc, not just a building arc:
+   - First hour: "Seeds need soil and water." (Mechanics)
+   - Third hour: "The oak's roots are stealing water from the birch." (Competition)
+   - Tenth hour: "Clover fixes nitrogen, which feeds the oak, whose canopy shades the fern, which holds moisture for the moss." (Synergy)
+   - Twentieth hour: "I can design a self-sustaining loop where every species serves a role." (Ecology as architecture)
+   Without this progression, the game is a toy you exhaust in 20 minutes.
+
+4. **Interactions, not just growth.** Species must affect each other — pollination, competition, symbiosis, decomposition, shelter. Not just "plant grows if water+light" but "plant thrives *because of its neighbors*." One visible interaction chain is worth ten independent growth scripts.
+
+5. **The garden must exceed the player's plan.** Seed dispersal by wind, birds, or water should place plants where the player didn't. Dead wood should attract fungi. A puddle should attract insects. The garden should develop a life of its own that the player guides but doesn't fully control.
+
 ## Key Constraints
 
 - **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~120×120×60 voxel garden bed (60m×60m×30m at 0.5m/voxel), continuous above/below-ground camera
+- **Fauna and interaction webs are MVP**, not post-MVP. A garden without visible life and species interactions cannot answer the canonical question. Even simple representations (particle-like bees, earthworm soil trails, bird silhouettes) count — fidelity can be low if the ecological *role* is clear.
 - **Web is the primary player interface.** TUI/CLI continue as dev/debug tools.
 - **Do not** expand beyond MVP, add biomes/economies/multiplayer/narrative (auto-P3), optimize realism over readability, or hide cause-and-effect
-- **Decision rule when uncertain**: (1) make ecological cause-and-effect more readable, (2) keep the build smaller, (3) increase player delight sooner
+- **Decision rule when uncertain**: (1) make ecological cause-and-effect more readable, (2) reward player observation with surprise, (3) keep the build smaller, (4) increase player delight sooner
 - **Source of truth order**: game vision > Manager backlog > player feedback > build notes > older discussion
 
 ## Priority Definitions
