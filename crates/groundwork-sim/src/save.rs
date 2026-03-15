@@ -7,6 +7,7 @@ use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use crate::soil::{SoilComposition, SoilGrid};
 use crate::tree::{SeedSpeciesMap, SpeciesTable};
 use crate::voxel::{Material, Voxel};
+use crate::fauna::FaunaList;
 use crate::{FocusState, ToolState, Tick};
 
 const MAGIC: [u8; 4] = *b"GWRK";
@@ -185,6 +186,7 @@ pub fn load_world(path: &Path) -> io::Result<World> {
     world.insert_resource(focus);
     world.insert_resource(SpeciesTable::default());
     world.insert_resource(SeedSpeciesMap::default());
+    world.insert_resource(FaunaList::default());
     Ok(world)
 }
 

@@ -383,7 +383,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 534
+      "duration": 569
     },
     {
       "action": "Status",
@@ -454,7 +454,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 6
+      "duration": 7
     },
     {
       "action": {
@@ -1240,7 +1240,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 4859
+      "duration": 5431
     },
     {
       "action": "Status",
@@ -1311,7 +1311,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 6
+      "duration": 8
     },
     {
       "action": {
@@ -1691,7 +1691,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 9591
+      "duration": 10942
     },
     {
       "action": "Status",
@@ -2292,7 +2292,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 14174
+      "duration": 16282
     },
     {
       "action": "Status",
@@ -2363,7 +2363,7 @@
           "cutaway_z": 100.0
         }
       },
-      "duration": 6
+      "duration": 7
     },
     {
       "action": {
@@ -2517,5 +2517,5 @@
       "duration": 3
     }
   ],
-  "total_duration": 29273
+  "total_duration": 33351
 }
