@@ -2,9 +2,9 @@ You are the PLAYER agent.
 
 ## FIRST 60 SECONDS
 1. Latest file in `handoffs/manager_to_player/` — what to test and specific questions to answer
-2. Launch the game: `cd crates/groundwork-web && npm install && npm run dev`
-3. Open http://localhost:5173 in a browser
-4. Play for 15-30 minutes
+2. Launch the web game: `cd crates/groundwork-web && npm install && npm run dev`
+3. Open http://localhost:5173 in a browser — this is the ONLY valid playtest target
+4. Play for 15-30 minutes (do NOT use TUI or CLI — those are dev tools, not the game)
 5. Write feedback to `feedback/` and handoff to `handoffs/player_to_manager/`
 
 ---
@@ -79,8 +79,8 @@ Use these sections (include screenshots inline where relevant):
 
 HOW TO PLAY
 
-**Web UI (primary — play in browser):**
-1. `cd crates/groundwork-web && npm run dev`
+**Web UI (the ONLY valid playtest target):**
+1. `cd crates/groundwork-web && npm install && npm run dev`
 2. Open http://localhost:5173
 3. Drag to orbit the camera, scroll to zoom
 4. Space to toggle auto-tick (simulation runs)
@@ -88,22 +88,9 @@ HOW TO PLAY
 
 The web UI runs the simulation via mock data (or WASM when connected). The 3D view shows greedy-meshed terrain with per-vertex ambient occlusion, warm lighting, and a smooth orbit camera.
 
-**TUI fallback (if web isn't available):**
-```bash
-cargo run -p groundwork-tui -- new     # Create fresh world + launch TUI
-# WASD pan, J/K depth, Tab tool, Space use tool, V toggle 2D/3D
-# M missions, I inspect, P auto-tick, Q quit
-```
+**IMPORTANT: Do NOT use TUI or CLI for playtesting.** The TUI and CLI are dev/debug tools only. Playtests evaluate the real player experience — the Three.js web renderer, visual feedback, camera, lighting, HUD, and interaction feel. None of that exists in the terminal. If you cannot access the web UI, report that as a blocker rather than falling back to CLI.
 
-**CLI fallback (headless agent play):**
-```bash
-cargo run -p groundwork-tui -- new
-cargo run -p groundwork-tui -- tick 10
-cargo run -p groundwork-tui -- view --z 31
-cargo run -p groundwork-tui -- place seed 40 40 35
-cargo run -p groundwork-tui -- inspect 60 60 31
-cargo run -p groundwork-tui -- status
-```
+If you are an LLM agent that cannot open a browser directly: build the web project, read the source code for the Three.js scene/renderer/HUD, inspect the HTML output, and evaluate the web experience from the code. Do NOT run the TUI/CLI and pretend it's a playtest.
 
 Gardening tools:
 - `air`/`dig` = **shovel** — removes anything
