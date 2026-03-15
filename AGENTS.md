@@ -29,6 +29,7 @@ The player can dip the camera below the surface with no mode switch. Same world,
 - One garden bed (~120×120×60 voxels, 60m×60m×30m at 0.5m/voxel)
 - Continuous above/below-ground camera
 - Terrain sculpting, seed placement, basic tending tools
+- **Biome-ready architecture**: species rosters, interaction rules, fauna triggers, growth parameters, and visual palettes must be data-driven and biome-parameterized. MVP ships temperate only, but adding a new biome should be a content task (new data, new art), not an architecture rewrite. Biomes are a core replayability pillar — see Replayability Model above.
 
 ## DESIGN GUARDRAILS
 - Readability over realism
@@ -47,6 +48,24 @@ This is stronger than mere legibility. A game where cause-and-effect is perfectl
 
 If a task does not help answer that, challenge it.
 
+## REPLAYABILITY MODEL
+
+Two pillars drive long-term replay. Both are load-bearing — the game needs them both.
+
+**Pillar 1: Knowledge Transfer — "I learned something. Let me try again."**
+Each garden teaches something the player carries to the next one. Not unlocks — understanding. Garden #1: "Seeds need water." Garden #5: "Space trees or their roots fight." Garden #12: "I can design self-sustaining loops." The player starts each garden *differently* because they know more. This is the Outer Wilds model extended: knowledge is the only progression, and the interaction web is deep enough that there's always another layer.
+
+**Pillar 2: Biome Variety — "New organisms, new rules, new vibes."**
+Each biome is both a content pack (new species, fauna, interactions, art, atmosphere) and a difficulty curve (different ecological principles to master). Biomes are not ordered — start anywhere, go anywhere. Mastery doesn't transfer cleanly: systemic intuition (look underground, watch fauna, space plants) carries over, but specific recipes (clover + oak = nitrogen boost) don't exist in the desert. The player must re-learn — but they know *how* to learn. Visual identity is itself a pull motivator: the player wants to *see and inhabit* each biome's world.
+
+**How they interact:**
+- Within a biome: knowledge transfer drives "one more garden" (hour-to-hour)
+- Across biomes: variety drives "one more biome" (week-to-week)
+- Cross-pollination: desert teaches water conservation that improves temperate gardens; rainforest teaches vertical layering that improves boreal gardens
+- The autonomous loop runs per-biome, surfacing each biome's 3-5 magical interactions independently
+
+See `decisions/2026-03-15T18:00:00_replayability_model.md` for the full replayability arc.
+
 ## EXPERIENTIAL NORTH STAR
 
 The autonomous simulation loop exists to make the game feel like this for a new player:
@@ -58,6 +77,9 @@ The autonomous simulation loop exists to make the game feel like this for a new 
 - **Hour 1:** Stop playing. Just watch. Light shifts. Pollinators move. A bird drops a seed. Your garden is making itself better without you. Pride and wonder.
 - **Hour 3:** Third garden. You know clover-first for nitrogen, flowers-near-water for pollinators. But a moss carpet spreads under the oak canopy, ferns follow, and a shaded undergrowth micro-ecosystem forms that you didn't design. Beautiful.
 - **Hour 10:** You design gardens like a landscape architect. Every plant has a role. But the garden still surprises you. You start your eleventh garden not because you haven't "won" but because you want to see what *this* combination will create.
+- **Hour 15:** You notice the desert biome. The art preview pulls you in — stark dawn light, sand textures, unfamiliar silhouettes. You start a desert garden and suddenly you're a beginner again. Clover doesn't exist here. Water is precious. But you know to look underground, to watch fauna, to space plants. You know *how to learn*. The discovery arc reignites.
+- **Hour 25:** Your third desert garden. You've found the desert's nitrogen-fixer, its dispersal agent, its own version of the canopy effect. You go back to temperate and notice you're more intentional with water — desert taught you conservation. The biomes cross-pollinate your understanding.
+- **Hour 50:** You think in terms of ecological *roles* and *niches*, not species names. Every biome has a nitrogen-fixer, a pioneer colonizer, a canopy-maker, a dispersal agent — but the specific organisms are different, and discovering each biome's web is its own arc. You start a new biome not to "complete" it but because you want to see its world and feel its atmosphere.
 
 Every feature, system, and polish pass should be measured against these moments. If it doesn't enable at least one of them, question why it exists.
 
@@ -213,7 +235,8 @@ The loop's most important output isn't bug fixes or regressions — it's the dis
 - Do not build systems where species grow in isolation — every new species or system should connect to the interaction web.
 - Do not make the garden fully predictable — if the player can foresee every outcome, there's no reason to observe, experiment, or come back.
 - If a proposal weakens "one more seed" curiosity or removes surprise, challenge it.
-- Any new biome, economy, multiplayer feature, narrative layer, or major content pipeline is automatically **P3**.
+- Any new economy, multiplayer feature, narrative layer, or major content pipeline is automatically **P3**.
+- Biome *implementation* (new species, art, interactions) is post-MVP work, but biome *architecture readiness* is MVP. Do not hardcode temperate assumptions into the sim.
 
 ## DEFAULT DECISION RULE
 If uncertain, choose the option that:
