@@ -133,7 +133,6 @@ fn scenario_nitrogen_handshake() {
 }
 
 #[test]
-#[ignore]
 fn scenario_pioneer_succession() {
     run_and_assert(gameplay::pioneer_succession);
 }
