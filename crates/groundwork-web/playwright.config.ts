@@ -63,26 +63,78 @@ function findChromium(): string | undefined {
 
 const chromiumPath = findChromium();
 
+/** Common launch options shared across all projects */
+const launchOptions = {
+  executablePath: chromiumPath,
+  args: [
+    '--no-sandbox', '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    ...(process.env.HEADED ? [] : ['--use-gl=angle', '--use-angle=swiftshader']),
+  ],
+};
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.ts',
   timeout: 120_000, // 2 minutes per test (sim + screenshots take time)
+  projects: [
+    // Mobile-first: iPhone 15 Pro is the primary screenshot target
+    {
+      name: 'iphone-15-pro',
+      use: {
+        viewport: { width: 393, height: 852 },
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
+        launchOptions,
+      },
+    },
+    // Smallest common phone — catches layout overflow and cramped UI
+    {
+      name: 'iphone-se',
+      use: {
+        viewport: { width: 375, height: 667 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+        launchOptions,
+      },
+    },
+    // Tablet reference
+    {
+      name: 'ipad-air',
+      use: {
+        viewport: { width: 820, height: 1180 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+        launchOptions,
+      },
+    },
+    // Android reference
+    {
+      name: 'pixel-8',
+      use: {
+        viewport: { width: 412, height: 915 },
+        deviceScaleFactor: 2.625,
+        isMobile: true,
+        hasTouch: true,
+        launchOptions,
+      },
+    },
+    // Desktop kept as secondary
+    {
+      name: 'desktop',
+      use: {
+        viewport: { width: 1920, height: 1080 },
+        launchOptions,
+      },
+    },
+  ],
   use: {
     baseURL: 'http://localhost:5173',
     // Headless by default; set HEADED=1 to see the browser
     headless: !process.env.HEADED,
-    // Large viewport for good screenshots
-    viewport: { width: 1920, height: 1080 },
-    // --no-sandbox for CI/container environments (no-op on macOS/Windows)
-    // SwiftShader software GL for headless; real GPU used in headed mode
-    launchOptions: {
-      executablePath: chromiumPath,
-      args: [
-        '--no-sandbox', '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        ...(process.env.HEADED ? [] : ['--use-gl=angle', '--use-angle=swiftshader']),
-      ],
-    },
   },
   // Start the dev server automatically
   webServer: {
