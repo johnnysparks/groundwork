@@ -30,6 +30,7 @@
 - **Competition Tuning** — Reduced partial recovery (+0.005→+0.002) so shade stress is lethal. Crowded clusters now thin naturally.
 - **Acceptance Test** — `crowded_oak_cluster_thins_naturally` validates core competition promise.
 - **Growth Pacing Fix (P0)** — Seed growth 5→12/tick, Seedling→Sapling 200→80, Sapling→YoungTree 800→500. First leaves at ~tick 25 (was 100+).
+- **Seasonal Day Phase (SIM-15)** — DayPhase resource (0-99): dawn=75%, day=100%, dusk=75%, night=50% growth. WASM exports for JS sync.
 
 ---
 
@@ -37,9 +38,6 @@
 
 ### SIM-14: Root War Visualization Data
 Export per-tree root count and water intake via WASM for x-ray mode.
-
-### SIM-15: Seasonal Growth Variation
-Tie growth rates to the day cycle phase — needs sim-side time-of-day resource.
 
 ---
 
