@@ -61,7 +61,8 @@ Runs every tick in this order (after fauna_update, before fauna_effects):
 1. `gnome_plan` — picks next task from queue, sets target, transitions Idle -> Walking
 2. `gnome_move` — moves gnome toward target, transitions Walking -> Working on arrival
 3. `gnome_work` — counts work ticks, applies tool on completion, transitions Working -> Idle
-4. `gnome_export` — packs gnome state + ghost data into export buffers for WASM bridge
+4. `gnome_fauna_interact` — fauna proximity checks, trust building, behavior modification (every 5 ticks)
+5. `gnome_export` — packs gnome state + ghost data into export buffers for WASM bridge
 
 ## WASM Bridge
 
@@ -80,11 +81,23 @@ Runs every tick in this order (after fauna_update, before fauna_effects):
 [state: u8, active_tool: u8, hunger: u8, energy: u8,
  x: f32le, y: f32le, z: f32le,
  target_x: f32le, target_y: f32le, target_z: f32le,
- queue_len: u16le, _pad: u16]
+ queue_len: u16le, squirrel_trust: u8, nearby_fauna: u8]
 ```
 
-## Fauna Interactions (planned)
+## Fauna Interactions
 
-- Gnome builds trust with squirrels over time (proximity-based)
-- Trusted squirrels assist with acorn caching (seed dispersal)
-- Birds may follow a well-established gnome path
+The `gnome_fauna_interact` system runs every 5 ticks and checks all fauna within 8 voxels of the gnome.
+
+### Squirrel Trust
+- **Trust builds** through co-presence: +1 every 10 ticks while a squirrel is within 8 voxels (0-255 scale)
+- **Follow threshold:** At trust >= 180, squirrels adjust their target to follow the gnome (offset +2 voxels)
+- Trust persists across tasks — a gnome working near oak/berry bushes (where squirrels spawn) gradually befriends them
+- Future: trusted squirrels assist with acorn caching (seed dispersal)
+
+### Bird Attraction
+- Birds within 5 voxels of a **working** gnome redirect their target to stay nearby
+- Creates an emergent "bird perching on shoulder" feel when the gnome digs or plants
+
+### Nearby Fauna Count
+- Total count of fauna within 8 voxels is exported as `nearby_fauna` (u8)
+- The renderer can use this to trigger emotion particles (hearts, musical notes) on the gnome sprite

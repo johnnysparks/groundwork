@@ -76,7 +76,7 @@ Same as Bee but slower (speed 0.08/tick) and spawns as 1/3 of pollinator spawns.
 
 **Behavior:** Idle twitching -> seeks random nearby target every 20 ticks -> darts to target at high speed with bobbing motion -> brief "digging" animation -> sometimes caches acorn -> returns to Idle.
 
-**Future:** Domesticable by the gnome (builds trust over time, carries out tasks).
+**Gnome interaction:** Squirrels within 8 voxels of the gnome build trust (+1 per 10 ticks). At trust >= 180, squirrels follow the gnome. See [Garden Gnome — Fauna Interactions](gnome.md#fauna-interactions).
 
 ---
 
