@@ -234,11 +234,10 @@ fn plant_starter_garden(world: &mut World) {
     let oak_y = cy + 4;
     let oak_z = VoxelGrid::surface_height(oak_x, oak_y) + 1;
     let oak_species = &species_table[0]; // Oak
-    // Initialize the skeleton so branch_growth and tree_rasterize work correctly.
-    // Without this, the tree has empty branches and the skeleton path never fires,
-    // causing a floating tree when it transitions to Mature during pre-ticks.
-    let (branches, attraction_points) =
-        init_skeleton(oak_species, &GrowthStage::YoungTree, 42);
+                                         // Initialize the skeleton so branch_growth and tree_rasterize work correctly.
+                                         // Without this, the tree has empty branches and the skeleton path never fires,
+                                         // causing a floating tree when it transitions to Mature during pre-ticks.
+    let (branches, attraction_points) = init_skeleton(oak_species, &GrowthStage::YoungTree, 42);
     world.spawn(Tree {
         species_id: 0,
         root_pos: (oak_x, oak_y, oak_z),
