@@ -58,36 +58,82 @@ const FAUNA_NAMES: Record<number, string> = {
   0: 'bee', 1: 'butterfly', 2: 'bird', 3: 'worm', 4: 'beetle',
 };
 
+/** Fauna arrival messages that teach ecology */
+const FAUNA_MESSAGES: Record<number, string[]> = {
+  0: [ // Bee
+    'A bee arrived — it will pollinate nearby flowers',
+    'Bee spotted! Flowers nearby will spread seeds faster',
+    'A bee is visiting your garden — plant more flowers to attract more',
+  ],
+  1: [ // Butterfly
+    'A butterfly appeared — it boosts seed nutrients when visiting flowers',
+    'Butterfly visiting! It helps flowers reproduce',
+  ],
+  2: [ // Bird
+    'A bird is nesting near your trees — it may carry seeds to new spots',
+    'Bird spotted! It picks up seeds and drops them across the garden',
+    'A bird arrived — watch for surprise plants it delivers',
+  ],
+  3: [ // Worm
+    'A worm is enriching the soil underground — nutrients are rising',
+    'Worm activity detected — soil quality is improving',
+  ],
+  4: [ // Beetle
+    'A beetle appeared near dead wood — it breaks down old plants into soil',
+    'Beetle at work — decomposition feeds the next generation',
+  ],
+};
+
+/** Periodic ecology tips */
+const ECO_TIPS = [
+  'Tip: Plant clover near oak trees — nitrogen fixing boosts their growth 50%',
+  'Tip: More flower variety = more pollinators = faster seed spread',
+  'Tip: Press Q for x-ray mode — see root networks competing underground',
+  'Tip: Press V to see water, light, or nutrient overlays',
+  'Tip: Birds near berry bushes carry seeds to surprising new spots',
+  'Tip: Each new species adds +100 to your score',
+  'Tip: Groundcover near trees enriches the soil for everyone',
+];
+let _tipIndex = 0;
+let _tipTimer = 0;
+
 /** Detect ecological events by comparing with previous stats */
 function detectEvents(stats: { plants: number; fauna: number; species: number }, hud: any): void {
   _eventCooldown--;
   if (_eventCooldown > 0) return;
 
-  // New fauna appeared
+  // New fauna appeared — with ecological explanation
   if (stats.fauna > _prevStats.fauna) {
-    const diff = stats.fauna - _prevStats.fauna;
-    // Try to identify what kind by reading fauna data
     const fView = getFaunaView?.();
     if (fView) {
       const f = readFauna(fView, stats.fauna - 1);
-      const name = FAUNA_NAMES[f.type] ?? 'creature';
-      hud.addEvent(`A ${name} appeared in your garden`);
-    } else {
-      hud.addEvent(`${diff} new creature${diff > 1 ? 's' : ''} appeared`);
+      const msgs = FAUNA_MESSAGES[f.type];
+      if (msgs) {
+        hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+      }
     }
-    _eventCooldown = 20; // Don't spam
+    _eventCooldown = 25;
   }
 
   // New species growing
   if (stats.species > _prevStats.species) {
-    hud.addEvent(`New species growing — ${stats.species} types in your garden`);
+    hud.addEvent(`New species growing — ${stats.species} types (+${(stats.species - _prevStats.species) * 100} score)`);
     _eventCooldown = 15;
   }
 
-  // Major plant growth burst (>500 new voxels)
+  // Major plant growth burst
   if (stats.plants > _prevStats.plants + 500 && _prevStats.plants > 0) {
     hud.addEvent('Growth burst — your garden is flourishing');
     _eventCooldown = 30;
+  }
+
+  // Periodic ecology tips (every ~60 ticks when nothing else happens)
+  _tipTimer++;
+  if (_tipTimer > 60 && _eventCooldown <= 0) {
+    hud.addEvent(ECO_TIPS[_tipIndex % ECO_TIPS.length]);
+    _tipIndex++;
+    _tipTimer = 0;
+    _eventCooldown = 10;
   }
 
   _prevStats = { ...stats };
