@@ -101,7 +101,7 @@ impl Default for DiscoveredSpecies {
         // Moss (9), grass (10), clover (11) are always discovered — the player
         // starts knowing these basic groundcover species.
         let mut d = 0u32;
-        d |= 1 << 9;  // moss
+        d |= 1 << 9; // moss
         d |= 1 << 10; // grass
         d |= 1 << 11; // clover
         Self { discovered: d }

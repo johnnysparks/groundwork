@@ -3676,7 +3676,9 @@ mod tests {
         // Place trunk and root
         {
             let grid = world.resource_mut::<VoxelGrid>().into_inner();
-            grid.get_mut(tx, ty, tz).unwrap().set_material(Material::Trunk);
+            grid.get_mut(tx, ty, tz)
+                .unwrap()
+                .set_material(Material::Trunk);
             // Root at surface_z (which is > GROUND_LEVEL)
             assert_eq!(
                 grid.get(tx, ty, root_z).unwrap().material,
