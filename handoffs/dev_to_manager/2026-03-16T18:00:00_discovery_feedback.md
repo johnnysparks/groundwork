@@ -1,11 +1,11 @@
-# Dev → Manager Handoff: Discovery Feedback Loop (Sprints 125-131)
+# Dev → Manager Handoff: Discovery Feedback + Night Atmosphere (Sprints 125-136)
 
-**Date:** 2026-03-16T18:00:00
-**Sprint count:** 7
+**Date:** 2026-03-16T18:30:00
+**Sprint count:** 12
 
 ## What Shipped
 
-7 sprints focused on closing the discovery feedback loop — making ecological surprises visible, audible, and rewarding:
+12 sprints: first 7 close the discovery feedback loop, last 5 add nighttime atmosphere:
 
 1. **Mobile ecology optimization** — ecology particle scan rate reduced from 0.3s to 1.0s on mobile devices.
 
@@ -27,6 +27,14 @@
 - All Rust tests pass (no sim changes this session)
 - All commits pass pre-commit hooks (formatting + types) and pre-push hooks (clippy)
 
+8. **Night stars** — procedural star field in sky shader, visible during nighttime. Grid-based hash for consistent placement.
+
+9. **Moonlight** — blue hour preset deepened with cool blue ambient fill. Garden visible as atmospheric silhouettes, not just dark.
+
+10. **Ambient wind** — continuous low-frequency filtered noise varies with weather wind strength. Calm breeze in clear weather, gusty rush in rain.
+
+11. **Shooting stars** — one every ~45 seconds during night, 0.6s bright white streak across the star field. Purely shader-based, random path per event.
+
 ## What Needs Playtesting
 
 - **Wild plant notifications** — Do they actually trigger during normal play? Requires a long-enough game for squirrels to cache and sprout oaks.
@@ -35,6 +43,10 @@
 - **Discovery chime volume** — 0.06 is very quiet. May not be audible on laptop speakers.
 - **Idle orbit speed** — 0.04 rad/s. Should be barely noticeable at first. May be too slow or too fast.
 - **Weather sounds** — do they feel cozy or startling?
+- **Night stars density** — ~5% of grid cells have stars. Too many? Too few?
+- **Moonlight brightness** — ambient 0.35 should let you see garden silhouettes. Too dark? Too bright?
+- **Wind volume** — base 0.02, peaks at 0.08. Might be inaudible on some speakers.
+- **Shooting star frequency** — every 45s. Might be too rare (need to watch 45s of night) or too frequent.
 
 ## Recommended Next Priorities
 

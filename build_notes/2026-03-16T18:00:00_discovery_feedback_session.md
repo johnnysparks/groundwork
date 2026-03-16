@@ -1,8 +1,8 @@
-# Build Notes: Discovery Feedback Session (Sprints 125-131)
+# Build Notes: Discovery Feedback Session (Sprints 125-136)
 
-**Date:** 2026-03-16T18:00:00
-**Sprints:** 125-131 (7 sprints)
-**Theme:** Make ecological discoveries visible, audible, and rewarding
+**Date:** 2026-03-16T18:30:00
+**Sprints:** 125-136 (12 sprints)
+**Theme:** Make ecological discoveries visible, audible, and rewarding + nighttime atmosphere
 
 ## Session Summary
 
@@ -19,6 +19,11 @@ This session focused on closing the discovery feedback loop: when the garden doe
 | 129 | Companion species suggestions | Web | main.ts |
 | 130 | Weather transition sounds | Web | audio/sfx.ts, main.ts |
 | 131 | Idle auto-orbit camera | Web | camera/orbit.ts, main.ts |
+| 132 | Session wrap-up (build notes + handoff) | Docs | backlog, build_notes, handoffs |
+| 133 | Night stars in sky dome | Web | lighting/sky.ts, lighting/daycycle.ts |
+| 134 | Moonlight (blue hour preset) | Web | lighting/daycycle.ts |
+| 135 | Ambient wind sound | Web | audio/ambient.ts, main.ts |
+| 136 | Shooting stars | Web | lighting/sky.ts, lighting/daycycle.ts |
 
 ## Key Technical Decisions
 
@@ -31,6 +36,13 @@ This session focused on closing the discovery feedback loop: when the garden doe
 - **Companion tips**: One suggestion per species per session, delayed 2 seconds after planting. Prevents spam while teaching the interaction web through play.
 
 - **Idle orbit**: 45-second threshold, 0.04 rad/s rotation. Resets on any mouse, keyboard, or camera interaction. Very slow so it feels meditative, not dizzy.
+
+## Nighttime Atmosphere (Sprints 133-136)
+
+- **Star field**: procedural grid-based hash in sky fragment shader, visible when `uNightAmount > 0`
+- **Moonlight**: blue hour preset enhanced with cool blue ambient fill (0x4466aa, 0.35 intensity), deeper sky colors
+- **Ambient wind**: low-pass filtered noise, volume/cutoff varies with weather wind strength (0.02-0.08 volume)
+- **Shooting stars**: one every ~45 seconds during night, 0.6s duration, random path — purely shader-based
 
 ## What the Discovery Loop Looks Like Now
 

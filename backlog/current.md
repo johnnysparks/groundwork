@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T18:00:00
-**Status:** Alpha complete. 131 sprints. Living ecosystem with visible ecological interactions, ambient life layers, day-night cycle, discovery feedback loop.
+**Last updated:** 2026-03-16T18:30:00
+**Status:** Alpha complete. 136 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars and moonlight, discovery feedback loop.
 
 ---
 
@@ -49,7 +49,7 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Weather-driven wind: gusty rain (0.7), still drought (0.12), clear (0.35)
 - Rain ambient audio: procedural patter fades in/out with weather
 
-### Sound & Ambient Life (Sprints 105-109, 117-119, 128, 130)
+### Sound & Ambient Life (Sprints 105-109, 117-119, 128, 130, 135)
 - Ambient fauna sounds: bird chirps + bee buzzes every 8-20s
 - Growth shimmer sound: soft ascending sweep when vegetation increases
 - Full procedural audio landscape (no audio files)
@@ -58,6 +58,7 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Dusk fireflies: 40 golden-green blinking particles during golden/blue hour
 - Discovery chime: ascending triad on wild plants and ecological firsts
 - Weather transition sounds: rain onset and drought wind cues
+- Ambient wind: continuous filtered noise varies with weather strength
 
 ### Visible Ecological Interactions (Sprints 115-116, 120, 123, 126-127)
 - Squirrel 3D model with scurry/dig animations and warm glow
@@ -73,6 +74,11 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Tips reference visible ecology particles
 - Companion species suggestions: first-time planting shows synergy tip
 - Idle auto-orbit: camera slowly rotates after 45s for living painting effect
+
+### Night Atmosphere (Sprints 133-134, 136)
+- Stars: procedural star field in sky shader, visible during nighttime
+- Moonlight: cool blue ambient fill, garden visible as atmospheric silhouettes
+- Shooting stars: one every ~45s during night, bright white streak across sky
 
 ### Quality of Life (Sprints 111-112)
 - Auto-save "Saved" indicator (bottom-right, fades after 1.5s)
