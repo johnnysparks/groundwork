@@ -295,6 +295,7 @@ pub fn seed_growth(
         if has_water && has_light {
             let mut best_nutrient: u8 = 0;
             let mut blocked_by_compaction = false;
+            let mut min_ph: u8 = 128; // track lowest pH for allelopathy
             let soil_cells = soil_grid.cells();
 
             macro_rules! check_soil {
@@ -310,6 +311,9 @@ pub fn seed_growth(
                         }
                         if comp.is_compacted() {
                             blocked_by_compaction = true;
+                        }
+                        if comp.ph < min_ph {
+                            min_ph = comp.ph;
                         }
                     }
                 }};
@@ -336,7 +340,19 @@ pub fn seed_growth(
 
             if !blocked_by_compaction {
                 let soil_bonus = (best_nutrient as u16 * 5 / 255) as u8;
-                let growth_rate = 5 + soil_bonus;
+                let mut growth_rate = 5 + soil_bonus;
+
+                // --- Allelopathy: acidic soil slows non-tolerant seed growth ---
+                // Pine roots acidify soil (pH < 40). Most species grow at half speed.
+                // Acid-tolerant species (pine=3, fern=4, moss=9) are immune.
+                // Discovery: "My seeds won't grow near the pine... the soil is too acidic!"
+                if min_ph < 40 {
+                    let species_id = seed_species.map.get(&(x, y, z)).copied().unwrap_or(0);
+                    let acid_tolerant = matches!(species_id, 3 | 4 | 9); // pine, fern, moss
+                    if !acid_tolerant {
+                        growth_rate /= 2; // half speed in acidic soil
+                    }
+                }
                 if let Some(cell) = grid.get_mut(x, y, z) {
                     cell.nutrient_level = cell.nutrient_level.saturating_add(growth_rate);
                     if cell.nutrient_level >= 200 {
@@ -496,10 +512,12 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
 
 /// Tree growth system: accumulates resources, checks stage transitions.
 /// Health declines when water or light is insufficient.
+/// Pollinators near a tree boost health recovery (Pollinator Bridge).
 pub fn tree_growth(
     mut trees: Query<&mut Tree>,
     grid: Res<VoxelGrid>,
     species_table: Res<SpeciesTable>,
+    fauna_list: Res<crate::fauna::FaunaList>,
 ) {
     // --- Nitrogen handshake ---
     // Clover/groundcover near a tree's root zone enriches soil nitrogen,
@@ -623,6 +641,33 @@ pub fn tree_growth(
         } else if water_ok || light_ok {
             // One resource met: moderate recovery (not punishment)
             tree.health = (tree.health + 0.005).min(1.0);
+        }
+
+        // --- Pollinator Bridge ---
+        // Pollinators (bees, butterflies) near a tree boost its health recovery.
+        // Discovery moment: "I planted flowers near my oak, bees came, the oak recovered."
+        // Creates the loop: flowers → pollinators → healthier neighbors → more flowers.
+        {
+            let (rx, ry, _rz) = tree.root_pos;
+            let pollinator_radius = 10.0_f32;
+            let mut nearby_pollinators = 0u32;
+            for f in &fauna_list.fauna {
+                match f.fauna_type {
+                    crate::fauna::FaunaType::Bee | crate::fauna::FaunaType::Butterfly => {
+                        let dx = f.x - rx as f32;
+                        let dy = f.y - ry as f32;
+                        if dx * dx + dy * dy < pollinator_radius * pollinator_radius {
+                            nearby_pollinators += 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            if nearby_pollinators > 0 {
+                // Each pollinator gives +0.005 health recovery, up to +0.02 (4 pollinators)
+                let bonus = (nearby_pollinators as f32 * 0.005).min(0.02);
+                tree.health = (tree.health + bonus).min(1.0);
+            }
         }
 
         // Re-rasterize every 30 ticks to update health visual stress on foliage
@@ -1796,10 +1841,11 @@ pub fn soil_evolution(
     }
 
     // Snapshot grid state so we can read neighbors while writing nutrient_level.
-    let snapshot: Vec<(u8, u8)> = grid
+    // Includes nutrient_level so we can read species_id from root voxels (allelopathy).
+    let snapshot: Vec<(u8, u8, u8)> = grid
         .cells()
         .iter()
-        .map(|v| (v.material.as_u8(), v.water_level))
+        .map(|v| (v.material.as_u8(), v.water_level, v.nutrient_level))
         .collect();
 
     let soil_cells = soil_grid.cells_mut();
@@ -1807,6 +1853,7 @@ pub fn soil_evolution(
     let root_u8 = Material::Root.as_u8();
     let soil_u8 = Material::Soil.as_u8();
     let z_stride = GRID_X * GRID_Y;
+    let pine_species_id: u8 = 3; // Pine species index
 
     // First pass: evolve soil composition and compute nutrient generation amounts.
     // We collect nutrient deltas because we need soil_cells borrow to end before
@@ -1873,6 +1920,32 @@ pub fn soil_evolution(
                 }
                 if comp.rock > 50 && comp.ph < 128 && (y + z) % 25 == 0 {
                     comp.ph = comp.ph.saturating_add(1);
+                }
+
+                // --- Allelopathy: pine roots acidify soil ---
+                // Pine (species_id=3) needles and roots release organic acids that
+                // lower soil pH. This creates pine territory — most other species
+                // struggle in acidic soil, but ferns and moss thrive.
+                // Discovery: "Why does nothing grow near my pines? The soil is acidic!"
+                {
+                    let mut has_pine_root = false;
+                    macro_rules! check_pine {
+                        ($nidx:expr) => {
+                            if snapshot[$nidx].0 == root_u8 && snapshot[$nidx].2 == pine_species_id {
+                                has_pine_root = true;
+                            }
+                        };
+                    }
+                    if x > 0 { check_pine!(idx - 1); }
+                    if x + 1 < GRID_X { check_pine!(idx + 1); }
+                    if y > 0 { check_pine!(idx - GRID_X); }
+                    if y + 1 < GRID_Y { check_pine!(idx + GRID_X); }
+                    if z > 0 { check_pine!(idx - z_stride); }
+                    if z + 1 < GRID_Z { check_pine!(idx + z_stride); }
+                    if has_pine_root && comp.ph > 0 {
+                        // Pine roots aggressively lower pH (5× faster than organic decay)
+                        comp.ph = comp.ph.saturating_sub(5);
+                    }
                 }
 
                 // --- Rock weathering ---
@@ -3762,6 +3835,128 @@ mod tests {
         assert!(
             cell.nutrient_level > 0,
             "Decomposed wood should leave nutrient-rich soil"
+        );
+    }
+
+    #[test]
+    fn pine_roots_acidify_soil() {
+        // Pine roots should lower pH of adjacent soil cells.
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let rx = 30;
+        let ry = 30;
+        let rz = GROUND_LEVEL - 1; // underground
+
+        // Record initial pH
+        let initial_ph = {
+            let soil = world.resource::<SoilGrid>();
+            soil.get(rx + 1, ry, rz).unwrap().ph
+        };
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place a pine root (species_id=3 stored in nutrient_level)
+            if let Some(cell) = grid.get_mut(rx, ry, rz) {
+                cell.set_material(Material::Root);
+                cell.nutrient_level = 3; // Pine
+            }
+            // Ensure adjacent cell is soil
+            assert_eq!(
+                grid.get(rx + 1, ry, rz).unwrap().material,
+                Material::Soil,
+                "Adjacent cell should be soil"
+            );
+        }
+
+        // Run soil_evolution cycles (every 10 ticks)
+        for _ in 0..100 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let soil = world.resource::<SoilGrid>();
+        let final_ph = soil.get(rx + 1, ry, rz).unwrap().ph;
+        assert!(
+            final_ph < initial_ph,
+            "Soil adjacent to pine root should have lower pH: initial={initial_ph}, final={final_ph}"
+        );
+    }
+
+    #[test]
+    fn pollinator_boosts_tree_health() {
+        // A tree with pollinators nearby should recover health faster.
+        use crate::fauna::{Fauna, FaunaList, FaunaState, FaunaType};
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let cx = GRID_X / 2 + 12;
+        let cy = GRID_Y / 2;
+        let sz = GROUND_LEVEL + 1;
+
+        // Spawn a stressed tree
+        let tree_id = world
+            .spawn(Tree {
+                species_id: 0,
+                root_pos: (cx, cy, sz),
+                age: 100,
+                stage: GrowthStage::Mature,
+                health: 0.5, // stressed
+                accumulated_water: 5000.0,
+                accumulated_light: 5000.0,
+                rng_seed: 42,
+                dirty: false,
+                voxel_footprint: vec![(cx, cy, sz)],
+                branches: Vec::new(),
+                attraction_points: Vec::new(),
+                skeleton_initialized: false,
+            })
+            .id();
+
+        // Place trunk and root so tree gets resources
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(cx, cy, sz) {
+                cell.set_material(Material::Trunk);
+            }
+            if let Some(cell) = grid.get_mut(cx, cy, sz - 1) {
+                cell.set_material(Material::Root);
+                // Place water nearby so root can absorb
+                if let Some(w) = grid.get_mut(cx + 1, cy, sz - 1) {
+                    w.water_level = 200;
+                }
+            }
+        }
+
+        // Spawn a bee near the tree
+        {
+            let mut fauna = world.resource_mut::<FaunaList>();
+            fauna.fauna.push(Fauna {
+                fauna_type: FaunaType::Bee,
+                state: FaunaState::Idle,
+                x: cx as f32 + 2.0,
+                y: cy as f32,
+                z: sz as f32 + 2.0,
+                target_x: cx as f32,
+                target_y: cy as f32,
+                target_z: sz as f32 + 1.0,
+                age: 0,
+                max_age: 500,
+                rng_seed: 99,
+            });
+        }
+
+        // Run a few ticks
+        for _ in 0..5 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let tree = world.entity(tree_id).get::<Tree>().unwrap();
+        assert!(
+            tree.health > 0.5,
+            "Tree near pollinator should have recovered some health (health={})",
+            tree.health
         );
     }
 }
