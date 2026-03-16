@@ -26,6 +26,12 @@ This runs the SYNC → MANAGE → DEV → SHIP → PLAYTEST loop. SYNC pulls in 
 
 Every session, you operate as one of three roles. Pick yours and follow the checklist.
 
+**First-time setup (run once per clone):**
+```bash
+git config core.hooksPath .githooks
+```
+This activates pre-commit (`cargo fmt --check` + `tsc`) and pre-push (`cargo clippy`) hooks.
+
 **Role assignment:**
 1. If a role is specified in the prompt, use it.
 2. Default to **dev** if dev work is available (check `handoffs/manager_to_dev/` and `backlog/current.md`).
