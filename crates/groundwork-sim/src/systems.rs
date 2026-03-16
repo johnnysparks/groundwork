@@ -1414,7 +1414,13 @@ pub fn tree_rasterize(
                     | Material::Leaf
                     | Material::Root
                     | Material::DeadWood => {
-                        if z <= GROUND_LEVEL {
+                        // Use actual surface height, not the constant GROUND_LEVEL.
+                        // The terrain has rolling hills (±6 voxels around GROUND_LEVEL),
+                        // so roots above GROUND_LEVEL but at/below the surface must
+                        // revert to Soil — otherwise they become Air gaps that fill
+                        // with water, causing trees to float.
+                        let surface = VoxelGrid::surface_height(x, y);
+                        if z <= surface {
                             cell.set_material(Material::Soil);
                         } else {
                             cell.set_material(Material::Air);
@@ -3621,6 +3627,85 @@ mod tests {
             Material::Leaf,
             "Sapling leaf disc (r=1) should include cardinal neighbor. Got {:?}",
             neighbor_leaf.material
+        );
+    }
+
+    #[test]
+    fn rasterize_clear_restores_soil_above_ground_level() {
+        // Regression: tree_rasterize clearing phase used the constant GROUND_LEVEL
+        // to decide Soil vs Air revert. On terrain where surface_height > GROUND_LEVEL,
+        // roots above GROUND_LEVEL but at/below the surface were reverted to Air,
+        // creating gaps that filled with water — causing floating trees.
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+
+        // Find a position where surface_height > GROUND_LEVEL
+        let mut tx = 0;
+        let mut ty = 0;
+        let mut surface_z = GROUND_LEVEL;
+        'search: for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let h = VoxelGrid::surface_height(x, y);
+                if h > GROUND_LEVEL {
+                    tx = x;
+                    ty = y;
+                    surface_z = h;
+                    break 'search;
+                }
+            }
+        }
+        assert!(
+            surface_z > GROUND_LEVEL,
+            "Test requires terrain above GROUND_LEVEL"
+        );
+
+        let tz = surface_z + 1; // trunk base, one above surface
+        let root_z = surface_z; // root position, at surface (above GROUND_LEVEL)
+
+        // Place trunk and root
+        {
+            let grid = world.resource_mut::<VoxelGrid>().into_inner();
+            grid.get_mut(tx, ty, tz).unwrap().set_material(Material::Trunk);
+            // Root at surface_z (which is > GROUND_LEVEL)
+            assert_eq!(
+                grid.get(tx, ty, root_z).unwrap().material,
+                Material::Soil,
+                "Surface voxel should be soil"
+            );
+            grid.get_mut(tx, ty, root_z)
+                .unwrap()
+                .set_material(Material::Root);
+        }
+
+        world.spawn(Tree {
+            species_id: 0,
+            root_pos: (tx, ty, tz),
+            age: 50,
+            stage: GrowthStage::Sapling,
+            health: 1.0,
+            accumulated_water: 300.0,
+            accumulated_light: 300.0,
+            rng_seed: 99,
+            dirty: true,
+            voxel_footprint: vec![(tx, ty, tz), (tx, ty, root_z)],
+            branches: Vec::new(),
+            attraction_points: Vec::new(),
+            skeleton_initialized: false,
+        });
+
+        let mut schedule = crate::create_schedule();
+        crate::tick(&mut world, &mut schedule);
+
+        // The root_z position should be Soil (or Root if re-placed), NOT Air.
+        let grid = world.resource::<VoxelGrid>();
+        let cell = grid.get(tx, ty, root_z).unwrap();
+        assert_ne!(
+            cell.material,
+            Material::Air,
+            "Root at z={} (above GROUND_LEVEL={}) should revert to Soil, not Air",
+            root_z,
+            GROUND_LEVEL
         );
     }
 
