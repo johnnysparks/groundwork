@@ -14,8 +14,8 @@ import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, materialIsFoliage as isF
 /** Maximum particles alive at once */
 const MAX_PARTICLES = 2000;
 
-/** Particles per growth burst */
-const BURST_COUNT = 12;
+/** Particles per growth burst — kept small so bursts are subtle sparkles */
+const BURST_COUNT = 5;
 
 /** Particle lifetime in seconds */
 const PARTICLE_LIFE = 1.5;
@@ -34,9 +34,9 @@ const PARTICLE_VERT = /* glsl */ `
     vColor = aColor;
 
     vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-    // Size: grows then shrinks over lifetime
+    // Size: grows then shrinks over lifetime — small and gentle
     float sizeCurve = sin(vLife * 3.14159);
-    gl_PointSize = sizeCurve * 6.0;
+    gl_PointSize = sizeCurve * 4.0;
     gl_Position = projectionMatrix * mvPos;
   }
 `;
@@ -115,7 +115,8 @@ export class GrowthParticles {
       fragmentShader: PARTICLE_FRAG,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      // NormalBlending so particles show their actual warm green/gold colors
+      // instead of washing out to white when stacked (additive was too bright).
     });
 
     this.points = new THREE.Points(this.geometry, this.material);
@@ -140,11 +141,11 @@ export class GrowthParticles {
       p.y = worldY + (Math.random() - 0.5) * 0.8;
       p.z = worldZ + (Math.random() - 0.5) * 0.8;
 
-      // Velocity: rise upward with outward spread (Three.js Y = up)
+      // Velocity: gentle rise with outward spread (Three.js Y = up)
       const angle = Math.random() * Math.PI * 2;
-      const speed = 0.3 + Math.random() * 0.5;
+      const speed = 0.2 + Math.random() * 0.3;
       p.vx = Math.cos(angle) * speed;
-      p.vy = 0.8 + Math.random() * 0.6; // mostly upward (Three.js Y)
+      p.vy = 0.4 + Math.random() * 0.4; // gentle rise, stays near canopy
       p.vz = Math.sin(angle) * speed;
 
       // Random color from palette
