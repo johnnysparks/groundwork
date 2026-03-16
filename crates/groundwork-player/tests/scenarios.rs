@@ -186,6 +186,11 @@ fn scenario_species_feel_different() {
     run_and_assert(gameplay::species_feel_different);
 }
 
+#[test]
+fn scenario_milestone_progression_arc() {
+    run_and_assert(gameplay::milestone_progression_arc);
+}
+
 // ---------------------------------------------------------------------------
 
 /// Verify that traces are serializable (important for artifact storage).

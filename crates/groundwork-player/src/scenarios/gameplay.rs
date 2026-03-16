@@ -2010,3 +2010,172 @@ pub fn species_feel_different() -> Scenario {
         })
         .build()
 }
+
+// ---------------------------------------------------------------------------
+// 24. Milestone Progression Arc — "Can the player unlock all tiers?"
+// ---------------------------------------------------------------------------
+
+/// Simulate the intended progression: start with groundcover (tier 0),
+/// grow enough to unlock flowers (tier 1), attract pollinators for
+/// shrubs (tier 2), build diversity for trees (tier 3). Measures whether
+/// a patient player can naturally reach each tier.
+pub fn milestone_progression_arc() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    let mut builder = Scenario::new("milestone_progression_arc")
+        .description(
+            "Full progression: groundcover → flowers → shrubs → trees. \
+             Measures biomass at each stage to verify tiers are reachable.",
+        )
+        .checkpoint("start")
+        .status()
+        // Water the garden
+        .fill(
+            "water",
+            cx - 6,
+            cy - 6,
+            GROUND_LEVEL + 1,
+            cx + 6,
+            cy + 6,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5);
+
+    // Tier 0: plant groundcover (always available)
+    builder = builder
+        .plant("moss", cx - 3, cy - 1, GROUND_LEVEL + 3)
+        .plant("moss", cx - 2, cy + 1, GROUND_LEVEL + 3)
+        .plant("grass", cx + 1, cy - 2, GROUND_LEVEL + 3)
+        .plant("grass", cx + 2, cy + 2, GROUND_LEVEL + 3)
+        .plant("clover", cx - 1, cy + 3, GROUND_LEVEL + 3)
+        .plant("clover", cx + 3, cy - 1, GROUND_LEVEL + 3)
+        .tick(100)
+        .checkpoint("tier0_groundcover")
+        .status();
+
+    // Tier 1: plant flowers (unlocked at 10+ groundcover leaf voxels)
+    builder = builder
+        .plant("wildflower", cx, cy - 3, GROUND_LEVEL + 3)
+        .plant("wildflower", cx - 4, cy, GROUND_LEVEL + 3)
+        .plant("daisy", cx + 4, cy, GROUND_LEVEL + 3)
+        .tick(200)
+        .checkpoint("tier1_flowers")
+        .status();
+
+    // Tier 2: plant shrubs (unlocked at 2+ pollinators)
+    builder = builder
+        .plant("fern", cx, cy + 4, GROUND_LEVEL + 3)
+        .plant("berry-bush", cx - 5, cy - 3, GROUND_LEVEL + 3)
+        .tick(200)
+        .checkpoint("tier2_shrubs")
+        .status();
+
+    // Tier 3: plant trees (unlocked at 4+ fauna, 3+ species diversity)
+    builder = builder
+        .plant("oak", cx, cy, GROUND_LEVEL + 3)
+        .plant("birch", cx + 5, cy + 3, GROUND_LEVEL + 3)
+        .tick(300)
+        .checkpoint("tier3_trees")
+        .status();
+
+    builder
+        .eval(NoCrash)
+        .eval(Custom {
+            name: "progression_reaches_all_tiers".into(),
+            f: Box::new(|trace| {
+                let steps = &trace.steps;
+                let n = steps.len();
+                if n < 4 {
+                    return Verdict {
+                        evaluator: "progression_reaches_all_tiers".into(),
+                        passed: false,
+                        reason: "too few steps".into(),
+                        score: Some(0.0),
+                    };
+                }
+
+                // Sample biomass at each tier checkpoint (roughly at 25%, 50%, 75%, 100%)
+                let tier_data: Vec<(usize, u64, u64, u64, u64)> = [n / 4, n / 2, 3 * n / 4, n - 1]
+                    .iter()
+                    .map(|&i| {
+                        let mc = &steps[i].oracle.material_counts;
+                        (i, mc.leaf, mc.trunk, mc.root, mc.total_plant())
+                    })
+                    .collect();
+
+                let mut report = Vec::new();
+                let mut tiers_reached = 0u32;
+
+                // Tier 0: groundcover should produce leaf voxels
+                let (_, t0_leaf, _, _, t0_total) = tier_data[0];
+                if t0_leaf >= 3 || t0_total >= 5 {
+                    tiers_reached += 1;
+                    report.push(format!(
+                        "T0: {} leaf, {} total — groundcover established",
+                        t0_leaf, t0_total
+                    ));
+                } else {
+                    report.push(format!(
+                        "T0: {} leaf, {} total — groundcover too sparse",
+                        t0_leaf, t0_total
+                    ));
+                }
+
+                // Tier 1: flowers added
+                let (_, t1_leaf, _, _, t1_total) = tier_data[1];
+                if t1_total > t0_total {
+                    tiers_reached += 1;
+                    report.push(format!(
+                        "T1: {} total (+{}) — flowers growing",
+                        t1_total,
+                        t1_total - t0_total
+                    ));
+                } else {
+                    report.push(format!("T1: {} total — stalled after flowers", t1_total));
+                }
+
+                // Tier 2: shrubs + fauna habitat
+                let (_, _, _, _, t2_total) = tier_data[2];
+                if t2_total > t1_total {
+                    tiers_reached += 1;
+                    report.push(format!(
+                        "T2: {} total (+{}) — shrubs growing",
+                        t2_total,
+                        t2_total - t1_total
+                    ));
+                } else {
+                    report.push(format!("T2: {} total — stalled after shrubs", t2_total));
+                }
+
+                // Tier 3: trees (the payoff)
+                let (_, t3_leaf, t3_trunk, t3_root, t3_total) = tier_data[3];
+                if t3_trunk >= 5 && t3_total > t2_total {
+                    tiers_reached += 1;
+                    report.push(format!(
+                        "T3: {} trunk, {} leaf, {} root, {} total — TREES GROWING!",
+                        t3_trunk, t3_leaf, t3_root, t3_total
+                    ));
+                } else {
+                    report.push(format!(
+                        "T3: {} trunk, {} total — trees not yet visible",
+                        t3_trunk, t3_total
+                    ));
+                }
+
+                let passed = tiers_reached >= 3;
+
+                Verdict {
+                    evaluator: "progression_reaches_all_tiers".into(),
+                    passed,
+                    reason: format!(
+                        "{}/4 tiers reached. [{}]",
+                        tiers_reached,
+                        report.join(" | "),
+                    ),
+                    score: Some(tiers_reached as f64 / 4.0),
+                }
+            }),
+        })
+        .build()
+}
