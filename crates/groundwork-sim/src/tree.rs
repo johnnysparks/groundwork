@@ -383,7 +383,7 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 20,
                     prune_threshold: 500,
-                    dispersal_distance_m: 0.5,
+                    dispersal_distance_m: 1.0,
                     dispersal_period: 15,
                 },
                 Species {
@@ -400,7 +400,7 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 140,
                     prune_threshold: 100,
-                    dispersal_distance_m: 0.5,
+                    dispersal_distance_m: 1.0,
                     dispersal_period: 12,
                 },
                 Species {
@@ -417,7 +417,7 @@ impl Default for SpeciesTable {
                     phototropism: 0.0,
                     shade_tolerance: 100,
                     prune_threshold: 150,
-                    dispersal_distance_m: 0.5,
+                    dispersal_distance_m: 1.0,
                     dispersal_period: 15,
                 },
             ],

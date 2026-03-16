@@ -215,11 +215,11 @@ pub fn create_world_with_garden() -> World {
 
     // Pre-tick so the world has visible growth and wet soil from tick 0.
     // Seeds sprout, water flows into soil, the oak begins branching,
-    // and groundcover carpets the floor. 100 ticks gives enough time for
-    // groundcover to spread, seedlings to appear, and the garden to feel
-    // established before the player sees it.
+    // and groundcover carpets the floor. 200 ticks gives generation-1
+    // groundcover time to mature and disperse generation-2, creating a
+    // green carpet instead of sparse dots. Tree canopies also fill in.
     let mut schedule = create_schedule();
-    for _ in 0..100 {
+    for _ in 0..200 {
         tick(&mut world, &mut schedule);
     }
     // Reset tick counter so the player starts at tick 0
@@ -267,36 +267,41 @@ fn plant_starter_garden(world: &mut World) {
 
     // -- Scatter seeds of varied species around the spring --
     // Each (species_id, dx_from_center, dy_from_center)
-    let seed_spots: &[(usize, isize, isize)] = &[
+    let mut seed_spots: Vec<(usize, isize, isize)> = vec![
         (1, -6, 3),  // birch
         (4, 3, -5),  // fern
         (7, -4, -3), // wildflower
         (7, 2, 7),   // wildflower
         (8, -3, -6), // daisy
         (5, -7, -6), // berry bush
-        // Groundcover carpet — scatter liberally for a green floor
-        (9, 5, 6), // moss
-        (9, -3, 1),
-        (9, 2, -4),
-        (9, -6, -2),
-        (9, 7, -5),
-        (10, -2, 5), // grass
-        (10, 3, 2),
-        (10, -4, -2),
-        (10, 1, -7),
-        (10, 6, -4),
-        (11, 4, -7), // clover
-        (11, -5, 3),
-        (11, 2, -2),
-        (11, -1, -5),
-        (11, 7, 3),
     ];
+
+    // Groundcover carpet: grid pattern within the watered zone around the
+    // spring. Seeds need water_level >= 30 to germinate, so only plant where
+    // water reaches (~25 voxels from center). Spacing 8 voxels for dense
+    // coverage with crown_radius overlap.
+    let groundcover_species = [9_usize, 10, 11];
+    let mut gc_idx = 0;
+    let spacing = 8_isize;
+    let range = 25_isize;
+    {
+        let mut dy = -range;
+        while dy <= range {
+            let mut dx = -range;
+            while dx <= range {
+                seed_spots.push((groundcover_species[gc_idx % 3], dx, dy));
+                gc_idx += 1;
+                dx += spacing;
+            }
+            dy += spacing;
+        }
+    }
 
     // Collect which seeds landed, then update the species map separately
     let mut planted_seeds: Vec<(usize, usize, usize, usize)> = Vec::new();
     {
         let grid = world.resource_mut::<VoxelGrid>().into_inner();
-        for &(species_id, dx, dy) in seed_spots {
+        for &(species_id, dx, dy) in &seed_spots {
             let sx = (cx as isize + dx) as usize;
             let sy = (cy as isize + dy) as usize;
             let sz = VoxelGrid::surface_height(sx, sy) + 1;
