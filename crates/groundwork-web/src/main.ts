@@ -47,11 +47,28 @@ function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; 
   // Fauna count from bridge
   let fauna = 0;
   try { fauna = getFaunaCount(); } catch {}
-  return { plants, fauna, species: speciesSet.size };
+  return { plants, fauna, species: speciesSet.size, speciesIds: speciesSet };
 }
 
+/** Species names for event messages */
+const SPECIES_NAMES: Record<number, string> = {
+  0: 'Oak', 1: 'Birch', 2: 'Willow', 3: 'Pine',
+  4: 'Fern', 5: 'Berry Bush', 6: 'Holly',
+  7: 'Wildflower', 8: 'Daisy', 9: 'Moss', 10: 'Grass', 11: 'Clover',
+};
+
+/** Pioneer succession species (appear autonomously) */
+const PIONEER_SPECIES = new Set([9, 10, 7]); // moss, grass, wildflower
+
+const SUCCESSION_MESSAGES: Record<number, string> = {
+  9: 'Moss is colonizing bare soil — the first sign of life',
+  10: 'Grass is spreading through the mossy patches',
+  7: 'Wildflowers appeared in the grassy areas — succession is working!',
+};
+
 /** Track previous stats for event detection */
-let _prevStats = { plants: 0, fauna: 0, species: 0 };
+let _prevStats = { plants: 0, fauna: 0, species: 0 } as any;
+let _prevSpeciesIds = new Set<number>();
 let _eventCooldown = 0;
 
 const FAUNA_NAMES: Record<number, string> = {
@@ -115,10 +132,22 @@ function detectEvents(stats: { plants: number; fauna: number; species: number },
     _eventCooldown = 25;
   }
 
-  // New species growing
-  if (stats.species > _prevStats.species) {
-    hud.addEvent(`New species growing — ${stats.species} types (+${(stats.species - _prevStats.species) * 100} score)`);
-    _eventCooldown = 15;
+  // New species growing — check if it's pioneer succession
+  if (stats.species > _prevStats.species && stats.speciesIds) {
+    for (const sid of stats.speciesIds) {
+      if (!_prevSpeciesIds.has(sid)) {
+        const msg = SUCCESSION_MESSAGES[sid];
+        if (msg) {
+          hud.addEvent(msg);
+        } else {
+          const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
+          hud.addEvent(`${name} is now growing in your garden (+100 score)`);
+        }
+        _eventCooldown = 20;
+        break; // one event per tick
+      }
+    }
+    _prevSpeciesIds = new Set(stats.speciesIds);
   }
 
   // Major plant growth burst
@@ -136,6 +165,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number },
     _eventCooldown = 10;
   }
 
+  if (stats.speciesIds) _prevSpeciesIds = new Set(stats.speciesIds);
   _prevStats = { ...stats };
 }
 
