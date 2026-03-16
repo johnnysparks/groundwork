@@ -9,6 +9,7 @@ This wiki documents the intent, mechanics, and design rationale behind every sim
 - [Water](water.md) — Springs, flow, soil absorption, weather
 - [Light](light.md) — Propagation, attenuation, day-night cycle
 - [Soil](soil.md) — Composition, evolution, nutrient cycling
+- [Garden Gnome](gnome.md) — Player's agent: task queue, movement, tools, ghost overlays
 
 ### Growth & Competition
 - [Seeds & Germination](seeds.md) — Growth rates, territorial suppression, nurse logs
@@ -44,8 +45,10 @@ Wiki pages reference images in `wiki/images/`. These are **automatically regener
 
 ```bash
 # Regenerate all wiki screenshots (requires WASM build + Playwright chromium)
-cd crates/groundwork-web && npm run wasm
-node ../../wiki/capture-wiki-images.mjs
+cd crates/groundwork-web
+npm run wasm                           # Build WASM module
+node scripts/capture-wiki-images.mjs   # Capture species + interaction screenshots
+./screenshot.sh                        # Capture 14-shot tour (hero, angles, overlays, x-ray)
 ```
 
 This captures:

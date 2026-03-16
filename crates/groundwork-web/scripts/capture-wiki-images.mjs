@@ -190,21 +190,22 @@ async function main() {
       }, action);
     };
 
-    /** Hide ALL UI elements for clean thumbnails — nothing but the 3D scene */
+    /** Hide ALL UI elements and scenery for clean thumbnails */
     const hideUI = async (page) => {
       await page.evaluate(() => {
-        // Nuclear approach: hide every HTML element that overlays the canvas
-        document.querySelectorAll('div, span, button, select, label, p, h1, h2, h3, h4').forEach(el => {
-          if (el.tagName !== 'CANVAS' && el.id !== 'app' && !el.contains(document.querySelector('canvas'))) {
-            el.style.setProperty('display', 'none', 'important');
-          }
-        });
-        // Also catch absolute/fixed positioned elements
-        document.querySelectorAll('[style*="position: absolute"], [style*="position: fixed"]').forEach(el => {
-          if (el.tagName !== 'CANVAS') {
-            el.style.setProperty('display', 'none', 'important');
-          }
-        });
+        const api = window.agentAPI;
+        if (api?.hideUI) api.hideUI();
+        if (api?.setSceneryVisible) api.setSceneryVisible(false);
+        if (api?.setFogEnabled) api.setFogEnabled(false);
+      });
+    };
+
+    /** Restore scenery after captures */
+    const restoreScenery = async (page) => {
+      await page.evaluate(() => {
+        const api = window.agentAPI;
+        if (api?.setSceneryVisible) api.setSceneryVisible(true);
+        if (api?.setFogEnabled) api.setFogEnabled(true);
       });
     };
 

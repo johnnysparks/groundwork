@@ -31,9 +31,15 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 
 ## Leaf Placement
 - Dense spherical leaf shells around alive branch tips
-- Radius: Seedling=1, YoungTree=2, Mature/OldGrowth=3
+- Radius is **species-dependent** via `crown_radius`: YoungTree = `(crown_r / 4).clamp(3, 5)`, Mature/OldGrowth = `(crown_r / 3).clamp(4, 6)`, Seedling = 1
+- Oak/willow get lush crowns, birch stays slim — each species has a distinct canopy size
 - Leaf voxels store species_id (nutrient_level) and health (water_level)
-- **Tuning note:** If canopies look too sparse ("brown sticks with green blobs"), increase leaf_r or the number of attraction points per stage. Current: 60 points (YoungTree), 120 (Mature).
+
+### Incremental Canopy Growth
+When `branch_growth` creates a new branch tip via space colonization, it **immediately generates a leaf sphere** around that tip and pushes the voxels to `pending_voxels`. This means:
+- New branches become visible within a few ticks (via `tree_grow_visual` drain) instead of waiting for the next stage transition
+- Canopies fill continuously as branches grow, producing dense multi-height foliage
+- Only places leaves in Air cells (respects existing geometry)
 
 ## Rasterization
 tree_rasterize runs when `tree.dirty = true`. Two modes:

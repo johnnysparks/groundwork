@@ -82,6 +82,7 @@ let _setXrayMode: ((active: boolean) => void) | null = null;
 let _setTickCount: ((count: number) => void) | null = null;
 let _overlay: any = null;
 let _taskQueue: any = null;
+let _scenery: { forestRing: any; skirt: any; scene: any } | null = null;
 
 export interface AgentAPIConfig {
   orbitCamera: any;
@@ -91,6 +92,7 @@ export interface AgentAPIConfig {
   setTickCount?: (count: number) => void;
   overlay?: any;
   taskQueue?: any;
+  scenery?: { forestRing: any; skirt: any; scene: any };
 }
 
 /** Initialize the agent API with references to scene objects */
@@ -102,6 +104,7 @@ export function initAgentAPI(config: AgentAPIConfig): void {
   _setTickCount = config.setTickCount ?? null;
   _overlay = config.overlay ?? null;
   _taskQueue = config.taskQueue ?? null;
+  _scenery = config.scenery ?? null;
 
   const api = {
     /** Check if sim is ready */
@@ -163,6 +166,42 @@ export function initAgentAPI(config: AgentAPIConfig): void {
       await new Promise(r => requestAnimationFrame(r));
       await new Promise(r => requestAnimationFrame(r));
       return captureScreenshot();
+    },
+
+    /** Toggle decorative scenery (forest ring + skirt) for clean captures */
+    setSceneryVisible: (visible: boolean) => {
+      if (_scenery) {
+        _scenery.forestRing.visible = visible;
+        _scenery.skirt.visible = visible;
+      }
+    },
+
+    /** Toggle fog for clean captures */
+    setFogEnabled: (enabled: boolean) => {
+      if (_scenery?.scene) {
+        if (!enabled) {
+          _scenery.scene._savedFog = _scenery.scene.fog;
+          _scenery.scene.fog = null;
+        } else if (_scenery.scene._savedFog) {
+          _scenery.scene.fog = _scenery.scene._savedFog;
+        }
+      }
+    },
+
+    /** Hide all HTML overlay elements for clean screenshots */
+    hideUI: () => {
+      document.querySelectorAll('div, span, button, select, label, p, h1, h2, h3, h4').forEach(el => {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.tagName !== 'CANVAS' && htmlEl.id !== 'app' && !htmlEl.contains(document.querySelector('canvas'))) {
+          htmlEl.style.setProperty('display', 'none', 'important');
+        }
+      });
+      document.querySelectorAll('[style*="position: absolute"], [style*="position: fixed"]').forEach(el => {
+        const htmlEl = el as HTMLElement;
+        if (htmlEl.tagName !== 'CANVAS') {
+          htmlEl.style.setProperty('display', 'none', 'important');
+        }
+      });
     },
 
     /** Get material counts from current grid */

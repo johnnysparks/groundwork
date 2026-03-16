@@ -899,6 +899,7 @@ async function main() {
     setTickCount: (count: number) => hud.setTickCount(count),
     overlay: overlay,
     taskQueue: taskQueue,
+    scenery: { forestRing, skirt, scene },
   });
 
   // --- Sim state ---

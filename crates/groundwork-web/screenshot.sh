@@ -322,7 +322,15 @@ async function main() {
       console.log(`  ${info}`);
     }
 
+    // Hide all UI overlays for clean screenshots
+    await page.evaluate(() => {
+      const api = window.agentAPI;
+      if (api?.hideUI) api.hideUI();
+    });
+
     const snap = async (name) => {
+      // Hide UI again (in case dynamic elements appeared)
+      await page.evaluate(() => { window.agentAPI?.hideUI?.(); });
       // Let render loop run for ~1s so ecology particles and fauna animations accumulate
       await page.evaluate(async () => {
         for (let i = 0; i < 30; i++) await new Promise(r => requestAnimationFrame(r));

@@ -158,6 +158,8 @@ export function buildSkirtMesh(): SkirtResult {
  * Update forest ring visibility: hide trees between the camera and the garden.
  */
 export function updateForestCulling(group: THREE.Group, cameraTheta: number): void {
+  if (!group.visible) return;
+
   const camDirX = Math.cos(cameraTheta);
   const camDirZ = Math.sin(cameraTheta);
 

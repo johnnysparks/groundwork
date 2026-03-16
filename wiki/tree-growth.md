@@ -5,7 +5,7 @@
 | Stage | Threshold | Visual | Vulnerability |
 |-------|-----------|--------|---------------|
 | Seedling | start | Tiny trunk + root, no leaves | 4x stress damage |
-| Sapling | water >= 80, light >= 80 | Short trunk + leaf disc (first green!) | 3x stress damage |
+| Sapling | water >= 80, light >= 80 | Starter skeleton: 1/3 height trunk + 3 branch tips + leaf shell (first green!) | 3x stress damage |
 | YoungTree | water >= 500, light >= 500 | 2/3 trunk, skeleton branches, early canopy | 2x stress damage |
 | Mature | water >= 3000, light >= 3000 | Full height, full crown, seed dispersal | 1x (baseline) |
 | OldGrowth | age >= 1200 | Same as Mature but 2x seed dispersal | 1x |
@@ -59,9 +59,20 @@ Dead trees with root water > 100: health recovers at +0.006/tick. At health 0.3:
 
 Two modes, controlled by the `stage_changed` flag on each Tree:
 
-- **Stage change** (`stage_changed = true`): Full footprint clear + regenerate from skeleton/template. Happens on Seedling→Sapling, Sapling→YoungTree, etc. Visual "snap" to new shape.
+- **Stage change** (`stage_changed = true`): Full footprint clear + regenerate skeleton. Voxels are queued via `pending_voxels` for gradual placement (see below). Happens on Seedling→Sapling, Sapling→YoungTree, etc.
 - **Health-only update** (`stage_changed = false`): Just refreshes `water_level` (health) and `nutrient_level` (species_id) on existing Leaf/Branch voxels. No footprint clear, no shape change. Runs every 30 ticks.
 
-This two-mode approach prevents the "shape snapping" bug where trees would visually reset to their template on every health update tick. Between stage transitions, the tree's shape is stable and only colors change.
+## Smooth Trunk Growth
 
-**Open design issue:** Stage transitions still snap (one tick the tree is a seedling, the next it's a full sapling). The feedback requests gradual voxel-by-voxel growth. See [Balance — Known Issues](balance.md) for details.
+Stage transitions use **gradual voxel placement** instead of snapping. When a tree transitions to a new stage, the rasterizer:
+
+1. **Roots** are placed immediately (underground, no visual snap needed)
+2. **Trunk/branch voxels** are queued in `pending_voxels`, sorted bottom→up
+3. **Leaf voxels** are queued after trunk, sorted top→down
+4. The `tree_grow_visual` system drains the queue at an adaptive rate: `(queue_len / 4).clamp(3, 40)` voxels per tick
+
+This means trunk grows upward from the ground, then leaves fill in from the crown downward. Small trees (≤12 pending voxels) place 3 voxels/tick. Large trees with 1000+ queued voxels place up to 40/tick to keep canopy growth snappy.
+
+**Incremental canopy:** Beyond stage transitions, `branch_growth` also pushes leaf spheres to `pending_voxels` whenever a new branch tip forms. This means canopies fill continuously between stages, not just on transition.
+
+**Template path:** Seedling, Sapling, and Dead stages still use static templates (small enough that gradual growth isn't needed). The smooth growth only applies to skeleton-based stages (YoungTree, Mature, OldGrowth).
