@@ -176,6 +176,16 @@ fn scenario_observation_reward_density() {
     run_and_assert(gameplay::observation_reward_density);
 }
 
+#[test]
+fn scenario_visual_growth_stages() {
+    run_and_assert(gameplay::visual_growth_stages);
+}
+
+#[test]
+fn scenario_species_feel_different() {
+    run_and_assert(gameplay::species_feel_different);
+}
+
 // ---------------------------------------------------------------------------
 
 /// Verify that traces are serializable (important for artifact storage).

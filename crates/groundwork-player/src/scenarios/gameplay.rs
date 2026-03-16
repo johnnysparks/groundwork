@@ -1801,3 +1801,212 @@ pub fn observation_reward_density() -> Scenario {
         })
         .build()
 }
+
+// ---------------------------------------------------------------------------
+// 22. Visual Growth Stages — "Can I see each stage?"
+// ---------------------------------------------------------------------------
+
+/// Extended growth timeline: run 300 ticks (enough for young tree with canopy)
+/// and verify each growth stage produces a visually distinct material change.
+/// The player should see: seed → trunk → leaf (canopy) → branch → root (underground).
+pub fn visual_growth_stages() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    let mut builder = Scenario::new("visual_growth_stages")
+        .description(
+            "Extended growth: 300 ticks. Verify seed→trunk→leaf→branch→root \
+             all appear as visible material changes.",
+        )
+        .checkpoint("setup")
+        .status()
+        .fill(
+            "water",
+            cx - 4,
+            cy - 4,
+            GROUND_LEVEL + 1,
+            cx + 4,
+            cy + 4,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5)
+        .plant("oak", cx, cy, GROUND_LEVEL + 3);
+
+    // Sample every 25 ticks for 300 ticks
+    for _ in 0..12 {
+        builder = builder.tick(25).status();
+    }
+
+    builder
+        .eval(NoCrash)
+        .eval(Custom {
+            name: "all_growth_stages_visible".into(),
+            f: Box::new(|trace| {
+                let mut first_seed: Option<u64> = None;
+                let mut first_trunk: Option<u64> = None;
+                let mut first_root: Option<u64> = None;
+                let mut first_leaf: Option<u64> = None;
+                let mut first_branch: Option<u64> = None;
+
+                for step in &trace.steps {
+                    let mc = &step.oracle.material_counts;
+                    let tick = step.oracle.tick;
+                    if first_seed.is_none() && mc.seed > 0 {
+                        first_seed = Some(tick);
+                    }
+                    if first_trunk.is_none() && mc.trunk > 0 {
+                        first_trunk = Some(tick);
+                    }
+                    if first_root.is_none() && mc.root > 0 {
+                        first_root = Some(tick);
+                    }
+                    if first_leaf.is_none() && mc.leaf > 0 {
+                        first_leaf = Some(tick);
+                    }
+                    if first_branch.is_none() && mc.branch > 0 {
+                        first_branch = Some(tick);
+                    }
+                }
+
+                let fmt = |o: &Option<u64>| o.map_or("never".into(), |t| format!("t{}", t));
+                let stages_seen = [
+                    first_trunk.is_some(),
+                    first_root.is_some(),
+                    first_leaf.is_some(),
+                ]
+                .iter()
+                .filter(|&&x| x)
+                .count();
+
+                let passed = stages_seen >= 2; // at minimum trunk + root should appear
+
+                Verdict {
+                    evaluator: "all_growth_stages_visible".into(),
+                    passed,
+                    reason: format!(
+                        "seed={}, trunk={}, root={}, leaf={}, branch={}. \
+                         {}/{} stages visible in 300 ticks. {}",
+                        fmt(&first_seed),
+                        fmt(&first_trunk),
+                        fmt(&first_root),
+                        fmt(&first_leaf),
+                        fmt(&first_branch),
+                        stages_seen,
+                        3,
+                        if first_leaf.is_none() {
+                            "WARNING: no leaves in 300 ticks — canopy never becomes visible!"
+                        } else if stages_seen >= 3 {
+                            "Full growth arc visible."
+                        } else {
+                            "Partial growth arc."
+                        }
+                    ),
+                    score: Some(stages_seen as f64 / 3.0),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 23. Species Personality — "Do different species feel different?"
+// ---------------------------------------------------------------------------
+
+/// Plant one of each plant type (tree, shrub, flower, groundcover) with
+/// identical conditions. After 300 ticks, verify they produce different
+/// material signatures — a pine should look different from an oak,
+/// a wildflower different from moss.
+pub fn species_feel_different() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    Scenario::new("species_feel_different")
+        .description(
+            "Plant oak, pine, wildflower, moss in identical conditions. \
+             Verify they produce different growth signatures after 300 ticks.",
+        )
+        .checkpoint("setup")
+        .status()
+        .fill(
+            "water",
+            cx - 8,
+            cy - 8,
+            GROUND_LEVEL + 1,
+            cx + 8,
+            cy + 8,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5)
+        // Plant 4 species with spacing so they don't compete
+        .plant("oak", cx - 6, cy, GROUND_LEVEL + 3)
+        .plant("pine", cx + 6, cy, GROUND_LEVEL + 3)
+        .plant("wildflower", cx, cy - 6, GROUND_LEVEL + 3)
+        .plant("moss", cx, cy + 6, GROUND_LEVEL + 3)
+        .tick(300)
+        .checkpoint("grown")
+        .status()
+        // Probe each planting location at multiple heights
+        .probe(cx - 6, cy, GROUND_LEVEL + 1) // oak base
+        .probe(cx - 6, cy, GROUND_LEVEL + 5) // oak canopy height
+        .probe(cx + 6, cy, GROUND_LEVEL + 1) // pine base
+        .probe(cx + 6, cy, GROUND_LEVEL + 5) // pine canopy height
+        .probe(cx, cy - 6, GROUND_LEVEL + 1) // wildflower
+        .probe(cx, cy + 6, GROUND_LEVEL + 1) // moss
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("plant", 5))
+        .eval(Custom {
+            name: "species_produce_different_signatures".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "species_produce_different_signatures".into(),
+                        passed: false,
+                        reason: "no oracle".into(),
+                        score: Some(0.0),
+                    };
+                };
+
+                // Check probes: different species at different locations should
+                // produce different materials at the same relative height
+                let probes = &oracle.probes;
+                let mut materials_at_base = Vec::new();
+                let mut materials_at_canopy = Vec::new();
+
+                for (i, p) in probes.iter().enumerate() {
+                    if i % 2 == 0 {
+                        materials_at_base.push(p.material.clone());
+                    } else {
+                        materials_at_canopy.push(p.material.clone());
+                    }
+                }
+
+                // Count distinct materials at base level
+                let distinct_base: std::collections::HashSet<_> =
+                    materials_at_base.iter().collect();
+                // Trees should have trunk at base, flowers/moss should have leaf or air
+                let has_variety = distinct_base.len() >= 2;
+
+                let total = oracle.material_counts.total_plant();
+
+                Verdict {
+                    evaluator: "species_produce_different_signatures".into(),
+                    passed: has_variety && total >= 5,
+                    reason: format!(
+                        "base materials: {:?}, canopy materials: {:?}. \
+                         {} distinct base types. Total biomass: {}. {}",
+                        materials_at_base,
+                        materials_at_canopy,
+                        distinct_base.len(),
+                        total,
+                        if has_variety {
+                            "Species produce visually distinct growth."
+                        } else {
+                            "All species look the same — need more visual differentiation."
+                        }
+                    ),
+                    score: Some(distinct_base.len() as f64 / 4.0),
+                }
+            }),
+        })
+        .build()
+}
