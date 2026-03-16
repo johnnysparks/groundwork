@@ -326,7 +326,7 @@ export class Hud {
     if (speciesEl) speciesEl.textContent = String(stats.species);
   }
 
-  /** Show a milestone celebration toast */
+  /** Show a milestone celebration toast (or completion screen at 5000+) */
   private showMilestone(score: number): void {
     const titles: Record<number, string> = {
       500: 'Sprout',
@@ -337,12 +337,29 @@ export class Hud {
     };
     const title = titles[score] || `Score ${score}`;
     const el = document.createElement('div');
-    el.className = 'milestone-toast';
-    el.innerHTML = `<div class="milestone-score">${score.toLocaleString()}</div><div class="milestone-title">${title}</div>`;
+
+    if (score >= 5000) {
+      // Garden completion screen — celebrate and prompt replay
+      const stats = this.state.gardenStats;
+      el.className = 'milestone-toast completion';
+      el.innerHTML = `
+        <div class="milestone-score">${score.toLocaleString()}</div>
+        <div class="milestone-title">${title}</div>
+        <div class="completion-stats">
+          <div>${stats?.plants.toLocaleString() ?? 0} plants grown</div>
+          <div>${stats?.fauna ?? 0} fauna attracted</div>
+          <div>${stats?.species ?? 0} species thriving</div>
+        </div>
+        <div class="completion-prompt">Your ecosystem is alive. Start a new garden?</div>
+      `;
+    } else {
+      el.className = 'milestone-toast';
+      el.innerHTML = `<div class="milestone-score">${score.toLocaleString()}</div><div class="milestone-title">${title}</div>`;
+    }
+
     this.container.appendChild(el);
-    // Animate in
     requestAnimationFrame(() => el.classList.add('visible'));
-    // Remove after 3s
+    const duration = score >= 5000 ? 8000 : 3000;
     setTimeout(() => {
       el.classList.remove('visible');
       setTimeout(() => el.remove(), 500);
@@ -738,6 +755,21 @@ const HUD_CSS = `
   letter-spacing: 2px;
   text-transform: uppercase;
   margin-top: 6px;
+}
+.milestone-toast.completion {
+  padding: 30px 50px;
+}
+.completion-stats {
+  margin-top: 12px;
+  font-size: 13px;
+  color: rgba(200, 190, 160, 0.7);
+  line-height: 1.6;
+}
+.completion-prompt {
+  margin-top: 16px;
+  font-size: 14px;
+  color: rgba(180, 220, 120, 0.8);
+  font-style: italic;
 }
 
 /* --- Event Feed (bottom left) --- */
