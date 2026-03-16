@@ -1200,10 +1200,12 @@ async function main() {
       // Dawn chorus: birds sing much more frequently around dawn (0.2-0.3)
       const dayTime = dayCycle.getTime();
       const isDawn = dayTime >= 0.2 && dayTime <= 0.3;
-      ambientSoundTimer = isDawn
-        ? 2 + Math.random() * 4   // 2-6s at dawn — lively chorus
-        : 8 + Math.random() * 12; // 8-20s normally
       const faunaCount = getFaunaCount();
+      // More fauna = more frequent sounds (thriving garden sounds different)
+      const faunaFactor = Math.max(0.3, 1.0 - faunaCount * 0.05); // 0.3-1.0
+      ambientSoundTimer = isDawn
+        ? (2 + Math.random() * 4) * faunaFactor   // 0.6-6s at dawn
+        : (8 + Math.random() * 12) * faunaFactor;  // 2.4-20s normally
       if (faunaCount > 0) {
         const fView = getFaunaView();
         if (fView) {
