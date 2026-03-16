@@ -57,21 +57,21 @@ const SOIL_GRASS_DAMP = new THREE.Color(0.18, 0.32, 0.14); // darker wet grass
 const SOIL_GRASS_WET = new THREE.Color(0.12, 0.25, 0.10);  // very dark wet grass
 
 /** Species-specific root colors for x-ray differentiation.
- *  Warmer/darker versions of trunk colors so different root systems
- *  are visually distinguishable underground. */
+ *  Saturated, distinct hues so root wars are immediately readable.
+ *  Each tree/plant species gets a unique color family. */
 const SPECIES_ROOT: THREE.Color[] = [
-  new THREE.Color(0.55, 0.35, 0.15),  // Oak: warm amber
-  new THREE.Color(0.60, 0.55, 0.40),  // Birch: pale gold
-  new THREE.Color(0.45, 0.40, 0.25),  // Willow: olive
-  new THREE.Color(0.40, 0.25, 0.12),  // Pine: dark russet
-  new THREE.Color(0.45, 0.30, 0.18),  // Fern
-  new THREE.Color(0.50, 0.35, 0.20),  // Berry Bush
-  new THREE.Color(0.40, 0.28, 0.16),  // Holly
-  new THREE.Color(0.55, 0.40, 0.25),  // Wildflower
-  new THREE.Color(0.55, 0.45, 0.20),  // Daisy
-  new THREE.Color(0.42, 0.32, 0.18),  // Moss
-  new THREE.Color(0.48, 0.38, 0.20),  // Grass
-  new THREE.Color(0.50, 0.38, 0.22),  // Clover
+  new THREE.Color(0.80, 0.50, 0.15),  // Oak: warm orange
+  new THREE.Color(0.85, 0.80, 0.50),  // Birch: bright gold
+  new THREE.Color(0.40, 0.65, 0.35),  // Willow: green
+  new THREE.Color(0.55, 0.25, 0.20),  // Pine: deep red-brown
+  new THREE.Color(0.20, 0.65, 0.45),  // Fern: teal
+  new THREE.Color(0.70, 0.30, 0.50),  // Berry Bush: magenta-rose
+  new THREE.Color(0.30, 0.45, 0.25),  // Holly: dark green
+  new THREE.Color(0.75, 0.55, 0.70),  // Wildflower: pink-lavender
+  new THREE.Color(0.80, 0.75, 0.25),  // Daisy: bright yellow
+  new THREE.Color(0.35, 0.50, 0.25),  // Moss: olive
+  new THREE.Color(0.45, 0.70, 0.30),  // Grass: bright green
+  new THREE.Color(0.50, 0.70, 0.45),  // Clover: lime green
 ];
 
 /** Species-specific leaf voxel colors — slightly muted vs billboard foliage
@@ -199,9 +199,10 @@ export function getRootGlowMaterial(): THREE.MeshLambertMaterial {
 function updateRootGlowClip(xrayActive: boolean): void {
   const mat = getRootGlowMaterial();
   if (xrayActive) {
-    // Warm amber glow makes roots visible through soil
-    mat.emissive = new THREE.Color(0.6, 0.35, 0.1);
-    mat.emissiveIntensity = 0.8;
+    // Neutral-warm emissive so species-specific vertex colors show through.
+    // Each species has a distinct root color — the glow amplifies it.
+    mat.emissive = new THREE.Color(0.9, 0.85, 0.75);
+    mat.emissiveIntensity = 0.6;
   } else {
     mat.emissive = new THREE.Color(0.0, 0.0, 0.0);
     mat.emissiveIntensity = 0.0;

@@ -85,6 +85,7 @@ let _birdDropNotified = false;
 
 /** Species the player has deliberately planted (via seed tool) */
 const _playerPlantedSpecies = new Set<number>();
+let _xrayTipShown = false;
 
 /** Wild plant messages — fauna attribution based on species */
 const WILD_PLANT_MESSAGES: Record<number, string[]> = {
@@ -957,6 +958,10 @@ async function main() {
         xrayActive = !xrayActive;
         setXrayMode(xrayActive);
         questLog.recordDepthChange();
+        if (xrayActive && !_xrayTipShown) {
+          hud.addEvent('X-ray: each species has a unique root color — watch for root wars!');
+          _xrayTipShown = true;
+        }
         console.log(`X-ray: ${xrayActive ? 'ON' : 'OFF'}`);
         break;
       case 'v': {
