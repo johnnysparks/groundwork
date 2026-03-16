@@ -413,12 +413,16 @@ const HUD_HTML = `
     </div>
   </div>
   <div id="event-feed"></div>
-  <div id="hud-status"></div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay | -/+: speed</div>
-  <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
-  <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
+  <div id="hud-top-bar">
+    <div id="hud-status"></div>
+    <div id="hud-controls">
+      <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
+      <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
+      <select id="scene-select" title="Choose a scene"></select>
+    </div>
+  </div>
+  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay</div>
   <button id="new-garden-btn" title="Start a fresh garden">New Garden</button>
-  <select id="scene-select" title="Choose a scene"></select>
 `;
 
 // --- CSS ---
@@ -551,63 +555,64 @@ const HUD_CSS = `
   color: #c4e890;
 }
 
-/* --- Status (top-left) --- */
-#hud-status {
+/* --- Top bar (status + controls) --- */
+#hud-top-bar {
   position: absolute;
   top: 12px;
   left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: rgba(20, 18, 15, 0.85);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+#hud-status {
   font-size: 12px;
   color: rgba(200, 180, 140, 0.7);
-  pointer-events: none;
+  white-space: nowrap;
 }
 
-/* --- Help (top-right) --- */
+#hud-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* --- Help (bottom-right, above New Garden) --- */
 #hud-help {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  font-size: 11px;
-  color: rgba(200, 180, 140, 0.4);
+  bottom: 96px;
+  right: 16px;
+  font-size: 10px;
+  color: rgba(200, 180, 140, 0.3);
   pointer-events: none;
+  text-align: right;
+  max-width: 200px;
+  line-height: 1.5;
 }
 
-/* --- Tick toggle (top-left, below status) --- */
-#tick-toggle {
-  position: absolute;
-  top: 34px;
-  left: 12px;
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  background: rgba(20, 18, 15, 0.7);
-  color: #b8a88a;
-  cursor: pointer;
-  font-size: 11px;
-  font-family: inherit;
-  pointer-events: auto;
-  transition: all 0.12s ease;
-}
-#tick-toggle:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #e8d8b8;
-}
-
-/* --- Screenshot button (top-left, below tick toggle) --- */
+/* --- Shared button style for top controls --- */
+#tick-toggle,
 #screenshot-btn {
-  position: absolute;
-  top: 58px;
-  left: 12px;
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  background: rgba(20, 18, 15, 0.7);
+  background: rgba(255, 255, 255, 0.05);
   color: #b8a88a;
   cursor: pointer;
   font-size: 11px;
   font-family: inherit;
-  pointer-events: auto;
   transition: all 0.12s ease;
 }
+#tick-toggle:hover,
 #screenshot-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e8d8b8;
@@ -767,20 +772,16 @@ const HUD_CSS = `
   font-weight: 500;
 }
 
-/* --- Scene selector (top-left, below screenshot) --- */
+/* --- Scene selector (inline in top bar) --- */
 #scene-select {
-  position: absolute;
-  top: 82px;
-  left: 12px;
-  padding: 4px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  background: rgba(20, 18, 15, 0.7);
+  background: rgba(255, 255, 255, 0.05);
   color: #b8a88a;
   cursor: pointer;
   font-size: 11px;
   font-family: inherit;
-  pointer-events: auto;
   transition: all 0.12s ease;
   -webkit-appearance: none;
   appearance: none;

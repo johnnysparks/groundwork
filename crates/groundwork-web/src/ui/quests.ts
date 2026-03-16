@@ -525,7 +525,7 @@ const QUEST_CSS = `
 /* --- Quest panel (top-left, below status) --- */
 #quest-panel {
   position: absolute;
-  top: 60px;
+  top: 50px;
   left: 12px;
   width: 280px;
   background: rgba(20, 18, 15, 0.88);
