@@ -224,14 +224,22 @@ export async function initSim(): Promise<boolean> {
   // Dynamic import — the WASM module is built by wasm-pack.
   // Fails gracefully if WASM hasn't been built yet (mock data mode).
   try {
-    const wasmUrl = new URL(/* @vite-ignore */ '../wasm/groundwork_sim.js', import.meta.url);
-    const resp = await fetch(wasmUrl, { method: 'HEAD' }).catch(() => null);
-    if (!resp || !resp.ok) {
+    // Try multiple WASM paths: relative (dev), public dir (production)
+    const candidates = [
+      new URL(/* @vite-ignore */ '../wasm/groundwork_sim.js', import.meta.url).href,
+      new URL('/wasm/groundwork_sim.js', window.location.origin + ((import.meta as any).env?.BASE_URL ?? '/')).href,
+    ];
+    let wasmHref: string | null = null;
+    for (const url of candidates) {
+      const resp = await fetch(url, { method: 'HEAD' }).catch(() => null);
+      if (resp?.ok) { wasmHref = url; break; }
+    }
+    if (!wasmHref) {
       console.warn('WASM module not found — running in mock data mode');
       populateFallbacks();
       return false;
     }
-    const wasm = await import(/* @vite-ignore */ wasmUrl.href);
+    const wasm = await import(/* @vite-ignore */ wasmHref);
     // default() initializes the WASM module and returns InitOutput (instance.exports)
     const initOutput = await wasm.default();
     wasm.init(); // Create bevy_ecs World + Schedule
