@@ -11,6 +11,7 @@
 use wasm_bindgen::prelude::*;
 
 use crate::fauna::FaunaList;
+use crate::gnome::{GnomeData, GnomeTask};
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use crate::soil::SoilGrid;
 use crate::tree::{SeedSpeciesMap, SpeciesTable};
@@ -611,4 +612,71 @@ pub fn tree_stats_ptr() -> *const u8 {
 #[wasm_bindgen]
 pub fn tree_stats_len() -> usize {
     TREE_STATS_BUF.with(|buf| buf.borrow().len())
+}
+
+// --- Garden Gnome ---
+
+/// Queue a task for the garden gnome. Tool codes: 0=shovel, 1=seed, 2=water, 3=soil, 4=stone.
+/// Species is used for seed tasks (pass 255 for non-seed tools).
+/// Returns true if the task was queued, false if the queue is full.
+#[wasm_bindgen]
+pub fn queue_gnome_task(tool: u8, x: usize, y: usize, z: usize, species: u8) -> bool {
+    with_sim(|sim| {
+        let mut gd = sim.world.resource_mut::<GnomeData>();
+        gd.queue_task(GnomeTask {
+            tool,
+            x,
+            y,
+            z,
+            species,
+        })
+    })
+}
+
+/// Cancel gnome tasks at a specific position.
+#[wasm_bindgen]
+pub fn cancel_gnome_task(x: usize, y: usize, z: usize) {
+    with_sim(|sim| {
+        let mut gd = sim.world.resource_mut::<GnomeData>();
+        gd.cancel_at(x, y, z);
+    });
+}
+
+/// Cancel all gnome tasks.
+#[wasm_bindgen]
+pub fn cancel_all_gnome_tasks() {
+    with_sim(|sim| {
+        let mut gd = sim.world.resource_mut::<GnomeData>();
+        gd.cancel_all();
+    });
+}
+
+/// Pointer to packed gnome state (32 bytes).
+#[wasm_bindgen]
+pub fn gnome_ptr() -> *const u8 {
+    with_sim(|sim| sim.world.resource::<GnomeData>().export_ptr())
+}
+
+/// Length of gnome export data in bytes (always 32).
+#[wasm_bindgen]
+pub fn gnome_len() -> usize {
+    with_sim(|sim| sim.world.resource::<GnomeData>().export_len())
+}
+
+/// Pointer to packed ghost zone data.
+#[wasm_bindgen]
+pub fn ghost_ptr() -> *const u8 {
+    with_sim(|sim| sim.world.resource::<GnomeData>().ghost_ptr())
+}
+
+/// Length of ghost zone data in bytes (8 bytes per ghost).
+#[wasm_bindgen]
+pub fn ghost_len() -> usize {
+    with_sim(|sim| sim.world.resource::<GnomeData>().ghost_len())
+}
+
+/// Number of pending gnome tasks.
+#[wasm_bindgen]
+pub fn gnome_queue_len() -> usize {
+    with_sim(|sim| sim.world.resource::<GnomeData>().queue_len())
 }

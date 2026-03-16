@@ -1,4 +1,5 @@
 pub mod fauna;
+pub mod gnome;
 pub mod grid;
 pub mod save;
 pub mod scale;
@@ -13,6 +14,7 @@ pub mod wasm_bridge;
 use bevy_ecs::prelude::*;
 
 use fauna::{fauna_effects, fauna_spawn, fauna_update, FaunaList};
+use gnome::{gnome_export, gnome_move, gnome_plan, gnome_work, GnomeData};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
 use systems::{
@@ -199,6 +201,7 @@ pub fn create_world() -> World {
     world.insert_resource(SpeciesTable::default());
     world.insert_resource(SeedSpeciesMap::default());
     world.insert_resource(FaunaList::default());
+    world.insert_resource(GnomeData::default());
     world
 }
 
@@ -330,6 +333,10 @@ pub fn create_schedule() -> Schedule {
             pioneer_succession,
             fauna_spawn,
             fauna_update,
+            gnome_plan,
+            gnome_move,
+            gnome_work,
+            gnome_export,
             fauna_effects,
             milestone_tracker,
             tick_counter,
