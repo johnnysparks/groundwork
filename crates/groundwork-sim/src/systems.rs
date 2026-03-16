@@ -1254,6 +1254,43 @@ pub fn branch_growth(
             // The old tip is now an interior node — keep as Branch
             // (Leaf placement happens separately during rasterize)
 
+            // Generate leaf sphere around new tip and queue for gradual growth.
+            // This makes branches visible immediately instead of waiting for the
+            // next stage transition (which could be hundreds of ticks away).
+            let new_crown_r = species.crown_radius() as isize;
+            let new_leaf_r: isize = match tree.stage {
+                GrowthStage::YoungTree => (new_crown_r / 4).clamp(3, 5),
+                GrowthStage::Mature | GrowthStage::OldGrowth => (new_crown_r / 3).clamp(4, 6),
+                _ => 1,
+            };
+            let new_leaf_r_sq = new_leaf_r * new_leaf_r;
+            // Push branch voxel first, then leaf sphere
+            tree.pending_voxels.push((wnx, wny, wnz, Material::Branch));
+            for ddx in -new_leaf_r..=new_leaf_r {
+                for ddy in -new_leaf_r..=new_leaf_r {
+                    for ddz in -new_leaf_r..=new_leaf_r {
+                        if ddx * ddx + ddy * ddy + ddz * ddz > new_leaf_r_sq {
+                            continue;
+                        }
+                        let lx = rx as isize + new_pos.0 + ddx;
+                        let ly = ry as isize + new_pos.1 + ddy;
+                        let lz = rz as isize + new_pos.2 + ddz;
+                        if lx < 0 || ly < 0 || lz < 0 {
+                            continue;
+                        }
+                        let (lx, ly, lz) = (lx as usize, ly as usize, lz as usize);
+                        if !VoxelGrid::in_bounds(lx, ly, lz) {
+                            continue;
+                        }
+                        if let Some(cell) = grid.get(lx, ly, lz) {
+                            if cell.material == Material::Air {
+                                tree.pending_voxels.push((lx, ly, lz, Material::Leaf));
+                            }
+                        }
+                    }
+                }
+            }
+
             // Consume nearby attraction points
             tree.attraction_points.retain(|&(px, py, pz)| {
                 let d = (px - new_pos.0) * (px - new_pos.0)
@@ -1565,10 +1602,13 @@ pub fn tree_rasterize(
                 }
             }
 
-            // Dense spherical leaf shells around alive tips for full canopy
+            // Dense spherical leaf shells around alive tips for full canopy.
+            // Radius scales with species crown_radius so each species has
+            // a distinct canopy size: oak/willow get lush crowns, birch stays slim.
+            let crown_r = species.crown_radius() as isize;
             let leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => 2,
-                GrowthStage::Mature | GrowthStage::OldGrowth => 3,
+                GrowthStage::YoungTree => (crown_r / 4).clamp(3, 5),
+                GrowthStage::Mature | GrowthStage::OldGrowth => (crown_r / 3).clamp(4, 6),
                 _ => 1,
             };
             let leaf_r_sq = leaf_r * leaf_r;
@@ -1798,9 +1838,9 @@ pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>
         if tree.pending_voxels.is_empty() {
             continue;
         }
-        // Adaptive drain rate: faster for large queues (trunk + leaves).
-        // Small queue (≤24): 3/tick. Large queue (200+): up to 12/tick.
-        let count = (tree.pending_voxels.len() / 8).clamp(3, 12);
+        // Adaptive drain rate: faster for large queues (trunk + canopy).
+        // Small queue (≤12): 3/tick. Large queue (1000+): up to 40/tick.
+        let count = (tree.pending_voxels.len() / 4).clamp(3, 40);
         let count = count.min(tree.pending_voxels.len());
         for _ in 0..count {
             if let Some((x, y, z, mat)) = tree.pending_voxels.pop() {
