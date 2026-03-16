@@ -7,7 +7,7 @@
 use groundwork_player::planner_scripted::ScriptedPlanner;
 use groundwork_player::runner;
 use groundwork_player::scenarios::{
-    autonomous, basic_growth, camera_exploration, ecosystem, water_system,
+    autonomous, basic_growth, camera_exploration, ecosystem, gameplay, water_system,
 };
 
 fn run_and_assert(scenario_fn: fn() -> groundwork_player::scenario::Scenario) {
@@ -62,6 +62,83 @@ fn scenario_explore_above_and_below() {
 fn scenario_camera_edge_cases() {
     run_and_assert(camera_exploration::camera_edge_cases);
 }
+
+// ---------------------------------------------------------------------------
+// Gameplay scenarios — core delight moments
+// ---------------------------------------------------------------------------
+
+#[test]
+fn scenario_water_table_sculpting() {
+    run_and_assert(gameplay::water_table_sculpting);
+}
+
+#[test]
+fn scenario_first_sprout() {
+    run_and_assert(gameplay::first_sprout);
+}
+
+#[test]
+fn scenario_underground_reveal() {
+    run_and_assert(gameplay::underground_reveal);
+}
+
+#[test]
+fn scenario_root_competition() {
+    run_and_assert(gameplay::root_competition);
+}
+
+#[test]
+fn scenario_seed_dispersal_surprise() {
+    run_and_assert(gameplay::seed_dispersal_surprise);
+}
+
+#[test]
+fn scenario_canopy_shade_garden() {
+    run_and_assert(gameplay::canopy_shade_garden);
+}
+
+#[test]
+#[ignore]
+fn scenario_self_pruning_discovery() {
+    run_and_assert(gameplay::self_pruning_discovery);
+}
+
+#[test]
+fn scenario_groundcover_spread() {
+    run_and_assert(gameplay::groundcover_spread);
+}
+
+#[test]
+fn scenario_recovery_after_destruction() {
+    run_and_assert(gameplay::recovery_after_destruction);
+}
+
+#[test]
+fn scenario_idle_garden_changes() {
+    run_and_assert(gameplay::idle_garden_changes);
+}
+
+#[test]
+fn scenario_willow_loves_water() {
+    run_and_assert(gameplay::willow_loves_water);
+}
+
+// Aspirational scenarios — expected to fail until features are built.
+// Run with: cargo test -p groundwork-player -- --ignored
+
+#[test]
+#[ignore]
+fn scenario_nitrogen_handshake() {
+    run_and_assert(gameplay::nitrogen_handshake);
+}
+
+#[test]
+#[ignore]
+fn scenario_pioneer_succession() {
+    run_and_assert(gameplay::pioneer_succession);
+}
+
+// ---------------------------------------------------------------------------
 
 /// Verify that traces are serializable (important for artifact storage).
 #[test]

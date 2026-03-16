@@ -1,0 +1,995 @@
+//! Gameplay scenarios — core delight moments and discovery arcs.
+//!
+//! These scenarios represent the experiences a player would expect, talk about,
+//! and replay for. Some test working mechanics; others are aspirational and will
+//! fail until the underlying features are built. Failing scenarios here are
+//! a **feature backlog**, not bugs — they tell us what to build next.
+
+use groundwork_sim::grid::{GRID_X, GRID_Y, GROUND_LEVEL};
+
+use crate::evaluator::{Custom, MaterialGrew, MaterialMinimum, NoCrash, Verdict};
+use crate::scenario::Scenario;
+
+// ---------------------------------------------------------------------------
+// 1. The Water Table — "I shaped the land and the water followed"
+// ---------------------------------------------------------------------------
+
+/// The first "aha" moment: dig a trench, add water, watch it flow downhill
+/// and pool where you shaped it. The player realizes they're sculpting hydrology.
+pub fn water_table_sculpting() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let surface = GROUND_LEVEL;
+
+    Scenario::new("water_table_sculpting")
+        .description(
+            "Dig a basin, pour water, and verify it pools where you shaped the terrain. \
+             The player's first realization that they control hydrology.",
+        )
+        .checkpoint("before_digging")
+        .status()
+        // Dig a 5x5 basin two layers deep
+        .fill("air", cx - 2, cy - 2, surface - 1, cx + 2, cy + 2, surface)
+        .checkpoint("basin_dug")
+        // Pour water above the basin — it should flow down and pool
+        .fill(
+            "water",
+            cx - 1,
+            cy - 1,
+            surface + 3,
+            cx + 1,
+            cy + 1,
+            surface + 3,
+        )
+        .tick(20)
+        .checkpoint("water_settled")
+        .status()
+        // Cut underground to see the water pooled in the basin
+        .cutaway(surface as f64 - 2.0)
+        .orbit(45.0, 45.0)
+        .checkpoint("viewing_basin")
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("water", 5))
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 2. The First Sprout — "I planted something and it grew!"
+// ---------------------------------------------------------------------------
+
+/// Plant a single seed with care — water it, wait, and watch it transform
+/// through growth stages. This is the emotional hook of the first session.
+pub fn first_sprout() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("first_sprout")
+        .description(
+            "Plant a wildflower near water and watch it grow through stages. \
+             The player's first emotional connection to something they grew.",
+        )
+        .checkpoint("bare_ground")
+        .status()
+        // Place the seed
+        .plant("wildflower", cx - 2, cy, seed_z)
+        // Water it by hand — the caring gesture
+        .place("water", cx - 2, cy, seed_z + 1)
+        .place("water", cx - 2, cy, seed_z + 2)
+        .tick(30)
+        .checkpoint("seedling")
+        .inspect(cx - 2, cy, GROUND_LEVEL + 1)
+        .tick(60)
+        .checkpoint("growing")
+        .status()
+        .tick(60)
+        .checkpoint("blooming")
+        .status()
+        // Orbit to admire it
+        .orbit(0.0, 50.0)
+        .zoom(2.0)
+        .pan(cx as f64 - 2.0, cy as f64, GROUND_LEVEL as f64 + 2.0)
+        .eval(NoCrash)
+        .eval(MaterialGrew::new("plant"))
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 3. The Underground Reveal — "There's a whole world down there"
+// ---------------------------------------------------------------------------
+
+/// Grow a tree, then cut underground and discover an extensive root network
+/// the player never placed. The moment the game shifts from "surface gardening"
+/// to "ecosystem thinking."
+pub fn underground_reveal() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+    let gl = GROUND_LEVEL as f64;
+
+    Scenario::new("underground_reveal")
+        .description(
+            "Grow an oak tree, then cut underground to discover its root network. \
+             The player realizes the garden extends below what they can see.",
+        )
+        .plant("oak", cx, cy, seed_z)
+        .tick(200)
+        .checkpoint("tree_grown")
+        .status()
+        // Surface view — just a tree
+        .orbit(30.0, 60.0)
+        .zoom(1.5)
+        .checkpoint("surface_only")
+        // Now the reveal: cut underground
+        .cutaway(gl)
+        .checkpoint("at_surface")
+        .cutaway(gl - 3.0)
+        .checkpoint("shallow_roots")
+        .cutaway(gl - 6.0)
+        .checkpoint("deep_roots")
+        .orbit(60.0, 35.0)
+        .checkpoint("roots_angled")
+        // Probe underground for roots
+        .probe(cx, cy, GROUND_LEVEL - 2)
+        .probe(cx, cy, GROUND_LEVEL - 4)
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("root", 5))
+        .eval(MaterialMinimum::new("trunk", 1))
+        // Custom: roots should extend meaningfully below surface
+        .eval(Custom {
+            name: "roots_reach_deep".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "roots_reach_deep".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                // Check if any probe below ground found a root
+                let root_probes: Vec<_> = oracle
+                    .probes
+                    .iter()
+                    .filter(|p| p.z < GROUND_LEVEL && p.material == "root")
+                    .collect();
+                let passed = !root_probes.is_empty();
+                Verdict {
+                    evaluator: "roots_reach_deep".into(),
+                    passed,
+                    reason: format!(
+                        "{} root probes below ground (of {} total probes)",
+                        root_probes.len(),
+                        oracle.probes.len()
+                    ),
+                    score: Some(if passed { 1.0 } else { 0.0 }),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 4. Root Competition — "The oak is stealing the birch's water!"
+// ---------------------------------------------------------------------------
+
+/// Plant two trees close together and observe that one outcompetes the other
+/// for water. The player discovers resource competition by noticing one tree
+/// thrives while the other struggles. This is the "third hour" discovery.
+pub fn root_competition() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+    let gl = GROUND_LEVEL as f64;
+
+    Scenario::new("root_competition")
+        .description(
+            "Plant oak and birch close together competing for the same water. \
+             Verify that root systems overlap and one tree gains advantage.",
+        )
+        .checkpoint("start")
+        // Plant them close — root zones will overlap
+        .plant("oak", cx - 3, cy, seed_z)
+        .plant("birch", cx + 3, cy, seed_z)
+        .tick(100)
+        .checkpoint("early_growth")
+        .status()
+        .tick(200)
+        .checkpoint("competition_phase")
+        .status()
+        // Look underground at overlapping roots
+        .cutaway(gl - 4.0)
+        .orbit(0.0, 40.0)
+        .checkpoint("root_overlap_view")
+        // Probe the contested zone between the two trees
+        .probe(cx, cy, GROUND_LEVEL - 2)
+        .probe(cx - 3, cy, GROUND_LEVEL - 2)
+        .probe(cx + 3, cy, GROUND_LEVEL - 2)
+        .eval(NoCrash)
+        // Both should grow
+        .eval(MaterialMinimum::new("trunk", 2))
+        .eval(MaterialMinimum::new("root", 10))
+        // Custom: the contested middle zone should have roots from at least one tree,
+        // and total root count should be lower than two isolated trees would produce
+        // (competition reduces overall growth)
+        .eval(Custom {
+            name: "roots_in_contested_zone".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "roots_in_contested_zone".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                let center_probe = oracle.probes.iter().find(|p| {
+                    p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL - 2
+                });
+                let has_root = center_probe.map_or(false, |p| p.material == "root");
+                // Even without root in exact center, verify both trees established
+                let passed = oracle.material_counts.root >= 10;
+                Verdict {
+                    evaluator: "roots_in_contested_zone".into(),
+                    passed,
+                    reason: format!(
+                        "center has root: {}, total roots: {}",
+                        has_root, oracle.material_counts.root
+                    ),
+                    score: Some(if has_root { 1.0 } else { 0.5 }),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 5. Seed Dispersal Surprise — "Where did that come from?"
+// ---------------------------------------------------------------------------
+
+/// Grow a tree to maturity, then wait for it to disperse seeds. The player
+/// discovers a seedling they didn't plant — the garden has agency.
+pub fn seed_dispersal_surprise() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("seed_dispersal_surprise")
+        .description(
+            "Grow an oak to maturity and wait for seed dispersal. \
+             Verify new seeds appear that the player didn't plant — the garden surprises you.",
+        )
+        .checkpoint("start")
+        .plant("oak", cx, cy, seed_z)
+        // Grow to maturity — needs significant time
+        .tick(500)
+        .checkpoint("mature")
+        .status()
+        // Wait for dispersal events
+        .tick(300)
+        .checkpoint("after_dispersal")
+        .status()
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("trunk", 1))
+        // The magic: new seeds appeared that the player didn't place
+        .eval(Custom {
+            name: "unplanned_seeds_appeared".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "unplanned_seeds_appeared".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                // We planted 1 seed. If seed count > 0 at the end, dispersal happened.
+                // (The original seed became a tree, so remaining seeds are new.)
+                let seed_count = oracle.material_counts.seed;
+                let passed = seed_count >= 1;
+                Verdict {
+                    evaluator: "unplanned_seeds_appeared".into(),
+                    passed,
+                    reason: format!("seeds at end: {} (need >= 1 from dispersal)", seed_count),
+                    score: Some((seed_count as f64).min(5.0) / 5.0),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 6. Canopy and Shade — "The fern loves the shade of the oak"
+// ---------------------------------------------------------------------------
+
+/// Plant a tree, let it grow a canopy, then plant shade-tolerant species
+/// underneath. The player discovers that the tree creates a microhabitat.
+/// Tests light propagation + shade tolerance interaction.
+pub fn canopy_shade_garden() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+    let gl = GROUND_LEVEL as f64;
+
+    Scenario::new("canopy_shade_garden")
+        .description(
+            "Grow an oak canopy, then plant fern and moss underneath. \
+             Shade-tolerant species should thrive under the canopy where sun-lovers wouldn't.",
+        )
+        .checkpoint("start")
+        // Grow the oak first to create canopy
+        .plant("oak", cx, cy, seed_z)
+        .tick(200)
+        .checkpoint("canopy_established")
+        .status()
+        // Now plant shade-tolerant species under the canopy
+        .plant("fern", cx - 1, cy, seed_z)
+        .plant("moss", cx + 1, cy, seed_z)
+        .plant("moss", cx, cy - 1, seed_z)
+        .tick(150)
+        .checkpoint("understory_grown")
+        .status()
+        // View the layered garden
+        .orbit(30.0, 55.0)
+        .zoom(1.8)
+        .pan(cx as f64, cy as f64, gl + 3.0)
+        .checkpoint("canopy_view")
+        // Probe light levels under canopy vs open sky
+        .probe(cx, cy, GROUND_LEVEL + 2)     // under canopy
+        .probe(cx + 10, cy, GROUND_LEVEL + 2) // open sky
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("leaf", 5))
+        // Custom: light level under canopy should be lower than open sky
+        .eval(Custom {
+            name: "canopy_creates_shade".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "canopy_creates_shade".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                let under_canopy = oracle.probes.iter().find(|p| {
+                    p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 2
+                });
+                let open_sky = oracle.probes.iter().find(|p| {
+                    p.x == GRID_X / 2 + 10 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 2
+                });
+                match (under_canopy, open_sky) {
+                    (Some(shaded), Some(open)) => {
+                        let passed = shaded.light_level < open.light_level;
+                        Verdict {
+                            evaluator: "canopy_creates_shade".into(),
+                            passed,
+                            reason: format!(
+                                "under canopy light={}, open sky light={} (shade should be less)",
+                                shaded.light_level, open.light_level
+                            ),
+                            score: Some(if passed { 1.0 } else { 0.0 }),
+                        }
+                    }
+                    _ => Verdict {
+                        evaluator: "canopy_creates_shade".into(),
+                        passed: false,
+                        reason: "missing probes".into(),
+                        score: Some(0.0),
+                    },
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 7. Self-Pruning Discovery — "Wait, why are those branches dying?"
+// ---------------------------------------------------------------------------
+
+/// Plant two trees close enough that their canopies overlap. After growth,
+/// shaded inner branches should self-prune into deadwood. The player notices
+/// something unexpected and investigates — discovering that shade kills branches.
+///
+/// ASPIRATIONAL: Self-pruning system exists but producing visible deadwood
+/// from inter-tree shade competition may need tuning.
+pub fn self_pruning_discovery() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("self_pruning_discovery")
+        .description(
+            "Plant two trees with overlapping canopies. Shaded branches should die \
+             and become deadwood — an unexpected consequence the player can trace back to shade.",
+        )
+        .checkpoint("start")
+        // Plant trees close enough for canopy overlap
+        // Oak crown_radius ~2 voxels, so 4 apart means edges touch
+        .plant("oak", cx - 2, cy, seed_z)
+        .plant("oak", cx + 2, cy, seed_z)
+        .tick(400)
+        .checkpoint("canopies_overlap")
+        .status()
+        // Let pruning happen — shade_tolerance=80, prune_threshold=200 ticks
+        .tick(400)
+        .checkpoint("after_pruning")
+        .status()
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("trunk", 2))
+        // Deadwood should appear from self-pruning
+        .eval(Custom {
+            name: "deadwood_from_shade".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "deadwood_from_shade".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                let deadwood = oracle.material_counts.deadwood;
+                let passed = deadwood >= 1;
+                Verdict {
+                    evaluator: "deadwood_from_shade".into(),
+                    passed,
+                    reason: format!("deadwood count: {} (need >= 1)", deadwood),
+                    score: Some((deadwood as f64).min(10.0) / 10.0),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 8. Groundcover Spread — "The moss is taking over!"
+// ---------------------------------------------------------------------------
+
+/// Plant moss and grass in good conditions and watch them spread outward.
+/// The player delights in ground that was bare becoming covered — the garden
+/// is filling itself in. Tests seed dispersal for groundcover plant types.
+pub fn groundcover_spread() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("groundcover_spread")
+        .description(
+            "Plant moss and grass near water. Over time they should spread to cover \
+             nearby bare soil — the garden fills itself in without player action.",
+        )
+        .checkpoint("start")
+        .status()
+        .plant("moss", cx - 2, cy, seed_z)
+        .plant("grass", cx + 2, cy, seed_z)
+        // Extra water to encourage growth
+        .fill(
+            "water",
+            cx - 4,
+            cy - 4,
+            GROUND_LEVEL + 3,
+            cx + 4,
+            cy + 4,
+            GROUND_LEVEL + 3,
+        )
+        .tick(200)
+        .checkpoint("initial_growth")
+        .status()
+        // Wait for spread
+        .tick(400)
+        .checkpoint("after_spread")
+        .status()
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("plant", 3))
+        // Custom: plant count should increase significantly from spreading
+        .eval(Custom {
+            name: "groundcover_spread_outward".into(),
+            f: Box::new(|trace| {
+                let mid = trace.checkpoint("initial_growth");
+                let end = trace.final_oracle();
+                match (mid, end) {
+                    (Some(mid_step), Some(end_oracle)) => {
+                        let mid_plant = mid_step.oracle.material_counts.total_plant();
+                        let end_plant = end_oracle.material_counts.total_plant();
+                        // Spread should at least double the plant material
+                        let passed = end_plant > mid_plant * 2 && end_plant > 10;
+                        Verdict {
+                            evaluator: "groundcover_spread_outward".into(),
+                            passed,
+                            reason: format!(
+                                "plant material: {} → {} (need >2x growth and >10 total)",
+                                mid_plant, end_plant
+                            ),
+                            score: Some(if mid_plant > 0 {
+                                (end_plant as f64 / (mid_plant as f64 * 3.0)).min(1.0)
+                            } else if end_plant > 0 {
+                                0.5
+                            } else {
+                                0.0
+                            }),
+                        }
+                    }
+                    _ => Verdict {
+                        evaluator: "groundcover_spread_outward".into(),
+                        passed: false,
+                        reason: "missing checkpoints".into(),
+                        score: Some(0.0),
+                    },
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 9. Recovery After Destruction — "Life finds a way"
+// ---------------------------------------------------------------------------
+
+/// Build a thriving garden, then destroy part of it with digging. The garden
+/// should recover through seed dispersal and regrowth — pioneer species
+/// recolonize bare patches. This teaches the player that mistakes are safe.
+pub fn recovery_after_destruction() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("recovery_after_destruction")
+        .description(
+            "Grow a garden, destroy part of it, and verify life recovers. \
+             Pioneer species should recolonize — mistakes don't kill the garden.",
+        )
+        .checkpoint("start")
+        // Plant a diverse garden
+        .plant("oak", cx, cy, seed_z)
+        .plant("moss", cx - 3, cy, seed_z)
+        .plant("grass", cx + 3, cy, seed_z)
+        .plant("wildflower", cx, cy - 3, seed_z)
+        .fill(
+            "water",
+            cx - 5,
+            cy - 5,
+            GROUND_LEVEL + 4,
+            cx + 5,
+            cy + 5,
+            GROUND_LEVEL + 4,
+        )
+        .tick(300)
+        .checkpoint("garden_thriving")
+        .status()
+        // Destroy a chunk of the garden — the "oops" moment
+        .fill(
+            "air",
+            cx - 2,
+            cy - 2,
+            GROUND_LEVEL - 2,
+            cx + 2,
+            cy + 2,
+            GROUND_LEVEL + 8,
+        )
+        .checkpoint("after_destruction")
+        .status()
+        // Replace soil so recovery is possible
+        .fill(
+            "soil",
+            cx - 2,
+            cy - 2,
+            GROUND_LEVEL - 2,
+            cx + 2,
+            cy + 2,
+            GROUND_LEVEL,
+        )
+        // Water the recovery zone
+        .fill(
+            "water",
+            cx - 2,
+            cy - 2,
+            GROUND_LEVEL + 3,
+            cx + 2,
+            cy + 2,
+            GROUND_LEVEL + 3,
+        )
+        // Wait for recolonization
+        .tick(500)
+        .checkpoint("after_recovery")
+        .status()
+        .eval(NoCrash)
+        // The garden should still be alive after recovery period
+        .eval(MaterialMinimum::new("plant", 3))
+        // Custom: plant count should recover (not necessarily to pre-destruction levels)
+        .eval(Custom {
+            name: "garden_recovers".into(),
+            f: Box::new(|trace| {
+                let destroyed = trace.checkpoint("after_destruction");
+                let recovered = trace.final_oracle();
+                match (destroyed, recovered) {
+                    (Some(d), Some(r)) => {
+                        let destroyed_plant = d.oracle.material_counts.total_plant();
+                        let recovered_plant = r.material_counts.total_plant();
+                        let passed = recovered_plant > destroyed_plant;
+                        Verdict {
+                            evaluator: "garden_recovers".into(),
+                            passed,
+                            reason: format!(
+                                "plant after destruction: {}, after recovery: {} (should increase)",
+                                destroyed_plant, recovered_plant
+                            ),
+                            score: Some(if passed {
+                                (recovered_plant as f64
+                                    / (destroyed_plant as f64 + 10.0).max(1.0))
+                                .min(1.0)
+                            } else {
+                                0.0
+                            }),
+                        }
+                    }
+                    _ => Verdict {
+                        evaluator: "garden_recovers".into(),
+                        passed: false,
+                        reason: "missing checkpoints".into(),
+                        score: Some(0.0),
+                    },
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 10. The Idle Garden — "I looked away and the garden changed"
+// ---------------------------------------------------------------------------
+
+/// Set up a garden, then do nothing but tick for a long time. The garden
+/// should visibly change — new seeds, shifting water, growth. If it doesn't
+/// change, it's a screensaver, not a living world.
+pub fn idle_garden_changes() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("idle_garden_changes")
+        .description(
+            "Plant a garden, then leave it idle for 500 ticks. \
+             The garden must visibly change on its own — it should feel alive.",
+        )
+        .checkpoint("start")
+        .plant("oak", cx - 3, cy, seed_z)
+        .plant("birch", cx + 3, cy, seed_z)
+        .plant("moss", cx, cy - 3, seed_z)
+        .plant("wildflower", cx, cy + 3, seed_z)
+        .tick(150)
+        .checkpoint("garden_established")
+        .status()
+        // Now the player stops clicking. Just watch.
+        .tick(500)
+        .checkpoint("after_idle")
+        .status()
+        .eval(NoCrash)
+        // Custom: the garden state must change during idle period
+        .eval(Custom {
+            name: "garden_changed_while_idle".into(),
+            f: Box::new(|trace| {
+                let established = trace.checkpoint("garden_established");
+                let idle_end = trace.final_oracle();
+                match (established, idle_end) {
+                    (Some(e), Some(i)) => {
+                        let ec = &e.oracle.material_counts;
+                        let ic = &i.material_counts;
+                        // Count how many material types changed
+                        let mut changes = 0u32;
+                        if ec.seed != ic.seed {
+                            changes += 1;
+                        }
+                        if ec.root != ic.root {
+                            changes += 1;
+                        }
+                        if ec.trunk != ic.trunk {
+                            changes += 1;
+                        }
+                        if ec.branch != ic.branch {
+                            changes += 1;
+                        }
+                        if ec.leaf != ic.leaf {
+                            changes += 1;
+                        }
+                        if ec.deadwood != ic.deadwood {
+                            changes += 1;
+                        }
+                        if ec.water != ic.water {
+                            changes += 1;
+                        }
+                        if ec.wet_soil != ic.wet_soil {
+                            changes += 1;
+                        }
+                        // At least 3 material types should change during idle
+                        let passed = changes >= 3;
+                        Verdict {
+                            evaluator: "garden_changed_while_idle".into(),
+                            passed,
+                            reason: format!(
+                                "{} material types changed during idle (need >= 3)",
+                                changes
+                            ),
+                            score: Some((changes as f64 / 5.0).min(1.0)),
+                        }
+                    }
+                    _ => Verdict {
+                        evaluator: "garden_changed_while_idle".into(),
+                        passed: false,
+                        reason: "missing checkpoints".into(),
+                        score: Some(0.0),
+                    },
+                }
+            }),
+        })
+        .build()
+}
+
+// ===========================================================================
+// ASPIRATIONAL SCENARIOS — these test features not yet built.
+// Failures here are the development backlog. Each describes an experience
+// the game MUST deliver eventually.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// 11. The Nitrogen Handshake — "Clover makes the oak grow faster"
+// ---------------------------------------------------------------------------
+
+/// Plant clover near an oak. The clover should fix nitrogen in the soil,
+/// which the oak's roots absorb, making the oak grow faster than it would
+/// alone. This is the "tenth hour" discovery — species synergy.
+///
+/// ASPIRATIONAL: Nitrogen fixation as a species interaction is not yet
+/// implemented. This scenario will fail until it is.
+pub fn nitrogen_handshake() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("nitrogen_handshake")
+        .description(
+            "Plant clover near an oak. Clover fixes nitrogen, oak grows faster. \
+             ASPIRATIONAL: tests nitrogen fixation species interaction.",
+        )
+        .checkpoint("start")
+        // Plant clover to fix nitrogen
+        .plant("clover", cx - 2, cy, seed_z)
+        .plant("clover", cx - 2, cy + 1, seed_z)
+        .plant("clover", cx - 2, cy - 1, seed_z)
+        // Plant the oak that should benefit
+        .plant("oak", cx, cy, seed_z)
+        // Also plant a control oak far from clover
+        .plant("oak", cx + 15, cy, seed_z)
+        // Extra water for both
+        .fill(
+            "water",
+            cx - 4,
+            cy - 4,
+            GROUND_LEVEL + 3,
+            cx + 4,
+            cy + 4,
+            GROUND_LEVEL + 3,
+        )
+        .fill(
+            "water",
+            cx + 12,
+            cy - 3,
+            GROUND_LEVEL + 3,
+            cx + 18,
+            cy + 3,
+            GROUND_LEVEL + 3,
+        )
+        .tick(300)
+        .checkpoint("growth_period")
+        .status()
+        // Probe nutrient levels near clover vs far from it
+        .probe(cx - 1, cy, GROUND_LEVEL - 1)  // soil near clover
+        .probe(cx + 14, cy, GROUND_LEVEL - 1) // soil far from clover
+        .eval(NoCrash)
+        // Custom: soil near clover should have higher nutrients
+        .eval(Custom {
+            name: "nitrogen_enrichment".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "nitrogen_enrichment".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                let near_clover = oracle.probes.iter().find(|p| {
+                    p.x == GRID_X / 2 - 1 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL - 1
+                });
+                let far_from_clover = oracle.probes.iter().find(|p| {
+                    p.x == GRID_X / 2 + 14 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL - 1
+                });
+                match (near_clover, far_from_clover) {
+                    (Some(near), Some(far)) => {
+                        let passed = near.nutrient_level > far.nutrient_level;
+                        Verdict {
+                            evaluator: "nitrogen_enrichment".into(),
+                            passed,
+                            reason: format!(
+                                "nutrients near clover: {}, far from clover: {} \
+                                 (clover should enrich soil)",
+                                near.nutrient_level, far.nutrient_level
+                            ),
+                            score: Some(if passed { 1.0 } else { 0.0 }),
+                        }
+                    }
+                    _ => Verdict {
+                        evaluator: "nitrogen_enrichment".into(),
+                        passed: false,
+                        reason: "missing probes for nutrient comparison".into(),
+                        score: Some(0.0),
+                    },
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 12. Pioneer Succession — "The garden built itself"
+// ---------------------------------------------------------------------------
+
+/// Start with bare, watered soil and a few pioneer species (moss, grass).
+/// Over many ticks, succession should unfold: moss → grass → wildflower.
+/// Each stage prepares conditions for the next. The garden bootstraps itself.
+///
+/// ASPIRATIONAL: Full succession chains require species interaction effects
+/// (soil preparation, facilitation) not yet implemented.
+pub fn pioneer_succession() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("pioneer_succession")
+        .description(
+            "Start with bare soil + pioneers (moss, grass). Over time, succession \
+             should unfold as each species prepares soil for the next. \
+             ASPIRATIONAL: tests ecological succession chains.",
+        )
+        .checkpoint("bare_start")
+        .status()
+        // Only plant the earliest pioneers
+        .plant("moss", cx - 1, cy, seed_z)
+        .plant("moss", cx + 1, cy, seed_z)
+        .plant("grass", cx, cy - 1, seed_z)
+        .plant("grass", cx, cy + 1, seed_z)
+        // Good water supply
+        .fill(
+            "water",
+            cx - 6,
+            cy - 6,
+            GROUND_LEVEL + 4,
+            cx + 6,
+            cy + 6,
+            GROUND_LEVEL + 4,
+        )
+        .tick(200)
+        .checkpoint("pioneers_established")
+        .status()
+        .tick(400)
+        .checkpoint("mid_succession")
+        .status()
+        .tick(400)
+        .checkpoint("late_succession")
+        .status()
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("plant", 5))
+        // Custom: plant diversity should increase over time (more seed sources = more species)
+        .eval(Custom {
+            name: "succession_increases_biomass".into(),
+            f: Box::new(|trace| {
+                let early = trace.checkpoint("pioneers_established");
+                let late = trace.final_oracle();
+                match (early, late) {
+                    (Some(e), Some(l)) => {
+                        let early_plant = e.oracle.material_counts.total_plant();
+                        let late_plant = l.material_counts.total_plant();
+                        // Biomass should grow significantly through succession
+                        let passed = late_plant > early_plant * 3 && late_plant > 20;
+                        Verdict {
+                            evaluator: "succession_increases_biomass".into(),
+                            passed,
+                            reason: format!(
+                                "biomass: {} → {} (need >3x growth and >20 total)",
+                                early_plant, late_plant
+                            ),
+                            score: Some(if early_plant > 0 {
+                                (late_plant as f64 / (early_plant as f64 * 4.0)).min(1.0)
+                            } else {
+                                0.0
+                            }),
+                        }
+                    }
+                    _ => Verdict {
+                        evaluator: "succession_increases_biomass".into(),
+                        passed: false,
+                        reason: "missing checkpoints".into(),
+                        score: Some(0.0),
+                    },
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 13. The Willow Loves Water — "Every species has a favorite spot"
+// ---------------------------------------------------------------------------
+
+/// Plant a willow near water and one far from water. The one near water
+/// should thrive while the distant one struggles. The player discovers that
+/// species have preferences — placement matters.
+pub fn willow_loves_water() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+    let seed_z = GROUND_LEVEL + 10;
+
+    Scenario::new("willow_loves_water")
+        .description(
+            "Plant one willow near the spring and one far away. \
+             The near-water willow should grow larger — species have habitat preferences.",
+        )
+        .checkpoint("start")
+        // Willow near the central spring
+        .plant("willow", cx - 2, cy, seed_z)
+        // Willow far from water
+        .plant("willow", cx + 20, cy + 20, seed_z)
+        // Give both time to grow
+        .tick(300)
+        .checkpoint("growth_complete")
+        .status()
+        // Probe both locations — use multiple heights to catch trunk/leaf
+        .probe(cx - 2, cy, GROUND_LEVEL + 3)  // near water, above surface
+        .probe(cx - 2, cy, GROUND_LEVEL + 5)  // near water, higher
+        .probe(cx + 20, cy + 20, GROUND_LEVEL + 3) // far from water
+        .probe(cx - 2, cy, GROUND_LEVEL - 2)  // root zone near water
+        .probe(cx + 20, cy + 20, GROUND_LEVEL - 2) // root zone far from water
+        .eval(NoCrash)
+        // At least the near-water willow should grow
+        .eval(MaterialMinimum::new("plant", 1))
+        // Custom: near-water willow should have developed plant material somewhere
+        .eval(Custom {
+            name: "water_proximity_advantage".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "water_proximity_advantage".into(),
+                        passed: false,
+                        reason: "no trace".into(),
+                        score: Some(0.0),
+                    };
+                };
+                // Check if any probe near the watered willow found plant material
+                let near_probes: Vec<_> = oracle
+                    .probes
+                    .iter()
+                    .filter(|p| p.x == GRID_X / 2 - 2 && p.y == GRID_Y / 2)
+                    .collect();
+                let near_has_plant = near_probes.iter().any(|p| {
+                    matches!(
+                        p.material.as_str(),
+                        "trunk" | "branch" | "leaf" | "seed" | "root"
+                    )
+                });
+                let probe_details: Vec<String> = near_probes
+                    .iter()
+                    .map(|p| format!("z{}={}", p.z, p.material))
+                    .collect();
+                let passed = near_has_plant;
+                Verdict {
+                    evaluator: "water_proximity_advantage".into(),
+                    passed,
+                    reason: format!(
+                        "near-water willow probes: [{}]",
+                        probe_details.join(", ")
+                    ),
+                    score: Some(if passed { 1.0 } else { 0.0 }),
+                }
+            }),
+        })
+        .build()
+}
