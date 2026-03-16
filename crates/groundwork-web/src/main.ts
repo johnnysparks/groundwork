@@ -36,6 +36,7 @@ import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
+import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient } from './audio/ambient';
 import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth } from './audio/sfx';
 
@@ -749,7 +750,54 @@ async function main() {
   });
 
   renderer.domElement.addEventListener('mouseup', () => { isDragging = false; });
-  renderer.domElement.addEventListener('mouseleave', () => { isDragging = false; });
+  renderer.domElement.addEventListener('mouseleave', () => {
+    isDragging = false;
+    hoverTooltip.style.display = 'none';
+  });
+
+  // --- Plant hover tooltip ---
+  const hoverTooltip = document.createElement('div');
+  hoverTooltip.style.cssText =
+    'position:fixed;pointer-events:none;padding:3px 8px;background:rgba(30,25,20,0.85);' +
+    'color:#e8dcc8;font-size:12px;border-radius:4px;display:none;z-index:100;' +
+    'font-family:system-ui,sans-serif;white-space:nowrap;';
+  document.body.appendChild(hoverTooltip);
+
+  const MATERIAL_NAMES: Record<number, string> = {
+    [Material.Trunk]: 'Trunk', [Material.Branch]: 'Branch',
+    [Material.Leaf]: 'Leaf', [Material.Root]: 'Root',
+    [Material.Seed]: 'Seed', [Material.DeadWood]: 'Dead Wood',
+  };
+  const PLANT_MATERIALS = new Set([Material.Trunk, Material.Branch, Material.Leaf, Material.Root, Material.Seed]);
+
+  renderer.domElement.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      hoverTooltip.style.display = 'none';
+      return;
+    }
+    const hit = raycastVoxel(e.clientX, e.clientY, orbit.camera, terrainGroup, false);
+    if (!hit) { hoverTooltip.style.display = 'none'; return; }
+
+    const grid = getGridView();
+    if (!grid) { hoverTooltip.style.display = 'none'; return; }
+
+    const idx = (hit.x + hit.y * GRID_X + hit.z * GRID_X * GRID_Y) * VOXEL_BYTES;
+    const mat = grid[idx];
+
+    if (!PLANT_MATERIALS.has(mat)) {
+      hoverTooltip.style.display = 'none';
+      return;
+    }
+
+    const speciesId = grid[idx + 3]; // byte 3 = species_id for plant voxels
+    const speciesName = SPECIES_NAMES[speciesId] ?? `Species ${speciesId}`;
+    const matName = MATERIAL_NAMES[mat] ?? '';
+
+    hoverTooltip.textContent = `${speciesName} ${matName}`.trim();
+    hoverTooltip.style.display = 'block';
+    hoverTooltip.style.left = `${e.clientX + 12}px`;
+    hoverTooltip.style.top = `${e.clientY - 20}px`;
+  });
 
   renderer.domElement.addEventListener('wheel', (e) => {
     e.preventDefault();
