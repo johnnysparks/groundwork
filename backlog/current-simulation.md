@@ -32,19 +32,20 @@
 - **Growth Pacing Fix (P0)** — Seed growth 5→12/tick, Seedling→Sapling 200→80, Sapling→YoungTree 800→500. First leaves at ~tick 25 (was 100+).
 - **Seasonal Day Phase (SIM-15)** — DayPhase resource (0-99): dawn=75%, day=100%, dusk=75%, night=50% growth. WASM exports for JS sync.
 - **Ecological Milestones** — EcoMilestones resource: tier 0 groundcover → tier 1 flowers → tier 2 shrubs → tier 3 trees. WASM exports for JS species picker gating.
+- **Weather System** — Rain/drought events every ~200-400 ticks. Rain floods surface; drought evaporates water. 500-tick initial grace period. WASM exports for JS visual effects.
 
 ---
 
-## Next Up — P1
+## Workstream Complete
 
-### SIM-14: Root War Visualization Data
-Export per-tree root count and water intake via WASM for x-ray mode.
+The simulation enhancement workstream is **feature-complete** after 18 sprints.
 
----
+**Remaining cross-team items:**
+- SIM-14 (root war viz data) — WASM export for visual team
+- JS species picker integration using milestone exports — default priorities team
+- Weather visual effects (rain particles, palette shift) — visual team
 
-## P2 — Future
-
-- Fire mechanics (dry gardens can burn, pioneer succession follows)
-- Disease spread (fungal infections between crowded same-species)
-- Symbiotic fauna pairs (squirrel+oak acorn caching)
-- Weather events (rain bursts, drought periods)
+**P2 — Future (if workstream reopens):**
+- Fire mechanics
+- Disease spread
+- Symbiotic fauna pairs (squirrel domestication UI)
