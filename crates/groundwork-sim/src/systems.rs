@@ -534,6 +534,8 @@ pub fn seed_growth(
                             attraction_points: Vec::new(),
                             skeleton_initialized: false,
                             stage_changed: true,
+                            pending_voxels: Vec::new(),
+                            revealed_z: 0,
                         });
                     }
                 }
@@ -1720,6 +1722,43 @@ pub fn root_growth(
 /// Succession order: bare soil → moss (species 9) → grass (10) → wildflower (7).
 /// Each stage requires the previous stage nearby. Runs every 50 ticks.
 /// Creates the feeling that "life finds a way" — the garden bootstraps itself.
+/// Gradually place pending voxels for smooth visual growth.
+/// Each tick, place up to 3 pending voxels sorted bottom-to-top.
+/// This creates the "growing" animation instead of trees snapping into shape.
+pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>) {
+    for mut tree in trees.iter_mut() {
+        if tree.pending_voxels.is_empty() {
+            continue;
+        }
+        // Place up to 3 voxels per tick (smooth growth rate)
+        let count = tree.pending_voxels.len().min(3);
+        for _ in 0..count {
+            if let Some((x, y, z, mat)) = tree.pending_voxels.pop() {
+                if let Some(cell) = grid.get_mut(x, y, z) {
+                    let can_place = match mat {
+                        Material::Root => {
+                            cell.material == Material::Soil || cell.material == Material::Root
+                        }
+                        _ => {
+                            cell.material == Material::Air
+                                || cell.material == Material::Leaf
+                                || cell.material == Material::Branch
+                        }
+                    };
+                    if can_place {
+                        cell.set_material(mat);
+                        cell.nutrient_level = tree.species_id as u8;
+                        if mat == Material::Leaf || mat == Material::Branch {
+                            cell.water_level = (tree.health * 255.0) as u8;
+                        }
+                        tree.voxel_footprint.push((x, y, z));
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub fn pioneer_succession(
     mut grid: ResMut<VoxelGrid>,
     mut seed_map: ResMut<SeedSpeciesMap>,
@@ -3633,6 +3672,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: false,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         // One tick runs tree_rasterize which should place the sapling template.
@@ -3725,6 +3766,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: false,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         let mut schedule = crate::create_schedule();
@@ -3800,6 +3843,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: false,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         crate::tick(&mut world, &mut schedule);
@@ -3869,6 +3914,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: true,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             });
 
             crate::tick(&mut world, &mut schedule);
@@ -3959,6 +4006,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: false,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         // Run several ticks for health to recover.
@@ -4026,6 +4075,8 @@ mod tests {
             attraction_points: points,
             skeleton_initialized: true,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         // Run several ticks to allow branch growth
@@ -4140,6 +4191,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: true,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         crate::tick(&mut world, &mut schedule);
@@ -4222,6 +4275,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: true,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         // Run enough ticks for shade_stress to exceed prune_threshold (200)
@@ -4265,6 +4320,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: false,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         crate::tick(&mut world, &mut schedule);
@@ -4594,6 +4651,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             })
             .id();
 
@@ -4720,6 +4779,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             })
             .id();
 
@@ -4816,6 +4877,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             })
             .id();
 
@@ -4895,6 +4958,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             })
             .id();
 
@@ -4914,6 +4979,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             })
             .id();
 
@@ -5040,6 +5107,8 @@ mod tests {
             attraction_points: Vec::new(),
             skeleton_initialized: false,
             stage_changed: true,
+            pending_voxels: Vec::new(),
+            revealed_z: 0,
         });
 
         // Struggling oak nearby
@@ -5059,6 +5128,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             })
             .id();
 
@@ -5149,6 +5220,8 @@ mod tests {
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
                 stage_changed: true,
+                pending_voxels: Vec::new(),
+                revealed_z: 0,
             });
         }
 

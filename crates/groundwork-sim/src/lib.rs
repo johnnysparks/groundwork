@@ -18,8 +18,8 @@ use soil::SoilGrid;
 use systems::{
     branch_growth, deadwood_decay, light_propagation, milestone_tracker, mycorrhizal_network,
     pioneer_succession, root_growth, root_water_absorption, seed_dispersal, seed_growth,
-    self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow,
-    water_spring, weather_system, wind_seed_drift,
+    self_pruning, soil_absorption, soil_evolution, tree_grow_visual, tree_growth, tree_rasterize,
+    water_flow, water_spring, weather_system, wind_seed_drift,
 };
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
@@ -276,6 +276,8 @@ fn plant_starter_garden(world: &mut World) {
         attraction_points: Vec::new(),
         skeleton_initialized: false,
         stage_changed: true,
+        pending_voxels: Vec::new(),
+        revealed_z: 0,
     });
 
     // -- Scatter seeds of varied species around the spring --
@@ -343,6 +345,7 @@ pub fn create_schedule() -> Schedule {
         (
             self_pruning,
             tree_rasterize,
+            tree_grow_visual,
             root_growth,
             deadwood_decay,
             wind_seed_drift,

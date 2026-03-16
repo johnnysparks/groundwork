@@ -463,6 +463,10 @@ pub struct Tree {
     pub attraction_points: Vec<(isize, isize, isize)>,
     /// Whether the skeleton has been initialized for the current stage.
     pub skeleton_initialized: bool,
+    /// Voxels waiting to be placed gradually (smooth growth animation).
+    pub pending_voxels: Vec<(usize, usize, usize, Material)>,
+    /// Maximum Z height currently revealed (grows 1-2 per tick for smooth visual)
+    pub revealed_z: usize,
 }
 
 /// Generated template: list of (dx, dy, dz, Material) offsets from root_pos.
