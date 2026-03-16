@@ -453,6 +453,9 @@ pub struct Tree {
     pub accumulated_light: f32,
     pub rng_seed: u64,
     pub dirty: bool,
+    /// True only when growth stage actually changed (triggers full re-rasterize).
+    /// False for health-only updates (just update leaf colors, don't clear footprint).
+    pub stage_changed: bool,
     pub voxel_footprint: Vec<(usize, usize, usize)>,
     /// Branch skeleton for space colonization (used for YoungTree+ stages).
     pub branches: Vec<BranchNode>,

@@ -275,6 +275,7 @@ fn plant_starter_garden(world: &mut World) {
         branches: Vec::new(),
         attraction_points: Vec::new(),
         skeleton_initialized: false,
+        stage_changed: true,
     });
 
     // -- Scatter seeds of varied species around the spring --

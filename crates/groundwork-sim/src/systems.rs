@@ -533,6 +533,7 @@ pub fn seed_growth(
                             branches: Vec::new(),
                             attraction_points: Vec::new(),
                             skeleton_initialized: false,
+                            stage_changed: true,
                         });
                     }
                 }
@@ -916,10 +917,11 @@ pub fn tree_growth(
             }
         }
 
-        // Re-rasterize every 30 ticks to update health visual stress on foliage
-        // (was 50 — more frequent updates make stress visible sooner)
+        // Re-rasterize every 30 ticks to update health visual stress on foliage.
+        // This is a health-only update — don't clear footprint, just update colors.
         if tree.age > 0 && tree.age % 30 == 0 {
             tree.dirty = true;
+            tree.stage_changed = false; // health update, not stage change
         }
 
         // Crowding death: sustained low health kills the plant.
@@ -947,6 +949,7 @@ pub fn tree_growth(
             let prev = tree.stage;
             tree.stage = next;
             tree.dirty = true;
+            tree.stage_changed = true;
 
             // Initialize or expand skeleton on transition to branching stages
             // Only trees use space colonization; other plant types always use templates
@@ -1400,6 +1403,22 @@ pub fn tree_rasterize(
             .collect();
 
         let mut dynamic_roots: Vec<(usize, usize, usize)> = Vec::new();
+
+        // Only clear footprint on stage change. Health-only updates just refresh leaf colors.
+        if !tree.stage_changed {
+            // Health-only update: just write health into existing leaf voxels
+            for &(x, y, z) in &tree.voxel_footprint {
+                if let Some(cell) = grid.get_mut(x, y, z) {
+                    if cell.material == Material::Leaf || cell.material == Material::Branch {
+                        cell.water_level = (tree.health * 255.0) as u8;
+                        cell.nutrient_level = tree.species_id as u8;
+                    }
+                }
+            }
+            tree.dirty = false;
+            continue;
+        }
+        tree.stage_changed = false;
 
         // Clear old footprint, preserving dynamic roots
         for &(x, y, z) in &tree.voxel_footprint {
@@ -3613,6 +3632,7 @@ mod tests {
             branches: Vec::new(),
             attraction_points: Vec::new(),
             skeleton_initialized: false,
+            stage_changed: true,
         });
 
         // One tick runs tree_rasterize which should place the sapling template.
@@ -3704,6 +3724,7 @@ mod tests {
             branches: Vec::new(),
             attraction_points: Vec::new(),
             skeleton_initialized: false,
+            stage_changed: true,
         });
 
         let mut schedule = crate::create_schedule();
@@ -3778,6 +3799,7 @@ mod tests {
             branches: Vec::new(),
             attraction_points: Vec::new(),
             skeleton_initialized: false,
+            stage_changed: true,
         });
 
         crate::tick(&mut world, &mut schedule);
@@ -3846,6 +3868,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: true,
+                stage_changed: true,
             });
 
             crate::tick(&mut world, &mut schedule);
@@ -3935,6 +3958,7 @@ mod tests {
             branches: Vec::new(),
             attraction_points: Vec::new(),
             skeleton_initialized: false,
+            stage_changed: true,
         });
 
         // Run several ticks for health to recover.
@@ -4001,6 +4025,7 @@ mod tests {
             branches,
             attraction_points: points,
             skeleton_initialized: true,
+            stage_changed: true,
         });
 
         // Run several ticks to allow branch growth
@@ -4114,6 +4139,7 @@ mod tests {
             branches,
             attraction_points: Vec::new(),
             skeleton_initialized: true,
+            stage_changed: true,
         });
 
         crate::tick(&mut world, &mut schedule);
@@ -4195,6 +4221,7 @@ mod tests {
             branches,
             attraction_points: Vec::new(),
             skeleton_initialized: true,
+            stage_changed: true,
         });
 
         // Run enough ticks for shade_stress to exceed prune_threshold (200)
@@ -4237,6 +4264,7 @@ mod tests {
             branches: Vec::new(), // No skeleton
             attraction_points: Vec::new(),
             skeleton_initialized: false,
+            stage_changed: true,
         });
 
         crate::tick(&mut world, &mut schedule);
@@ -4565,6 +4593,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             })
             .id();
 
@@ -4690,6 +4719,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             })
             .id();
 
@@ -4785,6 +4815,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             })
             .id();
 
@@ -4863,6 +4894,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             })
             .id();
 
@@ -4881,6 +4913,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             })
             .id();
 
@@ -5006,6 +5039,7 @@ mod tests {
             branches: Vec::new(),
             attraction_points: Vec::new(),
             skeleton_initialized: false,
+            stage_changed: true,
         });
 
         // Struggling oak nearby
@@ -5024,6 +5058,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             })
             .id();
 
@@ -5113,6 +5148,7 @@ mod tests {
                 branches: Vec::new(),
                 attraction_points: Vec::new(),
                 skeleton_initialized: false,
+                stage_changed: true,
             });
         }
 
