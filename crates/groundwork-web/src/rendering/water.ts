@@ -201,6 +201,11 @@ const waterFragmentShader = /* glsl */ `
     return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
   }
 
+  // Scalar hash for sparkle cells
+  float hash1(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
   // Smooth noise
   float noise(vec2 p) {
     vec2 i = floor(p);
@@ -237,15 +242,40 @@ const waterFragmentShader = /* glsl */ `
     float dx = (hx - combined) / eps;
     float dy = (hy - combined) / eps;
 
-    // Ripple strength — subtle enough for cozy aesthetic
-    float strength = 0.15;
+    // Ripple strength — visible but cozy
+    float strength = 0.22;
     return normalize(vec3(-dx * strength, -dy * strength, 1.0));
+  }
+
+  // Dancing sun sparkles: cell-based glints that wink on and off
+  float sparkle(vec2 worldXY, float time) {
+    // Tile the surface into cells; each cell has a random phase
+    vec2 cell = floor(worldXY * 2.0); // ~0.5 voxel sparkle cells
+    float phase = hash1(cell) * 6.283;
+    float speed = 1.0 + hash1(cell + 100.0) * 2.0;
+
+    // Sharp pulse: only bright for a narrow window of the sine cycle
+    float pulse = sin(time * speed + phase);
+    pulse = smoothstep(0.85, 0.95, pulse); // bright only at peak
+
+    // Spatial variation: center of cell is brightest
+    vec2 cellUV = fract(worldXY * 2.0) - 0.5;
+    float dist = length(cellUV);
+    float spot = smoothstep(0.3, 0.0, dist);
+
+    return pulse * spot;
   }
 
   void main() {
     // Depth-based color blend: shallow → clear teal, deep → rich dark blue-green
     float depthFactor = clamp(vDepth / 5.0, 0.0, 1.0);
     vec3 baseColor = mix(uShallowColor, uDeepColor, depthFactor);
+
+    // Shoreline foam: shallow edges get a soft white fringe
+    float foamFactor = smoothstep(2.0, 0.5, vDepth);
+    float foamNoise = noise(vWorldPos.xy * 4.0 + vec2(uTime * 0.5, uTime * 0.3));
+    float foam = foamFactor * smoothstep(-0.1, 0.3, foamNoise);
+    baseColor = mix(baseColor, vec3(0.75, 0.88, 0.90), foam * 0.5);
 
     // Animated ripple normal
     vec3 normal = rippleNormal(vWorldPos.xy, uTime);
@@ -254,19 +284,25 @@ const waterFragmentShader = /* glsl */ `
     float NdotL = max(dot(normal, normalize(uSunDirection)), 0.0);
     vec3 lit = baseColor * (0.6 + 0.4 * NdotL * uSunIntensity);
 
-    // Specular highlight — sun glint on ripples
+    // Broad specular highlight — sun glint on ripples
     vec3 viewDir = vec3(0.0, 0.0, 1.0); // orthographic, looking down-ish
     vec3 halfDir = normalize(normalize(uSunDirection) + viewDir);
-    float spec = pow(max(dot(normal, halfDir), 0.0), 64.0);
-    lit += vec3(1.0, 0.95, 0.8) * spec * 0.4 * uSunIntensity;
+    float spec = pow(max(dot(normal, halfDir), 0.0), 48.0);
+    lit += vec3(1.0, 0.95, 0.8) * spec * 0.5 * uSunIntensity;
+
+    // Dancing sun sparkles — scattered bright glints across the surface
+    float glint = sparkle(vWorldPos.xy, uTime);
+    lit += vec3(1.0, 0.97, 0.85) * glint * 0.7 * uSunIntensity;
 
     // Sky reflection tint (subtle, based on normal perturbation)
     float skyFresnel = 1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0);
-    skyFresnel = pow(skyFresnel, 3.0) * 0.15;
+    skyFresnel = pow(skyFresnel, 3.0) * 0.2;
     lit += vec3(0.53, 0.81, 0.92) * skyFresnel; // sky blue tint
 
     // Depth-based opacity: shallow water is see-through, deep is opaque
-    float alpha = mix(0.4, 0.85, depthFactor);
+    // Shore edges slightly more opaque so foam reads clearly
+    float alpha = mix(0.45, 0.88, depthFactor);
+    alpha = mix(alpha, max(alpha, 0.6), foam);
 
     gl_FragColor = vec4(lit, alpha);
   }
@@ -347,8 +383,8 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
       fragmentShader: waterFragmentShader,
       uniforms: {
         uTime: { value: 0 },
-        uShallowColor: { value: new THREE.Color(0.25, 0.55, 0.65) },  // clear teal
-        uDeepColor: { value: new THREE.Color(0.08, 0.25, 0.35) },      // deep blue-green
+        uShallowColor: { value: new THREE.Color(0.22, 0.58, 0.55) },  // bright teal-green
+        uDeepColor: { value: new THREE.Color(0.05, 0.18, 0.30) },      // dark blue-green
         uSunDirection: { value: new THREE.Vector3(0.5, -0.3, 0.8).normalize() },
         uSunIntensity: { value: 1.2 },
       },
