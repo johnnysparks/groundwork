@@ -80,6 +80,15 @@ const _scratchColor = new THREE.Color();
 /** AO darkening factors: 0=no occlusion (bright), 3=full occlusion (dark) */
 const AO_CURVE = [1.0, 0.82, 0.65, 0.50];
 
+/** Simple integer hash for per-voxel color noise (returns 0.0–1.0) */
+function voxelNoise(x: number, y: number, z: number): number {
+  let h = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
+  h = ((h >> 16) ^ h) * 0x45d9f3b;
+  h = ((h >> 16) ^ h) * 0x45d9f3b;
+  h = (h >> 16) ^ h;
+  return (h & 0xffff) / 65535.0;
+}
+
 /** Face normals indexed by face direction.
  *  Sim uses Z-up; Three.js uses Y-up. We swap Y↔Z here:
  *  sim +Y → Three.js +Z, sim +Z → Three.js +Y */
@@ -268,6 +277,17 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
     } else {
       baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
     }
+    // Depth-based darkening for soil/stone: deeper = darker, breaks contour bands
+    let depthFactor = 1.0;
+    let noiseFactor = 0.0;
+    if (quad.material === Material.Soil || quad.material === Material.Stone) {
+      // Darken by 0–15% based on depth below surface
+      const depthBelow = Math.max(0, GROUND_LEVEL - quad.z);
+      depthFactor = 1.0 - Math.min(depthBelow / GROUND_LEVEL, 1.0) * 0.15;
+      // Per-voxel noise: ±5% brightness variation to break uniformity
+      noiseFactor = (voxelNoise(quad.x, quad.y, quad.z) - 0.5) * 0.10;
+    }
+
     const [nx, ny, nz] = FACE_NORMALS[quad.face];
     const corners = getQuadCorners(quad);
     const ao = quad.ao;
@@ -279,6 +299,7 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
     for (const ci of indices) {
       const [cx, cy, cz] = corners[ci];
       const aoFactor = AO_CURVE[ao[ci]];
+      const colorScale = aoFactor * depthFactor + noiseFactor;
 
       positions[vi * 3] = cx;
       positions[vi * 3 + 1] = cy;
@@ -288,9 +309,9 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
       normals[vi * 3 + 1] = ny;
       normals[vi * 3 + 2] = nz;
 
-      colors[vi * 3] = baseColor.r * aoFactor;
-      colors[vi * 3 + 1] = baseColor.g * aoFactor;
-      colors[vi * 3 + 2] = baseColor.b * aoFactor;
+      colors[vi * 3] = Math.max(0, baseColor.r * colorScale);
+      colors[vi * 3 + 1] = Math.max(0, baseColor.g * colorScale);
+      colors[vi * 3 + 2] = Math.max(0, baseColor.b * colorScale);
 
       vi++;
     }
