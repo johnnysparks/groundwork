@@ -48,7 +48,7 @@ const GNOME_VERT = /* glsl */ `
     vec3 camRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
     vec3 camUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
 
-    float scale = 2.5; // ~2.5 voxels tall
+    float scale = 4.0; // prominent gnome — visible at default zoom
     vec3 vert = worldPos.xyz
       + camRight * position.x * scale
       + camUp * position.y * scale;
@@ -89,7 +89,16 @@ const GNOME_FRAG = /* glsl */ `
     vec3 color = mix(bodyColor, hatColor, hatAlpha);
     color = mix(color, beardColor, beardMask * bodyAlpha);
 
-    gl_FragColor = vec4(color, alpha * 0.95);
+    // Soft glow halo behind the gnome for visibility
+    float glowDist = length(p) * 2.0;
+    float glow = (1.0 - smoothstep(0.3, 0.8, glowDist)) * 0.2;
+    vec3 glowColor = vec3(1.0, 0.9, 0.7); // warm white glow
+
+    vec3 finalColor = mix(glowColor, color, step(0.1, alpha));
+    float finalAlpha = max(alpha * 0.95, glow);
+    if (finalAlpha < 0.02) discard;
+
+    gl_FragColor = vec4(finalColor, finalAlpha);
   }
 `;
 

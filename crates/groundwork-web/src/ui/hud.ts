@@ -48,6 +48,7 @@ export interface HudState {
   gardenStats?: { plants: number; fauna: number; species: number };
   water: number;
   maxWater: number;
+  queueCount?: number;
 }
 
 type HudChangeCallback = (state: HudState) => void;
@@ -378,9 +379,16 @@ export class Hud {
     }, 8000);
   }
 
+  /** Set the gnome task queue count for HUD display */
+  setQueueCount(count: number): void {
+    this.state.queueCount = count;
+    this.renderStatus();
+  }
+
   private renderStatus(): void {
     const tickState = this.state.autoTick ? 'ON' : 'OFF';
-    this.statusEl.textContent = `Tick: ${this.state.tickCount} | Auto: ${tickState} [Space]`;
+    const queueStr = (this.state.queueCount ?? 0) > 0 ? ` | Tasks: ${this.state.queueCount}` : '';
+    this.statusEl.textContent = `Tick: ${this.state.tickCount} | Auto: ${tickState} [Space]${queueStr}`;
   }
 }
 

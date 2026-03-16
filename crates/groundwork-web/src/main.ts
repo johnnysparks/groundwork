@@ -728,8 +728,9 @@ async function main() {
       remeshDirty();
     }
 
-    // Update ghost overlay
+    // Update ghost overlay + queue counter
     ghosts.rebuild(taskQueue, elapsed);
+    hud.setQueueCount(taskQueue.length);
 
 
     // Auto-save every ~10 seconds
