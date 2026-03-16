@@ -12,16 +12,13 @@
 - Species-aware seed spacing
 - **Dead tree decomposition** — DeadWood passively decays into nutrient-rich soil (~2500 ticks). Moisture accelerates. Beetles further accelerate via fauna_effects.
 - **Canopy Effect** — Shade-tolerant species (fern, moss, holly) get 1.5× growth boost in moderate shade (light 5-30). Creates undergrowth niche.
+- **Pollinator Bridge** (SIM-12) — Bees/butterflies near trees boost health recovery +0.005/pollinator. Creates flower→bee→healthier tree loop.
+- **Pine Allelopathy** (SIM-16) — Pine roots acidify soil (pH drops 5x faster). Non-tolerant seeds grow at half speed in acidic soil. Pine/fern/moss immune.
+- **Bird Express Enhancement** — Birds carry species-specific seeds (not just oak), enrich soil with droppings, spawn more readily near berry bushes.
 
 ---
 
 ## Next Up — P0
-
-### SIM-12: Pollinator Bridge Strengthening
-Flower clusters attract pollinators, but pollinators don't visibly improve nearby plants enough.
-- Pollinators within range of a tree/shrub should boost its health recovery rate
-- The effect should be visible: plants near active pollinators visibly greener
-- Creates the pollination loop: flowers → bees → healthier neighbors → more flowers
 
 ---
 
