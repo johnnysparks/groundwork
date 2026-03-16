@@ -26,9 +26,9 @@ const TiltShiftShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     resolution: { value: new THREE.Vector2(1, 1) },
-    blurMax: { value: 3.0 },        // max blur in pixels
+    blurMax: { value: 4.5 },        // max blur in pixels — stronger miniature effect
     focusCenter: { value: 0.45 },    // Y center of focus band (0–1, slightly below middle)
-    focusWidth: { value: 0.3 },      // width of the sharp band (0–1)
+    focusWidth: { value: 0.25 },     // narrower focus band — more pronounced DOF
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -90,9 +90,9 @@ const TiltShiftShader = {
 const ColorGradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    warmth: { value: 0.02 },       // red/yellow shift — subtle, lets day cycle colors through
-    contrast: { value: 1.08 },     // contrast multiplier around mid-gray
-    saturation: { value: 1.12 },   // saturation multiplier
+    warmth: { value: 0.035 },      // red/yellow shift — cozy warmth
+    contrast: { value: 1.10 },     // contrast multiplier around mid-gray
+    saturation: { value: 1.18 },   // saturation multiplier — vivid greens and golds
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -137,8 +137,8 @@ const ColorGradeShader = {
 const VignetteShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    darkness: { value: 0.2 },    // gentle darkening at corners
-    offset: { value: 1.4 },      // starts further from center
+    darkness: { value: 0.35 },   // noticeable darkening at corners — frames the garden
+    offset: { value: 1.3 },      // starts slightly closer for a warmer frame
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -209,12 +209,12 @@ export function createPostProcessing(
   // ssaoPass.output = SSAOPass.OUTPUT.Default;
   // composer.addPass(ssaoPass);
 
-  // 3. Bloom — subtle warm glow on sunlit edges
+  // 3. Bloom — warm glow on sunlit edges and golden foliage
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    0.15,   // strength — very subtle
-    0.8,    // radius — wide, soft glow
-    0.85,   // threshold — only brightest areas
+    0.25,   // strength — visible but not overpowering
+    0.9,    // radius — wide, soft glow
+    0.80,   // threshold — catches sunlit canopy highlights
   );
   composer.addPass(bloomPass);
 
