@@ -11,8 +11,10 @@
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let rainGain: GainNode | null = null;
+let cricketGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
+let isNight = false;
 
 /** Create the procedural water sound */
 function createWaterSound(audioCtx: AudioContext, output: GainNode): void {
@@ -109,6 +111,74 @@ function createRainSound(audioCtx: AudioContext, output: GainNode): void {
   lfo.start();
 }
 
+/** Create procedural cricket chirps — rhythmic high-freq oscillation, classic evening sound */
+function createCricketSound(audioCtx: AudioContext, output: GainNode): void {
+  // Cricket chirps: rapid oscillation between two tones at ~4000Hz
+  // Modulated by a slower rhythm that creates the chirp pattern
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 4200;
+
+  // Rapid tremolo: gives the characteristic cricket "trill"
+  const tremolo = audioCtx.createOscillator();
+  const tremoloGain = audioCtx.createGain();
+  tremolo.frequency.value = 30; // 30Hz = rapid trill
+  tremoloGain.gain.value = 0.5;
+  tremolo.connect(tremoloGain);
+  tremoloGain.connect(osc.frequency); // FM creates the trill
+
+  // Slow on/off: creates the chirp→silence→chirp pattern
+  const rhythm = audioCtx.createOscillator();
+  const rhythmGain = audioCtx.createGain();
+  rhythm.frequency.value = 2.5; // chirps per second
+  rhythmGain.gain.value = 1.0;
+
+  // The rhythmGain modulates the signal gain to make chirps
+  const chirpGate = audioCtx.createGain();
+  chirpGate.gain.value = 0;
+  rhythm.connect(rhythmGain);
+  rhythmGain.connect(chirpGate.gain);
+
+  // Second cricket at a slightly different frequency for natural chorus
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 3800;
+
+  const tremolo2 = audioCtx.createOscillator();
+  const tremoloGain2 = audioCtx.createGain();
+  tremolo2.frequency.value = 28;
+  tremoloGain2.gain.value = 0.5;
+  tremolo2.connect(tremoloGain2);
+  tremoloGain2.connect(osc2.frequency);
+
+  const rhythm2 = audioCtx.createOscillator();
+  const rhythmGain2 = audioCtx.createGain();
+  rhythm2.frequency.value = 2.2; // slightly offset rhythm
+  rhythmGain2.gain.value = 1.0;
+
+  const chirpGate2 = audioCtx.createGain();
+  chirpGate2.gain.value = 0;
+  rhythm2.connect(rhythmGain2);
+  rhythmGain2.connect(chirpGate2.gain);
+
+  // Cricket-specific gain (controlled externally for day/night fade)
+  cricketGain = audioCtx.createGain();
+  cricketGain.gain.value = 0; // start silent
+
+  osc.connect(chirpGate);
+  chirpGate.connect(cricketGain);
+  osc2.connect(chirpGate2);
+  chirpGate2.connect(cricketGain);
+  cricketGain.connect(output);
+
+  osc.start();
+  tremolo.start();
+  rhythm.start();
+  osc2.start();
+  tremolo2.start();
+  rhythm2.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -124,6 +194,7 @@ export function initAmbientAudio(): void {
 
     createWaterSound(ctx, masterGain);
     createRainSound(ctx, masterGain);
+    createCricketSound(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -156,5 +227,17 @@ export function setRaining(raining: boolean): void {
   if (rainGain && ctx) {
     const target = raining ? 0.12 : 0; // rain is quieter than spring
     rainGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 2);
+  }
+}
+
+/** Fade cricket sounds in for dusk/night, out for day.
+ *  Call each frame with the day cycle time (0–1). */
+export function setNightAmbient(dayTime: number): void {
+  const shouldChirp = dayTime >= 0.65 || dayTime < 0.05;
+  if (shouldChirp === isNight) return;
+  isNight = shouldChirp;
+  if (cricketGain && ctx) {
+    const target = shouldChirp ? 0.03 : 0; // very quiet — background texture
+    cricketGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
   }
 }

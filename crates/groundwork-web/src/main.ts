@@ -36,7 +36,7 @@ import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
-import { initAmbientAudio, setRaining } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient } from './audio/ambient';
 import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1028,9 +1028,11 @@ async function main() {
     // Update fauna positions and animation
     fauna.update(elapsed);
 
-    // Fireflies: active during dusk/night
-    fireflies.setActive(dayCycle.getTime());
+    // Fireflies + cricket sounds: active during dusk/night
+    const dayTime = dayCycle.getTime();
+    fireflies.setActive(dayTime);
     fireflies.update(dt, elapsed);
+    setNightAmbient(dayTime);
 
     // Falling leaves: ambient canopy motion
     fallingLeaves.setPlantCount(foliage.count);
