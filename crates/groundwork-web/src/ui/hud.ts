@@ -6,6 +6,7 @@
  */
 
 import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized } from '../bridge';
+import { SCENES, getSceneId, switchScene } from '../mesher/mockGrid';
 
 /** Re-export SPECIES so other UI modules can import from hud */
 export { BRIDGE_SPECIES as SPECIES };
@@ -145,6 +146,27 @@ export class Hud {
     screenshotBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       captureScreenshot();
+    });
+
+    // Scene selector
+    const sceneSelect = this.container.querySelector('#scene-select') as HTMLSelectElement;
+    const wasmAvailable = isInitialized();
+    const currentScene = getSceneId(wasmAvailable);
+    for (const scene of SCENES) {
+      const opt = document.createElement('option');
+      opt.value = scene.id;
+      opt.textContent = scene.name;
+      opt.title = scene.description;
+      // Disable sim option if WASM not available
+      if (scene.id === 'sim' && !wasmAvailable) {
+        opt.disabled = true;
+        opt.textContent += ' (no wasm)';
+      }
+      if (scene.id === currentScene) opt.selected = true;
+      sceneSelect.appendChild(opt);
+    }
+    sceneSelect.addEventListener('change', () => {
+      switchScene(sceneSelect.value);
     });
 
     // Set initial state
@@ -355,6 +377,7 @@ const HUD_HTML = `
   <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay | -/+: speed</div>
   <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
   <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
+  <select id="scene-select" title="Choose a scene"></select>
 `;
 
 // --- CSS ---
@@ -680,5 +703,35 @@ const HUD_CSS = `
 .score-row span:last-child {
   color: #e8d8b8;
   font-weight: 500;
+}
+
+/* --- Scene selector (top-left, below screenshot) --- */
+#scene-select {
+  position: absolute;
+  top: 82px;
+  left: 12px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(20, 18, 15, 0.7);
+  color: #b8a88a;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  pointer-events: auto;
+  transition: all 0.12s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+#scene-select:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e8d8b8;
+}
+#scene-select option {
+  background: #1a1815;
+  color: #b8a88a;
+}
+#scene-select option:disabled {
+  color: #665e50;
 }
 `;

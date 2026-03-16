@@ -441,6 +441,39 @@ const Z = DEMO_GROUND + 1; // surface level (first air voxel)
 // Grid generation
 // ═══════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════
+// Scene registry — each scene is a named grid factory
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface SceneDef {
+  id: string;
+  name: string;
+  description: string;
+  /** null = use WASM simulation */
+  createGrid: (() => Uint8Array) | null;
+}
+
+export const SCENES: SceneDef[] = [
+  { id: 'sim', name: 'Simulation', description: 'Live WASM simulation (requires wasm build)', createGrid: null },
+  { id: 'oak', name: 'Oak Stages', description: 'Five oak growth stages — seedling to old-growth', createGrid: () => createPlantDemoGrid() },
+  { id: 'garden', name: 'Dense Garden', description: 'A mixed garden with all species', createGrid: () => createDenseGardenGrid() },
+];
+
+/** Get the scene ID from the URL, or a sensible default */
+export function getSceneId(wasmAvailable: boolean): string {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('scene');
+  if (id && SCENES.some(s => s.id === id)) return id;
+  return wasmAvailable ? 'sim' : 'oak';
+}
+
+/** Navigate to a different scene (reloads the page) */
+export function switchScene(id: string): void {
+  const params = new URLSearchParams(window.location.search);
+  params.set('scene', id);
+  window.location.search = params.toString();
+}
+
 export function createPlantDemoGrid(): Uint8Array {
   setGridDimensions(DEMO_X, DEMO_Y, DEMO_Z, DEMO_GROUND);
 
@@ -518,6 +551,117 @@ export function createPlantDemoGrid(): Uint8Array {
   placeOakCrown(grid, S4, OAK_Y, Z + 18, 28, 14, 18, S4);
   // depth=30, spread=28, tapR=5 — enormous spreading root cave network
   placeOakRoots(grid, S4, OAK_Y, GROUND_LEVEL, 30, 28, 5, S4);
+
+  return grid;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Dense Garden — a mixed garden with multiple species
+// ═══════════════════════════════════════════════════════════════════════
+
+function createDenseGardenGrid(): Uint8Array {
+  // Use a moderate grid — fits nicely without massive dimensions
+  setGridDimensions(120, 120, 60, 30);
+
+  const GX = 120, GY = 120, GZ = 60, GL = 30;
+  const size = GX * GY * GZ * VOXEL_BYTES;
+  const grid = new Uint8Array(size);
+  const SZ = GL + 1; // surface Z
+
+  function set(x: number, y: number, z: number, mat: number): void {
+    if (x < 0 || x >= GX || y < 0 || y >= GY || z < 0 || z >= GZ) return;
+    grid[(x + y * GX + z * GX * GY) * VOXEL_BYTES] = mat;
+  }
+
+  function get(x: number, y: number, z: number): number {
+    if (x < 0 || x >= GX || y < 0 || y >= GY || z < 0 || z >= GZ) return Material.Air;
+    return grid[(x + y * GX + z * GX * GY) * VOXEL_BYTES];
+  }
+
+  // --- Terrain ---
+  for (let z = 0; z < GZ; z++) {
+    for (let y = 0; y < GY; y++) {
+      for (let x = 0; x < GX; x++) {
+        if (z < 10) set(x, y, z, Material.Stone);
+        else if (z <= GL) set(x, y, z, Material.Soil);
+      }
+    }
+  }
+
+  // --- Water feature: small pond ---
+  for (let dx = -5; dx <= 5; dx++) {
+    for (let dy = -5; dy <= 5; dy++) {
+      if (dx * dx + dy * dy <= 25) {
+        set(60 + dx, 60 + dy, GL, Material.Water);
+        set(60 + dx, 60 + dy, GL + 1, Material.Water);
+      }
+    }
+  }
+
+  // --- Mature oak (center-left) ---
+  placeTaperingTrunk(grid, 35, 60, SZ, 25, 3, 2);
+  placeLimbs(grid, 35, 60, SZ + 14, 10, 2, 35);
+  placeLimbs(grid, 35, 60, SZ + 18, 8, 1, 36);
+  placeOakCrown(grid, 35, 60, SZ + 12, 14, 10, 10, 35);
+  placeOakRoots(grid, 35, 60, GL, 18, 16, 2, 35);
+
+  // --- Young birch (right of pond) ---
+  placeTrunk(grid, 85, 55, SZ, 18, 1);
+  placeBranches(grid, 85, 55, SZ + 12, 4, 0);
+  placeBranches(grid, 85, 55, SZ + 14, 3, 1);
+  placeCrown(grid, 85, 55, SZ + 10, 6, 8, 'narrow');
+
+  // --- Pine (back-right) ---
+  placeTrunk(grid, 95, 85, SZ, 22, 1);
+  placeCrown(grid, 95, 85, SZ + 6, 8, 16, 'conical');
+
+  // --- Willow near pond ---
+  placeTrunk(grid, 52, 68, SZ, 14, 1);
+  placeBranches(grid, 52, 68, SZ + 10, 6, 2);
+  placeCrown(grid, 52, 68, SZ + 8, 8, 6, 'wide');
+
+  // --- Shrubs: fern cluster ---
+  for (const [fx, fy] of [[25, 45], [28, 48], [22, 50], [30, 44]]) {
+    placeTrunk(grid, fx, fy, SZ, 2, 0);
+    placeCrown(grid, fx, fy, SZ + 1, 3, 3, 'round');
+  }
+
+  // --- Berry bush near pond ---
+  for (const [bx, by] of [[70, 55], [72, 58], [68, 52]]) {
+    placeTrunk(grid, bx, by, SZ, 3, 0);
+    placeCrown(grid, bx, by, SZ + 2, 3, 3, 'round');
+  }
+
+  // --- Flowers scattered around ---
+  for (const [fx, fy] of [[40, 40], [42, 38], [38, 42], [55, 45], [58, 42],
+                           [75, 70], [78, 72], [80, 68], [45, 80], [48, 82]]) {
+    set(fx, fy, SZ, Material.Trunk); // stem
+    set(fx, fy, SZ + 1, Material.Leaf); // bloom (rendered as foliage billboard)
+  }
+
+  // --- Groundcover: moss patches ---
+  for (const [mx, my] of [[30, 55], [32, 57], [34, 56], [33, 54],
+                           [80, 40], [82, 42], [81, 38], [83, 41]]) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        if (dx * dx + dy * dy <= 4 && get(mx + dx, my + dy, SZ) === Material.Air) {
+          set(mx + dx, my + dy, SZ, Material.Leaf);
+        }
+      }
+    }
+  }
+
+  // --- Clover patch near oak (nitrogen handshake demo) ---
+  for (let dx = -4; dx <= 4; dx++) {
+    for (let dy = -4; dy <= 4; dy++) {
+      if (dx * dx + dy * dy <= 16) {
+        const gx = 40 + dx, gy = 50 + dy;
+        if (get(gx, gy, SZ) === Material.Air) {
+          set(gx, gy, SZ, Material.Leaf);
+        }
+      }
+    }
+  }
 
   return grid;
 }

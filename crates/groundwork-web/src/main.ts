@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
-import { createPlantDemoGrid } from './mesher/mockGrid';
+import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
@@ -130,14 +130,21 @@ async function main() {
 
   // --- Voxel mesh ---
 
-  // Use real sim grid if WASM loaded, otherwise mock
+  // Select scene based on URL parameter (or auto-detect)
+  const sceneId = getSceneId(wasmReady);
+  const sceneDef = SCENES.find(s => s.id === sceneId);
   let grid: Uint8Array;
-  if (wasmReady) {
-    // Run a few ticks to populate the world (water/light propagation)
+  if (sceneDef?.createGrid) {
+    // Mock scene — use the factory function
+    grid = sceneDef.createGrid();
+  } else if (wasmReady) {
+    // WASM simulation
     simTick(5);
     grid = getGridView();
   } else {
-    grid = createPlantDemoGrid();
+    // Fallback: first scene with a grid factory
+    const fallback = SCENES.find(s => s.createGrid);
+    grid = fallback!.createGrid!();
   }
 
   const chunkManager = new ChunkManager();

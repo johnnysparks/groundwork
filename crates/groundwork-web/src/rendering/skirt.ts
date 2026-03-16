@@ -192,7 +192,11 @@ export function buildForestRing(): THREE.Group {
 
   // Shared geometry
   const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 1, 5);
-  const trunkMat = new THREE.MeshLambertMaterial({ color: TRUNK_COLOR });
+  const trunkMat = new THREE.MeshLambertMaterial({
+    color: TRUNK_COLOR,
+    emissive: TRUNK_COLOR,
+    emissiveIntensity: 0.3,
+  });
 
   // --- Meadow ground plane with garden cutout ---
   const groundRadius = 400;
@@ -295,7 +299,11 @@ function addTreeWithColor(
   trunk.position.set(tx, groundY + trunkH / 2, tz);
   tree.add(trunk);
 
-  const canopyMat = new THREE.MeshLambertMaterial({ color: canopyColor });
+  const canopyMat = new THREE.MeshLambertMaterial({
+    color: canopyColor,
+    emissive: canopyColor,
+    emissiveIntensity: 0.35,
+  });
   if (h % 4 === 0) {
     const geo = new THREE.ConeGeometry(canopyR, canopyR + 2, 6);
     const mesh = new THREE.Mesh(geo, canopyMat);
