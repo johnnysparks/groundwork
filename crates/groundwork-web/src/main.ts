@@ -19,6 +19,7 @@ import { GrowthParticles } from './rendering/particles';
 import { RainRenderer } from './rendering/rain';
 import { FaunaRenderer } from './rendering/fauna';
 import { FireflyRenderer } from './rendering/fireflies';
+import { FallingLeaves } from './rendering/leaves';
 import { EcologyParticles } from './rendering/ecology';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
@@ -440,6 +441,11 @@ async function main() {
 
   const fireflies = new FireflyRenderer();
   scene.add(fireflies.group);
+
+  // --- Falling leaves ---
+
+  const fallingLeaves = new FallingLeaves();
+  scene.add(fallingLeaves.group);
 
   // --- Data overlay (V key: water/light/nutrient heat maps) ---
 
@@ -1025,6 +1031,10 @@ async function main() {
     // Fireflies: active during dusk/night
     fireflies.setActive(dayCycle.getTime());
     fireflies.update(dt, elapsed);
+
+    // Falling leaves: ambient canopy motion
+    fallingLeaves.setPlantCount(foliage.count);
+    fallingLeaves.update(dt, elapsed);
 
     // Ambient fauna sounds: periodic bird chirps and bee buzzes when present
     ambientSoundTimer -= dt;
