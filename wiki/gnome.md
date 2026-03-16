@@ -11,8 +11,8 @@ The gnome is a **sim-side entity** (following the fauna pattern): a lightweight 
 | Idle | No task. Gnome stands at last position. |
 | Walking | Moving toward the next task's target position. |
 | Working | At the task location, applying the tool (takes 3 ticks). |
-
-Future phases will add Eating, Resting, and Reacting states.
+| Eating | Hungry gnome pauses to eat (15 ticks, resets hunger to 0). |
+| Resting | Tired gnome rests (20 ticks, restores energy to 255). |
 
 ## Task Queue
 
@@ -33,7 +33,9 @@ Future phases will add Eating, Resting, and Reacting states.
 
 ## Movement
 
-- Walk speed: 1.5 voxels/tick
+- Walk speed: 1.5 voxels/tick (base), modified by needs
+- **Hunger penalty:** speed x0.7 when hunger > 200
+- **Energy penalty:** speed x0.6 when energy < 50 (stacks with hunger: x0.42 minimum)
 - Gnome walks along the surface (z = topmost solid + 1)
 - Arrives when within 1 voxel of target (2D distance)
 - Position is fractional (f32) for smooth interpolation on the renderer side
@@ -44,12 +46,22 @@ Future phases will add Eating, Resting, and Reacting states.
 - Tool application mirrors `place_tool` logic: gravity for non-stone, air-only target, seed species mapping
 - After completing a task, gnome returns to Idle and picks up the next queued task
 
-## Needs (Phase 2, stubbed)
+## Needs
 
-- **Hunger:** 0 = full, 255 = starving. Not yet active.
-- **Energy:** 255 = full, 0 = exhausted. Not yet active.
+Hunger and energy create a soft pacing constraint — the gnome can always work, but an overworked gnome slows down and takes breaks.
 
-Future: the garden sustains the gnome (berries for food, shade for rest). The gnome's wellbeing becomes a soft constraint on how much work you can queue.
+### Hunger (0 = full, 255 = starving)
+- Increases by +1 every 5 completed work actions
+- At hunger >= 180: gnome enters **Eating** state (pauses 15 ticks, resets to 0)
+- At hunger > 200: walk speed drops to 70%
+
+### Energy (255 = full, 0 = exhausted)
+- Decreases by 1 every 3 completed work actions
+- At energy <= 30: gnome enters **Resting** state (pauses 20 ticks, restores to 255)
+- At energy < 50: walk speed drops to 60%
+
+### Design Intent
+Needs never create a fail state — the gnome always recovers. They create natural breathing moments: the player zones a big area, the gnome works through it, then pauses to eat and rest before continuing. This makes the gnome feel alive, not robotic. Speed penalties make the player *notice* the gnome is struggling, teaching them to pace their requests.
 
 ## Ghost Overlays
 
@@ -59,10 +71,11 @@ Pending tasks are exported as **ghost zones** — the renderer draws translucent
 
 Runs every tick in this order (after fauna_update, before fauna_effects):
 1. `gnome_plan` — picks next task from queue, sets target, transitions Idle -> Walking
-2. `gnome_move` — moves gnome toward target, transitions Walking -> Working on arrival
-3. `gnome_work` — counts work ticks, applies tool on completion, transitions Working -> Idle
-4. `gnome_fauna_interact` — fauna proximity checks, trust building, behavior modification (every 5 ticks)
-5. `gnome_export` — packs gnome state + ghost data into export buffers for WASM bridge
+2. `gnome_move` — moves gnome toward target (speed affected by needs), transitions Walking -> Working on arrival
+3. `gnome_work` — counts work ticks, applies tool on completion, applies hunger/energy cost, transitions Working -> Idle
+4. `gnome_needs` — checks hunger/energy thresholds, triggers Eating/Resting from Idle, counts down needs timers
+5. `gnome_fauna_interact` — fauna proximity checks, trust building, behavior modification (every 5 ticks)
+6. `gnome_export` — packs gnome state + ghost data into export buffers for WASM bridge
 
 ## WASM Bridge
 
