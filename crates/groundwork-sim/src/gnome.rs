@@ -12,6 +12,7 @@ use std::collections::VecDeque;
 
 use bevy_ecs::prelude::*;
 
+use crate::fauna::{FaunaList, FaunaType};
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GROUND_LEVEL};
 use crate::tree::SeedSpeciesMap;
 use crate::voxel::Material;
@@ -79,6 +80,10 @@ pub struct Gnome {
     pub active_tool: u8,
     /// Progress on current work action (counts up to TICKS_PER_TASK)
     pub work_progress: u8,
+    /// Trust level with squirrels (0-255). Builds through co-presence.
+    pub squirrel_trust: u8,
+    /// Count of nearby fauna (updated each tick by gnome_fauna_interact)
+    pub nearby_fauna: u8,
 }
 
 impl Default for Gnome {
@@ -97,6 +102,8 @@ impl Default for Gnome {
             hunger: 0,
             energy: 255,
             active_tool: 255, // no tool
+            squirrel_trust: 0,
+            nearby_fauna: 0,
             work_progress: 0,
         }
     }
@@ -108,7 +115,7 @@ impl Default for Gnome {
 /// [state: u8, active_tool: u8, hunger: u8, energy: u8,
 ///  x: f32, y: f32, z: f32,
 ///  target_x: f32, target_y: f32, target_z: f32,
-///  queue_len: u16le, _pad: u16]
+///  queue_len: u16le, squirrel_trust: u8, nearby_fauna: u8]
 pub const GNOME_EXPORT_BYTES: usize = 32;
 
 /// Ghost zone export: 8 bytes each.
@@ -170,8 +177,8 @@ impl GnomeData {
         buf[24..28].copy_from_slice(&g.target_z.to_le_bytes());
         let qlen = self.tasks.len() as u16;
         buf[28..30].copy_from_slice(&qlen.to_le_bytes());
-        buf[30] = 0;
-        buf[31] = 0;
+        buf[30] = g.squirrel_trust;
+        buf[31] = g.nearby_fauna;
     }
 
     /// Pack ghost zones into export buffer.
@@ -294,6 +301,70 @@ pub fn gnome_work(
     gd.gnome.state = GnomeState::Idle;
     gd.gnome.work_progress = 0;
     gd.gnome.active_tool = 255;
+}
+
+/// Squirrel trust threshold for following the gnome.
+const SQUIRREL_FOLLOW_TRUST: u8 = 180;
+
+/// Radius (in voxels) within which fauna interact with the gnome.
+const FAUNA_INTERACT_RADIUS: f32 = 8.0;
+
+/// System: gnome-fauna proximity interactions.
+///
+/// - Counts nearby fauna for export (JS can show emotion particles)
+/// - Builds squirrel trust through co-presence
+/// - High-trust squirrels adjust their target toward the gnome
+pub fn gnome_fauna_interact(
+    mut gd: ResMut<GnomeData>,
+    mut fauna_list: ResMut<FaunaList>,
+    tick: Res<Tick>,
+) {
+    // Only check every 5 ticks to avoid overhead
+    if !tick.0.is_multiple_of(5) {
+        return;
+    }
+
+    let gx = gd.gnome.x;
+    let gy = gd.gnome.y;
+    let mut nearby: u8 = 0;
+    let mut squirrel_nearby = false;
+
+    for f in &mut fauna_list.fauna {
+        let dx = f.x - gx;
+        let dy = f.y - gy;
+        let dist = (dx * dx + dy * dy).sqrt();
+
+        if dist < FAUNA_INTERACT_RADIUS {
+            nearby = nearby.saturating_add(1);
+
+            match f.fauna_type {
+                FaunaType::Squirrel => {
+                    squirrel_nearby = true;
+                    // High-trust squirrels follow the gnome
+                    if gd.gnome.squirrel_trust >= SQUIRREL_FOLLOW_TRUST {
+                        // Set target to gnome position (offset slightly)
+                        f.target_x = gx + 2.0;
+                        f.target_y = gy + 2.0;
+                    }
+                }
+                FaunaType::Bird => {
+                    // Birds that encounter the gnome working prefer to stay nearby
+                    if gd.gnome.state == GnomeState::Working && dist < 5.0 {
+                        f.target_x = gx;
+                        f.target_y = gy;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    gd.gnome.nearby_fauna = nearby;
+
+    // Build squirrel trust through co-presence (every 10 ticks if squirrel nearby)
+    if squirrel_nearby && tick.0.is_multiple_of(10) {
+        gd.gnome.squirrel_trust = gd.gnome.squirrel_trust.saturating_add(1);
+    }
 }
 
 /// Pack gnome + ghost data for WASM export. Runs after gnome systems.
@@ -517,5 +588,56 @@ mod tests {
             }
         }
         assert!(found, "gnome should have placed soil");
+    }
+
+    /// Gnome near squirrel builds trust over time.
+    #[test]
+    fn squirrel_trust_builds() {
+        use crate::fauna::{Fauna, FaunaState};
+
+        let mut world = crate::create_world();
+
+        // Place gnome at center
+        let gd = GnomeData::default();
+        let gx = gd.gnome.x;
+        let gy = gd.gnome.y;
+        world.insert_resource(gd);
+
+        // Spawn a squirrel near the gnome
+        let mut fauna_list = world.resource_mut::<FaunaList>();
+        fauna_list.fauna.push(Fauna {
+            fauna_type: FaunaType::Squirrel,
+            state: FaunaState::Idle,
+            x: gx + 3.0,
+            y: gy + 3.0,
+            z: GROUND_LEVEL as f32 + 1.0,
+            target_x: gx + 3.0,
+            target_y: gy + 3.0,
+            target_z: GROUND_LEVEL as f32 + 1.0,
+            age: 0,
+            max_age: 1000,
+            rng_seed: 42,
+        });
+
+        // Run the interaction system repeatedly
+        let mut schedule = bevy_ecs::schedule::Schedule::default();
+        schedule.add_systems(gnome_fauna_interact);
+
+        // Trust builds every 10 ticks when squirrel nearby
+        // We run 200 iterations; the system checks every 5 ticks, trust every 10
+        for i in 0..200 {
+            world.resource_mut::<crate::Tick>().0 = i;
+            schedule.run(&mut world);
+        }
+
+        let gd = world.resource::<GnomeData>();
+        assert!(
+            gd.gnome.squirrel_trust > 0,
+            "squirrel trust should build through co-presence"
+        );
+        assert!(
+            gd.gnome.nearby_fauna > 0,
+            "nearby fauna count should be tracked"
+        );
     }
 }

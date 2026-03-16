@@ -527,7 +527,7 @@ export const GnomeState = {
  * [state: u8, active_tool: u8, hunger: u8, energy: u8,
  *  x: f32, y: f32, z: f32,
  *  target_x: f32, target_y: f32, target_z: f32,
- *  queue_len: u16le, _pad: u16] */
+ *  queue_len: u16le, squirrel_trust: u8, nearby_fauna: u8] */
 const GNOME_BYTES = 32;
 
 export interface GnomeView {
@@ -542,6 +542,8 @@ export interface GnomeView {
   targetY: number;
   targetZ: number;
   queueLen: number;
+  squirrelTrust: number;
+  nearbyFauna: number;
 }
 
 /** Read sim gnome state from WASM export buffer */
@@ -563,6 +565,8 @@ export function getGnomeState(): GnomeView | null {
     targetY: view.getFloat32(20, true),
     targetZ: view.getFloat32(24, true),
     queueLen: view.getUint16(28, true),
+    squirrelTrust: view.getUint8(30),
+    nearbyFauna: view.getUint8(31),
   };
 }
 
