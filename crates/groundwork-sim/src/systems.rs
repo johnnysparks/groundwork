@@ -516,14 +516,17 @@ pub fn seed_growth(
 
                         let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or(0);
                         let rng_seed = tick.0.wrapping_mul(x as u64 + 1).wrapping_mul(y as u64 + 1);
+                        // Start with accumulated resources so Seedling→Sapling
+                        // happens within ~10 ticks (threshold 80, start at 40).
+                        // This gets first leaf (from Sapling template) to tick ~27-35.
                         commands.spawn(Tree {
                             species_id,
                             root_pos: (x, y, z),
                             age: 0,
                             stage: GrowthStage::Seedling,
                             health: 1.0,
-                            accumulated_water: 0.0,
-                            accumulated_light: 0.0,
+                            accumulated_water: 40.0,
+                            accumulated_light: 40.0,
                             rng_seed,
                             dirty: false,
                             voxel_footprint: footprint,
@@ -2095,6 +2098,42 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
             }
         }
     }
+
+    // --- Root Water Decay ---
+    // Roots that have NO adjacent wet soil slowly lose water. This enforces
+    // water dependency: removing water from the garden eventually kills plants.
+    // Without this, roots hold water forever and drought has no effect.
+    // Rate: -2 per tick for roots with no wet soil neighbors.
+    let cells = grid.cells_mut();
+    for z in 0..GRID_Z {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let idx = x + y * GRID_X + z * z_stride;
+                if snapshot[idx].0 != root_u8 || snapshot[idx].1 == 0 {
+                    continue;
+                }
+                // Check if any neighbor is wet soil (water_level > 20)
+                let mut has_wet_neighbor = false;
+                macro_rules! check_wet {
+                    ($nidx:expr) => {
+                        if snapshot[$nidx].0 == soil_u8 && snapshot[$nidx].1 > 20 {
+                            has_wet_neighbor = true;
+                        }
+                    };
+                }
+                if x > 0 { check_wet!(idx - 1); }
+                if !has_wet_neighbor && x + 1 < GRID_X { check_wet!(idx + 1); }
+                if !has_wet_neighbor && y > 0 { check_wet!(idx - GRID_X); }
+                if !has_wet_neighbor && y + 1 < GRID_Y { check_wet!(idx + GRID_X); }
+                if !has_wet_neighbor && z > 0 { check_wet!(idx - z_stride); }
+                if !has_wet_neighbor && z + 1 < GRID_Z { check_wet!(idx + z_stride); }
+
+                if !has_wet_neighbor {
+                    cells[idx].water_level = cells[idx].water_level.saturating_sub(2);
+                }
+            }
+        }
+    }
 }
 
 /// Soil evolves over time based on environmental interactions.
@@ -3457,12 +3496,13 @@ mod tests {
     #[test]
     fn tree_grows_through_stages() {
         // Full lifecycle: seed → seedling → sapling (with visible canopy).
-        // Position near spring for good water access and loam soil.
+        // Place near center spring for sustained water access.
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        let tx = 25;
-        let ty = 25;
+        // Near the center spring so water persists
+        let tx = GRID_X / 2 + 5;
+        let ty = GRID_Y / 2 + 2;
         let tz = VoxelGrid::surface_height(tx, ty) + 1;
 
         {
@@ -3471,7 +3511,7 @@ mod tests {
                 cell.material = Material::Seed;
                 cell.water_level = 100;
             }
-            // Ensure soil below is wet so roots can accumulate water.
+            // Ensure soil below is wet. The spring nearby will sustain moisture.
             for dz in 1..=4 {
                 if let Some(cell) = grid.get_mut(tx, ty, tz - dz) {
                     cell.water_level = 200;
