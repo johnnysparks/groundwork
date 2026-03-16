@@ -381,7 +381,9 @@ async function main() {
 
   let autoTick = wasmReady; // Auto-tick ON by default when sim is ready
   let tickAccumulator = 0;
-  const TICK_INTERVAL_MS = 100; // Fast ticks for responsive zone-and-watch gameplay
+  let tickSpeed = 1; // 1x, 2x, 5x
+  const BASE_TICK_MS = 100;
+  let TICK_INTERVAL_MS = BASE_TICK_MS;
 
   // --- Camera orbit input ---
 
@@ -438,6 +440,24 @@ async function main() {
         break;
       case 'r':
         orbit.reset();
+        break;
+      case '-':
+      case '_':
+        // Slow down
+        if (tickSpeed > 1) {
+          tickSpeed = tickSpeed === 5 ? 2 : 1;
+          TICK_INTERVAL_MS = BASE_TICK_MS / tickSpeed;
+          hud.addEvent(`Speed: ${tickSpeed}x`);
+        }
+        break;
+      case '=':
+      case '+':
+        // Speed up
+        if (tickSpeed < 5) {
+          tickSpeed = tickSpeed === 1 ? 2 : 5;
+          TICK_INTERVAL_MS = BASE_TICK_MS / tickSpeed;
+          hud.addEvent(`Speed: ${tickSpeed}x`);
+        }
         break;
       case 't':
         // Manual single tick
