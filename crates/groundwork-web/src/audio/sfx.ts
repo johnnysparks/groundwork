@@ -123,3 +123,77 @@ export function playMilestone(): void {
     osc.stop(t + 0.8);
   }
 }
+
+/** Play a cozy bird chirp — two quick descending sine sweeps */
+export function playBirdCall(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Slight random variation for natural feel
+  const base = 2400 + Math.random() * 800; // 2400-3200 Hz
+
+  // First chirp: quick descending sweep
+  const osc1 = c.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(base, t);
+  osc1.frequency.exponentialRampToValueAtTime(base * 0.6, t + 0.08);
+  const g1 = c.createGain();
+  g1.gain.setValueAtTime(0.06, t);
+  g1.gain.setValueAtTime(0.06, t + 0.03);
+  g1.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+  osc1.connect(g1).connect(c.destination);
+  osc1.start(t);
+  osc1.stop(t + 0.1);
+
+  // Second chirp: slightly higher, 120ms later
+  const osc2 = c.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(base * 1.15, t + 0.12);
+  osc2.frequency.exponentialRampToValueAtTime(base * 0.7, t + 0.2);
+  const g2 = c.createGain();
+  g2.gain.setValueAtTime(0.05, t + 0.12);
+  g2.gain.setValueAtTime(0.05, t + 0.15);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  osc2.connect(g2).connect(c.destination);
+  osc2.start(t + 0.12);
+  osc2.stop(t + 0.22);
+}
+
+/** Play a soft buzz for bee/butterfly arrival */
+export function playBuzz(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Low oscillator modulated by a higher frequency for buzz texture
+  const osc = c.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.value = 180 + Math.random() * 60;
+  const bpf = c.createBiquadFilter();
+  bpf.type = 'bandpass';
+  bpf.frequency.value = 400;
+  bpf.Q.value = 3;
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0.04, t);
+  gain.gain.setValueAtTime(0.04, t + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+  osc.connect(bpf).connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.15);
+}
+
+/** Play a fauna arrival sound based on type */
+export function playFaunaArrival(faunaType: number): void {
+  // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle
+  switch (faunaType) {
+    case 2: // Bird
+      playBirdCall();
+      break;
+    case 0: // Bee
+    case 1: // Butterfly
+      playBuzz();
+      break;
+    // Worm and beetle are silent (underground/subtle)
+  }
+}

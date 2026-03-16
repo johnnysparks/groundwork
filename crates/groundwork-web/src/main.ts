@@ -34,7 +34,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { initAmbientAudio } from './audio/ambient';
-import { playPlant, playWater, playDig } from './audio/sfx';
+import { playPlant, playWater, playDig, playFaunaArrival } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -140,6 +140,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
       const f = readFauna(fView, stats.fauna - 1);
       const msgs = FAUNA_MESSAGES[f.type];
       if (msgs) {
+        playFaunaArrival(f.type);
         hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
       }
     }
