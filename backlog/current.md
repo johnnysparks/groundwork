@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T15:10:00
-**Status:** Alpha complete. 109 sprints. Full audio landscape, weather wind, growth sounds.
+**Last updated:** 2026-03-16T15:15:00
+**Status:** Alpha complete. 112 sprints. Multi-sensory weather, full audio, contextual tips, mobile perf.
 
 ---
 
@@ -50,6 +50,10 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Ambient fauna sounds: bird chirps + bee buzzes every 8-20s
 - Growth shimmer sound: soft ascending sweep when vegetation increases
 - Full procedural audio landscape (no audio files)
+
+### Quality of Life (Sprints 111-112)
+- Auto-save "Saved" indicator (bottom-right, fades after 1.5s)
+- Contextual ecology tips (suggests next discovery based on garden state)
 
 ---
 
