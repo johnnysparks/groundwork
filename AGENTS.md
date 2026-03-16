@@ -12,7 +12,7 @@ GROUNDWORK is a cozy ecological builder where the player grows a self-sustaining
 
 ## CORE PLAY
 
-The player doesn't directly manipulate voxels. Instead, you **plan zones** and a charming **garden gnome** carries out the work. Ghost overlays show planned-but-not-yet-executed zones. The gnome waddles to each task, executes it, and moves to the next. This Timberborn-inspired pacing creates natural observation time and character delight. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
+The player doesn't directly manipulate voxels. Instead, you **plan zones** and a charming **garden gnome** carries out the work. The gnome is a sim-side entity — it has hunger, energy, and builds trust with fauna (squirrels follow it, birds land on its hat). Ghost overlays show planned-but-not-yet-executed zones. The garden sustains the gnome; the gnome tends the garden. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
 
 - **Plan:** drag-to-paint zones — designate areas for planting, digging, watering, or soil placement
 - **Watch:** the garden gnome walks to your zones and does the work, one task at a time
@@ -97,8 +97,9 @@ These are the specific feelings the game must reliably produce. Reference them b
 | **The Underground Revelation** | "Oh. *That's* why." | Camera dips below; oak roots have stolen the birch's water |
 | **The Slow Bloom** | "This garden is better than my last" | Third garden thrives faster because the player *understands ecology now* |
 | **The Gift** | "I didn't plant that there" | A bird carries a seed; a perfect tree grows where the player never touched |
-| **The Living Painting** | "I just want to watch" | Golden hour, the gnome sitting on a rock, drifting pollinators, breathing garden — peace |
+| **The Living Painting** | "I just want to watch" | Golden hour, the gnome resting under a willow, a bird on his hat, drifting pollinators, breathing garden — peace |
 | **The Chain Reaction** | "One thing led to another" | One wildflower → bees → pollination spread → butterflies → nesting bird → new seedling |
+| **The Companion** | "He made a friend!" | The gnome works near oak trees for several sessions; a squirrel starts following him, perches on his shoulder, carries acorns |
 | **The Recovery** | "It came back" | Over-watered section recovers: pioneer moss, then grass, then life returns |
 | **The Seasonal Shift** | "Same garden, new world" | Autumn transforms the canopy; different fauna appear; the garden reinvents itself |
 

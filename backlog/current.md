@@ -13,11 +13,15 @@
 
 Replace instant voxel placement with a zone-planning + garden gnome execution system:
 1. **Zone painting** — drag-to-paint areas for seeding, digging, watering, soil (ghost overlays show the plan)
-2. **Garden gnome** — charming billboard sprite character that walks to zones and executes work one voxel at a time
-3. **Task queue** — JS-side queue drains over ticks; HUD shows remaining tasks; right-click to cancel
-4. **No sim changes** — gnome is renderer-side only; calls existing `placeTool()` on arrival
+2. **Garden gnome** — sim-side entity (follows fauna pattern) that walks to zones and executes work one voxel at a time
+3. **Gnome needs** — hunger (eats from berry bushes) and energy (rests under trees). Gentle pacing, never punishing.
+4. **Fauna interactions** — squirrel domestication, bird friendship, bee awareness, worm encounters. New fauna type: squirrel.
+5. **Task queue** — WASM-side queue via `queue_gnome_task()`; HUD shows remaining tasks; right-click to cancel
+6. **Sim changes** — new `gnome.rs` module, WASM bridge exports for gnome state + ghost zones
 
-Subsumes the "Drag-to-zone" P1 item below (zone painting is part of this system).
+Phased: (1) gnome core, (2) needs, (3) fauna interactions, (4) idle autonomy. See decision doc for details.
+
+Subsumes the "Drag-to-zone" P1 item (zone painting is part of this system).
 
 ---
 
