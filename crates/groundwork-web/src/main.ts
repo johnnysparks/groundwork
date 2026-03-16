@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -300,6 +300,8 @@ async function main() {
     hud.setTickCount(Number(getTick()));
     hud.setAutoTick(true);
   }
+
+  // New Garden button registered after remeshDirty is defined (see below)
   const questLog = new QuestLog();
 
   // Welcome message
@@ -379,6 +381,21 @@ async function main() {
     seeds.rebuild(freshGrid);
     particles.detectGrowth(freshGrid);
   }
+
+  // New Garden button — resets sim, HUD, and re-meshes
+  hud.onNewGarden(() => {
+    if (!isInitialized()) return;
+    resetSim();
+    simTick(5);
+    hud.resetForNewGarden();
+    hud.setTickCount(Number(getTick()));
+    _prevStats = { plants: 0, fauna: 0, species: 0 };
+    _tipIndex = 0;
+    _tipTimer = 0;
+    remeshDirty();
+    hud.addEvent('Fresh garden — the spring is flowing');
+    hud.addEvent('Click to start planting zones');
+  });
 
   setupControls({
     hud,

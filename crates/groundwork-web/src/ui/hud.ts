@@ -66,6 +66,7 @@ export class Hud {
   };
 
   private _lastScore = 0;
+  private _onNewGarden: (() => void) | null = null;
   private tools: ToolUIDef[];
   private species: SpeciesDef[];
   private container: HTMLElement;
@@ -167,6 +168,13 @@ export class Hud {
     }
     sceneSelect.addEventListener('change', () => {
       switchScene(sceneSelect.value);
+    });
+
+    // New Garden button
+    const newGardenBtn = this.container.querySelector('#new-garden-btn')!;
+    newGardenBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._onNewGarden?.();
     });
 
     // Set initial state
@@ -297,6 +305,30 @@ export class Hud {
     }, 3000);
   }
 
+  /** Register callback for New Garden button */
+  onNewGarden(cb: () => void): void { this._onNewGarden = cb; }
+
+  /** Reset HUD state for a new garden */
+  resetForNewGarden(): void {
+    this.state.tickCount = 0;
+    this.state.water = this.state.maxWater;
+    this.state.gardenStats = undefined;
+    this._lastScore = 0;
+    this.updateWaterBar();
+    this.renderStatus();
+    const scoreEl = this.container.querySelector('#score-number');
+    if (scoreEl) scoreEl.textContent = '0';
+    const plantsEl = this.container.querySelector('#stat-plants');
+    if (plantsEl) plantsEl.textContent = '0';
+    const faunaEl = this.container.querySelector('#stat-fauna');
+    if (faunaEl) faunaEl.textContent = '0';
+    const speciesEl = this.container.querySelector('#stat-species');
+    if (speciesEl) speciesEl.textContent = '0';
+    // Clear event feed
+    const feed = this.container.querySelector('#event-feed');
+    if (feed) feed.innerHTML = '';
+  }
+
   /** Spend water — returns false if not enough */
   spendWater(amount: number): boolean {
     if (this.state.water < amount) return false;
@@ -377,6 +409,7 @@ const HUD_HTML = `
   <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay | -/+: speed</div>
   <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
   <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
+  <button id="new-garden-btn" title="Start a fresh garden">New Garden</button>
   <select id="scene-select" title="Choose a scene"></select>
 `;
 
@@ -570,6 +603,27 @@ const HUD_CSS = `
 #screenshot-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e8d8b8;
+}
+#new-garden-btn {
+  position: absolute;
+  bottom: 64px;
+  right: 16px;
+  padding: 6px 14px;
+  border: 1px solid rgba(120, 180, 80, 0.3);
+  border-radius: 6px;
+  background: rgba(40, 60, 30, 0.7);
+  color: #a8d888;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  pointer-events: auto;
+  transition: all 0.15s ease;
+}
+#new-garden-btn:hover {
+  background: rgba(60, 100, 40, 0.8);
+  border-color: rgba(140, 200, 100, 0.5);
+  color: #c8f0a8;
 }
 
 /* --- Milestone Toast --- */

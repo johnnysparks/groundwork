@@ -252,6 +252,13 @@ export function tick(n: number = 1): void {
   wasmModule.tick(n);
 }
 
+/** Reset the simulation to a fresh garden */
+export function resetSim(): void {
+  if (wasmModule?.init) {
+    wasmModule.init();
+  }
+}
+
 /** Get current tick count */
 export function getTick(): bigint {
   return wasmModule.get_tick();
