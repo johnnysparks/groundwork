@@ -284,10 +284,14 @@ pub fn fauna_spawn(
             }
         }
 
-        // --- Birds: spawn near trunk/branch clusters (mature trees with berries) ---
+        // --- Birds: spawn near trunk/branch clusters or berry bushes ---
+        // Berry bushes (species_id=5) attract birds at a lower threshold.
         let trunk_count = count_material_nearby(&grid, sx, sy, sz + 5, 10, Material::Trunk);
         let branch_count = count_material_nearby(&grid, sx, sy, sz + 5, 10, Material::Branch);
-        if trunk_count + branch_count >= 8 {
+        let leaf_count_birds = count_material_nearby(&grid, sx, sy, sz + 2, 6, Material::Leaf);
+        // Berry bushes make it easier for birds to spawn (lower threshold)
+        let bird_threshold_met = trunk_count + branch_count >= 8 || leaf_count_birds >= 12;
+        if bird_threshold_met {
             let h2 = tree_hash(t + si as u64, 1001);
             if h2 % 150 < 10
                 && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bird) < 2
@@ -587,9 +591,11 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
 /// - Pollinators near flowers: boost nearby seed nutrient levels
 /// - Worms in soil: increase soil organic content and bacteria
 /// - Beetles near dead wood: accelerate decomposition
+/// - Birds: carry species-specific seeds, enrich soil with droppings
 pub fn fauna_effects(
     mut grid: ResMut<VoxelGrid>,
     mut soil: ResMut<SoilGrid>,
+    mut seed_map: ResMut<crate::tree::SeedSpeciesMap>,
     fauna_list: Res<FaunaList>,
     tick: Res<Tick>,
 ) {
@@ -671,14 +677,18 @@ pub fn fauna_effects(
                 }
             }
             FaunaType::Bird => {
-                // Bird Express: birds carry seeds to distant locations.
-                // Creates "gifts" — plants the player didn't place.
+                // Bird Express: birds carry species-specific seeds to distant locations.
+                // Birds also enrich soil with droppings (nitrogen) near where they perch.
+                // Discovery: "Berry bushes attract birds → birds spread berry seeds →
+                //             bird droppings fertilize soil → better growth nearby."
                 if f.state == FaunaState::Acting || f.state == FaunaState::Idle {
                     let cx = f.x as usize;
                     let cy = f.y as usize;
                     let cz = f.z as usize;
-                    // Check if near a tree (trunk or leaf voxels)
+
+                    // Find nearby plant voxels and determine species
                     let mut near_tree = false;
+                    let mut nearby_species: Option<u8> = None;
                     for dz in 0..5_usize {
                         for dy in 0..3_usize {
                             for dx in 0..3_usize {
@@ -689,11 +699,30 @@ pub fn fauna_effects(
                                     if v.material == Material::Leaf || v.material == Material::Trunk
                                     {
                                         near_tree = true;
+                                        // nutrient_level stores species_id on plant voxels
+                                        if nearby_species.is_none() {
+                                            nearby_species = Some(v.nutrient_level);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
+                    // Bird droppings: enrich soil below the bird's position
+                    // Creates nutrient hotspots that benefit nearby plants
+                    let ground_z = GROUND_LEVEL;
+                    if let Some(soil_cell) = grid.get_mut(cx, cy, ground_z) {
+                        if soil_cell.material == Material::Soil {
+                            soil_cell.nutrient_level =
+                                soil_cell.nutrient_level.saturating_add(3);
+                        }
+                    }
+                    // Also boost soil composition (organic matter from droppings)
+                    if let Some(sc) = soil.get_mut(cx, cy, ground_z) {
+                        sc.organic = sc.organic.saturating_add(2);
+                    }
+
                     if near_tree {
                         // ~5% chance per effect tick to drop a seed
                         let h = tree_hash(tick.0 + f.rng_seed, 777);
@@ -713,6 +742,14 @@ pub fn fauna_effects(
                                         cell.water_level = 0;
                                         cell.light_level = 0;
                                         cell.nutrient_level = 0;
+                                        // Register species so the right plant grows
+                                        // Bird carries seeds from the tree it was near
+                                        if let Some(sid) = nearby_species {
+                                            seed_map.map.insert(
+                                                (tx, ty, tz),
+                                                sid as usize,
+                                            );
+                                        }
                                     }
                                 }
                             }
