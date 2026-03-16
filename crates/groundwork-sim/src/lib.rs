@@ -214,9 +214,12 @@ pub fn create_world_with_garden() -> World {
     plant_starter_garden(&mut world);
 
     // Pre-tick so the world has visible growth and wet soil from tick 0.
-    // Seeds start sprouting, water flows into soil, the oak begins branching.
+    // Seeds sprout, water flows into soil, the oak begins branching,
+    // and groundcover carpets the floor. 100 ticks gives enough time for
+    // groundcover to spread, seedlings to appear, and the garden to feel
+    // established before the player sees it.
     let mut schedule = create_schedule();
-    for _ in 0..40 {
+    for _ in 0..100 {
         tick(&mut world, &mut schedule);
     }
     // Reset tick counter so the player starts at tick 0
