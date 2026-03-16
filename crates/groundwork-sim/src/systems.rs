@@ -1208,6 +1208,82 @@ pub fn root_growth(
     }
 }
 
+/// Pioneer succession: bare moist soil spontaneously grows groundcover.
+///
+/// Succession order: bare soil → moss (species 9) → grass (10) → wildflower (7).
+/// Each stage requires the previous stage nearby. Runs every 50 ticks.
+/// Creates the feeling that "life finds a way" — the garden bootstraps itself.
+pub fn pioneer_succession(
+    mut grid: ResMut<VoxelGrid>,
+    mut seed_map: ResMut<SeedSpeciesMap>,
+    tick: Res<Tick>,
+) {
+    if tick.0 % 50 != 0 { return; }
+
+    let t = tick.0;
+    // Sample ~20 random surface positions
+    for i in 0..20_u64 {
+        let h = tree_hash(t + i, 5555);
+        let sx = (h as usize) % GRID_X;
+        let sy = ((h >> 16) as usize) % GRID_Y;
+        let sz = GROUND_LEVEL + 1; // just above surface
+
+        if let Some(cell) = grid.get(sx, sy, sz) {
+            if cell.material != Material::Air { continue; }
+        } else { continue; }
+
+        // Check if the soil below is moist enough
+        let soil_below = grid.get(sx, sy, GROUND_LEVEL);
+        let water_level = soil_below.map_or(0, |v| v.water_level);
+        if water_level < 20 { continue; } // need some moisture
+
+        // Count nearby groundcover types to determine succession stage
+        let mut has_moss = false;
+        let mut has_grass = false;
+        let radius = 4_usize;
+        for dy in sy.saturating_sub(radius)..=(sy + radius).min(GRID_Y - 1) {
+            for dx in sx.saturating_sub(radius)..=(sx + radius).min(GRID_X - 1) {
+                for dz in GROUND_LEVEL..=(GROUND_LEVEL + 2) {
+                    if let Some(v) = grid.get(dx, dy, dz) {
+                        if v.material == Material::Leaf {
+                            let species_id = v.nutrient_level;
+                            if species_id == 9 { has_moss = true; }
+                            if species_id == 10 { has_grass = true; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Determine what to plant based on succession stage
+        let species_id = if has_grass {
+            // Grass present → wildflower can appear (low probability)
+            let h2 = tree_hash(t + i, 6666);
+            if h2 % 8 == 0 { Some(7_usize) } else { None } // wildflower
+        } else if has_moss {
+            // Moss present → grass can appear
+            let h2 = tree_hash(t + i, 7777);
+            if h2 % 5 == 0 { Some(10) } else { None } // grass
+        } else {
+            // Bare moist soil → moss appears (the pioneer)
+            let h2 = tree_hash(t + i, 8888);
+            if h2 % 4 == 0 { Some(9) } else { None } // moss
+        };
+
+        if let Some(sid) = species_id {
+            if let Some(cell) = grid.get_mut(sx, sy, sz) {
+                if cell.material == Material::Air {
+                    cell.set_material(Material::Seed);
+                    cell.water_level = 0;
+                    cell.light_level = 0;
+                    cell.nutrient_level = 0;
+                    seed_map.map.insert((sx, sy, sz), sid);
+                }
+            }
+        }
+    }
+}
+
 /// Mature trees disperse seeds nearby. Seeds land on soil via gravity.
 pub fn seed_dispersal(
     trees: Query<&Tree>,

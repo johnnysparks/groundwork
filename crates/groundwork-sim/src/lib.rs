@@ -15,7 +15,7 @@ use bevy_ecs::prelude::*;
 use fauna::{FaunaList, fauna_spawn, fauna_update, fauna_effects};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
-use systems::{branch_growth, light_propagation, root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring};
+use systems::{branch_growth, light_propagation, pioneer_succession, root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring};
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
 
@@ -177,7 +177,7 @@ fn plant_starter_garden(world: &mut World) {
 /// Create the simulation schedule with all systems in order.
 pub fn create_schedule() -> Schedule {
     let mut schedule = Schedule::default();
-    schedule.add_systems((water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, ApplyDeferred, tree_growth, branch_growth, self_pruning, tree_rasterize, root_growth, seed_dispersal, fauna_spawn, fauna_update, fauna_effects, tick_counter).chain());
+    schedule.add_systems((water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, ApplyDeferred, tree_growth, branch_growth, self_pruning, tree_rasterize, root_growth, seed_dispersal, pioneer_succession, fauna_spawn, fauna_update, fauna_effects, tick_counter).chain());
     schedule
 }
 
