@@ -782,8 +782,8 @@ impl TreeTemplate {
                     if dx * dx + dy * dy <= r_sq {
                         // Use hash to create natural-looking gaps
                         let h = tree_hash(rng_seed, (dx + 100) as u64 * 200 + (dy + 100) as u64);
-                        if !h.is_multiple_of(4) {
-                            // ~75% coverage for natural look
+                        if !h.is_multiple_of(8) {
+                            // ~87% coverage — dense carpet with occasional gaps
                             voxels.push((dx, dy, 0, Material::Leaf));
                         }
                     }

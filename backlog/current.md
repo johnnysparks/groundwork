@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T22:30:00
-**Status:** Alpha complete. 85 sprints. Gnome Phase 4 complete, canopy improved.
+**Last updated:** 2026-03-16T13:30:00
+**Status:** Alpha complete. 88 sprints. Gnome fully sim-driven, canopy improved, dense groundcover.
 
 ---
 
@@ -16,6 +16,7 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Phase 2: Hunger/energy needs (eating/resting states, speed modulation)
 - Phase 3: Gnome-fauna interactions (squirrel trust, bird attraction, emotion particles)
 - Phase 4: Idle wandering (targeted wander→inspect, task interrupts, JS visual sync)
+- Phase 5: Sim→JS position sync (sim is single authority for position, state, task execution)
 
 ### Canopy Fix (Sprints 83-84)
 - Crown envelope lowered to 30% of trunk height
@@ -23,14 +24,15 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Branch growth rate 10/tick, larger YoungTree leaf spheres
 - Trees now grow canopy that wraps the trunk, not perches on top
 
-**Remaining:**
-- Sim→JS position sync (single source of truth for gnome position)
+### Dense Starter Garden (Sprint 87)
+- 21 seed spots (was 7): 5 moss, 5 grass, 5 clover for green carpet
+- Trunk visual priority fix (leaf spheres can't overwrite trunk voxels)
 
 ---
 
 ## P1
 
-- Sim gnome position → JS gardener sync (replace JS movement with sim authority)
+- (empty — all P1 items resolved)
 
 ## P2
 
