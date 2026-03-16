@@ -87,6 +87,20 @@ let _birdDropNotified = false;
 const _playerPlantedSpecies = new Set<number>();
 let _xrayTipShown = false;
 
+/** Companion species suggestions — shown once per species per session */
+const _companionSuggested = new Set<number>();
+const COMPANION_TIPS: Record<number, string> = {
+  0: 'Try planting Clover nearby — nitrogen fixing boosts Oak growth 50%!',
+  1: 'Birch grows fast in open ground — add Wildflowers to attract pollinators',
+  2: 'Willow loves water — plant Moss at its base to hold moisture',
+  3: 'Pine acidifies soil — Fern and Moss tolerate it, others struggle nearby',
+  4: 'Ferns love shade — plant near a tall tree for the Canopy Effect',
+  5: 'Berry bushes attract birds — birds will spread seeds across the garden!',
+  7: 'Flowers attract bees and butterflies — cluster them for a pollinator bridge',
+  8: 'Daisies attract pollinators — plant near trees to boost their health',
+  11: 'Clover fixes nitrogen — plant near trees for a 50% growth boost!',
+};
+
 /** Wild plant messages — fauna attribution based on species */
 const WILD_PLANT_MESSAGES: Record<number, string[]> = {
   0: [ // Oak — likely squirrel
@@ -708,6 +722,14 @@ async function main() {
       const qLen = taskQueue.length;
       if (qLen > 0) {
         hud.addEvent(`Gnome: ${toolNames[tool] ?? 'working'} zone queued (${qLen} tasks)`);
+      }
+      // Companion species suggestion — once per species
+      if (tool === ToolCode.Seed) {
+        const sid = hud.state.activeSpeciesIndex;
+        if (!_companionSuggested.has(sid) && COMPANION_TIPS[sid]) {
+          setTimeout(() => hud.addEvent(COMPANION_TIPS[sid]), 2000);
+          _companionSuggested.add(sid);
+        }
       }
       // Record tool use for quest tracking
       const speciesIdx = hud.state.activeSpeciesIndex;
