@@ -160,7 +160,7 @@ export class DayCycle {
     deltaS: number,
     lights: Lights,
     scene: THREE.Scene,
-    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color> },
+    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color>; uNightAmount?: THREE.IUniform<number> },
   ): void {
     if (this.autoCycle) {
       this.time = (this.time + deltaS / DAY_LENGTH_S) % 1;
@@ -208,6 +208,16 @@ export class DayCycle {
       // Horizon color matches fog — seamless blend at any camera angle
       if (skyUniforms.horizonColor) {
         lerpColor(skyUniforms.horizonColor.value, a.fogColor, b.fogColor, t);
+      }
+      // Night amount for star visibility: peaks at midnight (0.0), zero at noon (0.5)
+      if (skyUniforms.uNightAmount) {
+        // 0.0=midnight → 1.0, 0.25=dawn → 0.0, 0.5=noon → 0.0, 0.75=golden hour → 0.3, 1.0=blue hour → 0.9
+        const night = this.time <= 0.25
+          ? 1.0 - this.time / 0.25  // midnight→dawn: 1→0
+          : this.time >= 0.75
+            ? (this.time - 0.75) / 0.25 // golden hour→midnight: 0→1
+            : 0.0; // daytime: 0
+        skyUniforms.uNightAmount.value = Math.max(0, Math.min(1, night));
       }
     }
   }
