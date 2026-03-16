@@ -62,8 +62,8 @@ When competition kills branches, it's just a brown voxel change. An event feed m
 ### Growth feels exponential, not linear
 Tick 100-200 is explosive compared to tick 0-100 due to sqrt accumulation with increasing root/leaf counts. This is ecologically correct but may confuse new players who expect steady growth. Not a bug, but worth monitoring in playtests.
 
-### Trunk-to-canopy ratio feels wrong
-Feedback: "Trees look like tall brown sticks with green blobs on top." The leaf sphere radius around branch tips (1/2/3 voxels for seedling/young/mature) may need increasing, or we need more branch tips per tree to create denser canopy coverage. This is a `tree_rasterize` tuning issue — specifically the `leaf_r` values and the number of attraction points generated per growth stage.
+### Trunk-to-canopy ratio (mostly resolved)
+Feedback: "Trees look like tall brown sticks with green blobs on top." **Fixed:** Crown envelope now starts at 30-40% of trunk height (was 100%), so attraction points fill the upper trunk zone instead of sitting on top. Branch stubs are placed at multiple heights during skeleton init, giving space colonization starting points throughout the crown. Leaf radius is now species-dependent (`crown_r/4` for YoungTree, `crown_r/3` for Mature). **Remaining:** Very young trees (Sapling stage) still look sparse until enough branches grow via space colonization.
 
 ### Stage transitions now grow smoothly (mostly resolved)
 Feedback: "Trees don't grow a voxel at a time — they SNAP between stages." **Fixed:** Skeleton-based stages (YoungTree, Mature, OldGrowth) now use `pending_voxels` for gradual placement — trunk grows bottom→up at 3-12 voxels/tick, then leaves fill top→down. Health-only updates (every 30 ticks) just refresh leaf colors without shape changes. **Remaining:** Seedling/Sapling still use static templates and snap instantly, but these are small enough that the snap is acceptable.

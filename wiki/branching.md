@@ -3,11 +3,12 @@
 Trees (PlantType::Tree only) use space colonization for organic branching. Other plant types use static templates at all stages.
 
 ## Algorithm
-1. **Attraction points** scattered in the crown envelope (species-specific shape: Round, Narrow, Wide, Conical)
-2. **Branch tips** grow toward nearest attraction points
-3. **Phototropism** biases growth toward brightest neighbors (species.phototropism: 0.0-0.6)
-4. **Kill distance** (0.3x crown_radius) consumes attraction points near new nodes
-5. **Regeneration** adds new points when count drops below 10 (prevents stalling)
+1. **Attraction points** scattered in the crown envelope (species-specific shape: Round, Narrow, Wide, Conical). The crown starts well below the trunk top (30-40% of trunk height) so the canopy wraps the upper trunk rather than sitting on top like a cap.
+2. **Branch stubs** are placed at multiple heights along the trunk during skeleton init, giving space colonization starting points throughout the crown zone — not just the trunk tip.
+3. **Branch tips** grow toward nearest attraction points
+4. **Phototropism** biases growth toward brightest neighbors (species.phototropism: 0.0-0.6)
+5. **Kill distance** (0.3x crown_radius) consumes attraction points near new nodes
+6. **Regeneration** adds new points when count drops below 10 (prevents stalling)
 
 ## Key Parameters
 - Grows every 3 ticks for trees with active skeletons
