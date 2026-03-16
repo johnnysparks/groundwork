@@ -808,6 +808,27 @@ export class GardenerSprite {
     this.glowDisc.position.set(this.x + 0.5, this.z + 0.15, this.y + 0.5);
   }
 
+  /** React to nearby fauna from sim state. Called by main loop when sim reports
+   *  fauna near the gnome. Probabilistic emission to avoid particle spam. */
+  reactToFauna(nearbyFauna: number, squirrelTrust: number, dt: number): void {
+    if (nearbyFauna === 0) return;
+
+    // Occasional heart when fauna are nearby (cozy feel)
+    if (Math.random() < dt * 0.3 * nearbyFauna) {
+      this.emitEmotion(EmotionType.Heart);
+    }
+
+    // Exclaim when squirrel trust passes thresholds
+    if (squirrelTrust > 0 && squirrelTrust % 50 < 2 && Math.random() < dt * 0.5) {
+      this.emitEmotion(EmotionType.Exclaim);
+    }
+
+    // Sparkle when a domesticated squirrel is following
+    if (squirrelTrust >= 180 && Math.random() < dt * 0.4) {
+      this.emitEmotion(EmotionType.Sparkle);
+    }
+  }
+
   dispose(): void {
     this.parts.root.traverse((obj) => {
       if (obj instanceof THREE.Mesh) {

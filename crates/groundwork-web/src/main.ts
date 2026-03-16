@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -850,6 +850,14 @@ async function main() {
       placeTool(completedTask.tool, completedTask.x, completedTask.y, completedTask.z);
       particles.emit(completedTask.x + 0.5, completedTask.z + 0.5, completedTask.y + 0.5);
       remeshDirty();
+    }
+
+    // Sync gnome with sim fauna proximity data (emotion reactions)
+    if (isInitialized()) {
+      const gnomeSim = getGnomeState();
+      if (gnomeSim) {
+        gardener.reactToFauna(gnomeSim.nearbyFauna, gnomeSim.squirrelTrust, dt);
+      }
     }
 
     // Update ghost overlay + gnome status
