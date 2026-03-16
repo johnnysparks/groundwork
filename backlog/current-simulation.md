@@ -31,6 +31,7 @@
 - **Acceptance Test** — `crowded_oak_cluster_thins_naturally` validates core competition promise.
 - **Growth Pacing Fix (P0)** — Seed growth 5→12/tick, Seedling→Sapling 200→80, Sapling→YoungTree 800→500. First leaves at ~tick 25 (was 100+).
 - **Seasonal Day Phase (SIM-15)** — DayPhase resource (0-99): dawn=75%, day=100%, dusk=75%, night=50% growth. WASM exports for JS sync.
+- **Ecological Milestones** — EcoMilestones resource: tier 0 groundcover → tier 1 flowers → tier 2 shrubs → tier 3 trees. WASM exports for JS species picker gating.
 
 ---
 
