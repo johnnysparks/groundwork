@@ -544,24 +544,38 @@ pub fn pack_tree_stats() -> usize {
         use crate::tree::Tree;
         use bevy_ecs::prelude::*;
 
-        let grid = sim.world.resource::<crate::grid::VoxelGrid>();
+        // Collect tree data first to avoid borrow conflicts
         let mut trees = sim.world.query::<&Tree>();
-        let tree_count = trees.iter(&sim.world).count();
+        let tree_data: Vec<_> = trees
+            .iter(&sim.world)
+            .map(|t| {
+                (
+                    t.species_id,
+                    t.health,
+                    t.stage,
+                    t.root_pos,
+                    t.voxel_footprint.clone(),
+                )
+            })
+            .collect();
+        let grid = sim.world.resource::<crate::grid::VoxelGrid>();
 
         TREE_STATS_BUF.with(|buf| {
             let mut buf = buf.borrow_mut();
             buf.clear();
-            buf.resize(tree_count * 12, 0);
+            buf.resize(tree_data.len() * 12, 0);
 
             let mut i = 0;
-            for tree in trees.iter(&sim.world) {
+            for (species_id, health, stage, root_pos, footprint) in &tree_data {
                 let off = i * 12;
-                if off + 12 > buf.len() { break; }
+                if off + 12 > buf.len() {
+                    break;
+                }
 
                 // Count roots and compute water intake
                 let mut root_count = 0u16;
                 let mut water_total = 0u16;
-                for &(vx, vy, vz) in &tree.voxel_footprint {
+                for &(vx, vy, vz) in footprint {
                     if let Some(v) = grid.get(vx, vy, vz) {
                         if v.material == crate::voxel::Material::Root {
                             root_count += 1;
@@ -570,19 +584,19 @@ pub fn pack_tree_stats() -> usize {
                     }
                 }
 
-                buf[off] = tree.species_id as u8;
-                buf[off + 1] = (tree.health * 255.0) as u8;
-                buf[off + 2] = tree.stage as u8;
+                buf[off] = *species_id as u8;
+                buf[off + 1] = (*health * 255.0) as u8;
+                buf[off + 2] = *stage as u8;
                 buf[off + 3] = 0; // pad
-                buf[off + 4..off + 6].copy_from_slice(&(tree.root_pos.0 as u16).to_le_bytes());
-                buf[off + 6..off + 8].copy_from_slice(&(tree.root_pos.1 as u16).to_le_bytes());
+                buf[off + 4..off + 6].copy_from_slice(&(root_pos.0 as u16).to_le_bytes());
+                buf[off + 6..off + 8].copy_from_slice(&(root_pos.1 as u16).to_le_bytes());
                 buf[off + 8..off + 10].copy_from_slice(&root_count.to_le_bytes());
                 buf[off + 10..off + 12].copy_from_slice(&water_total.to_le_bytes());
 
                 i += 1;
             }
 
-            tree_count
+            tree_data.len()
         })
     })
 }
