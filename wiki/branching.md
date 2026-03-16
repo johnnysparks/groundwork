@@ -33,6 +33,7 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 - Dense spherical leaf shells around alive branch tips
 - Radius: Seedling=1, YoungTree=2, Mature/OldGrowth=3
 - Leaf voxels store species_id (nutrient_level) and health (water_level)
+- **Tuning note:** If canopies look too sparse ("brown sticks with green blobs"), increase leaf_r or the number of attraction points per stage. Current: 60 points (YoungTree), 120 (Mature).
 
 ## Rasterization
 tree_rasterize converts skeleton -> voxels every 30 ticks when dirty. Clears old footprint, writes new geometry. Trunk inflated to species trunk_radius (tapered with height). Roots tapered with depth.

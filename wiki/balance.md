@@ -61,3 +61,9 @@ When competition kills branches, it's just a brown voxel change. An event feed m
 
 ### Growth feels exponential, not linear
 Tick 100-200 is explosive compared to tick 0-100 due to sqrt accumulation with increasing root/leaf counts. This is ecologically correct but may confuse new players who expect steady growth. Not a bug, but worth monitoring in playtests.
+
+### Trunk-to-canopy ratio feels wrong
+Feedback: "Trees look like tall brown sticks with green blobs on top." The leaf sphere radius around branch tips (1/2/3 voxels for seedling/young/mature) may need increasing, or we need more branch tips per tree to create denser canopy coverage. This is a `tree_rasterize` tuning issue — specifically the `leaf_r` values and the number of attraction points generated per growth stage.
+
+### Leaf health encoding must use non-zero default
+Leaf/branch voxels encode tree health in `water_level` (0=dead, 255=healthy). A bug was found where `water_level=0` caused the renderer to tint all foliage amber ("dead" color). **New leaves must always have health > 0.** The tree_rasterize system writes `(tree.health * 255.0) as u8` — if health is very low but non-zero, this rounds to 0. Consider using `.max(1)` to ensure leaves always show as at least minimally alive.
