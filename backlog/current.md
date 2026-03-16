@@ -1,62 +1,46 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T12:00:00
-**Session:** 32 sprints complete
+**Last updated:** 2026-03-16T07:00:00
+**Session:** 46 sprints complete. Multiple teams active.
 
 ---
 
-## Executive Mandate — P1 (prioritize above other P1s)
+## Executive Mandate
 
-### Garden Gnome Character & Zone-Planning System
+### Garden Gnome → Sim-Side Entity
 **Decision:** `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
-**Status:** Executive mandate — schedule promptly.
-
-Replace instant voxel placement with a zone-planning + garden gnome execution system:
-1. **Zone painting** — drag-to-paint areas for seeding, digging, watering, soil (ghost overlays show the plan)
-2. **Garden gnome** — sim-side entity (follows fauna pattern) that walks to zones and executes work one voxel at a time
-3. **Gnome needs** — hunger (eats from berry bushes) and energy (rests under trees). Gentle pacing, never punishing.
-4. **Fauna interactions** — squirrel domestication, bird friendship, bee awareness, worm encounters. New fauna type: squirrel.
-5. **Task queue** — WASM-side queue via `queue_gnome_task()`; HUD shows remaining tasks; right-click to cancel
-6. **Sim changes** — new `gnome.rs` module, WASM bridge exports for gnome state + ghost zones
-
-Phased: (1) gnome core, (2) needs, (3) fauna interactions, (4) idle autonomy. See decision doc for details.
-
-Subsumes the "Drag-to-zone" P1 item (zone painting is part of this system).
+**Current state:** JS-side task queue + billboard sprite working. Needs migration to Rust sim entity with needs, fauna interactions, and WASM export.
+**Phases:** (1) gnome core in Rust ← NEXT, (2) needs, (3) fauna interactions, (4) idle autonomy
 
 ---
 
-## Next Session — P1
+## P1 — Next
 
-### Root competition visualization
-Two species' roots overlapping → visible color conflict in x-ray mode. The dominant species (higher water absorption) pushes back the other's roots.
+### Drag-to-zone painting
+Mouse drag to paint zone rectangles (currently single-click radius). Ghost overlay during drag. Right-click to cancel.
 
 ### Sound design
-Ambient garden sounds: water spring, wind in leaves, bird calls. Tool placement sounds. Milestone celebration jingle. Would transform the feel from "silent game" to "living world."
+Ambient: water spring, wind, bird calls. Actions: tool placement, seed sprout, milestone jingle.
 
-### Mobile touch controls
-Touch-based orbit, pinch zoom, tap to place. Would make the deployed GitHub Pages version playable on phones.
+### Foliage color consistency
+Garden foliage still reads amber in warm lighting. Need to ensure healthy plants are distinctly green regardless of time-of-day lighting.
 
 ---
 
 ## P2 — Future
 
-- Score breakdown tooltip (hover for detail)
+- Root competition visualization (x-ray color conflict)
+- Mobile touch controls (upstream started, needs polish)
+- Score breakdown tooltip
 - Camera clipping fix at extreme angles
-- Species preview icons in species picker
-- Biome variety (desert, forest, wetland — different species, palettes, interactions)
-- Undo/redo
-- Share garden (export save as URL parameter)
-- Tutorial video or animated guide
+- Species preview icons in picker
+- Biome variety (desert, forest, wetland)
+- Multiple gnomes for larger gardens
 
 ---
 
-## Session Stats
-- 32 sprints shipped
-- 88 sim tests pass
-- 4 ecological interactions
-- 5 milestone tiers
-- 3 data overlay modes
-- 14-shot screenshot tour
-- Save/load persistence
-- GitHub Pages deployment
-- Complete game loop: zone → grow → score → milestone → discover → replay
+## Shipped This Session (46 sprints)
+
+See `build_notes/2026-03-16T07:00:00_session_46_sprints.md` for comprehensive list.
+
+Key stats: 90 sim tests, 14-shot screenshot tour, 4 ecological interactions + competition, SimCity game loop, garden gnome, save/load, deploy, 3 concurrent teams merging.
