@@ -643,8 +643,53 @@ pub fn fauna_effects(
                 }
             }
             FaunaType::Bird => {
-                // Birds are handled by seed_dispersal (they already carry seeds)
-                // No additional effect needed here
+                // Bird Express: birds carry seeds to distant locations.
+                // Creates "gifts" — plants the player didn't place.
+                if f.state == FaunaState::Acting || f.state == FaunaState::Idle {
+                    let cx = f.x as usize;
+                    let cy = f.y as usize;
+                    let cz = f.z as usize;
+                    // Check if near a tree (trunk or leaf voxels)
+                    let mut near_tree = false;
+                    for dz in 0..5_usize {
+                        for dy in 0..3_usize {
+                            for dx in 0..3_usize {
+                                let nx = cx.wrapping_add(dx).wrapping_sub(1);
+                                let ny = cy.wrapping_add(dy).wrapping_sub(1);
+                                let nz = cz.wrapping_sub(dz);
+                                if let Some(v) = grid.get(nx, ny, nz) {
+                                    if v.material == Material::Leaf || v.material == Material::Trunk {
+                                        near_tree = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if near_tree {
+                        // ~5% chance per effect tick to drop a seed
+                        let h = tree_hash(tick.0 + f.rng_seed, 777);
+                        if h % 20 == 0 {
+                            // Pick a random landing spot 10-20 voxels away
+                            let dist = 10 + (tree_hash(f.rng_seed, 888) % 12) as usize;
+                            let angle = tree_hash(f.rng_seed + tick.0, 999) % 360;
+                            let rad = (angle as f64) * std::f64::consts::PI / 180.0;
+                            let tx = (cx as f64 + rad.cos() * dist as f64) as usize;
+                            let ty = (cy as f64 + rad.sin() * dist as f64) as usize;
+                            // Find surface at target position
+                            let tz = GROUND_LEVEL + 1;
+                            if tx < GRID_X && ty < GRID_Y {
+                                if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                                    if cell.material == Material::Air {
+                                        cell.set_material(Material::Seed);
+                                        cell.water_level = 0;
+                                        cell.light_level = 0;
+                                        cell.nutrient_level = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
