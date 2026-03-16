@@ -147,6 +147,8 @@
 
 ## Flowers (2 species)
 
+Flowers use a stem + bloom template. The bloom is a **disc of leaf voxels** at the stem top (radius scales with crown_radius — half-size for YoungTree, full for Mature). A small leaf accent sits one voxel above center for 3D shape. This makes flower patches visually prominent for pollinator attraction.
+
 ### Wildflower (id: 7)
 **The pollinator magnet.**
 
