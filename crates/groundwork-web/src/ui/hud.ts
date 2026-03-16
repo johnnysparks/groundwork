@@ -271,6 +271,25 @@ export class Hud {
     }, 3000);
   }
 
+  /** Add an event to the feed */
+  addEvent(text: string): void {
+    const feed = this.container.querySelector('#event-feed');
+    if (!feed) return;
+    const el = document.createElement('div');
+    el.className = 'event-item';
+    el.textContent = text;
+    feed.appendChild(el);
+    // Keep max 5 items
+    while (feed.children.length > 5) {
+      feed.firstElementChild?.remove();
+    }
+    // Fade out after 8s
+    setTimeout(() => {
+      el.classList.add('fading');
+      setTimeout(() => el.remove(), 500);
+    }, 8000);
+  }
+
   private renderStatus(): void {
     const tickState = this.state.autoTick ? 'ON' : 'OFF';
     const stats = this.state.gardenStats;
@@ -297,6 +316,7 @@ const HUD_HTML = `
       <div class="score-row"><span class="score-label">Species</span><span id="stat-species">0</span></div>
     </div>
   </div>
+  <div id="event-feed"></div>
   <div id="hud-status"></div>
   <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay</div>
   <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
@@ -526,6 +546,31 @@ const HUD_CSS = `
   text-transform: uppercase;
   margin-top: 6px;
 }
+
+/* --- Event Feed (bottom left) --- */
+#event-feed {
+  position: absolute;
+  bottom: 80px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 300px;
+}
+.event-item {
+  font-size: 12px;
+  color: rgba(200, 190, 160, 0.85);
+  background: rgba(20, 18, 15, 0.7);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border-left: 3px solid rgba(255, 200, 80, 0.5);
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.event-item.fading { opacity: 0; }
 
 /* --- Garden Score Panel (top right) --- */
 #garden-score {

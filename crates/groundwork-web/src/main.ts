@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { createPlantDemoGrid } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -48,6 +48,49 @@ function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; 
   let fauna = 0;
   try { fauna = getFaunaCount(); } catch {}
   return { plants, fauna, species: speciesSet.size };
+}
+
+/** Track previous stats for event detection */
+let _prevStats = { plants: 0, fauna: 0, species: 0 };
+let _eventCooldown = 0;
+
+const FAUNA_NAMES: Record<number, string> = {
+  0: 'bee', 1: 'butterfly', 2: 'bird', 3: 'worm', 4: 'beetle',
+};
+
+/** Detect ecological events by comparing with previous stats */
+function detectEvents(stats: { plants: number; fauna: number; species: number }, hud: any): void {
+  _eventCooldown--;
+  if (_eventCooldown > 0) return;
+
+  // New fauna appeared
+  if (stats.fauna > _prevStats.fauna) {
+    const diff = stats.fauna - _prevStats.fauna;
+    // Try to identify what kind by reading fauna data
+    const fView = getFaunaView?.();
+    if (fView) {
+      const f = readFauna(fView, stats.fauna - 1);
+      const name = FAUNA_NAMES[f.type] ?? 'creature';
+      hud.addEvent(`A ${name} appeared in your garden`);
+    } else {
+      hud.addEvent(`${diff} new creature${diff > 1 ? 's' : ''} appeared`);
+    }
+    _eventCooldown = 20; // Don't spam
+  }
+
+  // New species growing
+  if (stats.species > _prevStats.species) {
+    hud.addEvent(`New species growing — ${stats.species} types in your garden`);
+    _eventCooldown = 15;
+  }
+
+  // Major plant growth burst (>500 new voxels)
+  if (stats.plants > _prevStats.plants + 500 && _prevStats.plants > 0) {
+    hud.addEvent('Growth burst — your garden is flourishing');
+    _eventCooldown = 30;
+  }
+
+  _prevStats = { ...stats };
 }
 
 async function main() {
@@ -471,8 +514,10 @@ async function main() {
         const freshGrid = getGridView();
         questLog.check(freshGrid);
         if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
-        // Update garden stats for HUD
-        hud.setGardenStats(computeGardenStats(freshGrid));
+        // Update garden stats for HUD + detect ecological events
+        const stats = computeGardenStats(freshGrid);
+        hud.setGardenStats(stats);
+        detectEvents(stats, hud);
       }
       remeshDirty();
     }
