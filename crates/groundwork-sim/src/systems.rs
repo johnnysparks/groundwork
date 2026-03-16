@@ -2207,10 +2207,11 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
     }
 
     // --- Root Water Decay ---
-    // Roots that have NO adjacent wet soil slowly lose water. This enforces
-    // water dependency: removing water from the garden eventually kills plants.
-    // Without this, roots hold water forever and drought has no effect.
-    // Rate: -2 per tick for roots with no wet soil neighbors.
+    // Roots that have NO adjacent wet soil lose water. This enforces water
+    // dependency: removing water from the garden kills plants within 30-50 ticks.
+    // Rate: -5 per tick for roots with no wet soil neighbors.
+    // Also: ALL roots lose -1 per tick (metabolic consumption) regardless of
+    // neighbors, creating continuous demand that must be met by the water supply.
     let cells = grid.cells_mut();
     for z in 0..GRID_Z {
         for y in 0..GRID_Y {
@@ -2247,8 +2248,9 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                     check_wet!(idx + z_stride);
                 }
 
+                // Drought penalty: roots without wet soil neighbors dry out
                 if !has_wet_neighbor {
-                    cells[idx].water_level = cells[idx].water_level.saturating_sub(2);
+                    cells[idx].water_level = cells[idx].water_level.saturating_sub(4);
                 }
             }
         }
