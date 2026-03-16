@@ -48,4 +48,6 @@ tree_rasterize runs when `tree.dirty = true`. Two modes:
 1. **Stage change** (`stage_changed = true`): Clears old footprint, writes new geometry from skeleton/template. Trunk inflated to species trunk_radius (tapered with height). Roots tapered with depth.
 2. **Health-only** (`stage_changed = false`): Skips footprint clear. Just updates `water_level` (health) and `nutrient_level` (species_id) on existing Leaf/Branch voxels. Prevents visual shape "snapping."
 
+**Material priority:** Leaf and Branch voxels cannot overwrite Trunk voxels. This ensures trunks remain visible even when canopy leaf spheres overlap the trunk column. Leaves can overwrite Air, other Leaves, Branches, and DeadWood.
+
 **Clearing phase (stage change only):** Old footprint voxels are reverted to Soil (underground) or Air (above ground). The surface boundary uses `VoxelGrid::surface_height(x, y)` per-column — not the constant `GROUND_LEVEL` — because terrain has rolling hills. This prevents gaps that would fill with water and cause floating trees.
