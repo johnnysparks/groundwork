@@ -1,17 +1,14 @@
 /**
- * Fauna renderer: billboard sprites for ecological creatures.
+ * Fauna renderer: charming 3D models for ecological creatures.
  *
  * Renders pollinators (bees, butterflies), birds, worms, and beetles as
- * animated billboard sprites. Each fauna type has its own visual identity:
+ * small but characterful 3D models built from soft primitives. Each model
+ * feels like a collectible figurine placed in the diorama — part of the
+ * same world as the voxel garden.
  *
- * - Bees: small golden dots with rapid wing flutter
- * - Butterflies: larger, colorful with gentle wing flap
- * - Birds: dark silhouettes circling above canopy
- * - Worms: pinkish underground with subtle wiggle
- * - Beetles: dark brown on surface near dead wood
- *
- * Uses InstancedMesh for efficient rendering, similar to FoliageRenderer.
- * Positions are read from the WASM fauna export buffer each frame.
+ * Uses a pool of pre-built model Groups. Positions are read from the
+ * WASM fauna export buffer each frame. Wing animations are driven by
+ * rotating named child meshes.
  */
 
 import * as THREE from 'three';
@@ -23,134 +20,12 @@ import {
   getFaunaView,
   readFauna,
 } from '../bridge';
+import { buildFaunaModel } from '../models/fauna';
 
 /** Maximum fauna instances (matches Rust MAX_FAUNA) */
 const MAX_FAUNA = 128;
 
-/** Fauna vertex shader — billboard with wing flutter animation */
-const FAUNA_VERT = /* glsl */ `
-  attribute vec3 instanceColor;
-  attribute float aFaunaType;
-  attribute float aFaunaState;
-
-  uniform float uTime;
-
-  varying vec3 vColor;
-  varying vec2 vUv;
-  varying float vType;
-  varying float vState;
-
-  void main() {
-    vColor = instanceColor;
-    vUv = uv;
-    vType = aFaunaType;
-    vState = aFaunaState;
-
-    // Billboard: extract instance position from instance matrix
-    vec4 worldPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-
-    // Wing flutter for flying creatures
-    float flutter = 0.0;
-    if (aFaunaType < 2.0) {
-      // Bees and butterflies: rapid wing motion
-      float wingSpeed = aFaunaType < 0.5 ? 15.0 : 6.0;
-      flutter = sin(uTime * wingSpeed + worldPos.x * 3.0) * 0.15;
-    } else if (aFaunaType < 2.5) {
-      // Birds: gentle wing soar
-      flutter = sin(uTime * 2.0 + worldPos.y * 2.0) * 0.1;
-    }
-
-    // Billboard orientation
-    vec3 cameraRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-    vec3 cameraUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-
-    float scale = length(instanceMatrix[0].xyz);
-
-    // Apply wing flutter to horizontal stretch
-    float hStretch = 1.0 + flutter;
-
-    vec3 vertexWorld = worldPos.xyz
-      + cameraRight * position.x * scale * hStretch
-      + cameraUp * position.y * scale;
-
-    gl_Position = projectionMatrix * viewMatrix * vec4(vertexWorld, 1.0);
-  }
-`;
-
-/** Fauna fragment shader — soft shapes with type-specific patterns */
-const FAUNA_FRAG = /* glsl */ `
-  varying vec3 vColor;
-  varying vec2 vUv;
-  varying float vType;
-  varying float vState;
-
-  void main() {
-    vec2 centered = vUv - 0.5;
-    float dist = length(centered) * 2.0;
-
-    float alpha = 0.0;
-
-    if (vType < 0.5) {
-      // Bee: small solid circle with bright glow
-      alpha = 1.0 - smoothstep(0.3, 0.7, dist);
-    } else if (vType < 1.5) {
-      // Butterfly: wing shape (wider than tall)
-      float wingDist = length(vec2(centered.x * 0.7, centered.y));
-      alpha = 1.0 - smoothstep(0.3, 0.6, wingDist * 2.0);
-    } else if (vType < 2.5) {
-      // Bird: V-shaped silhouette
-      float birdShape = abs(centered.y - abs(centered.x) * 0.5);
-      alpha = 1.0 - smoothstep(0.05, 0.15, birdShape);
-      alpha *= step(dist, 0.9);
-    } else if (vType < 3.5) {
-      // Worm: elongated oval
-      float wormDist = length(vec2(centered.x, centered.y * 2.5));
-      alpha = 1.0 - smoothstep(0.2, 0.5, wormDist * 2.0);
-    } else {
-      // Beetle: compact oval
-      float beetleDist = length(vec2(centered.x * 1.2, centered.y));
-      alpha = 1.0 - smoothstep(0.25, 0.5, beetleDist * 2.0);
-    }
-
-    // Warm soft halo — keeps fauna visible without neon glow
-    float halo = 1.0 - smoothstep(0.0, 1.0, dist);
-    float haloAlpha = halo * 0.20;
-
-    // Combine body + halo
-    float finalAlpha = max(alpha, haloAlpha);
-    if (finalAlpha < 0.03) discard;
-
-    // Leaving state: fade out
-    if (vState > 2.5) {
-      finalAlpha *= 0.5;
-    }
-
-    // Body is opaque with warm tint, halo is softer
-    float bodyMask = step(0.1, alpha);
-    float brightness = mix(0.7, 1.2, bodyMask);
-
-    // Acting state: warm glow (pollinating, working)
-    if (vState > 1.5 && vState < 2.5) brightness *= 1.15;
-
-    // Warm tint on halo to match golden hour palette
-    vec3 warmHalo = vColor * 0.8 + vec3(0.15, 0.10, 0.03);
-    vec3 finalColor = mix(warmHalo, vColor, bodyMask) * brightness;
-
-    gl_FragColor = vec4(finalColor, finalAlpha);
-  }
-`;
-
-/** Fauna type colors — warm earthy tones matching the garden palette */
-const FAUNA_COLORS: Record<number, THREE.Color> = {
-  [FaunaType.Bee]: new THREE.Color(0.90, 0.75, 0.20),         // warm honey gold
-  [FaunaType.Butterfly]: new THREE.Color(0.85, 0.60, 0.30),   // warm amber-orange
-  [FaunaType.Bird]: new THREE.Color(0.35, 0.30, 0.25),        // soft brown-gray
-  [FaunaType.Worm]: new THREE.Color(0.70, 0.50, 0.38),        // earthy tan
-  [FaunaType.Beetle]: new THREE.Color(0.45, 0.30, 0.18),      // dark amber
-};
-
-/** Fauna sprite sizes — deliberately oversized for diorama readability.
- *  These are "character presence" sizes, not anatomical accuracy. */
+/** Fauna model sizes in voxels — deliberately oversized for readability. */
 const FAUNA_SIZES: Record<number, number> = {
   [FaunaType.Bee]: 1.5,
   [FaunaType.Butterfly]: 2.0,
@@ -159,66 +34,47 @@ const FAUNA_SIZES: Record<number, number> = {
   [FaunaType.Beetle]: 1.2,
 };
 
+/** Pre-built model pool entry. */
+interface FaunaSlot {
+  model: THREE.Group;
+  type: number;
+  active: boolean;
+}
+
 export class FaunaRenderer {
   readonly group: THREE.Group;
 
-  private mesh: THREE.InstancedMesh;
-  private material: THREE.ShaderMaterial;
-  private colorAttr: THREE.InstancedBufferAttribute;
-  private typeAttr: THREE.InstancedBufferAttribute;
-  private stateAttr: THREE.InstancedBufferAttribute;
-  private dummy = new THREE.Object3D();
+  private pool: FaunaSlot[] = [];
   private activeCount = 0;
 
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'fauna';
 
-    // Quad geometry for billboard
-    const geo = new THREE.PlaneGeometry(1, 1);
-
-    this.material = new THREE.ShaderMaterial({
-      vertexShader: FAUNA_VERT,
-      fragmentShader: FAUNA_FRAG,
-      uniforms: {
-        uTime: { value: 0 },
-      },
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-
-    // Per-instance attributes
-    const colorArray = new Float32Array(MAX_FAUNA * 3);
-    this.colorAttr = new THREE.InstancedBufferAttribute(colorArray, 3);
-
-    const typeArray = new Float32Array(MAX_FAUNA);
-    this.typeAttr = new THREE.InstancedBufferAttribute(typeArray, 1);
-
-    const stateArray = new Float32Array(MAX_FAUNA);
-    this.stateAttr = new THREE.InstancedBufferAttribute(stateArray, 1);
-
-    this.mesh = new THREE.InstancedMesh(geo, this.material, MAX_FAUNA);
-    this.mesh.instanceColor = null;
-    this.mesh.geometry.setAttribute('instanceColor', this.colorAttr);
-    this.mesh.geometry.setAttribute('aFaunaType', this.typeAttr);
-    this.mesh.geometry.setAttribute('aFaunaState', this.stateAttr);
-    this.mesh.frustumCulled = false;
-    this.mesh.count = 0;
-
-    this.group.add(this.mesh);
+    // Pre-build model pool — one Group per possible fauna instance.
+    // Each slot starts as a bee; we swap model types as needed.
+    for (let i = 0; i < MAX_FAUNA; i++) {
+      const model = buildFaunaModel(FaunaType.Bee, i);
+      model.visible = false;
+      this.group.add(model);
+      this.pool.push({ model, type: FaunaType.Bee, active: false });
+    }
   }
 
   /**
-   * Update fauna positions from the WASM bridge data.
+   * Update fauna positions and animations from the WASM bridge data.
    * Call each frame after sim tick.
    */
-  rebuild(): void {
+  update(elapsedTime: number): void {
     const count = getFaunaCount();
     const view = getFaunaView();
 
     if (!view || count === 0) {
-      this.mesh.count = 0;
+      // Hide all
+      for (const slot of this.pool) {
+        slot.model.visible = false;
+        slot.active = false;
+      }
       this.activeCount = 0;
       return;
     }
@@ -227,45 +83,99 @@ export class FaunaRenderer {
 
     for (let i = 0; i < actualCount; i++) {
       const f = readFauna(view, i);
+      const slot = this.pool[i];
 
-      // Coordinate swap: sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
-      this.dummy.position.set(f.x, f.z, f.y);
+      // Swap model if type changed
+      if (slot.type !== f.type) {
+        this.group.remove(slot.model);
+        const newModel = buildFaunaModel(f.type, i);
+        slot.model = newModel;
+        slot.type = f.type;
+        this.group.add(newModel);
+      }
 
-      const size = FAUNA_SIZES[f.type] ?? 0.5;
-      this.dummy.scale.setScalar(size);
-      this.dummy.updateMatrix();
-      this.mesh.setMatrixAt(i, this.dummy.matrix);
+      // Position: sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
+      slot.model.position.set(f.x, f.z, f.y);
 
-      // Color with slight per-instance variation
-      const baseColor = FAUNA_COLORS[f.type] ?? new THREE.Color(1, 0, 1);
-      const variation = 0.9 + (i * 73856093 & 0xff) / 255.0 * 0.2;
-      this.colorAttr.setXYZ(
-        i,
-        baseColor.r * variation,
-        baseColor.g * variation,
-        baseColor.b * variation,
-      );
+      // Scale
+      const size = FAUNA_SIZES[f.type] ?? 1.0;
+      slot.model.scale.setScalar(size);
 
-      // Type and state for shader
-      this.typeAttr.setX(i, f.type);
-      this.stateAttr.setX(i, f.state);
+      // Face movement direction (basic: face toward camera-ish)
+      // For now, gentle rotation based on position for variety
+      slot.model.rotation.y = Math.atan2(f.y - 40, f.x - 40) + Math.PI;
+
+      // Wing animations
+      this.animateWings(slot.model, f.type, f.state, elapsedTime, i);
+
+      // Leaving state: fade via scale shrink
+      if (f.state === FaunaState.Leaving) {
+        slot.model.scale.multiplyScalar(0.6);
+      }
+
+      // Acting state: slight bob
+      if (f.state === FaunaState.Acting) {
+        slot.model.position.y += Math.sin(elapsedTime * 8 + i) * 0.15;
+      }
+
+      slot.model.visible = true;
+      slot.active = true;
+    }
+
+    // Hide unused slots
+    for (let i = actualCount; i < MAX_FAUNA; i++) {
+      this.pool[i].model.visible = false;
+      this.pool[i].active = false;
     }
 
     this.activeCount = actualCount;
-    this.mesh.count = actualCount;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.colorAttr.needsUpdate = true;
-    this.typeAttr.needsUpdate = true;
-    this.stateAttr.needsUpdate = true;
   }
 
-  /**
-   * Update animation time. Call each frame.
-   */
-  update(elapsedTime: number): void {
-    this.material.uniforms.uTime.value = elapsedTime;
-    // Rebuild positions every frame (fauna move continuously)
-    this.rebuild();
+  /** Animate wing meshes for flying creatures. */
+  private animateWings(
+    model: THREE.Group,
+    type: number,
+    state: number,
+    time: number,
+    index: number,
+  ): void {
+    const offset = index * 2.37; // per-creature phase offset
+
+    if (type === FaunaType.Bee) {
+      // Rapid wing flutter
+      const flutter = Math.sin((time + offset) * 30) * 0.8;
+      const wingL = model.getObjectByName('wing_l');
+      const wingR = model.getObjectByName('wing_r');
+      if (wingL) wingL.rotation.z = 0.5 + flutter;
+      if (wingR) wingR.rotation.z = -0.5 - flutter;
+      // Gentle body bob
+      model.position.y += Math.sin((time + offset) * 5) * 0.2;
+
+    } else if (type === FaunaType.Butterfly) {
+      // Gentle wing flap
+      const flap = Math.sin((time + offset) * 4) * 0.7;
+      const names = ['wing_ul', 'wing_ur', 'wing_ll', 'wing_lr'];
+      for (const name of names) {
+        const w = model.getObjectByName(name);
+        if (!w) continue;
+        const sign = name.includes('_u') ? 1 : 0.7;
+        const side = name.endsWith('l') ? 1 : -1;
+        w.rotation.z = side * flap * sign;
+      }
+      // Float gently
+      model.position.y += Math.sin((time + offset) * 2) * 0.3;
+
+    } else if (type === FaunaType.Bird) {
+      // Slow wing soar
+      const soar = Math.sin((time + offset) * 2) * 0.4;
+      const wingL = model.getObjectByName('wing_l');
+      const wingR = model.getObjectByName('wing_r');
+      if (wingL) wingL.rotation.z = 0.3 + soar;
+      if (wingR) wingR.rotation.z = -0.3 - soar;
+      // Gentle float
+      model.position.y += Math.sin((time + offset) * 1.5) * 0.15;
+    }
+    // Worms and beetles don't have wing animations
   }
 
   /** Current active fauna count */
@@ -274,7 +184,13 @@ export class FaunaRenderer {
   }
 
   dispose(): void {
-    this.mesh.geometry.dispose();
-    this.material.dispose();
+    for (const slot of this.pool) {
+      slot.model.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          obj.geometry.dispose();
+          if (obj.material instanceof THREE.Material) obj.material.dispose();
+        }
+      });
+    }
   }
 }
