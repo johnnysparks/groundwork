@@ -714,8 +714,7 @@ pub fn fauna_effects(
                     let ground_z = GROUND_LEVEL;
                     if let Some(soil_cell) = grid.get_mut(cx, cy, ground_z) {
                         if soil_cell.material == Material::Soil {
-                            soil_cell.nutrient_level =
-                                soil_cell.nutrient_level.saturating_add(3);
+                            soil_cell.nutrient_level = soil_cell.nutrient_level.saturating_add(3);
                         }
                     }
                     // Also boost soil composition (organic matter from droppings)
@@ -745,10 +744,7 @@ pub fn fauna_effects(
                                         // Register species so the right plant grows
                                         // Bird carries seeds from the tree it was near
                                         if let Some(sid) = nearby_species {
-                                            seed_map.map.insert(
-                                                (tx, ty, tz),
-                                                sid as usize,
-                                            );
+                                            seed_map.map.insert((tx, ty, tz), sid as usize);
                                         }
                                     }
                                 }
