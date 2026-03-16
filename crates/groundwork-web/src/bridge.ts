@@ -264,6 +264,26 @@ export function getTick(): bigint {
   return wasmModule.get_tick();
 }
 
+/** Save the voxel grid to a Uint8Array (copy from WASM memory) */
+export function saveGrid(): Uint8Array | null {
+  if (!wasmModule?.grid_ptr || !wasmMemory) return null;
+  const ptr = wasmModule.grid_ptr();
+  const len = wasmModule.grid_len();
+  const view = new Uint8Array(wasmMemory.buffer, ptr, len);
+  return new Uint8Array(view); // copy
+}
+
+/** Restore the voxel grid from a Uint8Array (write into WASM memory) */
+export function restoreGrid(data: Uint8Array): boolean {
+  if (!wasmModule?.grid_ptr || !wasmMemory) return false;
+  const ptr = wasmModule.grid_ptr();
+  const len = wasmModule.grid_len();
+  if (data.length !== len) return false;
+  const view = new Uint8Array(wasmMemory.buffer, ptr, len);
+  view.set(data);
+  return true;
+}
+
 /**
  * Get a live typed array view of the voxel grid.
  * IMPORTANT: This view becomes invalid after any WASM allocation (tick, place_tool, etc).

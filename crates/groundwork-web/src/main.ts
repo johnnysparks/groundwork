@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -184,8 +184,19 @@ async function main() {
     // Mock scene — use the factory function
     grid = sceneDef.createGrid();
   } else if (wasmReady) {
-    // WASM simulation
+    // WASM simulation — try to restore saved garden
     simTick(5);
+    const savedData = localStorage.getItem('groundwork-garden');
+    if (savedData) {
+      try {
+        const bytes = Uint8Array.from(atob(savedData), c => c.charCodeAt(0));
+        if (restoreGrid(bytes)) {
+          console.log('Restored saved garden');
+        }
+      } catch (e) {
+        console.warn('Failed to restore save:', e);
+      }
+    }
     grid = getGridView();
   } else {
     // Fallback: first scene with a grid factory
@@ -398,6 +409,7 @@ async function main() {
     _tipIndex = 0;
     _tipTimer = 0;
     remeshDirty();
+    try { localStorage.removeItem('groundwork-garden'); } catch {}
     hud.addEvent('Fresh garden — the spring is flowing');
     hud.addEvent('Click to start planting zones');
   });
@@ -606,6 +618,7 @@ async function main() {
   // --- Render loop ---
 
   const clock = new THREE.Clock();
+  let saveTimer = 0;
 
   function animate(): void {
     requestAnimationFrame(animate);
@@ -635,6 +648,24 @@ async function main() {
         detectEvents(stats, hud);
       }
       remeshDirty();
+    }
+
+    // Auto-save every ~10 seconds
+    saveTimer += dt;
+    if (saveTimer > 10 && isInitialized()) {
+      saveTimer = 0;
+      const gridData = saveGrid();
+      if (gridData) {
+        try {
+          // Encode binary as base64 in chunks (spread operator can't handle 2.5MB)
+          let binary = '';
+          const chunk = 8192;
+          for (let i = 0; i < gridData.length; i += chunk) {
+            binary += String.fromCharCode(...gridData.subarray(i, i + chunk));
+          }
+          localStorage.setItem('groundwork-garden', btoa(binary));
+        } catch { /* localStorage full or unavailable */ }
+      }
     }
 
     // Fade quest notifications
