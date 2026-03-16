@@ -36,6 +36,9 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 - **Tuning note:** If canopies look too sparse ("brown sticks with green blobs"), increase leaf_r or the number of attraction points per stage. Current: 60 points (YoungTree), 120 (Mature).
 
 ## Rasterization
-tree_rasterize converts skeleton -> voxels every 30 ticks when dirty. Clears old footprint, writes new geometry. Trunk inflated to species trunk_radius (tapered with height). Roots tapered with depth.
+tree_rasterize runs when `tree.dirty = true`. Two modes:
 
-**Clearing phase:** When re-rasterizing, old footprint voxels are reverted to Soil (underground) or Air (above ground). The surface boundary uses `VoxelGrid::surface_height(x, y)` per-column — not the constant `GROUND_LEVEL` — because terrain has rolling hills. This prevents gaps that would fill with water and cause floating trees.
+1. **Stage change** (`stage_changed = true`): Clears old footprint, writes new geometry from skeleton/template. Trunk inflated to species trunk_radius (tapered with height). Roots tapered with depth.
+2. **Health-only** (`stage_changed = false`): Skips footprint clear. Just updates `water_level` (health) and `nutrient_level` (species_id) on existing Leaf/Branch voxels. Prevents visual shape "snapping."
+
+**Clearing phase (stage change only):** Old footprint voxels are reverted to Soil (underground) or Air (above ground). The surface boundary uses `VoxelGrid::surface_height(x, y)` per-column — not the constant `GROUND_LEVEL` — because terrain has rolling hills. This prevents gaps that would fill with water and cause floating trees.

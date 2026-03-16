@@ -56,4 +56,12 @@ The `sqrt()` gives diminishing returns: 100 input -> +10, 10000 -> +100.
 Dead trees with root water > 100: health recovers at +0.006/tick. At health 0.3: revives as Sapling with fresh skeleton. Dead trees don't re-rasterize during recovery (preserves root footprint).
 
 ## Re-rasterization
-Every 30 ticks if health changed, tree_rasterize updates voxels from skeleton. Leaf/Branch voxels store health as water_level byte (0-255) for visual stress coloring.
+
+Two modes, controlled by the `stage_changed` flag on each Tree:
+
+- **Stage change** (`stage_changed = true`): Full footprint clear + regenerate from skeleton/template. Happens on Seedling→Sapling, Sapling→YoungTree, etc. Visual "snap" to new shape.
+- **Health-only update** (`stage_changed = false`): Just refreshes `water_level` (health) and `nutrient_level` (species_id) on existing Leaf/Branch voxels. No footprint clear, no shape change. Runs every 30 ticks.
+
+This two-mode approach prevents the "shape snapping" bug where trees would visually reset to their template on every health update tick. Between stage transitions, the tree's shape is stable and only colors change.
+
+**Open design issue:** Stage transitions still snap (one tick the tree is a seedling, the next it's a full sapling). The feedback requests gradual voxel-by-voxel growth. See [Balance — Known Issues](balance.md) for details.

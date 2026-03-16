@@ -65,5 +65,8 @@ Tick 100-200 is explosive compared to tick 0-100 due to sqrt accumulation with i
 ### Trunk-to-canopy ratio feels wrong
 Feedback: "Trees look like tall brown sticks with green blobs on top." The leaf sphere radius around branch tips (1/2/3 voxels for seedling/young/mature) may need increasing, or we need more branch tips per tree to create denser canopy coverage. This is a `tree_rasterize` tuning issue — specifically the `leaf_r` values and the number of attraction points generated per growth stage.
 
+### Stage transitions snap instead of growing gradually
+Feedback: "Trees don't grow a voxel at a time — they SNAP between stages." The rasterizer clears and regenerates the full footprint on stage change. **Partial fix shipped:** health-only updates (every 30 ticks) now skip the footprint clear and just refresh leaf colors, preventing visual "reset" between stages. But stage transitions themselves still snap. Full fix would require incremental voxel accumulation (add 1-3 voxels/tick) instead of full template regeneration. This is the most requested "feel" improvement.
+
 ### Leaf health encoding must use non-zero default
 Leaf/branch voxels encode tree health in `water_level` (0=dead, 255=healthy). A bug was found where `water_level=0` caused the renderer to tint all foliage amber ("dead" color). **New leaves must always have health > 0.** The tree_rasterize system writes `(tree.health * 255.0) as u8` — if health is very low but non-zero, this rounds to 0. Consider using `.max(1)` to ensure leaves always show as at least minimally alive.
