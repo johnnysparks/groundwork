@@ -916,6 +916,7 @@ async function main() {
             binary += String.fromCharCode(...gridData.subarray(i, i + chunk));
           }
           localStorage.setItem('groundwork-garden', btoa(binary));
+          hud.showSaveIndicator();
         } catch { /* localStorage full or unavailable */ }
       }
     }

@@ -475,6 +475,25 @@ export class Hud {
     }, 8000);
   }
 
+  /** Brief save indicator — shows "Saved" for 2s, doesn't clutter event feed */
+  showSaveIndicator(): void {
+    const el = this.container.querySelector('#save-indicator') as HTMLElement;
+    if (!el) {
+      // Create save indicator element if not present
+      const indicator = document.createElement('div');
+      indicator.id = 'save-indicator';
+      indicator.style.cssText = 'position:fixed;bottom:8px;right:8px;color:rgba(255,255,255,0.5);font-size:11px;pointer-events:none;transition:opacity 0.5s;';
+      indicator.textContent = 'Saved';
+      document.body.appendChild(indicator);
+      setTimeout(() => { indicator.style.opacity = '0'; }, 1500);
+      setTimeout(() => indicator.remove(), 2000);
+      return;
+    }
+    el.style.opacity = '1';
+    el.textContent = 'Saved';
+    setTimeout(() => { el.style.opacity = '0'; }, 1500);
+  }
+
   /** Update species unlocks from sim-side ecological milestones */
   updateMilestones(milestones: { tier1Flowers: boolean; tier2Shrubs: boolean; tier3Trees: boolean }): void {
     const tiers: [string, boolean][] = [
