@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T14:30:00
-**Status:** Alpha complete. 96 sprints. Green garden floor, species-specific canopy, sim-driven gnome.
+**Last updated:** 2026-03-16T14:45:00
+**Status:** Alpha complete. 100 sprints. Water shimmer, seed sparkles, mobile performance preset.
 
 ---
 
@@ -28,6 +28,16 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - 21 seed spots (was 7): 5 moss, 5 grass, 5 clover for green carpet
 - Trunk visual priority fix (leaf spheres can't overwrite trunk voxels)
 
+### Water & Seed Visibility (Sprints 97-98)
+- Water surface shimmer: dancing sun sparkles, shoreline foam, stronger color contrast
+- Seed golden sparkle particles: 2-3 seeds twinkle every 0.3s until they sprout
+- Seed voxel color brightened for soil contrast
+
+### Mobile Performance (Sprints 99-100)
+- DPR clamped to 2, tilt-shift DOF disabled, bloom half-res, shadows 1024
+- Chunk remesh budgeted to 4/frame on mobile (eliminates stutter)
+- Mobile camera starts at 1.6x zoom (shows detail instead of tiny rectangle)
+
 ---
 
 ## P1
@@ -40,4 +50,4 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Squirrel domestication (seeds cached by squirrels sprout) — partially in, needs tuning
 - Root competition visualization in x-ray
 - Multiple gnomes, biome variety, undo/redo, share garden
-- SSAO + shadows (disabled, need tuning)
+- SSAO (disabled, needs tuning — shadows now enabled with warm PCF)

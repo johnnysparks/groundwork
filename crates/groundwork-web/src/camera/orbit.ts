@@ -59,7 +59,7 @@ export class OrbitCamera {
   /** Frustum half-size (for resize) — scales with grid dimensions */
   private frustumSize = 80;
 
-  constructor(aspect: number) {
+  constructor(aspect: number, opts?: { mobile?: boolean }) {
     // Compute defaults from live grid dimensions (may have been overridden by demo grid)
     const cx = GRID_X / 2;
     const cy = GROUND_LEVEL;
@@ -72,6 +72,11 @@ export class OrbitCamera {
     const maxDim = Math.max(GRID_X, GRID_Y);
     this.frustumSize = maxDim <= 100 ? maxDim : 100;
     this.distance = Math.max(100, maxDim * 0.5);
+
+    // Mobile: start zoomed in ~50% so plants and fauna are visible on small screens
+    if (opts?.mobile) {
+      this.targetZoom = 1.6;
+    }
 
     this.camera = new THREE.OrthographicCamera(
       -this.frustumSize * aspect / 2,

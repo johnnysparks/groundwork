@@ -217,7 +217,7 @@ async function main() {
   scene.fog = new THREE.FogExp2(0xccddcc, 0.0025);
 
   // Camera
-  const orbit = new OrbitCamera(window.innerWidth / window.innerHeight);
+  const orbit = new OrbitCamera(window.innerWidth / window.innerHeight, { mobile: isMobile });
 
   // Lighting
   const lights = createLighting(scene, { mobile: isMobile });
