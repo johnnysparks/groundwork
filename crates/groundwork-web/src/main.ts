@@ -27,6 +27,7 @@ import { Hud } from './ui/hud';
 import { setupControls } from './ui/controls';
 import { TaskQueue } from './gardener/queue';
 import { GhostOverlay } from './gardener/ghosts';
+import { GardenerSprite } from './gardener/gardener';
 import { QuestLog } from './ui/quests';
 import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
@@ -348,6 +349,8 @@ async function main() {
   const taskQueue = new TaskQueue();
   const ghosts = new GhostOverlay();
   scene.add(ghosts.group);
+  const gardener = new GardenerSprite();
+  scene.add(gardener.group);
 
   // --- Post-processing ---
 
@@ -699,15 +702,8 @@ async function main() {
       }
       if (ticked) {
         hud.setTickCount(Number(getTick()));
-        // Drain task queue: gnome processes 1 task per tick
-        const task = taskQueue.dequeue();
-        if (task) {
-          if (task.species !== undefined) {
-            setSelectedSpecies(task.species);
-          }
-          placeTool(task.tool, task.x, task.y, task.z);
-          particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
-        }
+        // Gnome processes tasks — walks to each one and executes
+        // (gnome update happens in the frame loop below)
         const freshGrid = getGridView();
         questLog.check(freshGrid);
         if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
@@ -719,9 +715,22 @@ async function main() {
         detectEvents(stats, hud);
       }
       remeshDirty();
-      // Update ghost overlay
-      ghosts.rebuild(taskQueue, clock.elapsedTime);
     }
+
+    // Update gnome (walks, works, returns completed tasks)
+    const completedTask = gardener.update(dt, elapsed, taskQueue);
+    if (completedTask && isInitialized()) {
+      if (completedTask.species !== undefined) {
+        setSelectedSpecies(completedTask.species);
+      }
+      placeTool(completedTask.tool, completedTask.x, completedTask.y, completedTask.z);
+      particles.emit(completedTask.x + 0.5, completedTask.z + 0.5, completedTask.y + 0.5);
+      remeshDirty();
+    }
+
+    // Update ghost overlay
+    ghosts.rebuild(taskQueue, elapsed);
+
 
     // Auto-save every ~10 seconds
     saveTimer += dt;
