@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -479,6 +479,14 @@ async function main() {
     hud.addEvent('Fresh garden — the spring is flowing');
   });
 
+  /** Enqueue a task to both the JS gardener queue and the WASM sim gnome */
+  function enqueueTask(tool: number, x: number, y: number, z: number, species?: number) {
+    taskQueue.enqueue({ tool, x, y, z, species });
+    if (isInitialized()) {
+      queueGnomeTask(tool, x, y, z, species ?? 255);
+    }
+  }
+
   setupControls({
     hud,
     questLog,
@@ -517,7 +525,7 @@ async function main() {
             const sx = hit.x + dx;
             const sy = hit.y + dy;
             if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
-            taskQueue.enqueue({ tool, x: sx, y: sy, z: hit.z, species: hud.state.activeSpeciesIndex });
+            enqueueTask(tool, sx, sy, hit.z, hud.state.activeSpeciesIndex);
           }
         }
       } else {
@@ -527,7 +535,7 @@ async function main() {
             const sx = hit.x + dx;
             const sy = hit.y + dy;
             if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
-            taskQueue.enqueue({ tool, x: sx, y: sy, z: hit.z });
+            enqueueTask(tool, sx, sy, hit.z);
           }
         }
       }
@@ -572,11 +580,7 @@ async function main() {
       for (let y = y1; y <= y2; y += spacing) {
         for (let x = x1; x <= x2; x += spacing) {
           if (x >= 0 && y >= 0 && x < GRID_X && y < GRID_Y) {
-            taskQueue.enqueue({
-              tool,
-              x, y, z,
-              species: tool === ToolCode.Seed ? hud.state.activeSpeciesIndex : undefined,
-            });
+            enqueueTask(tool, x, y, z, tool === ToolCode.Seed ? hud.state.activeSpeciesIndex : undefined);
           }
         }
       }

@@ -513,3 +513,76 @@ export function getAvailablePlantTypes(): string[] {
   if (wasmModule?.milestone_tier3_trees?.()) types.push('Tree');
   return types;
 }
+
+// ─── Garden Gnome ──────────────────────────────────────────────
+
+/** Gnome state enum (mirrors Rust GnomeState repr(u8)) */
+export const GnomeState = {
+  Idle: 0,
+  Walking: 1,
+  Working: 2,
+} as const;
+
+/** Gnome export: 32 bytes.
+ * [state: u8, active_tool: u8, hunger: u8, energy: u8,
+ *  x: f32, y: f32, z: f32,
+ *  target_x: f32, target_y: f32, target_z: f32,
+ *  queue_len: u16le, _pad: u16] */
+const GNOME_BYTES = 32;
+
+export interface GnomeView {
+  state: number;
+  activeTool: number;
+  hunger: number;
+  energy: number;
+  x: number;
+  y: number;
+  z: number;
+  targetX: number;
+  targetY: number;
+  targetZ: number;
+  queueLen: number;
+}
+
+/** Read sim gnome state from WASM export buffer */
+export function getGnomeState(): GnomeView | null {
+  if (!wasmModule?.gnome_ptr || !wasmMemory) return null;
+  const ptr = wasmModule.gnome_ptr();
+  const len = wasmModule.gnome_len();
+  if (len < GNOME_BYTES) return null;
+  const view = new DataView(wasmMemory.buffer, ptr, len);
+  return {
+    state: view.getUint8(0),
+    activeTool: view.getUint8(1),
+    hunger: view.getUint8(2),
+    energy: view.getUint8(3),
+    x: view.getFloat32(4, true),
+    y: view.getFloat32(8, true),
+    z: view.getFloat32(12, true),
+    targetX: view.getFloat32(16, true),
+    targetY: view.getFloat32(20, true),
+    targetZ: view.getFloat32(24, true),
+    queueLen: view.getUint16(28, true),
+  };
+}
+
+/** Queue a task for the sim gnome. Returns true if queued. */
+export function queueGnomeTask(tool: number, x: number, y: number, z: number, species: number = 255): boolean {
+  if (!wasmModule?.queue_gnome_task) return false;
+  return wasmModule.queue_gnome_task(tool, x, y, z, species);
+}
+
+/** Cancel sim gnome tasks at a position */
+export function cancelGnomeTask(x: number, y: number, z: number): void {
+  wasmModule?.cancel_gnome_task?.(x, y, z);
+}
+
+/** Cancel all sim gnome tasks */
+export function cancelAllGnomeTasks(): void {
+  wasmModule?.cancel_all_gnome_tasks?.();
+}
+
+/** Number of pending sim gnome tasks */
+export function getGnomeQueueLen(): number {
+  return wasmModule?.gnome_queue_len?.() ?? 0;
+}
