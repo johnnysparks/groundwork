@@ -223,7 +223,7 @@ pub fn create_world_with_garden() -> World {
 /// Plant a small starter garden near the spring so the world feels alive from tick 0.
 /// Places a young oak, a few seeds of varied species, and some groundcover.
 fn plant_starter_garden(world: &mut World) {
-    use tree::{GrowthStage, Tree, TreeTemplate};
+    use tree::{init_skeleton, GrowthStage, Tree};
 
     let cx = grid::GRID_X / 2;
     let cy = grid::GRID_Y / 2;
@@ -234,33 +234,11 @@ fn plant_starter_garden(world: &mut World) {
     let oak_y = cy + 4;
     let oak_z = VoxelGrid::surface_height(oak_x, oak_y) + 1;
     let oak_species = &species_table[0]; // Oak
-    let oak_template = TreeTemplate::generate(oak_species, &GrowthStage::YoungTree, 42);
-    let mut oak_footprint = Vec::new();
-    {
-        let grid = world.resource_mut::<VoxelGrid>().into_inner();
-        for &(dx, dy, dz, mat) in &oak_template.voxels {
-            let ax = oak_x as isize + dx;
-            let ay = oak_y as isize + dy;
-            let az = oak_z as isize + dz;
-            if ax < 0 || ay < 0 || az < 0 {
-                continue;
-            }
-            let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
-            if !VoxelGrid::in_bounds(ax, ay, az) {
-                continue;
-            }
-            if let Some(cell) = grid.get_mut(ax, ay, az) {
-                let can_place = match mat {
-                    Material::Root => cell.material == Material::Soil,
-                    _ => cell.material == Material::Air,
-                };
-                if can_place {
-                    cell.set_material(mat);
-                    oak_footprint.push((ax, ay, az));
-                }
-            }
-        }
-    }
+    // Initialize the skeleton so branch_growth and tree_rasterize work correctly.
+    // Without this, the tree has empty branches and the skeleton path never fires,
+    // causing a floating tree when it transitions to Mature during pre-ticks.
+    let (branches, attraction_points) =
+        init_skeleton(oak_species, &GrowthStage::YoungTree, 42);
     world.spawn(Tree {
         species_id: 0,
         root_pos: (oak_x, oak_y, oak_z),
@@ -271,10 +249,10 @@ fn plant_starter_garden(world: &mut World) {
         accumulated_light: 1500.0,
         rng_seed: 42,
         dirty: true,
-        voxel_footprint: oak_footprint,
-        branches: Vec::new(),
-        attraction_points: Vec::new(),
-        skeleton_initialized: false,
+        voxel_footprint: Vec::new(),
+        branches,
+        attraction_points,
+        skeleton_initialized: true,
         stage_changed: true,
         pending_voxels: Vec::new(),
         revealed_z: 0,
