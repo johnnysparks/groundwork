@@ -686,7 +686,8 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                 }
 
                 // Keep on ground surface
-                f.z = f.z.clamp(GROUND_LEVEL as f32 + 0.5, GROUND_LEVEL as f32 + 2.0);
+                f.z =
+                    f.z.clamp(GROUND_LEVEL as f32 + 0.5, GROUND_LEVEL as f32 + 2.0);
             }
         }
 

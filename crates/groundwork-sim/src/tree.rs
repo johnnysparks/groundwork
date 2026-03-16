@@ -1056,10 +1056,7 @@ mod tests {
             Some(GrowthStage::Sapling)
         );
         // Not enough resources
-        assert_eq!(
-            GrowthStage::Seedling.next_stage(10, 50.0, 80.0, 1.0),
-            None
-        );
+        assert_eq!(GrowthStage::Seedling.next_stage(10, 50.0, 80.0, 1.0), None);
         // Sapling → YoungTree (threshold: 500)
         assert_eq!(
             GrowthStage::Sapling.next_stage(100, 500.0, 500.0, 1.0),

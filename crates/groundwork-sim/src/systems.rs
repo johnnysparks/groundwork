@@ -2848,8 +2848,7 @@ mod tests {
             assert!(
                 progressed,
                 "At 13 ticks, seed should have progressed: material={:?}, nutrient={}",
-                cell.material,
-                cell.nutrient_level
+                cell.material, cell.nutrient_level
             );
         }
     }
