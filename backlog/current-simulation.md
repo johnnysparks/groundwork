@@ -38,16 +38,20 @@
 
 ---
 
-## Workstream Complete
+## Workstream Complete — All P0/P1 Items Closed
 
-The simulation enhancement workstream is **feature-complete** after 18 sprints.
+The simulation enhancement workstream is **complete** after 21 sprints.
 
-**Remaining cross-team items:**
-- SIM-14 (root war viz data) — WASM export for visual team
-- JS species picker integration using milestone exports — default priorities team
-- Weather visual effects (rain particles, palette shift) — visual team
+**All P1 items closed:**
+- SIM-14 (root war viz data) — shipped: pack_tree_stats() WASM export ✓
+- Species picker milestone integration — shipped: discovery + milestones wired to HUD ✓
+- Root water decay + growth pacing — shipped ✓
+
+**Cross-team items for visual/default teams:**
+- Weather visual effects (rain particles, palette shift) — use get_weather_state() WASM export
+- Root territory circles in x-ray mode — use pack_tree_stats() WASM export
 
 **P2 — Future (if workstream reopens):**
 - Fire mechanics
 - Disease spread
-- Symbiotic fauna pairs (squirrel domestication UI)
+- Squirrel domestication UI (gnome interaction)
