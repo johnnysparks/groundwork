@@ -189,12 +189,13 @@
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.05m (1 voxel) |
-| Crown radius | 0.3m (6 voxels) |
+| Crown radius | 0.5m (10 voxels) |
 | Growth rate | 1.0x |
 | Water need | High |
 | Shade tolerance | 20/255 (extreme) |
+| Dispersal | 0.5m / 15 ticks |
 
-**Niche:** First to colonize bare moist soil. Acid-tolerant. Part of the nitrogen handshake (groundcover near tree roots = 1.5x tree growth). Pioneer succession stage 1.
+**Niche:** First to colonize bare moist soil. Acid-tolerant. Part of the nitrogen handshake (groundcover near tree roots = 1.5x tree growth). Pioneer succession stage 1. Dense 87% leaf coverage creates a carpet effect.
 
 ### Grass (id: 10)
 **Pioneer species #2 + soil binder.**
@@ -204,11 +205,13 @@
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.1m (2 voxels) |
+| Crown radius | 0.4m (8 voxels) |
 | Growth rate | 2.0x |
 | Water need | Low |
 | Shade tolerance | 140/255 |
+| Dispersal | 0.5m / 12 ticks |
 
-**Niche:** Follows moss in succession. Roots increase soil clay content (+1/cycle), improving water retention. "Prepare the ground" strategy — plant grass before trees.
+**Niche:** Follows moss in succession. Roots increase soil clay content (+1/cycle), improving water retention. Fastest-dispersing groundcover. "Prepare the ground" strategy — plant grass before trees.
 
 ### Clover (id: 11)
 **The nitrogen fixer.**
@@ -218,9 +221,11 @@
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.1m (2 voxels) |
+| Crown radius | 0.4m (8 voxels) |
 | Growth rate | 1.8x |
 | Water need | Medium |
 | Shade tolerance | 100/255 |
+| Dispersal | 0.5m / 15 ticks |
 
 **Niche:** Nitrogen handshake — clover near tree roots = 1.5x tree growth. Also binds soil like grass. The first "synergy" species the player discovers.
 
