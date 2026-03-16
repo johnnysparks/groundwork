@@ -347,19 +347,20 @@ async function main() {
       angles = [{ name: 'hero', theta: 45, phi: 60 }];
     } else {
       // Standard tour: surface views, lighting, x-ray
+      // tick: N means advance sim N ticks before this shot (garden evolves during tour)
       const shots = [
         // --- Surface (golden hour default) ---
         { name: '01-hero',           theta: 45,  phi: 60 },
-        { name: '02-side',           theta: 120, phi: 35 },
-        { name: '03-close-up',       theta: 30,  phi: 50, zoom: 2.0 },
+        { name: '02-side',           theta: 120, phi: 35, tick: 20 },
+        { name: '03-close-up',       theta: 30,  phi: 50, zoom: 2.0, tick: 20 },
         { name: '04-wide',           theta: 45,  phi: 85, zoom: 0.3 },
         // --- Day cycle: 4 times of day from same angle ---
         { name: '05-dawn',           theta: 45,  phi: 60, time: 0.25 },
         { name: '06-noon',           theta: 45,  phi: 60, time: 0.5 },
         { name: '07-golden',         theta: 45,  phi: 60, time: 0.75 },
         { name: '08-blue-hour',      theta: 45,  phi: 60, time: 0.0 },
-        // --- X-ray underground (reset to golden hour) ---
-        { name: '09-xray-hero',      theta: 45,  phi: 60, xray: true, time: 0.75 },
+        // --- X-ray underground (reset to golden hour, tick for more root growth) ---
+        { name: '09-xray-hero',      theta: 45,  phi: 60, xray: true, time: 0.75, tick: 50 },
         { name: '10-xray-side',      theta: 120, phi: 35, xray: true },
         { name: '11-xray-close',     theta: 30,  phi: 50, zoom: 2.0, xray: true },
       ];
@@ -368,6 +369,10 @@ async function main() {
 
     let xrayOn = false;
     for (const a of angles) {
+      // Advance sim between shots so the garden evolves during the tour
+      if (a.tick && wasmReady) {
+        await exec({ type: 'Tick', n: a.tick });
+      }
       // Toggle x-ray mode if needed
       const wantXray = !!a.xray;
       if (wantXray !== xrayOn) {
