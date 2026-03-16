@@ -1550,6 +1550,7 @@ pub fn tree_rasterize(
                 _ => 1,
             };
             let leaf_r_sq = leaf_r * leaf_r;
+            let mut pending_leaves: Vec<(usize, usize, usize, Material)> = Vec::new();
             for (i, node) in tree.branches.iter().enumerate() {
                 if !node.alive || has_child[i] || node.material == Material::Root {
                     continue;
@@ -1571,18 +1572,18 @@ pub fn tree_rasterize(
                             if !VoxelGrid::in_bounds(ax, ay, az) {
                                 continue;
                             }
-                            if let Some(cell) = grid.get_mut(ax, ay, az) {
+                            if let Some(cell) = grid.get(ax, ay, az) {
                                 if cell.material == Material::Air {
-                                    cell.set_material(Material::Leaf);
-                                    cell.nutrient_level = tree.species_id as u8;
-                                    cell.water_level = (tree.health * 255.0) as u8;
-                                    new_footprint.push((ax, ay, az));
+                                    pending_leaves.push((ax, ay, az, Material::Leaf));
                                 }
                             }
                         }
                     }
                 }
             }
+            // Move collected leaves to pending queue, sorted bottom-to-top
+            pending_leaves.sort_by_key(|&(_, _, z, _)| z);
+            tree.pending_voxels = pending_leaves;
         } else {
             // Template path: Seedling/Sapling/Dead use static templates
             let template = TreeTemplate::generate(species, &tree.stage, tree.rng_seed);
