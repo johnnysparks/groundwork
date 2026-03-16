@@ -379,6 +379,19 @@ export class Hud {
     }, 8000);
   }
 
+  /** Update gnome status display */
+  setGnomeStatus(queueLength: number): void {
+    const el = this.container.querySelector('#gnome-status');
+    if (!el) return;
+    if (queueLength > 0) {
+      el.textContent = `Gnome: working (${queueLength} tasks)`;
+      el.className = 'working';
+    } else {
+      el.textContent = 'Gnome: idle';
+      el.className = 'idle';
+    }
+  }
+
   /** Set the gnome task queue count for HUD display */
   setQueueCount(count: number): void {
     this.state.queueCount = count;
@@ -411,6 +424,7 @@ const HUD_HTML = `
       <div id="water-bar-label">Water</div>
       <div id="water-bar-track"><div id="water-bar-fill"></div></div>
     </div>
+    <div id="gnome-status"></div>
   </div>
   <div id="event-feed"></div>
   <div id="hud-top-bar">
@@ -699,6 +713,20 @@ const HUD_CSS = `
   text-overflow: ellipsis;
 }
 .event-item.fading { opacity: 0; }
+
+/* --- Gnome Status --- */
+#gnome-status {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(200, 180, 140, 0.6);
+  text-align: center;
+}
+#gnome-status.working {
+  color: rgba(180, 200, 120, 0.8);
+}
+#gnome-status.idle {
+  color: rgba(200, 180, 140, 0.5);
+}
 
 /* --- Water Bar --- */
 #water-bar-container {

@@ -505,8 +505,16 @@ async function main() {
         }
       }
 
-      // Visual feedback: particle burst at click
+      // Visual feedback: particle burst + event
       particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      const toolNames: Record<number, string> = {
+        [ToolCode.Seed]: 'planting', [ToolCode.Water]: 'watering',
+        [ToolCode.Shovel]: 'digging', [ToolCode.Soil]: 'soil', [ToolCode.Stone]: 'stone',
+      };
+      const qLen = taskQueue.length;
+      if (qLen > 0) {
+        hud.addEvent(`Gnome: ${toolNames[tool] ?? 'working'} zone queued (${qLen} tasks)`);
+      }
       // Record tool use for quest tracking
       const speciesIdx = hud.state.activeSpeciesIndex;
       questLog.recordToolUse(hud.state.activeTool, speciesIdx);
@@ -729,9 +737,10 @@ async function main() {
       remeshDirty();
     }
 
-    // Update ghost overlay + queue counter
+    // Update ghost overlay + gnome status
     ghosts.rebuild(taskQueue, elapsed);
     hud.setQueueCount(taskQueue.length);
+    hud.setGnomeStatus(taskQueue.length);
 
 
     // Auto-save every ~10 seconds

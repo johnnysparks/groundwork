@@ -54,11 +54,12 @@ export class GhostOverlay {
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
 
-    // Override material to use instance colors
+    // Visible ghost material — semi-transparent with wireframe edges
     this.mesh.material = new THREE.MeshBasicMaterial({
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.4,
       depthWrite: false,
+      wireframe: false,
     });
 
     this.group.add(this.mesh);
