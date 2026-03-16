@@ -26,6 +26,7 @@ enum GnomeState {
   Walking,
   Working,
   Celebrating,
+  Wandering,
 }
 
 enum IdleBehavior {
@@ -231,6 +232,10 @@ export class GardenerSprite {
   private walkDirY = 0;
   private facingAngle = 0;
 
+  // Idle wandering (driven by sim)
+  private wanderTargetX = 0;
+  private wanderTargetY = 0;
+
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'gardener';
@@ -305,6 +310,9 @@ export class GardenerSprite {
         break;
       case GnomeState.Celebrating:
         completedTask = this.updateCelebrating(dt, elapsed, queue);
+        break;
+      case GnomeState.Wandering:
+        this.updateWandering(dt, elapsed, queue);
         break;
     }
 
@@ -400,6 +408,63 @@ export class GardenerSprite {
     this.armRAngle = 0.3 - swing * 0.4;
 
     this.cheekGlow = 0.3;
+  }
+
+  private updateWandering(dt: number, elapsed: number, queue: TaskQueue): void {
+    // Interrupt wandering for new tasks
+    if (queue.length > 0) {
+      this.currentTask = queue.peek();
+      this.state = GnomeState.Walking;
+      this.idleBehavior = IdleBehavior.Standing;
+      this.toolType = this.getToolType(this.currentTask);
+      return;
+    }
+
+    const tx = this.wanderTargetX;
+    const ty = this.wanderTargetY;
+    const speed = WALK_SPEED * 0.5 * dt;
+    const dx = tx - this.x;
+    const dy = ty - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 1.0) {
+      this.x = tx;
+      this.y = ty;
+      this.state = GnomeState.Idle;
+      // Trigger an inspect behavior immediately
+      this.idleBehavior = IdleBehavior.InspectingPlant;
+      this.idleBehaviorTimer = 3.0;
+      this.idleElapsed = 0;
+      return;
+    }
+
+    const ndx = dx / dist;
+    const ndy = dy / dist;
+    this.walkDirX = ndx;
+    this.walkDirY = ndy;
+    this.x += ndx * Math.min(speed, dist);
+    this.y += ndy * Math.min(speed, dist);
+    this.facingAngle = Math.atan2(ndy, ndx);
+
+    // Gentle wandering animation (slower bounce than walking)
+    const walkPhase = this.x * 2.0 + this.y * 2.0;
+    this.bounce = Math.abs(Math.sin(walkPhase * 2.0)) * 0.15;
+    this.squashY = 1.0 + Math.sin(walkPhase * 3.0) * 0.02;
+    this.bodyLean = Math.sin(walkPhase * 1.5) * 0.08;
+    this.hatSway = Math.sin(walkPhase * 2.0) * 0.15;
+    const swing = Math.sin(walkPhase * 1.5);
+    this.armLAngle = 0.2 + swing * 0.2;
+    this.armRAngle = 0.2 - swing * 0.2;
+    this.cheekGlow = 0.2;
+  }
+
+  /** Called by main loop when sim gnome starts wandering. */
+  setWanderTarget(x: number, y: number): void {
+    if (this.state !== GnomeState.Idle) return;
+    this.wanderTargetX = x;
+    this.wanderTargetY = y;
+    this.state = GnomeState.Wandering;
+    this.idleBehavior = IdleBehavior.Standing;
   }
 
   private updateWorking(dt: number, queue: TaskQueue): GardenTask | null {

@@ -523,6 +523,8 @@ export const GnomeState = {
   Working: 2,
   Eating: 3,
   Resting: 4,
+  Wandering: 5,
+  Inspecting: 6,
 } as const;
 
 /** Gnome export: 32 bytes.

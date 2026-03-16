@@ -852,11 +852,15 @@ async function main() {
       remeshDirty();
     }
 
-    // Sync gnome with sim fauna proximity data (emotion reactions)
+    // Sync gnome with sim state (fauna reactions + idle wandering)
     if (isInitialized()) {
       const gnomeSim = getGnomeState();
       if (gnomeSim) {
         gardener.reactToFauna(gnomeSim.nearbyFauna, gnomeSim.squirrelTrust, dt);
+        // Sync idle wandering from sim (5=Wandering, 6=Inspecting)
+        if ((gnomeSim.state === 5 || gnomeSim.state === 6) && gnomeSim.queueLen === 0) {
+          gardener.setWanderTarget(gnomeSim.targetX, gnomeSim.targetY);
+        }
       }
     }
 

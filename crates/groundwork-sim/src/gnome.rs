@@ -44,6 +44,15 @@ const EAT_DURATION: u8 = 15;
 /// Ticks spent resting when tired (restores energy to 255).
 const REST_DURATION: u8 = 20;
 
+/// Ticks the gnome waits in Idle before starting an idle wander.
+const IDLE_WAIT_TICKS: u8 = 25;
+
+/// Ticks spent inspecting a spot after wandering there.
+const INSPECT_TICKS: u8 = 12;
+
+/// Maximum wander distance from current position (in voxels).
+const WANDER_RADIUS: f32 = 15.0;
+
 /// Hunger level that triggers eating behavior.
 const HUNGER_TRIGGER: u8 = 180;
 
@@ -66,6 +75,8 @@ pub enum GnomeState {
     Working = 2,
     Eating = 3,
     Resting = 4,
+    Wandering = 5,
+    Inspecting = 6,
 }
 
 // --- Task ---
@@ -110,6 +121,10 @@ pub struct Gnome {
     pub work_count: u16,
     /// Timer for eating/resting duration (counts down to 0)
     pub needs_timer: u8,
+    /// Ticks remaining before the gnome picks a new idle wander target.
+    pub idle_timer: u8,
+    /// Simple counter for deterministic wander target variety.
+    pub idle_seed: u16,
 }
 
 impl Default for Gnome {
@@ -133,6 +148,8 @@ impl Default for Gnome {
             work_count: 0,
             needs_timer: 0,
             work_progress: 0,
+            idle_timer: IDLE_WAIT_TICKS,
+            idle_seed: 0,
         }
     }
 }
@@ -247,30 +264,61 @@ impl GnomeData {
 // --- Systems ---
 
 /// Pick the next task from the queue and set target. Transitions Idle → Walking.
+/// When no tasks are queued, the gnome wanders to nearby spots after a cooldown.
 pub fn gnome_plan(mut gd: ResMut<GnomeData>) {
-    let state = gd.gnome.state;
-    if state != GnomeState::Idle {
-        return;
+    // Interrupt idle behaviors if tasks are queued
+    if !gd.tasks.is_empty()
+        && matches!(
+            gd.gnome.state,
+            GnomeState::Wandering | GnomeState::Inspecting
+        )
+    {
+        gd.gnome.state = GnomeState::Idle;
+        gd.gnome.work_progress = 0;
+        gd.gnome.idle_timer = 0;
     }
-    if gd.tasks.is_empty() {
+
+    if gd.gnome.state != GnomeState::Idle {
         return;
     }
 
-    // Copy task fields before mutating gnome (borrow rules)
-    let tx = gd.tasks[0].x;
-    let ty = gd.tasks[0].y;
-    let tool = gd.tasks[0].tool;
-    gd.gnome.target_x = tx as f32 + 0.5;
-    gd.gnome.target_y = ty as f32 + 0.5;
-    gd.gnome.target_z = surface_z(tx, ty);
-    gd.gnome.active_tool = tool;
-    gd.gnome.state = GnomeState::Walking;
+    // Task pickup (priority over idle behaviors)
+    if !gd.tasks.is_empty() {
+        let tx = gd.tasks[0].x;
+        let ty = gd.tasks[0].y;
+        let tool = gd.tasks[0].tool;
+        gd.gnome.target_x = tx as f32 + 0.5;
+        gd.gnome.target_y = ty as f32 + 0.5;
+        gd.gnome.target_z = surface_z(tx, ty);
+        gd.gnome.active_tool = tool;
+        gd.gnome.state = GnomeState::Walking;
+        gd.gnome.work_progress = 0;
+        return;
+    }
+
+    // Idle wander cooldown
+    if gd.gnome.idle_timer > 0 {
+        gd.gnome.idle_timer -= 1;
+        return;
+    }
+
+    // Pick a wander target and go
+    let seed = gd.gnome.idle_seed;
+    gd.gnome.idle_seed = gd.gnome.idle_seed.wrapping_add(1);
+    let (wx, wy) = pick_wander_target(gd.gnome.x, gd.gnome.y, seed);
+    gd.gnome.target_x = wx;
+    gd.gnome.target_y = wy;
+    gd.gnome.target_z = surface_z(wx as usize, wy as usize);
+    gd.gnome.state = GnomeState::Wandering;
     gd.gnome.work_progress = 0;
+    gd.gnome.active_tool = 255;
 }
 
-/// Move gnome toward target. Transitions Walking → Working when close enough.
+/// Move gnome toward target. Walking → Working, Wandering → Inspecting.
 pub fn gnome_move(mut gd: ResMut<GnomeData>) {
-    if gd.gnome.state != GnomeState::Walking {
+    let is_walking = gd.gnome.state == GnomeState::Walking;
+    let is_wandering = gd.gnome.state == GnomeState::Wandering;
+    if !is_walking && !is_wandering {
         return;
     }
 
@@ -280,31 +328,49 @@ pub fn gnome_move(mut gd: ResMut<GnomeData>) {
     let dist = (dx * dx + dy * dy).sqrt();
 
     if dist < 1.0 {
-        // Arrived at task location
         g.x = g.target_x;
         g.y = g.target_y;
-        g.state = GnomeState::Working;
+        g.state = if is_walking {
+            GnomeState::Working
+        } else {
+            GnomeState::Inspecting
+        };
         g.work_progress = 0;
         return;
     }
 
-    // Walk toward target along surface (speed affected by needs)
-    let speed = WALK_SPEED * speed_multiplier(g);
+    // Wandering is slower (60% speed) for a relaxed feel
+    let speed = if is_walking {
+        WALK_SPEED * speed_multiplier(g)
+    } else {
+        WALK_SPEED * 0.6
+    };
     let step = speed.min(dist);
     g.x += dx / dist * step;
     g.y += dy / dist * step;
-    // Stay on surface
     g.z = surface_z(g.x as usize, g.y as usize);
 }
 
 /// Execute the current task. Applies the tool to the voxel grid after
 /// TICKS_PER_TASK ticks of work. Transitions Working → Idle.
+/// Also handles Inspecting → Idle after INSPECT_TICKS.
 pub fn gnome_work(
     mut gd: ResMut<GnomeData>,
     mut grid: ResMut<VoxelGrid>,
     mut seed_map: ResMut<SeedSpeciesMap>,
     _tick: Res<Tick>,
 ) {
+    // Handle inspection (idle wander destination)
+    if gd.gnome.state == GnomeState::Inspecting {
+        gd.gnome.work_progress += 1;
+        if gd.gnome.work_progress >= INSPECT_TICKS {
+            gd.gnome.state = GnomeState::Idle;
+            gd.gnome.idle_timer = IDLE_WAIT_TICKS;
+            gd.gnome.work_progress = 0;
+        }
+        return;
+    }
+
     if gd.gnome.state != GnomeState::Working {
         return;
     }
@@ -483,6 +549,16 @@ fn surface_z(x: usize, y: usize) -> f32 {
     // the default terrain level. The gnome walks one voxel above that.
     let z = VoxelGrid::surface_height(x.min(GRID_X - 1), y.min(GRID_Y - 1));
     (z + 1) as f32
+}
+
+/// Pick a pseudo-random wander target near the gnome's current position.
+fn pick_wander_target(cx: f32, cy: f32, seed: u16) -> (f32, f32) {
+    let hash = (seed as u32).wrapping_mul(2654435761);
+    let angle = (hash & 0xFF) as f32 / 255.0 * std::f32::consts::TAU;
+    let dist = ((hash >> 8) & 0xFF) as f32 / 255.0 * WANDER_RADIUS + 3.0;
+    let wx = (cx + angle.cos() * dist).clamp(2.0, (GRID_X - 2) as f32);
+    let wy = (cy + angle.sin() * dist).clamp(2.0, (GRID_Y - 2) as f32);
+    (wx, wy)
 }
 
 /// Apply a gardening tool at the task position, same logic as wasm_bridge::place_tool.
@@ -783,5 +859,70 @@ mod tests {
             gd.gnome.nearby_fauna > 0,
             "nearby fauna count should be tracked"
         );
+    }
+
+    /// Gnome wanders when idle with no tasks.
+    #[test]
+    fn gnome_wanders_when_idle() {
+        let mut world = crate::create_world();
+        let mut gd = GnomeData::default();
+        gd.gnome.idle_timer = 0; // skip initial wait
+        let start_x = gd.gnome.x;
+        let start_y = gd.gnome.y;
+        world.insert_resource(gd);
+
+        let mut schedule = bevy_ecs::schedule::Schedule::default();
+        schedule.add_systems((gnome_plan, gnome_move, gnome_work, gnome_export).chain());
+
+        for _ in 0..50 {
+            schedule.run(&mut world);
+        }
+
+        let gd = world.resource::<GnomeData>();
+        let moved = (gd.gnome.x - start_x).abs() > 1.0 || (gd.gnome.y - start_y).abs() > 1.0;
+        assert!(moved, "gnome should wander from starting position");
+    }
+
+    /// Tasks interrupt wandering immediately.
+    #[test]
+    fn tasks_interrupt_wandering() {
+        let mut world = crate::create_world();
+        let mut gd = GnomeData::default();
+        gd.gnome.idle_timer = 0;
+        world.insert_resource(gd);
+
+        let mut schedule = bevy_ecs::schedule::Schedule::default();
+        schedule.add_systems((gnome_plan, gnome_move, gnome_work, gnome_export).chain());
+
+        // Start wandering
+        for _ in 0..3 {
+            schedule.run(&mut world);
+        }
+
+        // Queue a task
+        {
+            let mut gd = world.resource_mut::<GnomeData>();
+            gd.queue_task(GnomeTask {
+                tool: 3,
+                x: (GRID_X / 2) + 5,
+                y: (GRID_Y / 2) + 5,
+                z: GROUND_LEVEL + 1,
+                species: 255,
+            });
+        }
+
+        // Next tick should interrupt wandering
+        schedule.run(&mut world);
+
+        let gd = world.resource::<GnomeData>();
+        assert!(
+            matches!(
+                gd.gnome.state,
+                GnomeState::Walking | GnomeState::Working | GnomeState::Idle
+            ),
+            "task should interrupt wandering: state={:?}",
+            gd.gnome.state,
+        );
+        assert_eq!(gd.tasks.len(), 1, "task should still be queued");
     }
 }
