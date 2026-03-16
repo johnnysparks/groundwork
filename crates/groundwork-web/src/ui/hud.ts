@@ -45,6 +45,8 @@ export interface HudState {
   autoTick: boolean;
   tickCount: number;
   gardenStats?: { plants: number; fauna: number; species: number };
+  water: number;
+  maxWater: number;
 }
 
 type HudChangeCallback = (state: HudState) => void;
@@ -58,6 +60,8 @@ export class Hud {
     activeSpeciesIndex: 0,
     autoTick: false,
     tickCount: 0,
+    water: 100,
+    maxWater: 100,
   };
 
   private _lastScore = 0;
@@ -271,6 +275,36 @@ export class Hud {
     }, 3000);
   }
 
+  /** Spend water — returns false if not enough */
+  spendWater(amount: number): boolean {
+    if (this.state.water < amount) return false;
+    this.state.water = Math.max(0, this.state.water - amount);
+    this.updateWaterBar();
+    return true;
+  }
+
+  /** Replenish water (called each tick) */
+  replenishWater(amount: number): void {
+    this.state.water = Math.min(this.state.maxWater, this.state.water + amount);
+    this.updateWaterBar();
+  }
+
+  private updateWaterBar(): void {
+    const fill = this.container.querySelector('#water-bar-fill') as HTMLElement;
+    if (fill) {
+      const pct = (this.state.water / this.state.maxWater) * 100;
+      fill.style.width = `${pct}%`;
+      // Color shifts: blue when full, orange when low
+      if (pct < 20) {
+        fill.style.background = 'linear-gradient(90deg, #cc6633, #dd8844)';
+      } else if (pct < 50) {
+        fill.style.background = 'linear-gradient(90deg, #5599bb, #66aacc)';
+      } else {
+        fill.style.background = 'linear-gradient(90deg, #3388cc, #55aadd)';
+      }
+    }
+  }
+
   /** Add an event to the feed */
   addEvent(text: string): void {
     const feed = this.container.querySelector('#event-feed');
@@ -314,6 +348,10 @@ const HUD_HTML = `
       <div class="score-row"><span class="score-label">Plants</span><span id="stat-plants">0</span></div>
       <div class="score-row"><span class="score-label">Fauna</span><span id="stat-fauna">0</span></div>
       <div class="score-row"><span class="score-label">Species</span><span id="stat-species">0</span></div>
+    </div>
+    <div id="water-bar-container">
+      <div id="water-bar-label">Water</div>
+      <div id="water-bar-track"><div id="water-bar-fill"></div></div>
     </div>
   </div>
   <div id="event-feed"></div>
@@ -571,6 +609,33 @@ const HUD_CSS = `
   text-overflow: ellipsis;
 }
 .event-item.fading { opacity: 0; }
+
+/* --- Water Bar --- */
+#water-bar-container {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+#water-bar-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(120, 180, 220, 0.7);
+  margin-bottom: 4px;
+}
+#water-bar-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#water-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #3388cc, #55aadd);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
 
 /* --- Garden Score Panel (top right) --- */
 #garden-score {

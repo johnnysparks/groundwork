@@ -327,14 +327,22 @@ async function main() {
     terrainGroup,
     canvas: renderer.domElement,
     onToolPlaced: (hit) => {
-      // Zone-based placement: fill a radius instead of a single voxel.
-      // Seeds fill a 5-voxel radius zone, water fills 4, shovel clears 3.
+      // Zone-based placement with water cost.
       const tool = hud.state.activeTool;
       const r = tool === ToolCode.Seed ? 4 : tool === ToolCode.Shovel ? 3 : 3;
+      // Water costs: seeds=15, water=20, soil=10, shovel=5, stone=10
+      const costs: Record<number, number> = {
+        [ToolCode.Seed]: 15, [ToolCode.Water]: 20,
+        [ToolCode.Soil]: 10, [ToolCode.Shovel]: 5, [ToolCode.Stone]: 10,
+      };
+      const cost = costs[tool] ?? 10;
+      if (!hud.spendWater(cost)) {
+        hud.addEvent('Not enough water — wait for the spring to refill');
+        return;
+      }
       if (isInitialized()) {
         fillTool(tool, hit.x - r, hit.y - r, hit.z, hit.x + r, hit.y + r, hit.z);
       } else {
-        // Mock mode: single voxel fallback
         applyToolToMockGrid(tool, hit.x, hit.y, hit.z);
       }
       // Record tool use for quest tracking
@@ -514,6 +522,8 @@ async function main() {
         const freshGrid = getGridView();
         questLog.check(freshGrid);
         if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
+        // Replenish water budget from spring (2 per tick)
+        hud.replenishWater(2);
         // Update garden stats for HUD + detect ecological events
         const stats = computeGardenStats(freshGrid);
         hud.setGardenStats(stats);
