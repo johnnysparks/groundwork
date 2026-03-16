@@ -81,6 +81,22 @@ let _prevSpeciesIds = new Set<number>();
 let _eventCooldown = 0;
 let _squirrelCacheNotified = false;
 let _pollinatorActNotified = false;
+let _birdDropNotified = false;
+
+/** Species the player has deliberately planted (via seed tool) */
+const _playerPlantedSpecies = new Set<number>();
+
+/** Wild plant messages — fauna attribution based on species */
+const WILD_PLANT_MESSAGES: Record<number, string[]> = {
+  0: [ // Oak — likely squirrel
+    'A wild oak seedling appeared — a squirrel must have buried an acorn here!',
+    'An oak is growing where you didn\'t plant one — thank the squirrels',
+  ],
+  5: [ // Berry Bush — likely bird
+    'A berry bush appeared in a new spot — a bird must have dropped the seed!',
+    'Berry bushes are spreading — birds carry their seeds across the garden',
+  ],
+};
 
 const FAUNA_NAMES: Record<number, string> = {
   0: 'bee', 1: 'butterfly', 2: 'bird', 3: 'worm', 4: 'beetle',
@@ -191,13 +207,22 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
     _eventCooldown = 25;
   }
 
-  // New species growing — check if it's pioneer succession
+  // New species growing — check if it's pioneer succession or wild plant
   if (stats.species > _prevStats.species && stats.speciesIds) {
     for (const sid of stats.speciesIds) {
       if (!_prevSpeciesIds.has(sid)) {
         const msg = SUCCESSION_MESSAGES[sid];
         if (msg) {
           hud.addEvent(msg);
+        } else if (!_playerPlantedSpecies.has(sid) && !PIONEER_SPECIES.has(sid)) {
+          // Wild plant — fauna-dispersed!
+          const wildMsgs = WILD_PLANT_MESSAGES[sid];
+          if (wildMsgs) {
+            hud.addEvent(wildMsgs[Math.floor(Math.random() * wildMsgs.length)]);
+          } else {
+            const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
+            hud.addEvent(`A wild ${name} appeared — the garden is planting itself!`);
+          }
         } else {
           const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
           hud.addEvent(`${name} is now growing in your garden (+100 score)`);
@@ -227,6 +252,16 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
         _eventCooldown = 40;
         break;
       }
+      if (f.type === FaunaType.Bird && !_birdDropNotified) {
+        const msgs = [
+          'A bird is carrying seeds across the garden — watch for surprises!',
+          'Bird at work — it picks up seeds and drops them in new spots',
+        ];
+        hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+        _birdDropNotified = true;
+        _eventCooldown = 40;
+        break;
+      }
       if ((f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) && !_pollinatorActNotified) {
         const msgs = [
           'A pollinator is visiting a flower — nearby plants get a health boost',
@@ -242,6 +277,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
     if (_eventCooldown <= -100) {
       _squirrelCacheNotified = false;
       _pollinatorActNotified = false;
+      _birdDropNotified = false;
     }
   }
 
@@ -650,6 +686,11 @@ async function main() {
         }
       }
 
+      // Track player-planted species for wild plant detection
+      if (tool === ToolCode.Seed) {
+        _playerPlantedSpecies.add(hud.state.activeSpeciesIndex);
+      }
+
       // Visual + audio feedback
       particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       if (tool === ToolCode.Seed) playPlant();
@@ -693,6 +734,9 @@ async function main() {
             enqueueTask(tool, x, y, z, tool === ToolCode.Seed ? hud.state.activeSpeciesIndex : undefined);
           }
         }
+      }
+      if (tool === ToolCode.Seed) {
+        _playerPlantedSpecies.add(hud.state.activeSpeciesIndex);
       }
       particles.emit((x1 + x2) / 2 + 0.5, z + 0.5, (y1 + y2) / 2 + 0.5);
       if (tool === ToolCode.Seed) playPlant();
