@@ -15,16 +15,16 @@ import { isSeed } from '../mesher/greedy';
 /** Maximum number of seed instances */
 const MAX_SEEDS = 10_000;
 
-/** Mound scale relative to a voxel (small bump, not a full cube) */
-const MOUND_RADIUS = 0.3;
-const MOUND_HEIGHT = 0.2;
+/** Mound scale relative to a voxel — visible at default zoom */
+const MOUND_RADIUS = 0.45;
+const MOUND_HEIGHT = 0.3;
 
-/** Seed color palette — earthy golden tones */
+/** Seed color palette — green-golden to suggest emerging life */
 const SEED_COLORS = [
-  new THREE.Color(0.55, 0.50, 0.25), // golden
-  new THREE.Color(0.50, 0.42, 0.22), // darker brown
-  new THREE.Color(0.60, 0.52, 0.28), // lighter gold
-  new THREE.Color(0.48, 0.44, 0.20), // olive-brown
+  new THREE.Color(0.45, 0.55, 0.25), // green-gold
+  new THREE.Color(0.40, 0.50, 0.22), // olive
+  new THREE.Color(0.50, 0.55, 0.20), // warm green
+  new THREE.Color(0.35, 0.48, 0.25), // deep green-brown
 ];
 
 export class SeedRenderer {
@@ -55,8 +55,10 @@ export class SeedRenderer {
 
     this.material = new THREE.MeshLambertMaterial({
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.85,
       depthWrite: false,
+      emissive: new THREE.Color(0.15, 0.25, 0.05),
+      emissiveIntensity: 0.5,
     });
 
     // Per-instance colors
