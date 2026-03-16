@@ -72,6 +72,7 @@ export class FallingLeaves {
   private leaves: Leaf[] = [];
   private timeUniform: { value: number };
   private plantCount = 0;
+  private windStrength = 0.35;
 
   constructor() {
     this.group = new THREE.Group();
@@ -110,6 +111,11 @@ export class FallingLeaves {
   /** Set current plant count — leaves only fall if there are trees */
   setPlantCount(count: number): void {
     this.plantCount = count;
+  }
+
+  /** Set wind strength (0–1) from weather system. Affects fall speed and lateral drift. */
+  setWind(strength: number): void {
+    this.windStrength = strength;
   }
 
   private spawnLeaf(): Leaf {
@@ -151,12 +157,17 @@ export class FallingLeaves {
     for (let i = 0; i < MAX_LEAVES; i++) {
       const leaf = this.leaves[i];
 
-      // Fall
-      leaf.z -= leaf.fallSpeed * dt;
+      // Fall — faster in high wind (rain), slower in low wind (drought)
+      const windFactor = 0.5 + this.windStrength;
+      leaf.z -= leaf.fallSpeed * windFactor * dt;
 
-      // Sway side to side
-      leaf.x += Math.sin(elapsedTime * leaf.swaySpeed + leaf.phase) * leaf.swayAmplitude * dt;
-      leaf.y += Math.cos(elapsedTime * leaf.swaySpeed * 0.7 + leaf.phase) * leaf.swayAmplitude * 0.5 * dt;
+      // Sway side to side — stronger in wind
+      const swayMul = 0.5 + this.windStrength * 1.5;
+      leaf.x += Math.sin(elapsedTime * leaf.swaySpeed + leaf.phase) * leaf.swayAmplitude * swayMul * dt;
+      leaf.y += Math.cos(elapsedTime * leaf.swaySpeed * 0.7 + leaf.phase) * leaf.swayAmplitude * 0.5 * swayMul * dt;
+
+      // Wind pushes leaves in a consistent direction during gusts
+      leaf.x += this.windStrength * 0.5 * dt;
 
       // Hit ground — respawn at top
       if (leaf.z <= GROUND_LEVEL) {
