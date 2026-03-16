@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T21:30:00
-**Status:** Alpha complete. 82 sprints. Gnome Phases 1-4 complete.
+**Last updated:** 2026-03-16T22:30:00
+**Status:** Alpha complete. 85 sprints. Gnome Phase 4 complete, canopy improved.
 
 ---
 
@@ -15,7 +15,13 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Phase 1b: Bridge wiring (JS→WASM task sync, gnome state reading)
 - Phase 2: Hunger/energy needs (eating/resting states, speed modulation)
 - Phase 3: Gnome-fauna interactions (squirrel trust, bird attraction, emotion particles)
-- Phase 4: Idle wandering (autonomous wander→inspect cycle, task interrupts, JS visual sync)
+- Phase 4: Idle wandering (targeted wander→inspect, task interrupts, JS visual sync)
+
+### Canopy Fix (Sprints 83-84)
+- Crown envelope lowered to 30% of trunk height
+- Branch stubs at multiple heights for space colonization starting points
+- Branch growth rate 10/tick, larger YoungTree leaf spheres
+- Trees now grow canopy that wraps the trunk, not perches on top
 
 **Remaining:**
 - Sim→JS position sync (single source of truth for gnome position)
@@ -25,7 +31,6 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 ## P1
 
 - Sim gnome position → JS gardener sync (replace JS movement with sim authority)
-- Targeted idle wandering (wander to interesting voxels — plants, water, trees)
 
 ## P2
 
