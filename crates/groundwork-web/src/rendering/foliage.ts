@@ -19,8 +19,8 @@ import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, GROUND_LEVEL, materialIs
 /** Maximum number of foliage instances (pre-allocated) */
 const MAX_FOLIAGE = 50_000;
 
-/** Foliage sprite size (slightly larger than a voxel for lush overlap) */
-const SPRITE_SIZE = 1.3;
+/** Foliage sprite size (larger than a voxel for lush canopy overlap) */
+const SPRITE_SIZE = 1.4;
 
 /** Wind sway vertex shader */
 const FOLIAGE_VERT = /* glsl */ `
@@ -169,9 +169,27 @@ export class FoliageRenderer {
           // Position at voxel center (sim Y↔Z swap: sim Z=up → Three.js Y=up)
           this.dummy.position.set(x + 0.5, z + 0.5, y + 0.5);
 
-          // Slight random scale variation based on position hash
+          // Count neighboring leaf voxels for density-based sizing.
+          // Interior canopy leaves (many neighbors) get larger → cohesive mass.
+          // Edge leaves (few neighbors) stay smaller → natural fringe.
+          let neighbors = 0;
+          for (let dz = -1; dz <= 1; dz++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0 && dz === 0) continue;
+                const nx = x + dx, ny = y + dy, nz = z + dz;
+                if (nx >= 0 && nx < GRID_X && ny >= 0 && ny < GRID_Y && nz >= 0 && nz < GRID_Z) {
+                  const ni = (nx + ny * GRID_X + nz * GRID_X * GRID_Y) * VOXEL_BYTES;
+                  if (isFoliage(grid[ni])) neighbors++;
+                }
+              }
+            }
+          }
+          // Scale: edge leaves 0.8, dense interior 1.4 — plus hash noise
           const hash = (x * 73856093 ^ y * 19349663 ^ z * 83492791) & 0xffff;
-          const scaleVar = 0.85 + (hash & 0xff) / 255.0 * 0.3;
+          const densityScale = 0.8 + (neighbors / 26.0) * 0.6;
+          const noiseScale = ((hash & 0xff) / 255.0 - 0.5) * 0.15;
+          const scaleVar = densityScale + noiseScale;
           this.dummy.scale.setScalar(scaleVar);
 
           // Random rotation around Z for visual variety (won't matter much with billboard)
