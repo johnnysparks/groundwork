@@ -103,8 +103,12 @@ export class EcologyParticles {
   private colors: Float32Array;
   private geometry: THREE.BufferGeometry;
   private emitTimer = 0;
+  private emitInterval = 0.3;
 
-  constructor() {
+  constructor(opts?: { mobile?: boolean }) {
+    if (opts?.mobile) {
+      this.emitInterval = 1.0; // scan less frequently on mobile
+    }
     this.particles = new Array(MAX_PARTICLES);
     for (let i = 0; i < MAX_PARTICLES; i++) {
       this.particles[i] = {
@@ -287,7 +291,7 @@ export class EcologyParticles {
   update(dt: number, grid: Uint8Array): void {
     // Periodically emit new interaction particles
     this.emitTimer += dt;
-    if (this.emitTimer > 0.3) {
+    if (this.emitTimer > this.emitInterval) {
       this.emitTimer = 0;
       this.emitFromInteractions(grid);
     }

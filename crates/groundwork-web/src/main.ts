@@ -437,7 +437,7 @@ async function main() {
 
   // --- Ecology interaction particles ---
 
-  const ecology = new EcologyParticles();
+  const ecology = new EcologyParticles({ mobile: isMobile });
   scene.add(ecology.points);
 
   // --- Fireflies (dusk/night ambient) ---
