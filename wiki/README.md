@@ -30,6 +30,7 @@ This wiki documents the intent, mechanics, and design rationale behind every sim
 ### Design Intent
 - [Player Learning Arc](learning-arc.md) — Hour 1 → Hour 20 discovery progression
 - [Balance Philosophy](balance.md) — Tuning principles, competitive benchmarks
+- [Strategy Guide](strategy-guide.md) — Reading your garden: visual signals, events, species strategies, recovery
 
 ## How to Use This Wiki
 
