@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -16,6 +16,7 @@ import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/wat
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
+import { RainRenderer } from './rendering/rain';
 import { FaunaRenderer } from './rendering/fauna';
 import { EcologyParticles } from './rendering/ecology';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
@@ -349,6 +350,11 @@ async function main() {
   scene.add(particles.points);
   // Initial detection pass (no bursts on first load)
   particles.detectGrowth(grid);
+
+  // --- Rain particles ---
+
+  const rain = new RainRenderer();
+  scene.add(rain.points);
 
   // --- Ecology interaction particles ---
 
@@ -905,6 +911,13 @@ async function main() {
 
     // Animate growth particles
     particles.update(dt);
+
+    // Rain: sync with sim weather state
+    if (isInitialized()) {
+      const weatherState = getWeatherState();
+      rain.setActive(weatherState === 1); // 1 = Rain
+    }
+    rain.update(dt);
 
     // Ecology interaction indicators
     const freshGridForEco = isInitialized() ? getGridView() : grid;
