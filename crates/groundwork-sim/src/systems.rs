@@ -957,6 +957,48 @@ pub fn tree_growth(
             // Only trees use space colonization; other plant types always use templates
             if species.uses_skeleton() {
                 match next {
+                    GrowthStage::Sapling => {
+                        // Starter skeleton: short trunk with branch tips at the crown.
+                        // This produces visible leaves at the Sapling stage (~t25-35)
+                        // instead of waiting until YoungTree (~t80+).
+                        // The player sees a tiny tree with a leaf tuft — the first
+                        // emotional payoff after planting.
+                        let sapling_h = (species.max_height() / 3).max(2) as isize;
+                        let mut branches = Vec::new();
+                        // Short trunk
+                        for z in 0..sapling_h {
+                            branches.push(crate::tree::BranchNode {
+                                pos: (0, 0, z),
+                                parent: if z == 0 { u16::MAX } else { (z - 1) as u16 },
+                                material: Material::Trunk,
+                                shade_stress: 0,
+                                alive: true,
+                            });
+                        }
+                        // 3 branch tips at crown (offset from trunk top)
+                        let top_idx = (sapling_h - 1) as u16;
+                        let offsets: [(isize, isize, isize); 3] =
+                            [(1, 0, 1), (-1, 1, 1), (0, -1, 1)];
+                        for (dx, dy, dz) in offsets {
+                            branches.push(crate::tree::BranchNode {
+                                pos: (dx, dy, sapling_h + dz),
+                                parent: top_idx,
+                                material: Material::Branch,
+                                shade_stress: 0,
+                                alive: true,
+                            });
+                        }
+                        // Single root
+                        branches.push(crate::tree::BranchNode {
+                            pos: (0, 0, -1),
+                            parent: 0,
+                            material: Material::Root,
+                            shade_stress: 0,
+                            alive: true,
+                        });
+                        tree.branches = branches;
+                        tree.skeleton_initialized = true;
+                    }
                     GrowthStage::YoungTree => {
                         let (branches, points) = init_skeleton(species, &next, tree.rng_seed);
                         tree.branches = branches;
