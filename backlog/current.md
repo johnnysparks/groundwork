@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T12:00:00
-**Status:** Alpha complete. 72 sprints. All original P1 features shipped.
+**Last updated:** 2026-03-16T18:00:00
+**Status:** Alpha complete. 73 sprints. Smooth trunk growth shipped.
 
 ---
 
@@ -16,7 +16,6 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 
 - Fix screenshot pipeline (headless WASM loading broken)
 - Gnome → Rust sim entity with needs + fauna interactions
-- Smooth trunk growth (canopy gradual, trunk still snaps)
 - Bird call audio when fauna spawns
 
 ## P2
