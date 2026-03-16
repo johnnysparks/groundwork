@@ -1,55 +1,50 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T08:30:00
-**Session:** 58 sprints. 4 concurrent teams. 98+ tests.
+**Last updated:** 2026-03-16T09:00:00
+**Session:** 61 sprints. Game feature-complete for alpha.
 
 ---
 
-## Executive Mandate
+## Alpha Complete
 
-### Garden Gnome → Sim-Side Entity
-**Decision:** `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
-**Current state:** JS-side task queue + billboard sprite + progressive UI reveal.
-Upstream added `EcoMilestones` resource in Rust and `onChapterChange` for progressive tool reveal.
-**Next:** Migrate gnome to Rust sim entity with needs, fauna interactions.
+The game has a complete player experience: title → tutorial → progression → completion → replay. Sound, visuals, ecology, and game loop all working.
 
----
+## P1 — Next (post-alpha)
 
-## Recently Shipped (sprints 53-58)
+### Gnome → Sim-Side Entity (exec mandate)
+Migrate from JS-side task queue to Rust sim entity with needs and fauna interactions.
 
-- Title card ("GROUNDWORK" loading screen)
-- Mobile quest fix (touch orbit completes "Look around")
-- Progressive species unlocking (groundcover → flowers → shrubs → trees)
-- Quest chapters aligned with progression tiers
-- Garden completion screen at score 5000+
-- Score trend indicator (+/-)
-- Ecology tips for all interactions (16 total)
-- Auto day cycle (10-minute period)
-- Upstream: EcoMilestones, seasonal day phase, species niches, nurse logs, carrying capacity, progressive UI reveal
+### Drag-to-zone
+Mouse/touch drag to paint rectangles instead of single-click radius.
 
-## P1 — Next
+### More sounds
+Bird calls, seed sprout, milestone jingle, tool placement. The water spring is the only sound currently.
 
-### Drag-to-zone painting
-Mouse/touch drag to paint rectangles. Currently single-click radius.
-
-### Sound design
-Ambient: water, wind, birds. Actions: tool use, seed sprout, milestone jingle.
-
-### Wire sim-side EcoMilestones to JS unlock system
-The Rust sim now tracks `EcoMilestones` (groundcover count, pollinator count, fauna diversity). The JS HUD tracks unlocks by score threshold. These should be connected — JS reads the WASM-exported milestone state instead of computing score locally.
-
-### Foliage color: more green
-Healthy plants still lean amber. Species-specific greens need to be more saturated to overcome warm lighting.
+### Foliage greening
+Healthy plants still lean amber in warm lighting. More saturated species greens needed.
 
 ---
 
 ## P2 — Future
 
-- Gnome sim-side entity with needs
 - Squirrel domestication
-- Root competition visualization in x-ray
+- Root competition visualization
 - Multiple gnomes
 - Biome variety
-- Sound
 - Undo/redo
 - Share garden as URL
+- Leaderboard / garden gallery
+
+---
+
+## Session Stats
+- 61 sprints in one session
+- 98+ tests passing
+- 4 concurrent dev teams
+- 14-shot screenshot tour
+- 10+ ecological interactions
+- Progressive species unlocking (sim-driven)
+- Procedural audio (water spring)
+- 3D models (fauna, gnome, trees)
+- GitHub Pages deployment
+- Mobile touch support
