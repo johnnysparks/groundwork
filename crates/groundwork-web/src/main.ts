@@ -18,6 +18,7 @@ import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
 import { RainRenderer } from './rendering/rain';
 import { FaunaRenderer } from './rendering/fauna';
+import { FireflyRenderer } from './rendering/fireflies';
 import { EcologyParticles } from './rendering/ecology';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
@@ -434,6 +435,11 @@ async function main() {
 
   const ecology = new EcologyParticles();
   scene.add(ecology.points);
+
+  // --- Fireflies (dusk/night ambient) ---
+
+  const fireflies = new FireflyRenderer();
+  scene.add(fireflies.group);
 
   // --- Data overlay (V key: water/light/nutrient heat maps) ---
 
@@ -1015,6 +1021,10 @@ async function main() {
 
     // Update fauna positions and animation
     fauna.update(elapsed);
+
+    // Fireflies: active during dusk/night
+    fireflies.setActive(dayCycle.getTime());
+    fireflies.update(dt, elapsed);
 
     // Ambient fauna sounds: periodic bird chirps and bee buzzes when present
     ambientSoundTimer -= dt;
