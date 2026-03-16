@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T14:15:00
-**Status:** Alpha complete. 93 sprints. Dense canopy, multi-voxel flowers, sim-driven gnome.
+**Last updated:** 2026-03-16T14:30:00
+**Status:** Alpha complete. 96 sprints. Green garden floor, species-specific canopy, sim-driven gnome.
 
 ---
 
