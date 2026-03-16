@@ -117,6 +117,10 @@ const ECO_TIPS = [
   'Tip: Crowded plants die — give trees space to claim territory',
   'Tip: The garden gnome does the work — zone areas and watch',
   'Tip: Trees share nutrients through underground mycorrhizal networks',
+  'Tip: Dead wood becomes a nurse log — seedlings grow faster on it',
+  'Tip: Too many plants? The garden has a carrying capacity — thin for health',
+  'Tip: Berry bushes attract birds — birds spread seeds to new areas',
+  'Tip: Birch grows fast in open ground — perfect pioneer for bare patches',
   'Tip: Each new species adds +100 to your garden score',
 ];
 let _tipIndex = 0;

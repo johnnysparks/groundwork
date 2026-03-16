@@ -362,12 +362,24 @@ pub fn seed_growth(
                 {
                     let dead_u8 = Material::DeadWood.as_u8();
                     let mut near_deadwood = false;
-                    if x > 0 && cells[idx - 1].material.as_u8() == dead_u8 { near_deadwood = true; }
-                    if x + 1 < GRID_X && cells[idx + 1].material.as_u8() == dead_u8 { near_deadwood = true; }
-                    if y > 0 && cells[idx - GRID_X].material.as_u8() == dead_u8 { near_deadwood = true; }
-                    if y + 1 < GRID_Y && cells[idx + GRID_X].material.as_u8() == dead_u8 { near_deadwood = true; }
-                    if z > 0 && cells[idx - z_stride].material.as_u8() == dead_u8 { near_deadwood = true; }
-                    if z + 1 < GRID_Z && cells[idx + z_stride].material.as_u8() == dead_u8 { near_deadwood = true; }
+                    if x > 0 && cells[idx - 1].material.as_u8() == dead_u8 {
+                        near_deadwood = true;
+                    }
+                    if x + 1 < GRID_X && cells[idx + 1].material.as_u8() == dead_u8 {
+                        near_deadwood = true;
+                    }
+                    if y > 0 && cells[idx - GRID_X].material.as_u8() == dead_u8 {
+                        near_deadwood = true;
+                    }
+                    if y + 1 < GRID_Y && cells[idx + GRID_X].material.as_u8() == dead_u8 {
+                        near_deadwood = true;
+                    }
+                    if z > 0 && cells[idx - z_stride].material.as_u8() == dead_u8 {
+                        near_deadwood = true;
+                    }
+                    if z + 1 < GRID_Z && cells[idx + z_stride].material.as_u8() == dead_u8 {
+                        near_deadwood = true;
+                    }
                     if near_deadwood {
                         growth_rate = growth_rate.saturating_mul(2); // 2× germination near dead wood
                     }
