@@ -77,6 +77,10 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.30, 0.75, 0.25),  // fresh green
     new THREE.Color(0.40, 0.65, 0.20),  // olive green
   ],
+  canopyShade: [
+    new THREE.Color(0.35, 0.55, 0.70),  // cool dappled blue
+    new THREE.Color(0.30, 0.50, 0.55),  // teal shade
+  ],
 };
 
 interface EcoParticle {
@@ -215,6 +219,39 @@ export class EcologyParticles {
             4,
           );
         }
+      }
+    }
+
+    // Canopy Effect: shade-tolerant ground plants near tall trunks
+    // Detect Leaf voxels at ground level with low light (shaded) near Trunk voxels above
+    const cStep = 16;
+    for (let sy = 0; sy < GRID_Y; sy += cStep) {
+      for (let sx = 0; sx < GRID_X; sx += cStep) {
+        // Check for ground-level leaf with low light (shaded by canopy above)
+        const gIdx = (sx + sy * GRID_X + (GROUND_LEVEL + 1) * GRID_X * GRID_Y) * VOXEL_BYTES;
+        if (grid[gIdx] !== Material.Leaf) continue;
+        const lightLevel = grid[gIdx + 2]; // byte 2 = light_level
+        if (lightLevel > 30 || lightLevel < 5) continue; // moderate shade = 5-30
+
+        // Check for tall trunk above (canopy source)
+        let hasTrunkAbove = false;
+        for (let tz = GROUND_LEVEL + 5; tz < GROUND_LEVEL + 30; tz += 3) {
+          const tIdx = (sx + sy * GRID_X + tz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[tIdx] === Material.Trunk || grid[tIdx] === Material.Branch) {
+            hasTrunkAbove = true;
+            break;
+          }
+        }
+        if (!hasTrunkAbove) continue;
+
+        // Dappled shade particles — cool blue-green, drifting slowly
+        this.emitTrail(
+          sx + 0.5,
+          GROUND_LEVEL + 2,
+          sy + 0.5,
+          INTERACTION_COLORS.canopyShade,
+          3,
+        );
       }
     }
   }
