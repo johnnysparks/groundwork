@@ -2421,6 +2421,91 @@ pub fn wind_seed_drift(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>) {
     }
 }
 
+/// Track ecological milestones for species unlock progression.
+///
+/// Scans the world every 20 ticks and updates `EcoMilestones` with:
+/// - Groundcover leaf count (for tier 1: flowers unlock)
+/// - Pollinator count (for tier 2: shrubs unlock)
+/// - Total fauna + species diversity (for tier 3: trees unlock)
+///
+/// Milestones are one-way: once reached, they stay reached.
+pub fn milestone_tracker(
+    grid: Res<VoxelGrid>,
+    fauna_list: Res<crate::fauna::FaunaList>,
+    trees: Query<&Tree>,
+    tick: Res<Tick>,
+    mut milestones: ResMut<crate::EcoMilestones>,
+) {
+    // Only scan every 20 ticks for performance
+    if !tick.0.is_multiple_of(20) {
+        return;
+    }
+
+    // Count groundcover leaf voxels at ground level
+    // Groundcover species: moss=9, grass=10, clover=11
+    let mut groundcover_count = 0u16;
+    for z in GROUND_LEVEL..=(GROUND_LEVEL + 2).min(GRID_Z - 1) {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                if let Some(v) = grid.get(x, y, z) {
+                    if v.material == Material::Leaf {
+                        let sid = v.nutrient_level;
+                        if matches!(sid, 9 | 10 | 11) {
+                            groundcover_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Count pollinators (bees + butterflies)
+    let pollinator_count = fauna_list
+        .fauna
+        .iter()
+        .filter(|f| {
+            matches!(
+                f.fauna_type,
+                crate::fauna::FaunaType::Bee | crate::fauna::FaunaType::Butterfly
+            )
+        })
+        .count() as u16;
+
+    // Count total fauna and unique species
+    let fauna_count = fauna_list.fauna.len() as u16;
+    let mut species_seen = [false; 6]; // 6 fauna types
+    for f in &fauna_list.fauna {
+        species_seen[f.fauna_type as usize] = true;
+    }
+    let species_diversity = species_seen.iter().filter(|&&s| s).count() as u8;
+
+    // Count plant species diversity (from Tree entities)
+    let mut plant_species_seen = [false; 12]; // 12 plant species
+    for tree in trees.iter() {
+        if tree.species_id < 12 {
+            plant_species_seen[tree.species_id] = true;
+        }
+    }
+    let plant_diversity: u8 = plant_species_seen.iter().filter(|&&s| s).count() as u8;
+
+    // Update raw counts
+    milestones.groundcover_count = groundcover_count;
+    milestones.pollinator_count = pollinator_count;
+    milestones.fauna_count = fauna_count;
+    milestones.species_diversity = plant_diversity;
+
+    // Check tier unlocks (one-way — never reverts)
+    if !milestones.tier1_flowers && groundcover_count >= 10 {
+        milestones.tier1_flowers = true;
+    }
+    if !milestones.tier2_shrubs && pollinator_count >= 2 {
+        milestones.tier2_shrubs = true;
+    }
+    if !milestones.tier3_trees && fauna_count >= 4 && plant_diversity >= 3 {
+        milestones.tier3_trees = true;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

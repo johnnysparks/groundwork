@@ -399,3 +399,47 @@ pub fn fauna_ptr() -> *const u8 {
 pub fn fauna_len() -> usize {
     with_sim(|sim| sim.world.resource::<FaunaList>().export_len())
 }
+
+// --- Ecological Milestones ---
+
+/// Whether flowers are unlocked (tier 1: groundcover established).
+#[wasm_bindgen]
+pub fn milestone_tier1_flowers() -> bool {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().tier1_flowers)
+}
+
+/// Whether shrubs are unlocked (tier 2: pollinators attracted).
+#[wasm_bindgen]
+pub fn milestone_tier2_shrubs() -> bool {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().tier2_shrubs)
+}
+
+/// Whether trees are unlocked (tier 3: fauna ecosystem active).
+#[wasm_bindgen]
+pub fn milestone_tier3_trees() -> bool {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().tier3_trees)
+}
+
+/// Groundcover leaf voxel count (progress toward tier 1).
+#[wasm_bindgen]
+pub fn milestone_groundcover_count() -> u16 {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().groundcover_count)
+}
+
+/// Active pollinator count (progress toward tier 2).
+#[wasm_bindgen]
+pub fn milestone_pollinator_count() -> u16 {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().pollinator_count)
+}
+
+/// Total active fauna count (progress toward tier 3).
+#[wasm_bindgen]
+pub fn milestone_fauna_count() -> u16 {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().fauna_count)
+}
+
+/// Plant species diversity count (progress toward tier 3).
+#[wasm_bindgen]
+pub fn milestone_species_diversity() -> u8 {
+    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().species_diversity)
+}

@@ -16,9 +16,10 @@ use fauna::{fauna_effects, fauna_spawn, fauna_update, FaunaList};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
 use systems::{
-    branch_growth, deadwood_decay, light_propagation, mycorrhizal_network, pioneer_succession,
-    root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption,
-    soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring, wind_seed_drift,
+    branch_growth, deadwood_decay, light_propagation, milestone_tracker, mycorrhizal_network,
+    pioneer_succession, root_growth, root_water_absorption, seed_dispersal, seed_growth,
+    self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow,
+    water_spring, wind_seed_drift,
 };
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
@@ -54,6 +55,44 @@ impl DayPhase {
     /// Advance the phase by 1, wrapping at 100.
     pub fn advance(&mut self) {
         self.0 = (self.0 + 1) % 100;
+    }
+}
+
+/// Ecological milestone tracking for species unlock progression.
+///
+/// The game vision describes a learning arc (groundcover → flowers → shrubs → trees).
+/// This resource tracks sim-state conditions that JS reads to gate species availability.
+/// Updated every 20 ticks by the `milestone_tracker` system.
+///
+/// Milestones are one-way (once reached, they stay reached) so the player
+/// never loses access to unlocked species.
+#[derive(Resource, Debug, Clone)]
+pub struct EcoMilestones {
+    /// Tier 0: always available (moss, grass, clover)
+    /// Tier 1: groundcover established (10+ groundcover leaf voxels)
+    pub tier1_flowers: bool,
+    /// Tier 2: pollinators attracted (2+ bees/butterflies present)
+    pub tier2_shrubs: bool,
+    /// Tier 3: fauna ecosystem active (4+ total fauna, 3+ species diversity)
+    pub tier3_trees: bool,
+    /// Raw counts for JS to display progress toward next tier
+    pub groundcover_count: u16,
+    pub pollinator_count: u16,
+    pub fauna_count: u16,
+    pub species_diversity: u8,
+}
+
+impl Default for EcoMilestones {
+    fn default() -> Self {
+        Self {
+            tier1_flowers: false,
+            tier2_shrubs: false,
+            tier3_trees: false,
+            groundcover_count: 0,
+            pollinator_count: 0,
+            fauna_count: 0,
+            species_diversity: 0,
+        }
     }
 }
 
@@ -93,6 +132,7 @@ pub fn create_world() -> World {
     world.insert_resource(SoilGrid::new());
     world.insert_resource(Tick::default());
     world.insert_resource(DayPhase::default());
+    world.insert_resource(EcoMilestones::default());
     world.insert_resource(FocusState::default());
     world.insert_resource(SpeciesTable::default());
     world.insert_resource(SeedSpeciesMap::default());
@@ -247,6 +287,7 @@ pub fn create_schedule() -> Schedule {
             fauna_spawn,
             fauna_update,
             fauna_effects,
+            milestone_tracker,
             tick_counter,
         )
             .chain()
