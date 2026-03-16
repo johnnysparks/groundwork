@@ -548,19 +548,26 @@ pub fn tree_growth(
         tree.accumulated_light += light_intake.sqrt() * species.growth_rate * nitrogen_boost;
 
         // Health declines without resources, recovers when well-supplied.
-        // Both missing = severe stress (crowded, shaded, dry).
+        // Light check uses shade_tolerance: low tolerance = sun-loving = dies faster in shade.
         let water_ok = water_intake >= species.water_need.threshold();
-        let light_ok = light_intake >= species.light_need.threshold();
+        let light_threshold = (255.0 - species.shade_tolerance as f32).max(20.0);
+        let light_ok = light_intake >= light_threshold;
         if !water_ok && !light_ok {
             // Severe stress: both resources missing (crowded conditions)
             tree.health = (tree.health - 0.02).max(0.0);
         } else if !water_ok {
             tree.health = (tree.health - 0.01).max(0.0);
         } else if !light_ok {
-            tree.health = (tree.health - 0.008).max(0.0);
+            // Shade stress: sun-loving species (low shade_tolerance) decline faster
+            let shade_penalty = 0.005 + (1.0 - species.shade_tolerance as f32 / 255.0) * 0.01;
+            tree.health = (tree.health - shade_penalty).max(0.0);
         }
         if water_ok && light_ok {
-            tree.health = (tree.health + 0.005).min(1.0);
+            // Healthy plants recover faster — reward good placement
+            tree.health = (tree.health + 0.01).min(1.0);
+        } else if water_ok || light_ok {
+            // One resource met: slow partial recovery
+            tree.health = (tree.health + 0.002).min(1.0);
         }
 
         // Re-rasterize every 50 ticks to update health visual stress on foliage
