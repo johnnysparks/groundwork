@@ -31,6 +31,7 @@ pub enum FaunaType {
     Bird = 2,
     Worm = 3,
     Beetle = 4,
+    Squirrel = 5,
 }
 
 /// Movement behavior state.
@@ -401,6 +402,49 @@ pub fn fauna_spawn(
                 }
             }
         }
+
+        // --- Squirrels: spawn near oaks and berry bushes ---
+        // Squirrels are companion fauna: they cache acorns that sprout into
+        // new oaks, creating "gift" plantings the player didn't plan.
+        // Check for oak/berry leaf voxels (species_id 0 or 5 in nutrient_level).
+        {
+            let mut oak_berry_count = 0u32;
+            let sqr = 8_usize;
+            for sqz in GROUND_LEVEL..=(GROUND_LEVEL + 6).min(GRID_Z - 1) {
+                for sqy in sy.saturating_sub(sqr)..=(sy + sqr).min(GRID_Y - 1) {
+                    for sqx in sx.saturating_sub(sqr)..=(sx + sqr).min(GRID_X - 1) {
+                        if let Some(v) = grid.get(sqx, sqy, sqz) {
+                            if (v.material == Material::Trunk || v.material == Material::Leaf)
+                                && (v.nutrient_level == 0 || v.nutrient_level == 5)
+                            {
+                                oak_berry_count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            if oak_berry_count >= 10 {
+                let h5 = tree_hash(t + si as u64, 1007);
+                if h5 % 200 < 15
+                    && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Squirrel) < 2
+                {
+                    let seed = fauna_list.next_seed();
+                    fauna_list.fauna.push(Fauna {
+                        fauna_type: FaunaType::Squirrel,
+                        state: FaunaState::Idle,
+                        x: sx as f32 + 0.5,
+                        y: sy as f32 + 0.5,
+                        z: GROUND_LEVEL as f32 + 1.5,
+                        target_x: sx as f32,
+                        target_y: sy as f32,
+                        target_z: GROUND_LEVEL as f32 + 1.0,
+                        age: 0,
+                        max_age: 500 + (tree_hash(seed, 7) % 300) as u32,
+                        rng_seed: seed,
+                    });
+                }
+            }
+        }
     }
 }
 
@@ -587,6 +631,62 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                 if f.z < min_z {
                     f.z = min_z + 0.5;
                 }
+            }
+            FaunaType::Squirrel => {
+                // Squirrels scurry along the ground, darting between trees.
+                // Fast erratic movement with pauses (Idle → Seeking → Acting cycle).
+                let speed = 0.15;
+                let phase = f.rng_seed as f32 * 0.9;
+                let t_f = t as f32 + phase;
+
+                match f.state {
+                    FaunaState::Idle => {
+                        // Brief pause, twitch in place
+                        f.x += (t_f * 0.3).sin() * 0.01;
+                        f.y += (t_f * 0.4).cos() * 0.01;
+                        // Start seeking a new tree every ~20 ticks
+                        if f.age.is_multiple_of(20) {
+                            // Pick a random nearby target
+                            let h2 = tree_hash(f.rng_seed, f.age as u64);
+                            let dist = 5.0 + (h2 % 10) as f32;
+                            let angle = (h2 >> 8) as f32 * 0.1;
+                            f.target_x = f.x + angle.cos() * dist;
+                            f.target_y = f.y + angle.sin() * dist;
+                            f.target_x = f.target_x.clamp(2.0, (GRID_X - 3) as f32);
+                            f.target_y = f.target_y.clamp(2.0, (GRID_Y - 3) as f32);
+                            f.state = FaunaState::Seeking;
+                        }
+                    }
+                    FaunaState::Seeking => {
+                        // Dart toward target
+                        let dx = f.target_x - f.x;
+                        let dy = f.target_y - f.y;
+                        let dist = (dx * dx + dy * dy).sqrt();
+                        if dist < 1.0 {
+                            f.state = FaunaState::Acting; // arrived — cache an acorn
+                        } else {
+                            f.x += dx / dist * speed;
+                            f.y += dy / dist * speed;
+                            // Bobbing motion
+                            f.z = GROUND_LEVEL as f32 + 1.0 + (t_f * 0.4).sin().abs() * 0.3;
+                        }
+                    }
+                    FaunaState::Acting => {
+                        // Brief digging animation, then return to idle
+                        f.z = GROUND_LEVEL as f32 + 0.8;
+                        if f.age.is_multiple_of(5) {
+                            f.state = FaunaState::Idle;
+                            f.z = GROUND_LEVEL as f32 + 1.0;
+                        }
+                    }
+                    FaunaState::Leaving => {
+                        f.x += 0.2;
+                        f.y += 0.1;
+                    }
+                }
+
+                // Keep on ground surface
+                f.z = f.z.clamp(GROUND_LEVEL as f32 + 0.5, GROUND_LEVEL as f32 + 2.0);
             }
         }
 
@@ -775,6 +875,29 @@ pub fn fauna_effects(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+            FaunaType::Squirrel => {
+                // Squirrel acorn caching: when Acting (digging), cache an acorn
+                // that will sprout into an oak seedling. Creates "gift" plantings
+                // in unexpected places — the squirrel forgot where it buried them!
+                // Discovery: "An oak seedling appeared in the clearing — the squirrel must have buried an acorn there!"
+                if f.state == FaunaState::Acting {
+                    let cx = f.x as usize;
+                    let cy = f.y as usize;
+                    let tz = GROUND_LEVEL + 1;
+
+                    // ~30% chance per Acting tick to cache an acorn
+                    let h = tree_hash(tick.0 + f.rng_seed, 1111);
+                    if h.is_multiple_of(3) && cx < GRID_X && cy < GRID_Y {
+                        if let Some(cell) = grid.get_mut(cx, cy, tz) {
+                            if cell.material == Material::Air {
+                                cell.set_material(Material::Seed);
+                                // Register as oak seed
+                                seed_map.map.insert((cx, cy, tz), 0); // oak = species 0
                             }
                         }
                     }
