@@ -74,6 +74,23 @@ const SPECIES_ROOT: THREE.Color[] = [
   new THREE.Color(0.50, 0.38, 0.22),  // Clover
 ];
 
+/** Species-specific leaf voxel colors — slightly muted vs billboard foliage
+ *  so the voxel mesh reads as solid structure, not competing with soft sprites */
+const SPECIES_LEAF: THREE.Color[] = [
+  new THREE.Color(0.20, 0.45, 0.12),  // Oak: deep forest green
+  new THREE.Color(0.42, 0.62, 0.20),  // Birch: bright lime green
+  new THREE.Color(0.22, 0.48, 0.32),  // Willow: sage green
+  new THREE.Color(0.10, 0.28, 0.16),  // Pine: dark blue-green
+  new THREE.Color(0.14, 0.55, 0.30),  // Fern: emerald
+  new THREE.Color(0.34, 0.48, 0.14),  // Berry Bush: olive
+  new THREE.Color(0.12, 0.35, 0.12),  // Holly: dark green
+  new THREE.Color(0.55, 0.38, 0.45),  // Wildflower: muted pink
+  new THREE.Color(0.62, 0.58, 0.24),  // Daisy: warm gold
+  new THREE.Color(0.16, 0.38, 0.14),  // Moss: dark olive
+  new THREE.Color(0.26, 0.58, 0.12),  // Grass: fresh green
+  new THREE.Color(0.34, 0.52, 0.16),  // Clover: yellow-green
+];
+
 const DEFAULT_COLOR = new THREE.Color(1, 0, 1); // magenta = unmapped material
 const _scratchColor = new THREE.Color();
 
@@ -259,12 +276,14 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
       } else {
         baseColor = isGrass ? SOIL_GRASS : MATERIAL_COLORS[Material.Soil];
       }
-    } else if (grid && (quad.material === Material.Trunk || quad.material === Material.Branch || quad.material === Material.Root)) {
+    } else if (grid && (quad.material === Material.Trunk || quad.material === Material.Branch || quad.material === Material.Root || quad.material === Material.Leaf)) {
       // Look up species_id from voxel byte 3 for species-specific colors
       const vIdx = (quad.x + quad.y * GRID_X + quad.z * GRID_X * GRID_Y) * VOXEL_BYTES;
       const speciesId = grid[vIdx + 3] ?? 0;
       if (quad.material === Material.Root) {
         baseColor = SPECIES_ROOT[speciesId] ?? MATERIAL_COLORS[Material.Root];
+      } else if (quad.material === Material.Leaf) {
+        baseColor = SPECIES_LEAF[speciesId] ?? MATERIAL_COLORS[Material.Leaf];
       } else {
         const speciesColor = SPECIES_TRUNK[speciesId];
         if (speciesColor) {
