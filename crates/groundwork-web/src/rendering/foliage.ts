@@ -184,14 +184,19 @@ export class FoliageRenderer {
           const baseColor = speciesId < SPECIES_FOLIAGE.length
             ? SPECIES_FOLIAGE[speciesId]
             : LEAF_COLORS[hash % LEAF_COLORS.length];
-          // Add subtle per-instance brightness variation
+
+          // Health-based stress tint: water_level byte stores health (0-255)
+          // Only show stress below 50% health — above that, plants look normal.
+          const health = grid[idx + 1]; // water_level repurposed as health on leaves
+          const healthFrac = Math.min(health / 80, 1); // 0=dead, 1=healthy (80+ is full green)
+          const stressTint = Math.max(0, 1 - healthFrac); // 0 = healthy, 1 = dying
+
+          // Blend: healthy green → stressed yellow → dead brown
           const brightness = 0.9 + ((hash >> 4) & 0xf) / 15.0 * 0.2;
-          this.colorAttr.setXYZ(
-            count,
-            baseColor.r * brightness,
-            baseColor.g * brightness,
-            baseColor.b * brightness,
-          );
+          const r = baseColor.r * brightness + stressTint * 0.3;
+          const g = baseColor.g * brightness * (1 - stressTint * 0.4);
+          const b = baseColor.b * brightness * (1 - stressTint * 0.7);
+          this.colorAttr.setXYZ(count, r, g, b);
 
           count++;
         }

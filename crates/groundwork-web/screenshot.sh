@@ -288,8 +288,8 @@ async function main() {
 
     // Plant a diverse garden and advance sim for a lush screenshot
     if (wasmReady) {
-      // Water basin near center for root access
-      await exec({ type: 'Fill', tool: 'water', x1: 30, y1: 30, z1: 50, x2: 50, y2: 50, z2: 50 });
+      // Wider water basin so trees can actually reach water
+      await exec({ type: 'Fill', tool: 'water', x1: 25, y1: 25, z1: 50, x2: 55, y2: 55, z2: 50 });
 
       // Trees: well-spaced, each claiming its own territory (12+ voxels apart)
       await exec({ type: 'Place', tool: 'seed', x: 32, y: 32, z: 55, species: 'oak' });

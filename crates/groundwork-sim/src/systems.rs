@@ -563,6 +563,11 @@ pub fn tree_growth(
             tree.health = (tree.health + 0.005).min(1.0);
         }
 
+        // Re-rasterize every 50 ticks to update health visual stress on foliage
+        if tree.age > 0 && tree.age % 50 == 0 {
+            tree.dirty = true;
+        }
+
         // Crowding death: sustained zero health kills the plant.
         // Trees die after 100 ticks at health < 0.05 (about 10 seconds at 10 ticks/s).
         // This creates natural thinning — only the fittest survive in crowded zones.
@@ -1142,6 +1147,10 @@ pub fn tree_rasterize(
                                 cell.set_material(mat);
                                 // Tag with species_id for renderer color differentiation
                                 cell.nutrient_level = tree.species_id as u8;
+                                // Store health in water_level for leaf/branch visual stress
+                                if mat == Material::Leaf || mat == Material::Branch {
+                                    cell.water_level = (tree.health * 255.0) as u8;
+                                }
                                 new_footprint.push((ax, ay, az));
                             }
                         }
@@ -1181,6 +1190,7 @@ pub fn tree_rasterize(
                                 if cell.material == Material::Air {
                                     cell.set_material(Material::Leaf);
                                     cell.nutrient_level = tree.species_id as u8;
+                                    cell.water_level = (tree.health * 255.0) as u8;
                                     new_footprint.push((ax, ay, az));
                                 }
                             }
@@ -1220,6 +1230,9 @@ pub fn tree_rasterize(
                     if can_place {
                         cell.set_material(mat);
                         cell.nutrient_level = tree.species_id as u8;
+                        if mat == Material::Leaf || mat == Material::Branch {
+                            cell.water_level = (tree.health * 255.0) as u8;
+                        }
                         new_footprint.push((ax, ay, az));
                     }
                 }
