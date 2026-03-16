@@ -1284,8 +1284,8 @@ pub fn branch_growth(
             // next stage transition (which could be hundreds of ticks away).
             let new_crown_r = species.crown_radius() as isize;
             let new_leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => (new_crown_r / 3).clamp(3, 5),
-                GrowthStage::Mature | GrowthStage::OldGrowth => (new_crown_r / 3).clamp(4, 6),
+                GrowthStage::YoungTree => (new_crown_r / 3).clamp(4, 8),
+                GrowthStage::Mature | GrowthStage::OldGrowth => (new_crown_r / 3).clamp(5, 10),
                 _ => 1,
             };
             let new_leaf_r_sq = new_leaf_r * new_leaf_r;
@@ -1627,26 +1627,40 @@ pub fn tree_rasterize(
                 }
             }
 
-            // Dense spherical leaf shells around alive tips for full canopy.
-            // Radius scales with species crown_radius so each species has
-            // a distinct canopy size: oak/willow get lush crowns, birch stays slim.
+            // Dense spherical leaf shells around branch nodes for full canopy.
+            // Tips get large spheres; interior branch nodes above crown_start
+            // also get smaller spheres so the canopy fills in around the trunk
+            // instead of just sitting at the branch tips like green caps.
             let crown_r = species.crown_radius() as isize;
-            let leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => (crown_r / 3).clamp(3, 5),
-                GrowthStage::Mature | GrowthStage::OldGrowth => (crown_r / 3).clamp(4, 6),
+            let tip_leaf_r: isize = match tree.stage {
+                GrowthStage::YoungTree => (crown_r / 3).clamp(4, 8),
+                GrowthStage::Mature | GrowthStage::OldGrowth => (crown_r / 3).clamp(5, 10),
                 _ => 1,
             };
-            let leaf_r_sq = leaf_r * leaf_r;
+            // Interior branch nodes get smaller leaf spheres to fill gaps
+            let interior_leaf_r = (tip_leaf_r * 2 / 3).max(2);
+            // Crown start: only add interior leaf spheres above this height
+            let crown_z_start = match tree.stage {
+                GrowthStage::YoungTree => (trunk_h * 4 / 10).max(2),
+                _ => (trunk_h * 3 / 10).max(2),
+            };
             let mut pending_leaves: Vec<(usize, usize, usize, Material)> = Vec::new();
             for (i, node) in tree.branches.iter().enumerate() {
-                if !node.alive || has_child[i] || node.material == Material::Root {
+                if !node.alive || node.material == Material::Root {
                     continue;
                 }
-                // Fill a sphere of radius leaf_r around each tip
-                for ddx in -leaf_r..=leaf_r {
-                    for ddy in -leaf_r..=leaf_r {
-                        for ddz in -leaf_r..=leaf_r {
-                            if ddx * ddx + ddy * ddy + ddz * ddz > leaf_r_sq {
+                let is_tip = !has_child[i];
+                // Interior nodes only get leaves if above crown start
+                if !is_tip && node.pos.2 < crown_z_start {
+                    continue;
+                }
+                let r = if is_tip { tip_leaf_r } else { interior_leaf_r };
+                let r_sq = r * r;
+                // Fill a sphere of leaf voxels around this node
+                for ddx in -r..=r {
+                    for ddy in -r..=r {
+                        for ddz in -r..=r {
+                            if ddx * ddx + ddy * ddy + ddz * ddz > r_sq {
                                 continue;
                             }
                             let ax = rx as isize + node.pos.0 + ddx;
