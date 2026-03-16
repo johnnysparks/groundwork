@@ -156,6 +156,12 @@ function detectEvents(stats: { plants: number; fauna: number; species: number },
     _eventCooldown = 30;
   }
 
+  // Plant die-off from competition
+  if (_prevStats.plants > 100 && stats.plants < _prevStats.plants - 200) {
+    hud.addEvent('A plant died from competition — the strongest survive');
+    _eventCooldown = 40;
+  }
+
   // Periodic ecology tips (every ~60 ticks when nothing else happens)
   _tipTimer++;
   if (_tipTimer > 60 && _eventCooldown <= 0) {

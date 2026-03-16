@@ -549,8 +549,12 @@ pub fn tree_growth(
 
         // Health declines without resources, recovers when well-supplied.
         // Light check uses shade_tolerance: low tolerance = sun-loving = dies faster in shade.
+        // Threshold is scaled down because light_intake is sqrt(sum_of_light_across_voxels).
+        // A healthy tree in full sun: ~50 voxels × 200 light = sqrt(10000) ≈ 100 intake.
+        // Shade tolerance maps to threshold: high tolerance → low threshold.
         let water_ok = water_intake >= species.water_need.threshold();
-        let light_threshold = (255.0 - species.shade_tolerance as f32).max(20.0);
+        let shade_factor = 1.0 - species.shade_tolerance as f32 / 255.0; // 0=tolerant, 1=needs sun
+        let light_threshold = 10.0 + shade_factor * 40.0; // range: 10 (tolerant) to 50 (sun-loving)
         let light_ok = light_intake >= light_threshold;
         if !water_ok && !light_ok {
             // Severe stress: both resources missing (crowded conditions)
