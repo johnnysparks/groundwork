@@ -195,7 +195,7 @@ Flowers use a stem + bloom template. The bloom is a **disc of leaf voxels** at t
 | Growth rate | 1.0x |
 | Water need | High |
 | Shade tolerance | 20/255 (extreme) |
-| Dispersal | 0.5m / 15 ticks |
+| Dispersal | 1.0m / 15 ticks |
 
 **Niche:** First to colonize bare moist soil. Acid-tolerant. Part of the nitrogen handshake (groundcover near tree roots = 1.5x tree growth). Pioneer succession stage 1. Dense 87% leaf coverage creates a carpet effect.
 
@@ -211,7 +211,7 @@ Flowers use a stem + bloom template. The bloom is a **disc of leaf voxels** at t
 | Growth rate | 2.0x |
 | Water need | Low |
 | Shade tolerance | 140/255 |
-| Dispersal | 0.5m / 12 ticks |
+| Dispersal | 1.0m / 12 ticks |
 
 **Niche:** Follows moss in succession. Roots increase soil clay content (+1/cycle), improving water retention. Fastest-dispersing groundcover. "Prepare the ground" strategy — plant grass before trees.
 
@@ -227,7 +227,7 @@ Flowers use a stem + bloom template. The bloom is a **disc of leaf voxels** at t
 | Growth rate | 1.8x |
 | Water need | Medium |
 | Shade tolerance | 100/255 |
-| Dispersal | 0.5m / 15 ticks |
+| Dispersal | 1.0m / 15 ticks |
 
 **Niche:** Nitrogen handshake — clover near tree roots = 1.5x tree growth. Also binds soil like grass. The first "synergy" species the player discovers.
 
