@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T14:55:00
-**Status:** Alpha complete. 103 sprints. Weather visuals, ecology events, mobile performance.
+**Last updated:** 2026-03-16T15:00:00
+**Status:** Alpha complete. 106 sprints. Multi-sensory weather, seed sparkles, mobile perf, rain audio.
 
 ---
 
@@ -38,11 +38,13 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Chunk remesh budgeted to 4/frame on mobile (eliminates stutter)
 - Mobile camera starts at 1.6x zoom (shows detail instead of tiny rectangle)
 
-### Weather Visuals & Events (Sprints 101-103)
+### Weather Visuals & Events (Sprints 101-106)
 - Rain particles: 800 soft droplets during Rain weather state
 - Drought haze: fog lerps to warm amber during Drought
 - Weather event messages in HUD feed (rain/drought/clear transitions)
 - Squirrel fauna arrival messages added
+- Weather-driven wind: gusty rain (0.7), still drought (0.12), gentle clear (0.35)
+- Rain ambient audio: procedural patter fades in/out with weather
 
 ---
 
