@@ -33,6 +33,7 @@ import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
+import { initAmbientAudio } from './audio/ambient';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -372,6 +373,9 @@ async function main() {
     hud.setTickCount(Number(getTick()));
     hud.setAutoTick(true);
   }
+
+  // Ambient audio — procedural water spring sound, fades in on first interaction
+  initAmbientAudio();
 
   // New Garden button registered after remeshDirty is defined (see below)
   const questLog = new QuestLog();
