@@ -47,3 +47,17 @@ From the competitive analysis (Stardew Valley, Tiny Glade, Equilinox, Timberborn
 - **Instant everything:** Growth that's too fast removes the satisfaction of watching progression. 17 ticks is the floor.
 - **Invisible interactions:** Every interaction chain should produce a visible result the player can trace. If an interaction only changes internal numbers, it's not discoverable.
 - **Symmetric species:** If oak and birch play identically, one is redundant. Every species needs a unique strategic niche.
+
+## Known Issues / Open Tuning Questions
+
+### Self-pruning may be too weak
+Feedback: "Two oaks with overlapping canopies produce 0 deadwood." The self_pruning system requires shade_stress to exceed species.prune_threshold (200 for oak). With current light attenuation, overlapping canopies may not create shade dark enough to trigger pruning. Consider lowering prune_threshold or increasing leaf attenuation further.
+
+### Root growth is invisible
+Roots appear at ~tick 75 (underground) but the player has no visual indicator without x-ray mode. Consider: subtle ground-level darkening where roots spread, or a particle effect when a root system expands. This is a renderer task, not a sim task.
+
+### Deadwood competition isn't narrated
+When competition kills branches, it's just a brown voxel change. An event feed message ("An oak lost a branch to shade") would teach the player that competition is happening. This is a UI task.
+
+### Growth feels exponential, not linear
+Tick 100-200 is explosive compared to tick 0-100 due to sqrt accumulation with increasing root/leaf counts. This is ecologically correct but may confuse new players who expect steady growth. Not a bug, but worth monitoring in playtests.

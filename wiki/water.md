@@ -26,3 +26,10 @@ See [Weather](weather.md) for rain/drought cycles.
 - Pioneer succession requires soil water >= 20 (or >= 5 near DeadWood)
 - Root water decay rate (-2/tick) means isolated roots dry out in ~100 ticks
 - The spring provides infinite water at the center — plants near the spring always thrive
+
+## Design: "Gentle Timberborn" Approach
+From the competitive analysis: Timberborn makes drought its central gameplay tension (progressive droughts force water infrastructure). Stardew Valley is gentler (crops pause, don't die). Our approach:
+
+- **Tier 1 (Stardew-style):** Plants stop growing when soil moisture drops. No death, just pausing. This happens naturally via root water absorption (no water -> no water_intake -> no growth).
+- **Tier 2 (our implementation):** After sustained drought, roots lose water (-2/tick), health declines, deadwood appears. Pioneer succession fills gaps = recovery feature.
+- **Not implemented:** Timberborn-level infrastructure (dams, reservoirs, pumps). Our game is cozy — the spring is permanent, and recovery is always possible.

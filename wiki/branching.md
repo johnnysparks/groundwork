@@ -36,3 +36,5 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 
 ## Rasterization
 tree_rasterize converts skeleton -> voxels every 30 ticks when dirty. Clears old footprint, writes new geometry. Trunk inflated to species trunk_radius (tapered with height). Roots tapered with depth.
+
+**Clearing phase:** When re-rasterizing, old footprint voxels are reverted to Soil (underground) or Air (above ground). The surface boundary uses `VoxelGrid::surface_height(x, y)` per-column — not the constant `GROUND_LEVEL` — because terrain has rolling hills. This prevents gaps that would fill with water and cause floating trees.
