@@ -1058,6 +1058,15 @@ async function main() {
   const loadingEl = document.getElementById('loading');
   if (loadingEl) loadingEl.classList.add('hidden');
 
+  // --- Welcome message ---
+  // Delayed so the garden is visible before text appears
+  setTimeout(() => {
+    hud.addEvent('Welcome to your garden — the spring is flowing');
+  }, 1500);
+  setTimeout(() => {
+    hud.addEvent('Click anywhere to zone an area for planting');
+  }, 4000);
+
   // --- Render loop ---
 
   const clock = new THREE.Clock();
