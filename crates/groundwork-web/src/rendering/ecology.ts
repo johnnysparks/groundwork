@@ -73,6 +73,10 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.50, 0.35, 0.15),  // dark amber
     new THREE.Color(0.45, 0.30, 0.10),  // earthy brown
   ],
+  nitrogen: [
+    new THREE.Color(0.30, 0.75, 0.25),  // fresh green
+    new THREE.Color(0.40, 0.65, 0.20),  // olive green
+  ],
 };
 
 interface EcoParticle {
@@ -167,6 +171,49 @@ export class EcologyParticles {
             // Coordinate swap: sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
             this.emitTrail(sx + 0.5, sz + 0.5, sy + 0.5, INTERACTION_COLORS.waterAbsorb, 3);
           }
+        }
+      }
+    }
+
+    // Nitrogen handshake: detect Trunk voxels near ground-level Leaf voxels
+    // When groundcover (clover/moss/grass) is near a tree trunk, emit green
+    // nitrogen particles rising from the ground — makes the 1.5x boost visible.
+    const nStep = 12; // sparse scan (don't check every voxel)
+    for (let sy = 0; sy < GRID_Y; sy += nStep) {
+      for (let sx = 0; sx < GRID_X; sx += nStep) {
+        // Check for trunk at this position (at or just above ground)
+        let hasTrunk = false;
+        for (let sz = GROUND_LEVEL; sz <= GROUND_LEVEL + 3; sz++) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] === Material.Trunk) { hasTrunk = true; break; }
+        }
+        if (!hasTrunk) continue;
+
+        // Check for ground-level Leaf voxels within 5 voxels (nitrogen radius)
+        let groundLeafCount = 0;
+        const radius = 5;
+        for (let dy = -radius; dy <= radius; dy += 2) {
+          for (let dx = -radius; dx <= radius; dx += 2) {
+            const nx = sx + dx;
+            const ny = sy + dy;
+            if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y) continue;
+            for (let nz = GROUND_LEVEL; nz <= GROUND_LEVEL + 2; nz++) {
+              const nIdx = (nx + ny * GRID_X + nz * GRID_X * GRID_Y) * VOXEL_BYTES;
+              if (grid[nIdx] === Material.Leaf) groundLeafCount++;
+            }
+          }
+        }
+
+        // Need 3+ leaf voxels for boost (matches sim threshold)
+        if (groundLeafCount >= 3) {
+          // Emit green nitrogen particles rising from ground near the trunk
+          this.emitTrail(
+            sx + 0.5,
+            GROUND_LEVEL + 1.5, // Y-up position (just above ground)
+            sy + 0.5,
+            INTERACTION_COLORS.nitrogen,
+            4,
+          );
         }
       }
     }
