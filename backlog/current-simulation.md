@@ -20,6 +20,10 @@
 - **Birch Pioneer Vigor** — Birch grows 1.5× faster in open ground (no nearby trunks).
 - **Berry-Bird Symbiosis** — Berry bushes grow 1.5× faster near birds. Completes the bird loop.
 - **Grass/Clover Soil Binding** — Grass and clover roots increase soil clay (better water retention).
+- **Nurse Log Effect** (SIM-17) — Seeds near DeadWood germinate 2× faster. Pioneer succession sprouts in drier conditions near dead wood.
+- **Overgrowth Carrying Capacity** — Dense root zones (4+ adjacent roots) suppress soil bacteria. Self-regulating ecosystem density.
+- **OldGrowth Seed Rain** — OldGrowth trees disperse seeds 2× more frequently. Visible autonomous garden spread.
+- **Flower Meadow Effect** — Flower clusters double pollinator spawn probability and support more pollinators (5 vs 3).
 
 ---
 
@@ -29,16 +33,9 @@
 Export per-tree root count and water intake via WASM so the renderer can show:
 - Root territory boundaries in x-ray mode
 - Which tree is "winning" the root competition
-- Soil depletion zones around aggressive root systems
 
 ### SIM-15: Seasonal Growth Variation
-Tie growth rates to the day cycle phase:
-- Dawn/day: normal growth
-- Dusk/night: reduced growth (plants need light)
-- Creates visible rhythm in the garden
-
-### SIM-17: Nurse Log Effect
-Dead trees provide shelter for seedlings — seeds landing on/near DeadWood get a germination bonus and shade protection. Creates the forest succession pattern.
+Tie growth rates to the day cycle phase — needs sim-side time-of-day resource.
 
 ---
 
