@@ -10,23 +10,12 @@
 - Youth vulnerability (seedlings die 3-4× faster under stress)
 - Root water competition (shared pool)
 - Species-aware seed spacing
+- **Dead tree decomposition** — DeadWood passively decays into nutrient-rich soil (~2500 ticks). Moisture accelerates. Beetles further accelerate via fauna_effects.
+- **Canopy Effect** — Shade-tolerant species (fern, moss, holly) get 1.5× growth boost in moderate shade (light 5-30). Creates undergrowth niche.
 
 ---
 
 ## Next Up — P0
-
-### SIM-10: Dead Tree Decomposition
-Dead trees (DeadWood) should attract decomposers (beetles/worms) and gradually break down, enriching nearby soil. Currently dead trees just sit there forever.
-- DeadWood voxels slowly convert to soil over ~200 ticks
-- Adjacent soil gets organic matter boost (feeds soil_evolution)
-- Beetles should preferentially spawn near DeadWood
-- Creates the nutrient cycling loop: live tree → dead tree → soil → new tree
-
-### SIM-11: Canopy Microhabitat (Shade Benefits)
-Shade-tolerant species (fern shade_tolerance=30, moss=20) should grow *faster* under canopy, not just survive. Currently shade only hurts plants.
-- Add a "shade_bonus" in tree_growth: if light is below a threshold AND species.shade_tolerance is very high (low number), boost growth
-- Creates the undergrowth layer: tall oaks → ferns underneath → moss below ferns
-- This is the Canopy Effect from the Big Yeses list
 
 ### SIM-12: Pollinator Bridge Strengthening
 Flower clusters attract pollinators, but pollinators don't visibly improve nearby plants enough.
