@@ -359,6 +359,9 @@ async function main() {
       } else {
         applyToolToMockGrid(tool, hit.x, hit.y, hit.z);
       }
+      // Visual feedback: particle burst at placement location
+      // Sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
+      particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       // Record tool use for quest tracking
       const speciesIdx = hud.state.activeSpeciesIndex;
       questLog.recordToolUse(hud.state.activeTool, speciesIdx);
