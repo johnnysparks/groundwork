@@ -211,7 +211,7 @@ async function main() {
 
   // Day cycle controller
   const dayCycle = new DayCycle();
-  dayCycle.setTime(0.75); // Start at golden hour — warm and inviting
+  dayCycle.setTime(0.55); // Start just past noon — bright, warm, lets greens read as green
 
   // --- Voxel mesh ---
 

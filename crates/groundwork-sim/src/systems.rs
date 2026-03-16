@@ -569,7 +569,7 @@ pub fn tree_growth(
         let canopy_boost = if species.shade_tolerance < 60 {
             // shade_tolerance < 60 = very shade-tolerant (fern, moss, holly)
             // In moderate shade (light_intake 5-30), they grow 1.5× faster
-            if light_intake >= 5.0 && light_intake < 30.0 {
+            if (5.0..30.0).contains(&light_intake) {
                 1.5_f32
             } else {
                 1.0
@@ -581,8 +581,10 @@ pub fn tree_growth(
         // Use diminishing returns so more roots/light don't trivially blast
         // through all growth stages in a single tick. sqrt gives gentle scaling:
         // 100 water_intake → +10, 10000 → +100, 50000 → +224
-        tree.accumulated_water += water_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
-        tree.accumulated_light += light_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
+        tree.accumulated_water +=
+            water_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
+        tree.accumulated_light +=
+            light_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
 
         // Health declines without resources, recovers when well-supplied.
         // Light check uses shade_tolerance: low tolerance = sun-loving = dies faster in shade.
@@ -1618,10 +1620,18 @@ pub fn deadwood_decay(
                 let moisture_bonus = if z <= GROUND_LEVEL {
                     // Underground dead wood: check adjacent soil water
                     let mut adj_water = 0u16;
-                    if x > 0 { adj_water += cells[idx - 1].water_level as u16; }
-                    if x + 1 < GRID_X { adj_water += cells[idx + 1].water_level as u16; }
-                    if y > 0 { adj_water += cells[idx - GRID_X].water_level as u16; }
-                    if y + 1 < GRID_Y { adj_water += cells[idx + GRID_X].water_level as u16; }
+                    if x > 0 {
+                        adj_water += cells[idx - 1].water_level as u16;
+                    }
+                    if x + 1 < GRID_X {
+                        adj_water += cells[idx + 1].water_level as u16;
+                    }
+                    if y > 0 {
+                        adj_water += cells[idx - GRID_X].water_level as u16;
+                    }
+                    if y + 1 < GRID_Y {
+                        adj_water += cells[idx + GRID_X].water_level as u16;
+                    }
                     (adj_water / 200).min(3) as u8
                 } else {
                     0
@@ -1633,10 +1643,14 @@ pub fn deadwood_decay(
                 // When fully decayed, convert to soil with rich nutrients
                 if cells[idx].water_level >= 250 {
                     let was_underground = z <= GROUND_LEVEL;
-                    cells[idx].set_material(if was_underground { Material::Soil } else { Material::Air });
+                    cells[idx].set_material(if was_underground {
+                        Material::Soil
+                    } else {
+                        Material::Air
+                    });
                     if was_underground {
                         cells[idx].nutrient_level = 60; // nutrient-rich soil
-                        // Enrich the soil composition
+                                                        // Enrich the soil composition
                         soil_cells[idx].organic = soil_cells[idx].organic.saturating_add(40);
                         soil_cells[idx].bacteria = soil_cells[idx].bacteria.saturating_add(20);
                     }
