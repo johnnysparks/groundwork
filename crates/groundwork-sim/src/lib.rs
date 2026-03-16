@@ -268,10 +268,25 @@ fn plant_starter_garden(world: &mut World) {
         (1, -6, 3),  // birch
         (4, 3, -5),  // fern
         (7, -4, -3), // wildflower
-        (9, 5, 6),   // moss
-        (10, -2, 5), // grass
-        (11, 4, -7), // clover
+        (7, 2, 7),   // wildflower
+        (8, -3, -6), // daisy
         (5, -7, -6), // berry bush
+        // Groundcover carpet — scatter liberally for a green floor
+        (9, 5, 6), // moss
+        (9, -3, 1),
+        (9, 2, -4),
+        (9, -6, -2),
+        (9, 7, -5),
+        (10, -2, 5), // grass
+        (10, 3, 2),
+        (10, -4, -2),
+        (10, 1, -7),
+        (10, 6, -4),
+        (11, 4, -7), // clover
+        (11, -5, 3),
+        (11, 2, -2),
+        (11, -1, -5),
+        (11, 7, 3),
     ];
 
     // Collect which seeds landed, then update the species map separately

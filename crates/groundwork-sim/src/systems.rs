@@ -1737,6 +1737,13 @@ pub fn tree_rasterize(
                         Material::Root => {
                             cell.material == Material::Soil || cell.material == Material::Root
                         }
+                        // Leaf/Branch must not overwrite Trunk — trunk has visual priority
+                        Material::Leaf | Material::Branch => {
+                            cell.material == Material::Air
+                                || cell.material == Material::Branch
+                                || cell.material == Material::Leaf
+                                || cell.material == Material::DeadWood
+                        }
                         _ => {
                             cell.material == Material::Air
                                 || cell.material == Material::Trunk
@@ -1873,6 +1880,13 @@ pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>
                     let can_place = match mat {
                         Material::Root => {
                             cell.material == Material::Soil || cell.material == Material::Root
+                        }
+                        // Leaf/Branch must not overwrite Trunk — trunk has visual priority
+                        Material::Leaf | Material::Branch => {
+                            cell.material == Material::Air
+                                || cell.material == Material::Branch
+                                || cell.material == Material::Leaf
+                                || cell.material == Material::DeadWood
                         }
                         _ => {
                             cell.material == Material::Air
@@ -4321,8 +4335,8 @@ mod tests {
             age: 100,
             stage: GrowthStage::YoungTree,
             health: 1.0,
-            accumulated_water: 2000.0,
-            accumulated_light: 2000.0,
+            accumulated_water: 500.0,
+            accumulated_light: 500.0,
             rng_seed: 42,
             dirty: true,
             voxel_footprint: Vec::new(),
@@ -4336,6 +4350,8 @@ mod tests {
 
         // Trunk+leaf voxels now grow gradually via pending_voxels.
         // Run enough ticks to drain the queue (roots are placed immediately).
+        // Keep accumulated resources low (500) so the tree stays YoungTree
+        // and doesn't transition to Mature during the test ticks.
         for _ in 0..30 {
             crate::tick(&mut world, &mut schedule);
         }
