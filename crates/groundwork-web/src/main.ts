@@ -18,6 +18,7 @@ import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
 import { FaunaRenderer } from './rendering/fauna';
 import { EcologyParticles } from './rendering/ecology';
+import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
@@ -167,6 +168,11 @@ async function main() {
   const ecology = new EcologyParticles();
   scene.add(ecology.points);
 
+  // --- Data overlay (V key: water/light/nutrient heat maps) ---
+
+  const overlay = new DataOverlay();
+  scene.add(overlay.group);
+
   // --- Post-processing ---
 
   const postProcessing = createPostProcessing(renderer, scene, orbit.camera);
@@ -285,6 +291,7 @@ async function main() {
       setXrayMode(xrayActive);
     },
     setTickCount: (count: number) => hud.setTickCount(count),
+    overlay: overlay,
   });
 
   // --- Sim state ---
@@ -368,6 +375,20 @@ async function main() {
         questLog.recordDepthChange();
         console.log(`X-ray: ${xrayActive ? 'ON' : 'OFF'}`);
         break;
+      case 'v': {
+        // Data overlay: V=toggle, Shift+V=cycle mode
+        const freshGrid = isInitialized() ? getGridView() : grid;
+        if (e.shiftKey) {
+          overlay.cycle();
+        } else {
+          overlay.toggle();
+        }
+        if (overlay.mode !== OverlayMode.Off) {
+          overlay.rebuild(freshGrid);
+        }
+        console.log(`Overlay: ${overlay.modeName}`);
+        break;
+      }
       case '[':
         dayCycle.step(-0.04);
         break;
@@ -424,6 +445,7 @@ async function main() {
         hud.setTickCount(Number(getTick()));
         const freshGrid = getGridView();
         questLog.check(freshGrid);
+        if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
       }
       remeshDirty();
     }

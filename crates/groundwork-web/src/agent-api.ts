@@ -80,6 +80,7 @@ let _remeshDirty: (() => void) | null = null;
 let _dayCycle: any = null;
 let _setXrayMode: ((active: boolean) => void) | null = null;
 let _setTickCount: ((count: number) => void) | null = null;
+let _overlay: any = null;
 
 export interface AgentAPIConfig {
   orbitCamera: any;
@@ -87,6 +88,7 @@ export interface AgentAPIConfig {
   dayCycle?: any;
   setXrayMode?: (active: boolean) => void;
   setTickCount?: (count: number) => void;
+  overlay?: any;
 }
 
 /** Initialize the agent API with references to scene objects */
@@ -96,6 +98,7 @@ export function initAgentAPI(config: AgentAPIConfig): void {
   _dayCycle = config.dayCycle;
   _setXrayMode = config.setXrayMode ?? null;
   _setTickCount = config.setTickCount ?? null;
+  _overlay = config.overlay ?? null;
 
   const api = {
     /** Check if sim is ready */
@@ -112,6 +115,17 @@ export function initAgentAPI(config: AgentAPIConfig): void {
 
     /** Set time of day (0–1): 0.25=dawn, 0.5=noon, 0.75=golden, 0.0=blue hour */
     setTimeOfDay: (t: number) => { if (_dayCycle) _dayCycle.setTime(t); },
+
+    /** Set overlay mode: 0=off, 1=water, 2=light, 3=nutrient */
+    setOverlay: (mode: number) => {
+      if (_overlay) {
+        _overlay.setMode(mode);
+        if (mode > 0) {
+          const g = isInitialized() ? getGridView() : null;
+          if (g) _overlay.rebuild(g);
+        }
+      }
+    },
 
     /** Execute a single action and return the result */
     executeAction: async (action: AgentAction): Promise<ActionResult> => {

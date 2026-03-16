@@ -359,10 +359,14 @@ async function main() {
         { name: '06-noon',           theta: 45,  phi: 60, time: 0.5 },
         { name: '07-golden',         theta: 45,  phi: 60, time: 0.75 },
         { name: '08-blue-hour',      theta: 45,  phi: 60, time: 0.0 },
+        // --- Data overlays (from same hero angle) ---
+        { name: '09-overlay-water',   theta: 45,  phi: 60, time: 0.5, overlay: 1 },
+        { name: '10-overlay-light',   theta: 45,  phi: 60, overlay: 2 },
+        { name: '11-overlay-nutrient', theta: 45, phi: 60, overlay: 3 },
         // --- X-ray underground (reset to golden hour, tick for more root growth) ---
-        { name: '09-xray-hero',      theta: 45,  phi: 60, xray: true, time: 0.75, tick: 50 },
-        { name: '10-xray-side',      theta: 120, phi: 35, xray: true },
-        { name: '11-xray-close',     theta: 30,  phi: 50, zoom: 2.0, xray: true },
+        { name: '12-xray-hero',      theta: 45,  phi: 60, xray: true, time: 0.75, tick: 50, overlay: 0 },
+        { name: '13-xray-side',      theta: 120, phi: 35, xray: true },
+        { name: '14-xray-close',     theta: 30,  phi: 50, zoom: 2.0, xray: true },
       ];
       angles = shots;
     }
@@ -372,6 +376,13 @@ async function main() {
       // Advance sim between shots so the garden evolves during the tour
       if (a.tick && wasmReady) {
         await exec({ type: 'Tick', n: a.tick });
+      }
+      // Set overlay mode if specified
+      if (a.overlay !== undefined) {
+        await page.evaluate((m) => { window.agentAPI?.setOverlay(m); }, a.overlay);
+        await page.evaluate(async () => {
+          for (let i = 0; i < 3; i++) await new Promise(r => requestAnimationFrame(r));
+        });
       }
       // Toggle x-ray mode if needed
       const wantXray = !!a.xray;
