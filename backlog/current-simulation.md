@@ -33,6 +33,8 @@
 - **Seasonal Day Phase (SIM-15)** — DayPhase resource (0-99): dawn=75%, day=100%, dusk=75%, night=50% growth. WASM exports for JS sync.
 - **Ecological Milestones** — EcoMilestones resource: tier 0 groundcover → tier 1 flowers → tier 2 shrubs → tier 3 trees. WASM exports for JS species picker gating.
 - **Weather System** — Rain/drought events every ~200-400 ticks. Rain floods surface; drought evaporates water. 500-tick initial grace period. WASM exports for JS visual effects.
+- **Root Water Decay** — Roots without wet soil neighbors lose 2 water/tick. Makes drought lethal; enforces water placement strategy.
+- **First Leaf Acceleration** — New trees start with accumulated=40 (was 0). First leaf at ~tick 30 (was ~tick 130).
 
 ---
 
