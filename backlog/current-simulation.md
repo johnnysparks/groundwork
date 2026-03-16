@@ -15,21 +15,15 @@
 - **Pollinator Bridge** (SIM-12) — Bees/butterflies near trees boost health recovery +0.005/pollinator. Creates flower→bee→healthier tree loop.
 - **Pine Allelopathy** (SIM-16) — Pine roots acidify soil (pH drops 5x faster). Non-tolerant seeds grow at half speed in acidic soil. Pine/fern/moss immune.
 - **Bird Express Enhancement** — Birds carry species-specific seeds (not just oak), enrich soil with droppings, spawn more readily near berry bushes.
-
----
-
-## Next Up — P0
+- **Drought Recovery** — Dead trees with wet roots slowly revive as Saplings. "My tree came back!"
+- **Willow Water Affinity** — Willows grow 2× faster near water. "Plant willows by the stream."
+- **Birch Pioneer Vigor** — Birch grows 1.5× faster in open ground (no nearby trunks).
+- **Berry-Bird Symbiosis** — Berry bushes grow 1.5× faster near birds. Completes the bird loop.
+- **Grass/Clover Soil Binding** — Grass and clover roots increase soil clay (better water retention).
 
 ---
 
 ## Next Up — P1
-
-### SIM-13: Water Stress Propagation
-Plants that can't get enough water should show progressive damage stages:
-- Mild drought: slower growth (already happens)
-- Moderate drought: leaves start dying from tips inward
-- Severe drought: entire canopy dies, trunk survives if roots still find water
-- Recovery: new leaf growth from surviving branches when water returns
 
 ### SIM-14: Root War Visualization Data
 Export per-tree root count and water intake via WASM so the renderer can show:
@@ -42,6 +36,9 @@ Tie growth rates to the day cycle phase:
 - Dawn/day: normal growth
 - Dusk/night: reduced growth (plants need light)
 - Creates visible rhythm in the garden
+
+### SIM-17: Nurse Log Effect
+Dead trees provide shelter for seedlings — seeds landing on/near DeadWood get a germination bonus and shade protection. Creates the forest succession pattern.
 
 ---
 
