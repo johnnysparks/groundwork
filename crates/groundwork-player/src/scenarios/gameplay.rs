@@ -1554,3 +1554,250 @@ pub fn interaction_chain_depth() -> Scenario {
         })
         .build()
 }
+
+// ---------------------------------------------------------------------------
+// 20. Water Scarcity — "Does the garden degrade gracefully?"
+// ---------------------------------------------------------------------------
+
+/// Build a thriving garden with water, then dig away all water sources.
+/// The garden should degrade visibly (stress, stunted growth, possible death)
+/// but NOT crash or produce glitched state. Recovery principle: the garden
+/// should show stress signals, not just silently freeze.
+pub fn water_scarcity_response() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    Scenario::new("water_scarcity_response")
+        .description(
+            "Build garden with water, remove water sources, observe degradation. \
+             Tests graceful stress response — not a crash, not a freeze.",
+        )
+        .checkpoint("setup")
+        .status()
+        // Phase 1: build a healthy garden
+        .fill(
+            "water",
+            cx - 4,
+            cy - 4,
+            GROUND_LEVEL + 1,
+            cx + 4,
+            cy + 4,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5)
+        .plant("oak", cx, cy, GROUND_LEVEL + 3)
+        .plant("fern", cx - 2, cy + 1, GROUND_LEVEL + 3)
+        .plant("wildflower", cx + 2, cy - 1, GROUND_LEVEL + 3)
+        .tick(200)
+        .checkpoint("garden_thriving")
+        .status()
+        // Phase 2: remove all water by digging the spring area
+        .fill(
+            "air",
+            cx - 2,
+            cy - 2,
+            GROUND_LEVEL - 3,
+            cx + 2,
+            cy + 2,
+            GROUND_LEVEL + 1,
+        )
+        .tick(300)
+        .checkpoint("after_drought")
+        .status()
+        .eval(NoCrash)
+        .eval(Custom {
+            name: "garden_responds_to_drought".into(),
+            f: Box::new(|trace| {
+                // Compare thriving vs drought states
+                let steps = &trace.steps;
+                let n = steps.len();
+                // Mid-point (thriving) vs final (drought)
+                let mid = &steps[n / 2].oracle.material_counts;
+                let end = &steps[n - 1].oracle.material_counts;
+
+                let mid_plant = mid.total_plant();
+                let end_plant = end.total_plant();
+                let mid_water = mid.water;
+                let end_water = end.water;
+
+                // Water should decrease
+                let water_dropped = end_water < mid_water;
+                // Plants might decrease, stay same, or even grow (from seeds already in ground)
+                // Key: the garden should NOT be identical — some response occurred
+                let plant_changed = end_plant != mid_plant;
+                // Deadwood appearing = stress death (good signal)
+                let has_deadwood = end.deadwood > mid.deadwood;
+
+                let passed = water_dropped || plant_changed;
+
+                Verdict {
+                    evaluator: "garden_responds_to_drought".into(),
+                    passed,
+                    reason: format!(
+                        "thriving: {} plants, {} water → drought: {} plants, {} water. \
+                         deadwood: {} → {}. {}",
+                        mid_plant,
+                        mid_water,
+                        end_plant,
+                        end_water,
+                        mid.deadwood,
+                        end.deadwood,
+                        if has_deadwood {
+                            "Trees died from stress — visible degradation."
+                        } else if plant_changed {
+                            "Garden changed in response to drought."
+                        } else if water_dropped {
+                            "Water dropped but plants unchanged — stress not visible enough."
+                        } else {
+                            "PROBLEM: no response to drought at all."
+                        }
+                    ),
+                    score: Some(if has_deadwood {
+                        1.0
+                    } else if plant_changed {
+                        0.7
+                    } else if water_dropped {
+                        0.3
+                    } else {
+                        0.0
+                    }),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 21. Observation Reward — "How much happened while I watched?"
+// ---------------------------------------------------------------------------
+
+/// Plant a diverse garden, let it run for 600 ticks, then measure how many
+/// distinct ecological changes occurred. A living garden should produce
+/// multiple observable events: new species appearing (from dispersal),
+/// material type changes, fauna spawning, deadwood cycling.
+///
+/// This tests whether "watching the garden" is rewarding vs. boring.
+pub fn observation_reward_density() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    Scenario::new("observation_reward_density")
+        .description(
+            "Plant a diverse garden, idle 600 ticks, count distinct ecological \
+             changes. Tests whether passive observation is rewarding.",
+        )
+        .checkpoint("setup")
+        .status()
+        .fill(
+            "water",
+            cx - 6,
+            cy - 6,
+            GROUND_LEVEL + 1,
+            cx + 6,
+            cy + 6,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5)
+        // Diverse planting: tree, shrub, flower, groundcover
+        .plant("oak", cx - 3, cy, GROUND_LEVEL + 3)
+        .plant("birch", cx + 3, cy, GROUND_LEVEL + 3)
+        .plant("fern", cx, cy + 3, GROUND_LEVEL + 3)
+        .plant("wildflower", cx - 1, cy - 2, GROUND_LEVEL + 3)
+        .plant("moss", cx + 2, cy + 2, GROUND_LEVEL + 3)
+        .plant("clover", cx - 2, cy + 1, GROUND_LEVEL + 3)
+        .tick(100)
+        .checkpoint("garden_established")
+        .status()
+        // Now just watch — 600 ticks of idle, sampled every 100
+        .tick(100)
+        .status()
+        .tick(100)
+        .status()
+        .tick(100)
+        .status()
+        .tick(100)
+        .status()
+        .tick(100)
+        .status()
+        .tick(100)
+        .status()
+        .checkpoint("observation_complete")
+        .eval(NoCrash)
+        .eval(Custom {
+            name: "observation_event_density".into(),
+            f: Box::new(|trace| {
+                let steps = &trace.steps;
+                if steps.len() < 4 {
+                    return Verdict {
+                        evaluator: "observation_event_density".into(),
+                        passed: false,
+                        reason: "too few steps".into(),
+                        score: Some(0.0),
+                    };
+                }
+
+                // Count distinct changes between consecutive status snapshots
+                let mut events = 0u32;
+                let mut event_details = Vec::new();
+
+                for i in 1..steps.len() {
+                    let prev = &steps[i - 1].oracle.material_counts;
+                    let curr = &steps[i].oracle.material_counts;
+
+                    // New trunk appeared (tree grew)
+                    if curr.trunk > prev.trunk {
+                        events += 1;
+                        event_details.push(format!("trunk +{}", curr.trunk - prev.trunk));
+                    }
+                    // New leaf appeared (canopy/flower grew)
+                    if curr.leaf > prev.leaf {
+                        events += 1;
+                        event_details.push(format!("leaf +{}", curr.leaf - prev.leaf));
+                    }
+                    // New root appeared (underground growth)
+                    if curr.root > prev.root {
+                        events += 1;
+                        event_details.push(format!("root +{}", curr.root - prev.root));
+                    }
+                    // Seed appeared (dispersal!)
+                    if curr.seed > prev.seed {
+                        events += 1;
+                        event_details.push(format!("seed +{} (dispersal!)", curr.seed - prev.seed));
+                    }
+                    // Deadwood appeared (lifecycle)
+                    if curr.deadwood > prev.deadwood {
+                        events += 1;
+                        event_details.push(format!("deadwood +{}", curr.deadwood - prev.deadwood));
+                    }
+                    // Water changed (hydrology)
+                    let water_diff = (curr.water as i64 - prev.water as i64).unsigned_abs();
+                    if water_diff > 10 {
+                        events += 1;
+                        event_details.push(format!("water delta {}", water_diff));
+                    }
+                }
+
+                // A living garden should produce 5+ distinct events over 600 ticks
+                let passed = events >= 5;
+
+                Verdict {
+                    evaluator: "observation_event_density".into(),
+                    passed,
+                    reason: format!(
+                        "{} distinct events over 600 idle ticks: [{}]. {}",
+                        events,
+                        event_details.join(", "),
+                        if events >= 10 {
+                            "Rich observation — garden is very alive!"
+                        } else if events >= 5 {
+                            "Good observation density."
+                        } else {
+                            "SPARSE — player gets bored watching. Need more autonomous activity."
+                        }
+                    ),
+                    score: Some((events as f64 / 10.0).min(1.0)),
+                }
+            }),
+        })
+        .build()
+}

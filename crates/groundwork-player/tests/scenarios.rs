@@ -166,6 +166,16 @@ fn scenario_interaction_chain_depth() {
     run_and_assert(gameplay::interaction_chain_depth);
 }
 
+#[test]
+fn scenario_water_scarcity_response() {
+    run_and_assert(gameplay::water_scarcity_response);
+}
+
+#[test]
+fn scenario_observation_reward_density() {
+    run_and_assert(gameplay::observation_reward_density);
+}
+
 // ---------------------------------------------------------------------------
 
 /// Verify that traces are serializable (important for artifact storage).
