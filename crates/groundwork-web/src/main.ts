@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -76,6 +76,8 @@ const SUCCESSION_MESSAGES: Record<number, string> = {
 let _prevStats = { plants: 0, fauna: 0, species: 0 } as any;
 let _prevSpeciesIds = new Set<number>();
 let _eventCooldown = 0;
+let _squirrelCacheNotified = false;
+let _pollinatorActNotified = false;
 
 const FAUNA_NAMES: Record<number, string> = {
   0: 'bee', 1: 'butterfly', 2: 'bird', 3: 'worm', 4: 'beetle',
@@ -200,6 +202,42 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
       }
     }
     _prevSpeciesIds = new Set(stats.speciesIds);
+  }
+
+  // Ecological interactions — detect fauna in Acting state
+  const fView2 = getFaunaView?.();
+  if (fView2 && stats.fauna > 0) {
+    const fCount = Math.min(stats.fauna, 128);
+    for (let i = 0; i < fCount; i++) {
+      const f = readFauna(fView2, i);
+      if (f.state !== FaunaState.Acting) continue;
+      if (f.type === FaunaType.Squirrel && !_squirrelCacheNotified) {
+        const msgs = [
+          'A squirrel is burying an acorn — an oak may sprout here later!',
+          'The squirrel is caching seeds — nature plants its own garden',
+          'Squirrel at work — it buries acorns that become oak trees',
+        ];
+        hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+        _squirrelCacheNotified = true;
+        _eventCooldown = 40;
+        break;
+      }
+      if ((f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) && !_pollinatorActNotified) {
+        const msgs = [
+          'A pollinator is visiting a flower — nearby plants get a health boost',
+          'Pollination in progress — flowers spread faster near pollinators',
+        ];
+        hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+        _pollinatorActNotified = true;
+        _eventCooldown = 40;
+        break;
+      }
+    }
+    // Reset notification flags after cooldown (allow re-notification later)
+    if (_eventCooldown <= -100) {
+      _squirrelCacheNotified = false;
+      _pollinatorActNotified = false;
+    }
   }
 
   // Major plant growth burst
