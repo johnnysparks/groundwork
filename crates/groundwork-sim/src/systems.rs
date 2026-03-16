@@ -1027,6 +1027,31 @@ pub fn tree_growth(
                                     alive: true,
                                 });
                             }
+                            // Add branch stubs on the new trunk section so
+                            // space colonization can fill the mid-canopy.
+                            let stub_dirs: [(isize, isize); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+                            let stub_positions = [
+                                old_trunk_h + (new_trunk_h - old_trunk_h) / 3,
+                                old_trunk_h + (new_trunk_h - old_trunk_h) * 2 / 3,
+                            ];
+                            for (i, &sz) in stub_positions.iter().enumerate() {
+                                if sz > 0 && sz < new_trunk_h {
+                                    let (sdx, sdy) = stub_dirs[i % 4];
+                                    let pidx = tree
+                                        .branches
+                                        .iter()
+                                        .position(|b| b.pos == (0, 0, sz))
+                                        .unwrap_or(0)
+                                        as u16;
+                                    tree.branches.push(BranchNode {
+                                        pos: (sdx, sdy, sz),
+                                        parent: pidx,
+                                        material: Material::Branch,
+                                        shade_stress: 0,
+                                        alive: true,
+                                    });
+                                }
+                            }
                         }
                     }
                     GrowthStage::Dead => {

@@ -912,6 +912,14 @@ pub fn generate_attraction_points(
         _ => species.crown_radius() as isize,
     };
 
+    // Crown starts well below trunk top so the canopy wraps the upper trunk
+    // instead of sitting on top like a green cap. This gives trees the
+    // landscape-dominating silhouette described in the game vision.
+    let crown_start = match stage {
+        GrowthStage::YoungTree => (trunk_h * 4 / 10).max(2),
+        _ => (trunk_h * 3 / 10).max(2),
+    };
+
     // Number of attraction points scales with crown volume.
     // Dense sampling fills the crown envelope so branches reach all regions.
     let num_points = match stage {
@@ -931,22 +939,23 @@ pub fn generate_attraction_points(
         // Random offset within bounding box
         let dx = (h % (cr as u64 * 2 + 1)) as isize - cr;
         let dy = (h2 % (cr as u64 * 2 + 1)) as isize - cr;
+        // Crown height spans from crown_start to slightly above trunk top.
         let crown_height = match species.crown_shape {
-            CrownShape::Round => cr + 1,
-            CrownShape::Narrow => cr + 2,
-            CrownShape::Wide => (cr / 2 + 1).max(2),
-            CrownShape::Conical => cr + 1,
+            CrownShape::Round => (trunk_h - crown_start + cr / 3).max(cr + 1),
+            CrownShape::Narrow => (trunk_h - crown_start + cr / 4).max(cr + 2),
+            CrownShape::Wide => (trunk_h - crown_start + cr / 3).max((cr / 2 + 1).max(2)),
+            CrownShape::Conical => (trunk_h - crown_start + cr / 4).max(cr + 1),
         };
         let dz = (h3 % crown_height as u64) as isize;
 
-        let z = trunk_h + dz;
+        let z = crown_start + dz;
 
-        // Filter by crown shape envelope
+        // Filter by crown shape envelope (ellipsoidal scaling for tall crowns)
         let inside = match species.crown_shape {
             CrownShape::Round => {
-                let mid = crown_height / 2;
-                let dist_from_mid = (dz - mid).abs();
-                let allowed_r = (cr - dist_from_mid).max(0);
+                let half_h = (crown_height / 2).max(1);
+                let dist = (dz - half_h).abs();
+                let allowed_r = (cr * (half_h - dist) / half_h).max(0);
                 dx * dx + dy * dy <= allowed_r * allowed_r
             }
             CrownShape::Narrow => {
@@ -998,6 +1007,29 @@ pub fn init_skeleton(
             shade_stress: 0,
             alive: true,
         });
+    }
+
+    // Branch stubs at multiple heights so space colonization grows
+    // a full canopy from the crown zone, not just the trunk tip.
+    let crown_start = match stage {
+        GrowthStage::YoungTree => (trunk_h * 4 / 10).max(2),
+        _ => (trunk_h * 3 / 10).max(2),
+    };
+    let stub_dirs: [(isize, isize); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+    let num_stubs = 4_isize;
+    let stub_spacing = ((trunk_h - crown_start) / (num_stubs + 1)).max(1);
+    for i in 0..num_stubs {
+        let sz = crown_start + (i + 1) * stub_spacing;
+        if sz > 0 && sz < trunk_h {
+            let (dx, dy) = stub_dirs[i as usize % 4];
+            branches.push(BranchNode {
+                pos: (dx, dy, sz),
+                parent: sz as u16,
+                material: Material::Branch,
+                shade_stress: 0,
+                alive: true,
+            });
+        }
     }
 
     // Roots
