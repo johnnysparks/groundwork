@@ -624,6 +624,7 @@ async function main() {
   let autoTick = wasmReady; // Auto-tick ON by default when sim is ready
   let tickAccumulator = 0;
   let tickSpeed = 1; // 1x, 2x, 5x
+  let prevWeatherState = 0; // 0=Clear, 1=Rain, 2=Drought
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -849,6 +850,15 @@ async function main() {
         // Update species unlocks from sim-side ecological milestones
         const milestones = getMilestones();
         if (milestones) hud.updateMilestones(milestones);
+        // Weather transition events
+        const newWeather = getWeatherState();
+        if (newWeather !== prevWeatherState) {
+          if (newWeather === 1) hud.addEvent('Rain begins \u2014 the garden drinks deeply');
+          else if (newWeather === 2) hud.addEvent('Drought \u2014 water runs low, roots dig deep');
+          else if (prevWeatherState === 1) hud.addEvent('The rain passes \u2014 skies clear');
+          else if (prevWeatherState === 2) hud.addEvent('Drought breaks \u2014 the soil can breathe');
+          prevWeatherState = newWeather;
+        }
       }
       remeshDirty();
     }
