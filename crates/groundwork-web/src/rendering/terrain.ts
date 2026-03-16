@@ -22,7 +22,7 @@ const MATERIAL_COLORS: Record<number, THREE.Color> = {
   [Material.Stone]: new THREE.Color(0.52, 0.50, 0.48),    // cool gray (distinct from soil)
   [Material.Water]: new THREE.Color(0.20, 0.50, 0.65),    // teal
   [Material.Root]: new THREE.Color(0.50, 0.34, 0.16),     // tan brown
-  [Material.Seed]: new THREE.Color(0.55, 0.50, 0.25),     // golden
+  [Material.Seed]: new THREE.Color(0.75, 0.65, 0.25),     // bright golden (visible on soil)
   [Material.Trunk]: new THREE.Color(0.36, 0.25, 0.14),    // dark bark
   [Material.Branch]: new THREE.Color(0.40, 0.30, 0.18),   // medium brown
   [Material.Leaf]: new THREE.Color(0.30, 0.58, 0.20),     // bright green

@@ -65,6 +65,13 @@ const BURST_COLORS = [
   new THREE.Color(0.40, 0.60, 0.28),  // earthy green
 ];
 
+/** Seed sparkle colors — bright warm golds to mark where life is about to begin */
+const SEED_COLORS = [
+  new THREE.Color(0.95, 0.85, 0.40),  // bright gold
+  new THREE.Color(0.90, 0.75, 0.30),  // amber gold
+  new THREE.Color(1.00, 0.92, 0.55),  // pale gold
+];
+
 interface Particle {
   alive: boolean;
   life: number;
@@ -88,6 +95,10 @@ export class GrowthParticles {
   /** Previous grid snapshot for detecting growth (material bytes only) */
   private prevLeafCount = 0;
   private prevLeafPositions: Set<number> = new Set();
+
+  /** Seed positions for persistent sparkle effect */
+  private seedPositions: { x: number; y: number; z: number }[] = [];
+  private seedSparkleTimer = 0;
 
   constructor() {
     this.particles = new Array(MAX_PARTICLES);
@@ -160,6 +171,7 @@ export class GrowthParticles {
    */
   detectGrowth(grid: Uint8Array): void {
     const newLeafPositions = new Set<number>();
+    const newSeedPositions: { x: number; y: number; z: number }[] = [];
 
     for (let z = 0; z < GRID_Z; z++) {
       for (let y = 0; y < GRID_Y; y++) {
@@ -176,18 +188,33 @@ export class GrowthParticles {
               // Sim Y↔Z swap: sim Z=up → Three.js Y=up
               this.emit(x + 0.5, z + 0.5, y + 0.5);
             }
+          } else if (mat === Material.Seed) {
+            newSeedPositions.push({ x, y, z });
           }
         }
       }
     }
 
     this.prevLeafPositions = newLeafPositions;
+    this.seedPositions = newSeedPositions;
   }
 
   /**
    * Update particle simulation. Call each frame with delta time in seconds.
    */
   update(dt: number): void {
+    // Emit seed sparkles: 2-3 random seeds sparkle each ~0.3 seconds
+    this.seedSparkleTimer += dt;
+    if (this.seedSparkleTimer >= 0.3 && this.seedPositions.length > 0) {
+      this.seedSparkleTimer = 0;
+      const count = Math.min(3, this.seedPositions.length);
+      for (let s = 0; s < count; s++) {
+        const idx = Math.floor(Math.random() * this.seedPositions.length);
+        const seed = this.seedPositions[idx];
+        this.emitSeedSparkle(seed.x + 0.5, seed.z + 0.5, seed.y + 0.5);
+      }
+    }
+
     let activeCount = 0;
 
     for (let i = 0; i < MAX_PARTICLES; i++) {
@@ -241,6 +268,31 @@ export class GrowthParticles {
 
     // Set draw range to avoid processing unused particles
     this.geometry.setDrawRange(0, MAX_PARTICLES);
+  }
+
+  /**
+   * Emit a single gentle golden sparkle above a seed — marks where life will begin.
+   */
+  private emitSeedSparkle(worldX: number, worldY: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.8 + Math.random() * 0.4;
+    p.maxLife = p.life;
+
+    // Spawn just above the seed with tiny offset
+    p.x = worldX + (Math.random() - 0.5) * 0.3;
+    p.y = worldY + 0.3 + Math.random() * 0.3;
+    p.z = worldZ + (Math.random() - 0.5) * 0.3;
+
+    // Gentle upward drift
+    p.vx = (Math.random() - 0.5) * 0.1;
+    p.vy = 0.3 + Math.random() * 0.2;
+    p.vz = (Math.random() - 0.5) * 0.1;
+
+    const c = SEED_COLORS[Math.floor(Math.random() * SEED_COLORS.length)];
+    p.color.copy(c);
   }
 
   private findDeadParticle(): Particle | null {
