@@ -29,6 +29,7 @@
 - **Squirrel Acorn Caching** — New fauna type. Spawns near oaks/berry bushes. Caches acorns that sprout into oak seedlings at random locations.
 - **Competition Tuning** — Reduced partial recovery (+0.005→+0.002) so shade stress is lethal. Crowded clusters now thin naturally.
 - **Acceptance Test** — `crowded_oak_cluster_thins_naturally` validates core competition promise.
+- **Growth Pacing Fix (P0)** — Seed growth 5→12/tick, Seedling→Sapling 200→80, Sapling→YoungTree 800→500. First leaves at ~tick 25 (was 100+).
 
 ---
 
