@@ -246,7 +246,8 @@ pub fn seed_growth(
         let mut suppressed = false;
         'suppress: for sz in z.saturating_sub(4)..=(z + 4).min(GRID_Z - 1) {
             for sy in y.saturating_sub(suppress_radius)..=(y + suppress_radius).min(GRID_Y - 1) {
-                for sx in x.saturating_sub(suppress_radius)..=(x + suppress_radius).min(GRID_X - 1) {
+                for sx in x.saturating_sub(suppress_radius)..=(x + suppress_radius).min(GRID_X - 1)
+                {
                     let sidx = sx + sy * GRID_X + sz * z_stride;
                     if cells[sidx].material == Material::Trunk {
                         suppressed = true;
@@ -621,9 +622,7 @@ pub fn tree_growth(
         };
         if tree.health < 0.1 && tree.age > death_age_threshold {
             tree.health = (tree.health - 0.01 * youth_multiplier).max(0.0);
-            if tree.health == 0.0
-                && tree.stage != GrowthStage::Dead
-            {
+            if tree.health == 0.0 && tree.stage != GrowthStage::Dead {
                 tree.stage = GrowthStage::Dead;
                 tree.dirty = true;
             }
@@ -1602,12 +1601,24 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                     continue;
                 }
                 let mut count = 0u8;
-                if x > 0 && snapshot[idx - 1].0 == root_u8 { count += 1; }
-                if x + 1 < GRID_X && snapshot[idx + 1].0 == root_u8 { count += 1; }
-                if y > 0 && snapshot[idx - GRID_X].0 == root_u8 { count += 1; }
-                if y + 1 < GRID_Y && snapshot[idx + GRID_X].0 == root_u8 { count += 1; }
-                if z > 0 && snapshot[idx - z_stride].0 == root_u8 { count += 1; }
-                if z + 1 < GRID_Z && snapshot[idx + z_stride].0 == root_u8 { count += 1; }
+                if x > 0 && snapshot[idx - 1].0 == root_u8 {
+                    count += 1;
+                }
+                if x + 1 < GRID_X && snapshot[idx + 1].0 == root_u8 {
+                    count += 1;
+                }
+                if y > 0 && snapshot[idx - GRID_X].0 == root_u8 {
+                    count += 1;
+                }
+                if y + 1 < GRID_Y && snapshot[idx + GRID_X].0 == root_u8 {
+                    count += 1;
+                }
+                if z > 0 && snapshot[idx - z_stride].0 == root_u8 {
+                    count += 1;
+                }
+                if z + 1 < GRID_Z && snapshot[idx + z_stride].0 == root_u8 {
+                    count += 1;
+                }
                 root_neighbor_count[idx] = count;
             }
         }
@@ -3597,21 +3608,23 @@ mod tests {
         }
 
         // Spawn a seedling directly under the canopy
-        let shaded_tree = world.spawn(Tree {
-            species_id: 0,
-            root_pos: (cx + 1, cy, sz),
-            age: 0,
-            stage: GrowthStage::Seedling,
-            health: 1.0,
-            accumulated_water: 0.0,
-            accumulated_light: 0.0,
-            rng_seed: 999,
-            dirty: false,
-            voxel_footprint: vec![(cx + 1, cy, sz)],
-            branches: Vec::new(),
-            attraction_points: Vec::new(),
-            skeleton_initialized: false,
-        }).id();
+        let shaded_tree = world
+            .spawn(Tree {
+                species_id: 0,
+                root_pos: (cx + 1, cy, sz),
+                age: 0,
+                stage: GrowthStage::Seedling,
+                health: 1.0,
+                accumulated_water: 0.0,
+                accumulated_light: 0.0,
+                rng_seed: 999,
+                dirty: false,
+                voxel_footprint: vec![(cx + 1, cy, sz)],
+                branches: Vec::new(),
+                attraction_points: Vec::new(),
+                skeleton_initialized: false,
+            })
+            .id();
 
         // Run ticks — the shaded seedling should lose health quickly
         for _ in 0..50 {
