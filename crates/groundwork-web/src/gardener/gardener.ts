@@ -61,41 +61,105 @@ const GNOME_VERT = /* glsl */ `
 const GNOME_FRAG = /* glsl */ `
   varying vec2 vUv;
 
+  // SDF helpers
+  float sdCircle(vec2 p, vec2 c, float r) {
+    return length(p - c) - r;
+  }
+  float sdEllipse(vec2 p, vec2 c, vec2 r) {
+    vec2 d = (p - c) / r;
+    return (length(d) - 1.0) * min(r.x, r.y);
+  }
+
   void main() {
     vec2 p = vUv - 0.5;
 
-    // Body: round bottom half
-    float body = length(vec2(p.x * 1.3, (p.y + 0.1) * 1.0));
-    float bodyAlpha = 1.0 - smoothstep(0.2, 0.22, body);
+    // --- Shapes ---
 
-    // Hat: triangle top
-    float hatY = p.y - 0.15;
+    // Body: squat ellipse (tunic)
+    float body = sdEllipse(p, vec2(0.0, -0.04), vec2(0.16, 0.20));
+    float bodyAlpha = 1.0 - smoothstep(-0.01, 0.01, body);
+
+    // Head: circle sitting on body
+    float head = sdCircle(p, vec2(0.0, 0.14), 0.10);
+    float headAlpha = 1.0 - smoothstep(-0.01, 0.01, head);
+
+    // Hat: pointy cone sitting on head
+    float hatY = p.y - 0.22;
     float hatX = abs(p.x);
-    float hat = hatX - (0.18 - hatY * 0.6);
-    float hatAlpha = step(hat, 0.0) * step(0.0, hatY) * step(hatY, 0.35);
+    float hatBase = 0.13;
+    float hatHeight = 0.26;
+    float hatSdf = hatX - (hatBase - hatY * (hatBase / hatHeight));
+    float hatAlpha = step(hatSdf, 0.0) * step(0.0, hatY) * step(hatY, hatHeight);
+    // Round the hat tip
+    float tipDist = sdCircle(p, vec2(0.0, 0.22 + hatHeight - 0.03), 0.03);
+    hatAlpha = max(hatAlpha, 1.0 - smoothstep(-0.01, 0.01, tipDist));
 
-    // Combine
-    float alpha = max(bodyAlpha, hatAlpha);
+    // Boots: two small ellipses at bottom
+    float bootL = sdEllipse(p, vec2(-0.08, -0.24), vec2(0.07, 0.04));
+    float bootR = sdEllipse(p, vec2(0.08, -0.24), vec2(0.07, 0.04));
+    float bootsAlpha = max(
+      1.0 - smoothstep(-0.01, 0.01, bootL),
+      1.0 - smoothstep(-0.01, 0.01, bootR)
+    );
+
+    // Belt: thin horizontal stripe across body center
+    float beltAlpha = bodyAlpha
+      * step(-0.06, p.y) * step(p.y, -0.02)
+      * (1.0 - step(0.14, abs(p.x)));
+
+    // Belt buckle: tiny square at center
+    float buckleAlpha = step(-0.05, p.y) * step(p.y, -0.03)
+      * step(abs(p.x), 0.025);
+
+    // --- Combine alpha ---
+    float alpha = max(max(max(bodyAlpha, headAlpha), hatAlpha), bootsAlpha);
     if (alpha < 0.1) discard;
 
-    // Colors: brown body, red hat, white beard hint
-    vec3 bodyColor = vec3(0.45, 0.32, 0.20); // brown tunic
-    vec3 hatColor = vec3(0.75, 0.15, 0.10);  // red hat
-    vec3 beardColor = vec3(0.85, 0.82, 0.75); // white beard
+    // --- Colors ---
+    vec3 tunicColor = vec3(0.32, 0.45, 0.25);   // earthy green tunic
+    vec3 hatColor = vec3(0.72, 0.18, 0.12);      // warm red hat
+    vec3 skinColor = vec3(0.85, 0.70, 0.55);     // warm skin
+    vec3 bootColor = vec3(0.35, 0.22, 0.12);     // dark brown boots
+    vec3 beltColor = vec3(0.30, 0.20, 0.10);     // dark leather belt
+    vec3 buckleColor = vec3(0.85, 0.75, 0.35);   // gold buckle
+    vec3 beardColor = vec3(0.82, 0.78, 0.70);    // warm white beard
 
-    // Beard: small white area below center
-    float beardMask = step(-0.15, -p.y) * step(p.y, -0.02) * step(abs(p.x), 0.12);
+    // Layer colors bottom-to-top
+    vec3 color = tunicColor;
 
-    vec3 color = mix(bodyColor, hatColor, hatAlpha);
-    color = mix(color, beardColor, beardMask * bodyAlpha);
+    // Boots
+    color = mix(color, bootColor, bootsAlpha);
+    // Head (skin)
+    color = mix(color, skinColor, headAlpha);
+    // Beard: lower half of head
+    float beardMask = headAlpha * step(p.y, 0.12) * step(0.04, p.y);
+    color = mix(color, beardColor, beardMask);
+    // Eyes: two tiny dark dots
+    float eyeL = 1.0 - smoothstep(0.01, 0.02, length(p - vec2(-0.04, 0.16)));
+    float eyeR = 1.0 - smoothstep(0.01, 0.02, length(p - vec2(0.04, 0.16)));
+    color = mix(color, vec3(0.15, 0.10, 0.08), max(eyeL, eyeR));
+    // Nose: tiny bump
+    float nose = 1.0 - smoothstep(0.01, 0.02, length(p - vec2(0.0, 0.13)));
+    color = mix(color, skinColor * 0.9, nose);
+    // Hat over head
+    color = mix(color, hatColor, hatAlpha);
+    // Hat brim highlight
+    float brimMask = hatAlpha * step(0.22, p.y) * step(p.y, 0.25);
+    color = mix(color, hatColor * 0.8, brimMask);
+    // Belt and buckle over body
+    color = mix(color, beltColor, beltAlpha);
+    color = mix(color, buckleColor, buckleAlpha * bodyAlpha);
 
-    // Soft glow halo behind the gnome for visibility
-    float glowDist = length(p) * 2.0;
-    float glow = (1.0 - smoothstep(0.3, 0.8, glowDist)) * 0.2;
-    vec3 glowColor = vec3(1.0, 0.9, 0.7); // warm white glow
+    // Subtle shading: darker at edges
+    float shade = 1.0 - length(p) * 0.3;
+    color *= shade;
 
-    vec3 finalColor = mix(glowColor, color, step(0.1, alpha));
-    float finalAlpha = max(alpha * 0.95, glow);
+    // Shadow disc on the ground (below feet)
+    float shadowDist = sdEllipse(p, vec2(0.0, -0.28), vec2(0.14, 0.03));
+    float shadowAlpha = (1.0 - smoothstep(-0.01, 0.02, shadowDist)) * 0.3;
+
+    float finalAlpha = max(alpha * 0.95, shadowAlpha);
+    vec3 finalColor = mix(vec3(0.0), color, step(0.1, alpha));
     if (finalAlpha < 0.02) discard;
 
     gl_FragColor = vec4(finalColor, finalAlpha);
