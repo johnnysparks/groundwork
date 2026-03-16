@@ -25,13 +25,14 @@ import { buildFaunaModel } from '../models/fauna';
 /** Maximum fauna instances (matches Rust MAX_FAUNA) */
 const MAX_FAUNA = 128;
 
-/** Fauna model sizes in voxels — deliberately oversized for readability. */
+/** Fauna model sizes in voxels — deliberately oversized for readability.
+ *  Sized so creatures are visible at default camera zoom (full 80×80 garden). */
 const FAUNA_SIZES: Record<number, number> = {
-  [FaunaType.Bee]: 1.5,
-  [FaunaType.Butterfly]: 2.0,
-  [FaunaType.Bird]: 3.0,
-  [FaunaType.Worm]: 1.0,
-  [FaunaType.Beetle]: 1.2,
+  [FaunaType.Bee]: 2.5,
+  [FaunaType.Butterfly]: 3.5,
+  [FaunaType.Bird]: 5.0,
+  [FaunaType.Worm]: 1.8,
+  [FaunaType.Beetle]: 2.0,
 };
 
 /** Pre-built model pool entry. */

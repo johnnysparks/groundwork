@@ -69,6 +69,10 @@ const WORK_DURATION = 0.4;
 const BLINK_INTERVAL = 3.0;
 const BLINK_DURATION = 0.15;
 
+/** Base scale for the gnome model — oversized so it's visible at default zoom
+ *  among trees and foliage. At 1.8x the gnome is ~8 units tall. */
+const GNOME_BASE_SCALE = 1.8;
+
 // ─── Emotion Particles ──────────────────────────────────────────
 
 enum EmotionType {
@@ -642,9 +646,12 @@ export class GardenerSprite {
     this.sBodyY = smoothTo(this.sBodyY, this.bodyY, lerp);
     this.sBootSpread = smoothTo(this.sBootSpread, this.bootSpread, lerp);
 
-    // Body: bounce + squash + lean
+    // Body: bounce + squash + lean (with base scale for visibility)
     p.root.position.y = this.sBounce + this.sBodyY;
-    p.root.scale.set(2.0 - this.sSquash, this.sSquash, 1);
+    const sx = (2.0 - this.sSquash) * GNOME_BASE_SCALE;
+    const sy = this.sSquash * GNOME_BASE_SCALE;
+    const sz = GNOME_BASE_SCALE;
+    p.root.scale.set(sx, sy, sz);
     p.root.rotation.z = this.sLean;
 
     // Face direction of movement (rotate entire gnome)

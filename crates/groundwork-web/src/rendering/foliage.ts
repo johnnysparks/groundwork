@@ -77,7 +77,7 @@ const FOLIAGE_FRAG = /* glsl */ `
     // Slight shading: darker toward edges
     float shade = 1.0 - dist * 0.2;
 
-    gl_FragColor = vec4(vColor * shade, alpha * 0.92);
+    gl_FragColor = vec4(vColor * shade, alpha * 0.96);
   }
 `;
 
@@ -93,20 +93,24 @@ const LEAF_COLORS = [
 /** Species-specific foliage color palettes.
  *  Index matches species_id stored in voxel nutrient_level byte.
  *  0=Oak, 1=Birch, 2=Willow, 3=Pine, 4=Fern, 5=Berry Bush, 6=Holly,
- *  7=Wildflower, 8=Daisy, 9=Moss, 10=Grass, 11=Clover */
+ *  7=Wildflower, 8=Daisy, 9=Moss, 10=Grass, 11=Clover
+ *
+ *  Colors are pushed wide apart so each species reads as visually
+ *  distinct even under warm golden-hour lighting. Hue varies from
+ *  warm olive (oak) through cool sage (willow) to vibrant emerald (fern). */
 const SPECIES_FOLIAGE: THREE.Color[] = [
-  new THREE.Color(0.28, 0.50, 0.18),  // Oak: deep forest green
-  new THREE.Color(0.40, 0.62, 0.25),  // Birch: bright lime green
-  new THREE.Color(0.30, 0.55, 0.28),  // Willow: muted sage green
-  new THREE.Color(0.15, 0.38, 0.15),  // Pine: dark conifer green
-  new THREE.Color(0.22, 0.55, 0.30),  // Fern: blue-green
-  new THREE.Color(0.35, 0.50, 0.22),  // Berry Bush: warm green
-  new THREE.Color(0.18, 0.42, 0.18),  // Holly: dark green
+  new THREE.Color(0.22, 0.48, 0.12),  // Oak: deep warm forest green
+  new THREE.Color(0.48, 0.72, 0.22),  // Birch: bright spring yellow-green
+  new THREE.Color(0.25, 0.52, 0.38),  // Willow: silver-sage, distinctly blue
+  new THREE.Color(0.10, 0.30, 0.18),  // Pine: very dark blue-green
+  new THREE.Color(0.16, 0.62, 0.35),  // Fern: vibrant emerald
+  new THREE.Color(0.38, 0.52, 0.16),  // Berry Bush: warm olive
+  new THREE.Color(0.12, 0.38, 0.12),  // Holly: dark pure green
   new THREE.Color(0.65, 0.45, 0.55),  // Wildflower: pink-purple
-  new THREE.Color(0.70, 0.65, 0.30),  // Daisy: warm yellow
-  new THREE.Color(0.25, 0.48, 0.22),  // Moss: muted green
-  new THREE.Color(0.35, 0.58, 0.20),  // Grass: bright green
-  new THREE.Color(0.30, 0.55, 0.25),  // Clover: green with yellow tint
+  new THREE.Color(0.72, 0.68, 0.28),  // Daisy: warm yellow
+  new THREE.Color(0.18, 0.40, 0.16),  // Moss: dark muted olive
+  new THREE.Color(0.30, 0.65, 0.14),  // Grass: bright fresh green
+  new THREE.Color(0.38, 0.60, 0.18),  // Clover: yellow-green
 ];
 
 export class FoliageRenderer {
@@ -203,14 +207,15 @@ export class FoliageRenderer {
             ? SPECIES_FOLIAGE[speciesId]
             : LEAF_COLORS[hash % LEAF_COLORS.length];
 
-          // Health-based stress tint: water_level byte stores health (0-255)
-          // Only show stress below ~25% health — healthy gardens should be GREEN.
-          // The cozy aesthetic requires mostly-green with occasional stress spots.
-          const health = grid[idx + 1]; // water_level repurposed as health on leaves
-          const healthFrac = Math.min(health / 60, 1); // 0=dead, 1=healthy (60+ is full green)
-          const stressTint = Math.pow(Math.max(0, 1 - healthFrac), 2); // squared: subtle until very low
+          // Health-based stress tint: water_level byte MAY store health.
+          // However, leaf voxels in the canopy often have water_level=0 (no
+          // water above ground), which is NOT "dead" — it means "no data".
+          // Treat 0 as fully healthy. Only values 1–59 indicate actual stress.
+          const health = grid[idx + 1];
+          const healthFrac = health === 0 ? 1.0 : Math.min(health / 60, 1);
+          const stressTint = Math.pow(Math.max(0, 1 - healthFrac), 2);
 
-          // Blend: healthy green → mild amber → stressed brown (gentle curve)
+          // Per-instance brightness variation for visual richness
           const brightness = 0.9 + ((hash >> 4) & 0xf) / 15.0 * 0.2;
           const r = baseColor.r * brightness + stressTint * 0.2;
           const g = baseColor.g * brightness * (1 - stressTint * 0.3);
