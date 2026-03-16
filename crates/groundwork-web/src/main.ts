@@ -35,7 +35,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
-function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number } {
+function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
   let plants = 0;
   const speciesSet = new Set<number>();
   const total = GRID_X * GRID_Y * GRID_Z;
@@ -118,7 +118,7 @@ let _tipIndex = 0;
 let _tipTimer = 0;
 
 /** Detect ecological events by comparing with previous stats */
-function detectEvents(stats: { plants: number; fauna: number; species: number }, hud: any): void {
+function detectEvents(stats: { plants: number; fauna: number; species: number; speciesIds?: Set<number> }, hud: any): void {
   _eventCooldown--;
   if (_eventCooldown > 0) return;
 
