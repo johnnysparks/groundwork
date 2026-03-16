@@ -26,6 +26,9 @@
 - **Flower Meadow Effect** — Flower clusters double pollinator spawn probability and support more pollinators (5 vs 3).
 - **Mycorrhizal Network** — Same-species trees with nearby roots share health. Healthier trees support struggling neighbors.
 - **Wind Seed Drift** — Seeds high in air drift with rotating wind direction. Creates directional spread patterns.
+- **Squirrel Acorn Caching** — New fauna type. Spawns near oaks/berry bushes. Caches acorns that sprout into oak seedlings at random locations.
+- **Competition Tuning** — Reduced partial recovery (+0.005→+0.002) so shade stress is lethal. Crowded clusters now thin naturally.
+- **Acceptance Test** — `crowded_oak_cluster_thins_naturally` validates core competition promise.
 
 ---
 
