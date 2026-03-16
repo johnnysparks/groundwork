@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -25,6 +25,8 @@ import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
 import { Hud } from './ui/hud';
 import { setupControls } from './ui/controls';
+import { TaskQueue } from './gardener/queue';
+import { GhostOverlay } from './gardener/ghosts';
 import { QuestLog } from './ui/quests';
 import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
@@ -341,6 +343,12 @@ async function main() {
   const overlay = new DataOverlay();
   scene.add(overlay.group);
 
+  // --- Garden gnome task queue + ghost overlay ---
+
+  const taskQueue = new TaskQueue();
+  const ghosts = new GhostOverlay();
+  scene.add(ghosts.group);
+
   // --- Post-processing ---
 
   const postProcessing = createPostProcessing(renderer, scene, orbit.camera);
@@ -468,47 +476,33 @@ async function main() {
         hud.addEvent('Not enough water — wait for the spring to refill');
         return;
       }
-      if (isInitialized()) {
-        if (tool === ToolCode.Seed) {
-          // Smart zone spacing: place seeds 4 voxels apart, skip occupied cells.
-          // Seeds need territory — don't dump them all in one spot.
-          const spacing = 4;
-          const r = 6; // scan radius
-          const grid = getGridView();
-          for (let dy = -r; dy <= r; dy += spacing) {
-            for (let dx = -r; dx <= r; dx += spacing) {
-              const sx = hit.x + dx;
-              const sy = hit.y + dy;
-              if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
-              // Check if there's already a plant nearby (within 2 voxels)
-              let blocked = false;
-              for (let cz = GROUND_LEVEL; cz <= GROUND_LEVEL + 5; cz++) {
-                for (let cy = sy - 1; cy <= sy + 1; cy++) {
-                  for (let cx = sx - 1; cx <= sx + 1; cx++) {
-                    if (cx < 0 || cy < 0 || cx >= GRID_X || cy >= GRID_Y || cz >= GRID_Z) continue;
-                    const idx = (cx + cy * GRID_X + cz * GRID_X * GRID_Y) * VOXEL_BYTES;
-                    const mat = grid[idx];
-                    if (mat === Material.Trunk || mat === Material.Seed || mat === Material.Root) {
-                      blocked = true;
-                    }
-                  }
-                }
-              }
-              if (!blocked) {
-                placeTool(ToolCode.Seed, sx, sy, hit.z);
-              }
-            }
+
+      // Queue tasks instead of instant execution — gnome will do the work.
+      // Smart spacing for seeds, radius fill for other tools.
+      if (tool === ToolCode.Seed) {
+        const spacing = 4;
+        const r = 6;
+        for (let dy = -r; dy <= r; dy += spacing) {
+          for (let dx = -r; dx <= r; dx += spacing) {
+            const sx = hit.x + dx;
+            const sy = hit.y + dy;
+            if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
+            taskQueue.enqueue({ tool, x: sx, y: sy, z: hit.z, species: hud.state.activeSpeciesIndex });
           }
-        } else {
-          // Non-seed tools: fill normally
-          const r = tool === ToolCode.Shovel ? 3 : 3;
-          fillTool(tool, hit.x - r, hit.y - r, hit.z, hit.x + r, hit.y + r, hit.z);
         }
       } else {
-        applyToolToMockGrid(tool, hit.x, hit.y, hit.z);
+        const r = 3;
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            const sx = hit.x + dx;
+            const sy = hit.y + dy;
+            if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
+            taskQueue.enqueue({ tool, x: sx, y: sy, z: hit.z });
+          }
+        }
       }
-      // Visual feedback: particle burst at placement location
-      // Sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
+
+      // Visual feedback: particle burst at click
       particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       // Record tool use for quest tracking
       const speciesIdx = hud.state.activeSpeciesIndex;
@@ -705,6 +699,15 @@ async function main() {
       }
       if (ticked) {
         hud.setTickCount(Number(getTick()));
+        // Drain task queue: gnome processes 1 task per tick
+        const task = taskQueue.dequeue();
+        if (task) {
+          if (task.species !== undefined) {
+            setSelectedSpecies(task.species);
+          }
+          placeTool(task.tool, task.x, task.y, task.z);
+          particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+        }
         const freshGrid = getGridView();
         questLog.check(freshGrid);
         if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
@@ -716,6 +719,8 @@ async function main() {
         detectEvents(stats, hud);
       }
       remeshDirty();
+      // Update ghost overlay
+      ghosts.rebuild(taskQueue, clock.elapsedTime);
     }
 
     // Auto-save every ~10 seconds
