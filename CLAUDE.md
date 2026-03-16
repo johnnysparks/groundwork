@@ -10,7 +10,7 @@ GROUNDWORK is a cozy ecological voxel garden builder game. The player composes e
 
 **What makes it replayable:** Two pillars drive "one more garden" across hundreds of hours. First, *knowledge transfer* — each garden teaches something that changes how you start the next one. Your tenth garden looks different from your first not because of unlocks, but because you *understand ecology now*. Second, *biome variety* — each biome is a complete ecosystem with its own species, interactions, fauna, and visual identity. Mastering temperate doesn't prepare you for desert. Systemic intuition transfers; specific recipes don't. And each biome's art, lighting, and atmosphere is a pull motivator on its own — you want to see what that world *looks and feels like*. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
 
-**The gardener gnome:** The player doesn't directly manipulate voxels. Instead, you **zone areas** (drag-to-paint) and a charming **garden gnome** character waddles over and does the work — planting seeds, digging trenches, watering soil. Ghost overlays show planned-but-not-yet-executed work. This Timberborn-inspired pacing creates natural observation time, character delight, and planning-as-gameplay. The gnome is the soul of the garden. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
+**The gardener gnome:** The player doesn't directly manipulate voxels. Instead, you **zone areas** (drag-to-paint) and a charming **garden gnome** character waddles over and does the work — planting seeds, digging trenches, watering soil. The gnome is a **sim-side entity** (following the fauna pattern): it has hunger, energy, and builds trust with fauna like squirrels and birds. Ghost overlays show planned-but-not-yet-executed work. The garden sustains the gnome; the gnome tends the garden. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
 
 **Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
 
@@ -98,6 +98,7 @@ crates/
       soil.rs             SoilComposition (6 bytes) + SoilGrid Resource
       tree.rs             12 species, PlantType enum, growth stages, space colonization
       systems.rs          ECS systems: water, soil, light, seeds, trees, dispersal
+      gnome.rs            Garden gnome: sim entity, task queue, needs, fauna interactions
       save.rs             Binary save/load v3
       wasm_bridge.rs      wasm-bindgen exports (cfg(wasm32) guarded)
 
@@ -116,10 +117,8 @@ crates/
       lighting/sky.ts     Sky gradient background shader
       lighting/daycycle.ts  Time-of-day cycle controller
       postprocessing/effects.ts  SSAO, bloom, DOF, color grading
-      gardener/queue.ts   Task queue for zone-planned work items
-      gardener/gardener.ts  Garden gnome billboard sprite with walk/work/idle animations
+      gardener/gnome.ts   Garden gnome renderer: billboard sprite, reads sim state via WASM
       gardener/ghosts.ts  Ghost overlay: InstancedMesh for planned-but-not-executed zones
-      gardener/movement.ts  Simple surface-walking movement for gnome
       ui/raycaster.ts     Mouse click → voxel coordinate raycasting
       ui/controls.ts      Input controls, keyboard shortcuts, drag-to-zone painting
       ui/hud.ts           HUD overlay: tool palette, species picker, task queue counter
@@ -166,7 +165,7 @@ crates/
 - **Flat voxel array**: 640K voxels in contiguous Vec. Z=0 is deepest, Z=GROUND_LEVEL (~50) is surface, Z=99 is sky.
 - **12 species, 4 plant types**: Tree/Shrub/Groundcover/Flower. Trees use space colonization branching, others use templates.
 - **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
-- **Garden gnome mediated actions**: Player zones are queued in JS-side TaskQueue. A renderer-side gnome sprite walks to tasks and calls `placeTool()` on arrival. No sim changes — the gnome is a visual pacing layer. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`.
+- **Garden gnome mediated actions**: Player zones are queued via `queue_gnome_task()` WASM export. The gnome is a sim-side entity (like fauna) with position, task queue, hunger, energy, and fauna trust. Gnome walks to tasks and applies tools on arrival. Renderer reads gnome state via zero-copy export buffer. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`.
 
 ### Sim API
 
@@ -214,6 +213,12 @@ All tools are used by **painting zones** (drag-to-select area). The garden gnome
 - **Shrubs:** `fern`, `berry-bush`, `holly` — bushy, 1-2m, template-only
 - **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing
 - **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly
+
+## Fauna
+- **Pollinators:** `bee`, `butterfly` — spawn near flower clusters, boost seed nutrients
+- **Dispersers:** `bird` — spawn near mature trees, carry seeds 10-50 voxels
+- **Decomposers:** `worm`, `beetle` — enrich soil, break down dead wood
+- **Companions:** `squirrel` — spawn near oak/berry, domesticable by the gnome, cache acorns that sprout
 
 ## Gameplay Depth Principles
 
