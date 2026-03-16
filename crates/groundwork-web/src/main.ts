@@ -126,6 +126,7 @@ async function main() {
 
   // Day cycle controller
   const dayCycle = new DayCycle();
+  dayCycle.setTime(0.75); // Start at golden hour — warm and inviting
 
   // --- Voxel mesh ---
 
@@ -247,6 +248,12 @@ async function main() {
     hud.setAutoTick(true);
   }
   const questLog = new QuestLog();
+
+  // Welcome message
+  if (wasmReady) {
+    hud.addEvent('Your garden is growing — click to place zones');
+    hud.addEvent('Press 3 for water, 2 for seeds');
+  }
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
   function applyToolToMockGrid(toolCode: number, x: number, y: number, z: number): void {

@@ -60,8 +60,8 @@ export class Hud {
     activeSpeciesIndex: 0,
     autoTick: false,
     tickCount: 0,
-    water: 100,
-    maxWater: 100,
+    water: 150,
+    maxWater: 150,
   };
 
   private _lastScore = 0;
