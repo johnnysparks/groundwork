@@ -12,7 +12,7 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 
 ## Key Parameters
 - Grows every 3 ticks for trees with active skeletons
-- Max 6 new nodes per tick
+- Max 10 new nodes per tick
 - Influence distance: 2x crown_radius
 - Kill distance: 0.3x crown_radius
 
@@ -32,7 +32,7 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 
 ## Leaf Placement
 - Dense spherical leaf shells around alive branch tips
-- Radius is **species-dependent** via `crown_radius`: YoungTree = `(crown_r / 4).clamp(3, 5)`, Mature/OldGrowth = `(crown_r / 3).clamp(4, 6)`, Seedling = 1
+- Radius is **species-dependent** via `crown_radius`: YoungTree = `(crown_r / 3).clamp(3, 5)`, Mature/OldGrowth = `(crown_r / 3).clamp(4, 6)`, Seedling = 1
 - Oak/willow get lush crowns, birch stays slim — each species has a distinct canopy size
 - Leaf voxels store species_id (nutrient_level) and health (water_level)
 

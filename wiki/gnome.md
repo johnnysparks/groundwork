@@ -67,16 +67,16 @@ Needs never create a fail state — the gnome always recovers. They create natur
 
 ## Idle Wandering
 
-When the task queue is empty, the gnome doesn't just stand still — it explores the garden autonomously.
+When the task queue is empty, the gnome doesn't just stand still — it explores the garden autonomously, preferring interesting spots.
 
 - **Cooldown:** 25 ticks idle before picking a wander target
-- **Wander radius:** up to 15 voxels from current position (minimum 3)
+- **Target selection:** Samples up to 24 random positions within 15 voxels, preferring spots near **leaves, trunks, seeds, or water**. Falls back to random if nothing interesting is nearby.
 - **Wander speed:** 60% of base (relaxed amble, not purposeful walk)
 - **Inspect:** On arrival, gnome pauses 12 ticks (looking around) then returns to Idle
 - **Cycle:** Idle (25 ticks) -> Wandering -> Inspecting (12 ticks) -> Idle -> repeat
 - **Task interruption:** Queuing a task immediately cancels wandering/inspecting and switches to Walking
 
-This makes the gnome feel alive during idle time — it roams, stops to look at plants, then moves on. The deterministic wander target (hash-based from a counter seed) ensures consistent replay behavior.
+This makes the gnome feel alive during idle time — it roams to plants and water features, stops to admire them, then moves on. The targeted selection means the gnome naturally gravitates toward the parts of the garden the player has developed, reinforcing the feeling that the gnome cares about the ecosystem.
 
 ## Ghost Overlays
 
