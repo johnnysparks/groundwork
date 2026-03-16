@@ -224,6 +224,16 @@ export class Hud {
   setGardenStats(stats: { plants: number; fauna: number; species: number }): void {
     this.state.gardenStats = stats;
     this.renderStatus();
+    // Update score panel
+    const score = Math.round(stats.plants * 0.1 + stats.fauna * 50 + stats.species * 100);
+    const scoreEl = this.container.querySelector('#score-number');
+    if (scoreEl) scoreEl.textContent = score.toLocaleString();
+    const plantsEl = this.container.querySelector('#stat-plants');
+    if (plantsEl) plantsEl.textContent = stats.plants.toLocaleString();
+    const faunaEl = this.container.querySelector('#stat-fauna');
+    if (faunaEl) faunaEl.textContent = String(stats.fauna);
+    const speciesEl = this.container.querySelector('#stat-species');
+    if (speciesEl) speciesEl.textContent = String(stats.species);
   }
 
   private renderStatus(): void {
@@ -243,8 +253,17 @@ const HUD_HTML = `
   <div id="species-panel">
     <div id="species-list"></div>
   </div>
+  <div id="garden-score">
+    <div id="score-title">Garden</div>
+    <div id="score-number">0</div>
+    <div id="score-details">
+      <div class="score-row"><span class="score-label">Plants</span><span id="stat-plants">0</span></div>
+      <div class="score-row"><span class="score-label">Fauna</span><span id="stat-fauna">0</span></div>
+      <div class="score-row"><span class="score-label">Species</span><span id="stat-species">0</span></div>
+    </div>
+  </div>
   <div id="hud-status"></div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | F2: screenshot</div>
+  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay</div>
   <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
   <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
 `;
@@ -435,5 +454,50 @@ const HUD_CSS = `
 #screenshot-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e8d8b8;
+}
+
+/* --- Garden Score Panel (top right) --- */
+#garden-score {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(20, 18, 15, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 16px;
+  backdrop-filter: blur(8px);
+  min-width: 120px;
+  text-align: center;
+}
+#score-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(200, 180, 140, 0.6);
+  margin-bottom: 2px;
+}
+#score-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: #e8d8b8;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+#score-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 8px;
+}
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(200, 180, 140, 0.7);
+}
+.score-row span:last-child {
+  color: #e8d8b8;
+  font-weight: 500;
 }
 `;
