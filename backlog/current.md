@@ -1,82 +1,82 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T03:40:00
-**Session:** Sprints 1-20 complete
+**Last updated:** 2026-03-16T04:20:00
+**Session:** 26 sprints complete
 
 ---
 
-## Shipped This Session (20 sprints)
+## Shipped (26 sprints)
 
-### Sim Interactions
-- Nitrogen handshake: groundcover boosts nearby tree growth 1.5x
-- Pollinator boost: bees increase seed nutrient levels (already in sim)
-- Bird Express: birds carry seeds 10-20 voxels to random locations
-- Species_id tagging: all plant voxels tagged with species for renderer use
+### Sim
+- Nitrogen handshake (groundcover → 1.5x tree growth)
+- Bird Express (birds scatter seeds to random locations)
+- Pollinator boost (bees increase seed nutrients)
+- Species_id tagging on all plant voxels
 
 ### Rendering
-- Species-specific foliage colors (12 palettes)
-- Species-specific trunk/bark colors (birch=white, pine=dark, etc.)
-- Species-specific root colors for x-ray differentiation
-- Fauna glow halos with additive blending + wing flutter
-- Ecology particles boosted (pollination, nutrients, water absorption, decomposition)
-- Day cycle: 4 distinct moods (dawn pink, noon bright, golden amber, blue hour cool)
-- Warmth reduced from 0.06→0.02 to let day cycle colors through
-- Data overlays: water/light/nutrient heat maps (V key)
+- Species foliage colors (12 palettes)
+- Species trunk colors (birch white, pine dark, etc.)
+- Species root colors (x-ray differentiation)
+- Fauna glow halos + additive blending
+- Ecology particles (pollination, nutrients, water, decomposition)
+- Day cycle (dawn/noon/golden/blue hour)
+- Data overlays (water/light/nutrient heat maps, V key)
+- Spring highlight (pulsing blue glow)
 
-### Game Loop (SimCity pivot)
-- Zone-based tools: click fills radius instead of single voxel
-- Auto-tick ON by default, 100ms interval
-- Speed control: -/+ keys for 1x/2x/5x
-- Water budget: tools cost water, spring replenishes 2/tick
-- Garden Score panel with live stats (plants, fauna, species)
-- Score milestones: 500/1000/2000/5000/10000 with celebration toasts
-- Ecological event feed: narrates fauna arrivals, species growth, growth bursts
-- Zone-based challenge quests: 5 chapters teaching the SimCity loop
+### Game Loop
+- Zone tools (click fills radius)
+- Auto-tick ON, 100ms, speed control 1x/2x/5x
+- Water budget (tools cost water, spring replenishes)
+- Garden Score + milestones (500→10000)
+- Event feed (ecology teaching, fauna roles, tips)
+- Zone-based quest challenges (5 chapters)
+- Seed placement particle burst
+- New Garden reset button
+- Clear tool labels
 
 ### Infrastructure
-- HUD tick counter wired to all tick paths
-- Q keybinding conflict fixed (Q=x-ray, Z/C=species)
-- Screenshot script: 14-shot tour with day cycle, overlays, x-ray, evolving garden
-- Favicon fix (no more 404)
-- CLAUDE.md grid dimensions corrected (80×80×100)
-- Backlog, feedback, and handoffs triaged and maintained
-- Manager/dev agent instructions updated for visual-first phase
+- HUD tick counter, keybinding fixes
+- 14-shot screenshot tour
+- Favicon, doc fixes, feedback triage
+- Scene selector (from upstream)
 
 ---
 
-## Next Session Priorities
+## Next Session — P1
 
-### P1 — High impact
+### Drag-to-zone
+Click-and-drag rectangle for precise zone placement.
 
-**Drag-to-zone**: Click-and-drag to paint a rectangle, not just single-click radius. SimCity-style box selection for placing seed/water zones.
+### Root competition visualization
+Two species' roots overlapping → visual conflict in x-ray.
 
-**Root competition**: When two species' roots overlap underground, the dominant species (higher water absorption) should visually push back the other's roots. Make it visible in x-ray.
+### Pioneer succession
+Bare soil autonomously grows moss → grass → wildflower.
 
-**Pioneer succession**: Bare soil should autonomously grow moss → grass → wildflower without player input. Creates the feeling that the garden recovers from mistakes.
+### Save/load
+Persist garden state to localStorage.
 
-**Score breakdown tooltip**: Hover over the score number to see what's contributing — "Nitrogen bonus: +150", "Pollinator chain: +200", "Bird gifts: +50".
+### Deploy to GitHub Pages
+WASM bundle in production build for public access.
 
-### P2 — Polish
+---
 
-**Seed placement particles**: Brief burst when seeds are zoned.
+## P2 — Future
 
-**Camera clipping fix**: Extreme angles still produce artifacts.
-
-**Species preview icons**: Visual previews in the species picker.
-
-**Save/load**: Persist garden state to localStorage.
-
-**Deploy WASM to GitHub Pages**: Production build with WASM assets.
+- Score breakdown tooltip
+- Camera clipping fix at extreme angles
+- Species preview icons in picker
+- Biome variety (desert, forest, wetland)
+- Sound effects / ambient audio
+- Mobile touch controls
 
 ---
 
 ## Session Stats
-
-- 20 sprints shipped
-- ~40 files changed
+- 26 sprints
 - 88 sim tests pass
 - 14-shot screenshot tour
 - 3 species interactions
 - 5 milestone tiers
 - 3 data overlay modes
-- Complete game loop: zone → grow → score → milestone → discover → zone more
+- Complete game loop with replay
