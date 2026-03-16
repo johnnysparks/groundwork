@@ -1641,8 +1641,8 @@ pub fn tree_rasterize(
             let interior_leaf_r = (tip_leaf_r * 2 / 3).max(2);
             // Crown start: only add interior leaf spheres above this height
             let crown_z_start = match tree.stage {
-                GrowthStage::YoungTree => (trunk_h * 4 / 10).max(2),
-                _ => (trunk_h * 3 / 10).max(2),
+                GrowthStage::YoungTree => (trunk_h * 25 / 100).max(2),
+                _ => (trunk_h * 15 / 100).max(2),
             };
             let mut pending_leaves: Vec<(usize, usize, usize, Material)> = Vec::new();
             for (i, node) in tree.branches.iter().enumerate() {
@@ -1885,8 +1885,9 @@ pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>
             continue;
         }
         // Adaptive drain rate: faster for large queues (trunk + canopy).
-        // Small queue (≤12): 3/tick. Large queue (1000+): up to 40/tick.
-        let count = (tree.pending_voxels.len() / 4).clamp(3, 40);
+        // Small queue (≤12): 3/tick. Large queue: up to 200/tick so dense
+        // canopies fully appear within the 100 pre-tick window.
+        let count = (tree.pending_voxels.len() / 4).clamp(3, 200);
         let count = count.min(tree.pending_voxels.len());
         for _ in 0..count {
             if let Some((x, y, z, mat)) = tree.pending_voxels.pop() {

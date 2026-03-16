@@ -932,8 +932,8 @@ pub fn generate_attraction_points(
     // instead of sitting on top like a green cap. This gives trees the
     // landscape-dominating silhouette described in the game vision.
     let crown_start = match stage {
-        GrowthStage::YoungTree => (trunk_h * 4 / 10).max(2),
-        _ => (trunk_h * 3 / 10).max(2),
+        GrowthStage::YoungTree => (trunk_h * 25 / 100).max(2),
+        _ => (trunk_h * 15 / 100).max(2),
     };
 
     // Number of attraction points scales with crown volume.
@@ -1028,8 +1028,8 @@ pub fn init_skeleton(
     // Branch stubs at multiple heights so space colonization grows
     // a full canopy from the crown zone, not just the trunk tip.
     let crown_start = match stage {
-        GrowthStage::YoungTree => (trunk_h * 4 / 10).max(2),
-        _ => (trunk_h * 3 / 10).max(2),
+        GrowthStage::YoungTree => (trunk_h * 25 / 100).max(2),
+        _ => (trunk_h * 15 / 100).max(2),
     };
     let stub_dirs: [(isize, isize); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
     let num_stubs = 4_isize;
