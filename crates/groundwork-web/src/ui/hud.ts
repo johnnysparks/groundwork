@@ -60,6 +60,7 @@ export class Hud {
     tickCount: 0,
   };
 
+  private _lastScore = 0;
   private tools: ToolUIDef[];
   private species: SpeciesDef[];
   private container: HTMLElement;
@@ -226,6 +227,17 @@ export class Hud {
     this.renderStatus();
     // Update score panel
     const score = Math.round(stats.plants * 0.1 + stats.fauna * 50 + stats.species * 100);
+
+    // Check milestones
+    const milestones = [500, 1000, 2000, 5000, 10000];
+    const prevScore = this._lastScore;
+    for (const m of milestones) {
+      if (prevScore < m && score >= m) {
+        this.showMilestone(m);
+      }
+    }
+    this._lastScore = score;
+
     const scoreEl = this.container.querySelector('#score-number');
     if (scoreEl) scoreEl.textContent = score.toLocaleString();
     const plantsEl = this.container.querySelector('#stat-plants');
@@ -234,6 +246,29 @@ export class Hud {
     if (faunaEl) faunaEl.textContent = String(stats.fauna);
     const speciesEl = this.container.querySelector('#stat-species');
     if (speciesEl) speciesEl.textContent = String(stats.species);
+  }
+
+  /** Show a milestone celebration toast */
+  private showMilestone(score: number): void {
+    const titles: Record<number, string> = {
+      500: 'Sprout',
+      1000: 'Seedling Garden',
+      2000: 'Thriving Grove',
+      5000: 'Living Ecosystem',
+      10000: 'Master Gardener',
+    };
+    const title = titles[score] || `Score ${score}`;
+    const el = document.createElement('div');
+    el.className = 'milestone-toast';
+    el.innerHTML = `<div class="milestone-score">${score.toLocaleString()}</div><div class="milestone-title">${title}</div>`;
+    this.container.appendChild(el);
+    // Animate in
+    requestAnimationFrame(() => el.classList.add('visible'));
+    // Remove after 3s
+    setTimeout(() => {
+      el.classList.remove('visible');
+      setTimeout(() => el.remove(), 500);
+    }, 3000);
   }
 
   private renderStatus(): void {
@@ -454,6 +489,42 @@ const HUD_CSS = `
 #screenshot-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e8d8b8;
+}
+
+/* --- Milestone Toast --- */
+.milestone-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  text-align: center;
+  background: rgba(20, 18, 12, 0.92);
+  border: 2px solid rgba(255, 200, 80, 0.4);
+  border-radius: 16px;
+  padding: 20px 40px;
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+  z-index: 100;
+}
+.milestone-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.milestone-score {
+  font-size: 48px;
+  font-weight: 800;
+  color: #ffc850;
+  text-shadow: 0 0 20px rgba(255, 200, 80, 0.5);
+  line-height: 1;
+}
+.milestone-title {
+  font-size: 16px;
+  color: rgba(255, 220, 140, 0.8);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 6px;
 }
 
 /* --- Garden Score Panel (top right) --- */
