@@ -68,6 +68,7 @@ export class Hud {
   };
 
   private _lastScore = 0;
+  private _bestScore = 0;
   private _onNewGarden: (() => void) | null = null;
   private tools: ToolUIDef[];
   private species: SpeciesDef[];
@@ -81,6 +82,7 @@ export class Hud {
   constructor() {
     this.tools = buildTools();
     this.species = BRIDGE_SPECIES;
+    try { this._bestScore = Number(localStorage.getItem('groundwork-best') ?? '0'); } catch {}
 
     this.container = document.createElement('div');
     this.container.id = 'hud';
@@ -337,6 +339,14 @@ export class Hud {
       }
     }
     this._lastScore = score;
+    if (score > this._bestScore) {
+      this._bestScore = score;
+      try { localStorage.setItem('groundwork-best', String(score)); } catch {}
+    }
+    const bestEl = this.container.querySelector('#score-best');
+    if (bestEl && this._bestScore > 0) {
+      bestEl.textContent = `best: ${this._bestScore.toLocaleString()}`;
+    }
 
     const scoreEl = this.container.querySelector('#score-number');
     if (scoreEl) {
@@ -375,6 +385,7 @@ export class Hud {
           <div>${stats?.fauna ?? 0} fauna attracted</div>
           <div>${stats?.species ?? 0} species thriving</div>
         </div>
+        <div class="completion-best">Personal best: ${this._bestScore.toLocaleString()}</div>
         <div class="completion-prompt">Your ecosystem is alive. Start a new garden?</div>
       `;
     } else {
@@ -522,6 +533,7 @@ const HUD_HTML = `
   <div id="garden-score">
     <div id="score-title">Garden</div>
     <div id="score-number">0</div>
+    <div id="score-best"></div>
     <div id="score-details">
       <div class="score-row"><span class="score-label">Plants</span><span id="stat-plants">0</span></div>
       <div class="score-row"><span class="score-label">Fauna</span><span id="stat-fauna">0</span></div>
@@ -812,6 +824,12 @@ const HUD_CSS = `
   color: rgba(200, 190, 160, 0.7);
   line-height: 1.6;
 }
+.completion-best {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 200, 80, 0.6);
+  letter-spacing: 1px;
+}
 .completion-prompt {
   margin-top: 16px;
   font-size: 14px;
@@ -897,6 +915,11 @@ const HUD_CSS = `
   backdrop-filter: blur(8px);
   min-width: 120px;
   text-align: center;
+}
+#score-best {
+  font-size: 10px;
+  color: rgba(255, 200, 80, 0.4);
+  margin-bottom: 4px;
 }
 #score-title {
   font-size: 11px;
