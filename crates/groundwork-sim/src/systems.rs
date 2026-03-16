@@ -562,11 +562,27 @@ pub fn tree_growth(
             1.0
         };
 
+        // --- Canopy Effect: shade-tolerant species thrive under canopy ---
+        // Species with low shade_tolerance (fern=30, moss=20) get a growth boost
+        // in moderate shade. This creates the undergrowth layer: oaks shade ferns,
+        // ferns shade moss — each species fills its niche.
+        let canopy_boost = if species.shade_tolerance < 60 {
+            // shade_tolerance < 60 = very shade-tolerant (fern, moss, holly)
+            // In moderate shade (light_intake 5-30), they grow 1.5× faster
+            if light_intake >= 5.0 && light_intake < 30.0 {
+                1.5_f32
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+
         // Use diminishing returns so more roots/light don't trivially blast
         // through all growth stages in a single tick. sqrt gives gentle scaling:
         // 100 water_intake → +10, 10000 → +100, 50000 → +224
-        tree.accumulated_water += water_intake.sqrt() * species.growth_rate * nitrogen_boost;
-        tree.accumulated_light += light_intake.sqrt() * species.growth_rate * nitrogen_boost;
+        tree.accumulated_water += water_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
+        tree.accumulated_light += light_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
 
         // Health declines without resources, recovers when well-supplied.
         // Light check uses shade_tolerance: low tolerance = sun-loving = dies faster in shade.
@@ -1566,6 +1582,66 @@ pub fn seed_dispersal(
             seed_species
                 .map
                 .insert((sx, sy, landing_z), tree.species_id);
+        }
+    }
+}
+
+/// Dead wood slowly decomposes into nutrient-rich soil. Beetles accelerate this
+/// via fauna_effects, but passive decomposition ensures the nutrient cycle completes
+/// even without beetles present. Creates visible "life from death" progression.
+///
+/// Runs every 20 ticks. Each DeadWood voxel accumulates decay in its water_level byte
+/// (repurposed since dead wood doesn't hold water). At 255, it converts to soil.
+pub fn deadwood_decay(
+    mut grid: ResMut<VoxelGrid>,
+    mut soil_grid: ResMut<SoilGrid>,
+    tick: Res<Tick>,
+) {
+    if !tick.0.is_multiple_of(20) {
+        return;
+    }
+
+    let z_stride = GRID_X * GRID_Y;
+    let cells = grid.cells_mut();
+    let soil_cells = soil_grid.cells_mut();
+
+    for z in 0..GRID_Z {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let idx = x + y * GRID_X + z * z_stride;
+                if cells[idx].material != Material::DeadWood {
+                    continue;
+                }
+
+                // Passive decay: +2 per 20-tick cycle (~2550 ticks to full decomposition)
+                // Moisture accelerates: wet dead wood decays faster
+                let moisture_bonus = if z <= GROUND_LEVEL {
+                    // Underground dead wood: check adjacent soil water
+                    let mut adj_water = 0u16;
+                    if x > 0 { adj_water += cells[idx - 1].water_level as u16; }
+                    if x + 1 < GRID_X { adj_water += cells[idx + 1].water_level as u16; }
+                    if y > 0 { adj_water += cells[idx - GRID_X].water_level as u16; }
+                    if y + 1 < GRID_Y { adj_water += cells[idx + GRID_X].water_level as u16; }
+                    (adj_water / 200).min(3) as u8
+                } else {
+                    0
+                };
+
+                let decay_rate = 2 + moisture_bonus;
+                cells[idx].water_level = cells[idx].water_level.saturating_add(decay_rate);
+
+                // When fully decayed, convert to soil with rich nutrients
+                if cells[idx].water_level >= 250 {
+                    let was_underground = z <= GROUND_LEVEL;
+                    cells[idx].set_material(if was_underground { Material::Soil } else { Material::Air });
+                    if was_underground {
+                        cells[idx].nutrient_level = 60; // nutrient-rich soil
+                        // Enrich the soil composition
+                        soil_cells[idx].organic = soil_cells[idx].organic.saturating_add(40);
+                        soil_cells[idx].bacteria = soil_cells[idx].bacteria.saturating_add(20);
+                    }
+                }
+            }
         }
     }
 }
@@ -3636,6 +3712,42 @@ mod tests {
             tree.health < 0.5,
             "Shaded seedling should have significantly reduced health ({} >= 0.5)",
             tree.health
+        );
+    }
+
+    #[test]
+    fn deadwood_decays_into_soil() {
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let dx = 30;
+        let dy = 30;
+        let dz = GROUND_LEVEL; // underground deadwood
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(dx, dy, dz) {
+                cell.set_material(Material::DeadWood);
+                // Pre-decay: set water_level high to simulate near-complete decomposition
+                cell.water_level = 240;
+            }
+        }
+
+        // Run enough ticks for passive decay to complete (240 + 2 per 20 ticks)
+        for _ in 0..200 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        let cell = grid.get(dx, dy, dz).unwrap();
+        assert_eq!(
+            cell.material,
+            Material::Soil,
+            "Underground DeadWood should decompose into soil"
+        );
+        assert!(
+            cell.nutrient_level > 0,
+            "Decomposed wood should leave nutrient-rich soil"
         );
     }
 }

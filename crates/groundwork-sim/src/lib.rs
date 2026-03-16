@@ -16,9 +16,9 @@ use fauna::{fauna_effects, fauna_spawn, fauna_update, FaunaList};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
 use systems::{
-    branch_growth, light_propagation, pioneer_succession, root_growth, root_water_absorption,
-    seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth,
-    tree_rasterize, water_flow, water_spring,
+    branch_growth, deadwood_decay, light_propagation, pioneer_succession, root_growth,
+    root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption,
+    soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring,
 };
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
@@ -200,6 +200,7 @@ pub fn create_schedule() -> Schedule {
             self_pruning,
             tree_rasterize,
             root_growth,
+            deadwood_decay,
             seed_dispersal,
             pioneer_succession,
             fauna_spawn,
