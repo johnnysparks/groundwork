@@ -1,14 +1,27 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T05:00:00
+**Last updated:** 2026-03-16T12:00:00
 **Session:** 32 sprints complete
 
 ---
 
-## Next Session — P1
+## Executive Mandate — P1 (prioritize above other P1s)
 
-### Drag-to-zone
-Click-and-drag rectangle for precise zone placement instead of single-click radius.
+### Garden Gnome Character & Zone-Planning System
+**Decision:** `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
+**Status:** Executive mandate — schedule promptly.
+
+Replace instant voxel placement with a zone-planning + garden gnome execution system:
+1. **Zone painting** — drag-to-paint areas for seeding, digging, watering, soil (ghost overlays show the plan)
+2. **Garden gnome** — charming billboard sprite character that walks to zones and executes work one voxel at a time
+3. **Task queue** — JS-side queue drains over ticks; HUD shows remaining tasks; right-click to cancel
+4. **No sim changes** — gnome is renderer-side only; calls existing `placeTool()` on arrival
+
+Subsumes the "Drag-to-zone" P1 item below (zone painting is part of this system).
+
+---
+
+## Next Session — P1
 
 ### Root competition visualization
 Two species' roots overlapping → visible color conflict in x-ray mode. The dominant species (higher water absorption) pushes back the other's roots.
