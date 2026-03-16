@@ -1717,7 +1717,11 @@ pub fn seed_dispersal(
         // OldGrowth trees disperse 2× more frequently — established trees
         // produce more seeds, creating visible "seed rain" during idle time.
         let base_period = species.dispersal_period;
-        let age_factor = if tree.stage == GrowthStage::OldGrowth { 2 } else { 1 };
+        let age_factor = if tree.stage == GrowthStage::OldGrowth {
+            2
+        } else {
+            1
+        };
         let period = (base_period
             + (tree_hash(tree.rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32)
             / age_factor;
@@ -2223,11 +2227,7 @@ pub fn soil_evolution(
 ///
 /// Runs every 10 ticks. Checks all tree pairs of the same species.
 /// Discovery: "My oaks are supporting each other through their roots!"
-pub fn mycorrhizal_network(
-    mut trees: Query<&mut Tree>,
-    grid: Res<VoxelGrid>,
-    tick: Res<Tick>,
-) {
+pub fn mycorrhizal_network(mut trees: Query<&mut Tree>, grid: Res<VoxelGrid>, tick: Res<Tick>) {
     if !tick.0.is_multiple_of(10) {
         return;
     }
@@ -2237,7 +2237,7 @@ pub fn mycorrhizal_network(
     struct TreeInfo {
         species_id: usize,
         health: f32,
-        root_water: f32,
+        _root_water: f32,
         root_positions: Vec<(usize, usize, usize)>,
     }
 
@@ -2267,7 +2267,7 @@ pub fn mycorrhizal_network(
         infos.push(TreeInfo {
             species_id: tree.species_id,
             health: tree.health,
-            root_water,
+            _root_water: root_water,
             root_positions,
         });
     }

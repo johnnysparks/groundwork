@@ -17,9 +17,8 @@ use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
 use systems::{
     branch_growth, deadwood_decay, light_propagation, mycorrhizal_network, pioneer_succession,
-    root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning,
-    soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring,
-    wind_seed_drift,
+    root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption,
+    soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring, wind_seed_drift,
 };
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;

@@ -275,7 +275,11 @@ pub fn fauna_spawn(
                     }
                 }
             }
-            if flower_leaves >= 5 { 2u64 } else { 1 }
+            if flower_leaves >= 5 {
+                2u64
+            } else {
+                1
+            }
         };
         if leaf_count >= 6 {
             // Probability increases with more flowers; flower clusters double it

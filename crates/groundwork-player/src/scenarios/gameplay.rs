@@ -1062,7 +1062,6 @@ pub fn fauna_near_flowers() -> Scenario {
                         score: Some(0.0),
                     };
                 };
-                let oracle = oracle;
                 // Check fauna count in the oracle — the sim tracks active fauna
                 let plant_count = oracle.material_counts.total_plant();
                 // Fauna spawn requires visible plant growth.
@@ -1137,7 +1136,6 @@ pub fn crowding_thins_forest() -> Scenario {
                         score: Some(0.0),
                     };
                 };
-                let oracle = oracle;
                 // With 9 oaks planted, healthy competition means some die or stunt.
                 // Check: either deadwood appeared (trees died) or trunk count is
                 // less than what 9 fully-grown oaks would produce.
@@ -1222,7 +1220,6 @@ pub fn diversity_beats_monoculture() -> Scenario {
                         score: Some(0.0),
                     };
                 };
-                let oracle = oracle;
                 // A diverse garden should have trunk (trees) + leaf (canopy/flowers)
                 // + root (underground) all present
                 let has_trunk = oracle.material_counts.trunk >= 1;
