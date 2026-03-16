@@ -554,6 +554,37 @@ async function main() {
       questLog.check(freshGrid);
       remeshDirty();
     },
+    onZoneCommit: (start, end) => {
+      // Drag-to-zone: queue all voxels in the rectangle
+      const tool = hud.state.activeTool;
+      const cost = tool === ToolCode.Seed ? 15 : tool === ToolCode.Water ? 20 : 10;
+      if (!hud.spendWater(cost)) {
+        hud.addEvent('Not enough water');
+        return;
+      }
+      const x1 = Math.min(start.x, end.x);
+      const x2 = Math.max(start.x, end.x);
+      const y1 = Math.min(start.y, end.y);
+      const y2 = Math.max(start.y, end.y);
+      const z = start.z;
+      const spacing = tool === ToolCode.Seed ? 4 : 1;
+      for (let y = y1; y <= y2; y += spacing) {
+        for (let x = x1; x <= x2; x += spacing) {
+          if (x >= 0 && y >= 0 && x < GRID_X && y < GRID_Y) {
+            taskQueue.enqueue({
+              tool,
+              x, y, z,
+              species: tool === ToolCode.Seed ? hud.state.activeSpeciesIndex : undefined,
+            });
+          }
+        }
+      }
+      particles.emit((x1 + x2) / 2 + 0.5, z + 0.5, (y1 + y2) / 2 + 0.5);
+      if (tool === ToolCode.Seed) playPlant();
+      else if (tool === ToolCode.Water) playWater();
+      else playDig();
+      hud.addEvent(`Zone painted: ${(x2 - x1 + 1)}×${(y2 - y1 + 1)} area queued`);
+    },
   });
 
   // --- Agent API (for Playwright screenshot harness) ---

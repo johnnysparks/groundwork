@@ -19,6 +19,10 @@ export interface ControlsConfig {
   canvas: HTMLCanvasElement;
   /** Called after a tool is placed (to trigger re-mesh of affected chunks) */
   onToolPlaced?: (hit: VoxelHit) => void;
+  /** Called during drag-to-zone with start and current positions */
+  onZoneDrag?: (start: VoxelHit, end: VoxelHit) => void;
+  /** Called when drag-to-zone completes */
+  onZoneCommit?: (start: VoxelHit, end: VoxelHit) => void;
 }
 
 /**
@@ -35,15 +39,56 @@ export function setupControls(config: ControlsConfig): () => void {
   const DRAG_THRESHOLD = 5; // pixels
   const CLICK_MAX_MS = 300;
 
+  // --- Drag-to-zone state ---
+  let zoneDragStart: VoxelHit | null = null;
+  let zoneDragging = false;
+
   function onMouseDown(e: MouseEvent): void {
     if (e.button !== 0) return; // left click only
     mouseDownX = e.clientX;
     mouseDownY = e.clientY;
     mouseDownTime = performance.now();
+
+    // Start zone drag if a placing tool is active
+    if (hud.isPlacingTool() && !hud.containsElement(e.target)) {
+      const hit = raycastVoxel(e.clientX, e.clientY, camera, terrainGroup, true);
+      if (hit) {
+        zoneDragStart = hit;
+        zoneDragging = false; // becomes true once drag exceeds threshold
+      }
+    }
+  }
+
+  function onMouseMove(e: MouseEvent): void {
+    if (!zoneDragStart) return;
+    const dx = e.clientX - mouseDownX;
+    const dy = e.clientY - mouseDownY;
+    if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD) {
+      zoneDragging = true;
+    }
+    if (zoneDragging) {
+      const hit = raycastVoxel(e.clientX, e.clientY, camera, terrainGroup, true);
+      if (hit) {
+        config.onZoneDrag?.(zoneDragStart, hit);
+      }
+    }
   }
 
   function onMouseUp(e: MouseEvent): void {
     if (e.button !== 0) return;
+
+    // Zone drag commit
+    if (zoneDragStart && zoneDragging) {
+      const hit = raycastVoxel(e.clientX, e.clientY, camera, terrainGroup, true);
+      if (hit) {
+        config.onZoneCommit?.(zoneDragStart, hit);
+      }
+      zoneDragStart = null;
+      zoneDragging = false;
+      return;
+    }
+    zoneDragStart = null;
+    zoneDragging = false;
 
     // Ignore if clicking on HUD
     if (hud.containsElement(e.target)) return;
@@ -138,6 +183,7 @@ export function setupControls(config: ControlsConfig): () => void {
 
   // --- Bind events ---
   canvas.addEventListener('mousedown', onMouseDown);
+  canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('mouseup', onMouseUp);
   canvas.addEventListener('touchstart', onTouchStart, { passive: true });
   canvas.addEventListener('touchend', onTouchEnd, { passive: true });
@@ -146,6 +192,7 @@ export function setupControls(config: ControlsConfig): () => void {
   // --- Cleanup ---
   return () => {
     canvas.removeEventListener('mousedown', onMouseDown);
+    canvas.removeEventListener('mousemove', onMouseMove);
     canvas.removeEventListener('mouseup', onMouseUp);
     canvas.removeEventListener('touchstart', onTouchStart);
     canvas.removeEventListener('touchend', onTouchEnd);
