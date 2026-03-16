@@ -137,6 +137,19 @@ pub fn set_day_phase(phase: u8) {
     });
 }
 
+/// Current weather state: 0=Clear, 1=Rain, 2=Drought.
+/// JS can use this for visual effects (rain particles, dry palette shift).
+#[wasm_bindgen]
+pub fn get_weather_state() -> u8 {
+    with_sim(|sim| sim.world.resource::<crate::Weather>().state as u8)
+}
+
+/// Ticks remaining in current weather state.
+#[wasm_bindgen]
+pub fn get_weather_duration() -> u32 {
+    with_sim(|sim| sim.world.resource::<crate::Weather>().duration)
+}
+
 /// Place a tool at (x, y, z). Tool codes: 0=shovel, 1=seed, 2=water, 3=soil, 4=stone.
 /// Returns the landing z coordinate, or -1 if the action had no effect.
 #[wasm_bindgen]

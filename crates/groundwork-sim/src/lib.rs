@@ -19,7 +19,7 @@ use systems::{
     branch_growth, deadwood_decay, light_propagation, milestone_tracker, mycorrhizal_network,
     pioneer_succession, root_growth, root_water_absorption, seed_dispersal, seed_growth,
     self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow,
-    water_spring, wind_seed_drift,
+    water_spring, weather_system, wind_seed_drift,
 };
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
@@ -82,6 +82,38 @@ pub struct EcoMilestones {
     pub species_diversity: u8,
 }
 
+/// Weather system: periodic rain bursts and drought periods.
+///
+/// Creates dramatic garden-wide events that test ecosystem resilience.
+/// Rain floods the surface with water; drought accelerates evaporation.
+/// Events trigger every ~200-400 ticks using deterministic RNG.
+#[derive(Resource, Debug, Clone)]
+pub struct Weather {
+    /// Current weather state
+    pub state: WeatherState,
+    /// Ticks remaining in current state
+    pub duration: u32,
+    /// RNG counter for deterministic weather sequence
+    pub sequence: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WeatherState {
+    Clear,
+    Rain,
+    Drought,
+}
+
+impl Default for Weather {
+    fn default() -> Self {
+        Self {
+            state: WeatherState::Clear,
+            duration: 500, // start clear for 500 ticks so early game isn't disrupted
+            sequence: 0,
+        }
+    }
+}
+
 /// Focus/cursor position in the world. Shared by CLI and TUI.
 #[derive(Resource, Debug, Clone)]
 pub struct FocusState {
@@ -119,6 +151,7 @@ pub fn create_world() -> World {
     world.insert_resource(Tick::default());
     world.insert_resource(DayPhase::default());
     world.insert_resource(EcoMilestones::default());
+    world.insert_resource(Weather::default());
     world.insert_resource(FocusState::default());
     world.insert_resource(SpeciesTable::default());
     world.insert_resource(SeedSpeciesMap::default());
@@ -246,6 +279,7 @@ pub fn create_schedule() -> Schedule {
     // Group 1: physics, resources, growth
     schedule.add_systems(
         (
+            weather_system,
             water_spring,
             water_flow,
             soil_absorption,

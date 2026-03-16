@@ -7,7 +7,116 @@ use crate::tree::{
     SeedSpeciesMap, SpeciesTable, Tree, TreeTemplate,
 };
 use crate::voxel::Material;
-use crate::Tick;
+use crate::{Tick, Weather, WeatherState};
+
+/// Weather system: transitions between Clear, Rain, and Drought states.
+/// Rain adds water to the surface; drought evaporates surface water.
+/// Creates dramatic garden-wide events every ~200-400 ticks.
+pub fn weather_system(
+    mut grid: ResMut<VoxelGrid>,
+    tick: Res<Tick>,
+    mut weather: ResMut<Weather>,
+) {
+    // Advance weather state
+    if weather.duration > 0 {
+        weather.duration -= 1;
+    }
+    if weather.duration == 0 {
+        // Transition to next state using deterministic sequence
+        weather.sequence += 1;
+        let h = tree_hash(weather.sequence, 12345);
+        let (next_state, next_duration) = match weather.state {
+            WeatherState::Clear => {
+                // 30% chance of rain, 15% chance of drought, 55% stay clear
+                if h % 100 < 30 {
+                    (WeatherState::Rain, 30 + (h % 20) as u32) // rain for 30-50 ticks
+                } else if h % 100 < 45 {
+                    (WeatherState::Drought, 40 + (h % 30) as u32) // drought for 40-70 ticks
+                } else {
+                    (WeatherState::Clear, 150 + (h % 100) as u32) // clear for 150-250 ticks
+                }
+            }
+            WeatherState::Rain => {
+                (WeatherState::Clear, 100 + (h % 80) as u32) // always return to clear
+            }
+            WeatherState::Drought => {
+                // Drought often ends with rain (recovery)
+                if h % 100 < 40 {
+                    (WeatherState::Rain, 20 + (h % 15) as u32) // rain relief
+                } else {
+                    (WeatherState::Clear, 100 + (h % 60) as u32)
+                }
+            }
+        };
+        weather.state = next_state;
+        weather.duration = next_duration;
+    }
+
+    // Apply weather effects
+    match weather.state {
+        WeatherState::Rain => {
+            // Rain: add water to surface air/soil cells every 3 ticks
+            if tick.0.is_multiple_of(3) {
+                let z = GROUND_LEVEL + 1;
+                // Scatter rain across ~20% of the surface
+                for i in 0..((GRID_X * GRID_Y) / 5) {
+                    let h = tree_hash(tick.0 + i as u64, 54321);
+                    let rx = (h as usize) % GRID_X;
+                    let ry = ((h >> 16) as usize) % GRID_Y;
+                    // Add water to surface
+                    if let Some(cell) = grid.get_mut(rx, ry, z) {
+                        if cell.material == Material::Air {
+                            cell.water_level = cell.water_level.saturating_add(30);
+                            if cell.water_level >= 50 {
+                                cell.material = Material::Water;
+                            }
+                        }
+                    }
+                    // Also moisten the soil below
+                    if let Some(cell) = grid.get_mut(rx, ry, GROUND_LEVEL) {
+                        if cell.material == Material::Soil {
+                            cell.water_level = cell.water_level.saturating_add(15);
+                        }
+                    }
+                }
+            }
+        }
+        WeatherState::Drought => {
+            // Drought: evaporate surface water and dry out shallow soil every 5 ticks
+            if tick.0.is_multiple_of(5) {
+                let cells = grid.cells_mut();
+                let z_stride = GRID_X * GRID_Y;
+                // Surface layer: evaporate water
+                let z = GROUND_LEVEL + 1;
+                for y in 0..GRID_Y {
+                    for x in 0..GRID_X {
+                        let idx = x + y * GRID_X + z * z_stride;
+                        if cells[idx].material == Material::Water {
+                            cells[idx].water_level = cells[idx].water_level.saturating_sub(8);
+                            if cells[idx].water_level < 5 {
+                                cells[idx].set_material(Material::Air);
+                            }
+                        }
+                    }
+                }
+                // Shallow soil: dry out
+                for sz in GROUND_LEVEL.saturating_sub(2)..=GROUND_LEVEL {
+                    for y in 0..GRID_Y {
+                        for x in 0..GRID_X {
+                            let idx = x + y * GRID_X + sz * z_stride;
+                            if cells[idx].material == Material::Soil && cells[idx].water_level > 10
+                            {
+                                cells[idx].water_level =
+                                    cells[idx].water_level.saturating_sub(3);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        WeatherState::Clear => {} // no special effects
+    }
+}
 
 /// Persistent water spring: refills the spring and stream source each tick.
 /// Without this, the spring dries up by tick ~200 and the garden dies.
