@@ -376,11 +376,15 @@ async function main() {
   // New Garden button registered after remeshDirty is defined (see below)
   const questLog = new QuestLog();
 
-  // Welcome message
-  if (wasmReady) {
-    hud.addEvent('Your garden is growing — click to place zones');
-    hud.addEvent('Press 3 for water, 2 for seeds');
-  }
+  // Progressive UI reveal: show HUD elements as player advances through chapters
+  questLog.onChapterChange((chapter) => {
+    hud.setPhase(chapter);
+    if (chapter === 1) {
+      // Seed tool auto-selected with groundcover — ready to plant
+      hud.selectTool(ToolCode.Seed);
+      hud.addEvent('Click near the spring to plant your first groundcover');
+    }
+  });
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
   function applyToolToMockGrid(toolCode: number, x: number, y: number, z: number): void {
@@ -467,7 +471,6 @@ async function main() {
     remeshDirty();
     try { localStorage.removeItem('groundwork-garden'); } catch {}
     hud.addEvent('Fresh garden — the spring is flowing');
-    hud.addEvent('Click to start planting zones');
   });
 
   setupControls({

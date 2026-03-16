@@ -201,8 +201,19 @@ export class Hud {
       this._onNewGarden?.();
     });
 
-    // Set initial state
+    // Set initial state — start in phase 0 (minimal UI)
+    this.setPhase(0);
     this.render();
+  }
+
+  /**
+   * Progressive UI reveal tied to quest chapters.
+   * Phase 0 (Welcome): Only quest panel visible — clean, cozy intro.
+   * Phase 1 (First Plants): Tool bar, event feed, status bar appear.
+   * Phase 2+ (Full UI): Score panel, new garden, help text appear.
+   */
+  setPhase(phase: number): void {
+    this.container.dataset.phase = String(phase);
   }
 
   /** Register a callback for state changes */
@@ -875,6 +886,41 @@ const HUD_CSS = `
 }
 #scene-select option:disabled {
   color: #665e50;
+}
+
+/* --- Progressive reveal: hide UI until quest progression unlocks it --- */
+/* Phase 0 (Welcome): hide everything except quest panel */
+#hud[data-phase="0"] #tool-bar,
+#hud[data-phase="0"] #species-panel,
+#hud[data-phase="0"] #garden-score,
+#hud[data-phase="0"] #event-feed,
+#hud[data-phase="0"] #hud-top-bar,
+#hud[data-phase="0"] #hud-help,
+#hud[data-phase="0"] #new-garden-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(20px);
+}
+
+/* Phase 1 (First Plants): tool bar + event feed + status bar slide in */
+#hud[data-phase="1"] #garden-score,
+#hud[data-phase="1"] #hud-help,
+#hud[data-phase="1"] #new-garden-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(20px);
+}
+
+/* Smooth transitions for reveal */
+#tool-bar,
+#garden-score,
+#event-feed,
+#hud-top-bar,
+#hud-help,
+#new-garden-btn {
+  transition: opacity 0.6s ease, visibility 0.6s ease, transform 0.6s ease;
 }
 
 /* --- Mobile responsive: larger touch targets and readable text --- */
