@@ -42,11 +42,12 @@ export function buildSkirtMesh(): SkirtResult {
   const cx = gx / 2;
   const cz = gz / 2;
 
-  // Soil strata colors (warm earth tones)
-  const topsoil = [0.40, 0.30, 0.18];
-  const subsoil = [0.48, 0.36, 0.22];
-  const clay    = [0.52, 0.38, 0.26];
-  const bedrock = [0.42, 0.36, 0.30];
+  // Soil strata colors — darkened so the walls recede behind the garden.
+  // The top edge blends toward the meadow green for a softer transition.
+  const topsoil = [0.28, 0.22, 0.14];
+  const subsoil = [0.34, 0.26, 0.16];
+  const clay    = [0.38, 0.30, 0.20];
+  const bedrock = [0.30, 0.26, 0.22];
 
   function strataColor(y: number): [number, number, number] {
     const t = (y - deep) / (top - deep);
@@ -83,8 +84,8 @@ export function buildSkirtMesh(): SkirtResult {
     const mat = new THREE.MeshLambertMaterial({
       vertexColors: true,
       side: THREE.DoubleSide,
-      emissive: new THREE.Color(0x3A2A1A),
-      emissiveIntensity: 0.4,
+      emissive: new THREE.Color(0x2A1A10),
+      emissiveIntensity: 0.2,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
@@ -99,6 +100,30 @@ export function buildSkirtMesh(): SkirtResult {
   ];
 
   for (const w of walls) group.add(w.mesh);
+
+  // Grass lip along the top edge — a thin overhang of mossy green that
+  // softens the transition from garden to the underground cross-section.
+  const lipH = 0.8;  // slightly thick for visibility
+  const lipD = 1.5;  // overhang distance outward
+  const lipMat = new THREE.MeshLambertMaterial({
+    color: 0x3A6820,
+    emissive: 0x1A3410,
+    emissiveIntensity: 0.3,
+  });
+  // Four lip strips (one per wall edge)
+  const lipDefs: [number, number, number, number, number][] = [
+    // [x, y(=top), z, width, depth] — positioned at each wall top edge
+    [cx, top, -lipD / 2, gx + lipD * 2, lipD],           // front (z=0)
+    [cx, top, gz + lipD / 2, gx + lipD * 2, lipD],       // back (z=gz)
+    [-lipD / 2, top, cz, lipD, gz],                       // left (x=0)
+    [gx + lipD / 2, top, cz, lipD, gz],                   // right (x=gx)
+  ];
+  for (const [lx, ly, lz, lw, ld] of lipDefs) {
+    const geo = new THREE.BoxGeometry(lw, lipH, ld);
+    const lip = new THREE.Mesh(geo, lipMat);
+    lip.position.set(lx, ly + lipH / 2, lz);
+    group.add(lip);
+  }
 
   // Bottom cap
   const capVerts: number[] = [];

@@ -3,6 +3,13 @@
 Theme: visual cohesion across scene, HUD, characters, and atmosphere.
 Goal: the game should feel polished and atmospheric — every element shares a warm, cozy, earthy palette.
 
+## P0 — Individual Model Fixes (DONE — session 2026-03-16T15:00)
+
+- [x] **Fix amber foliage bug** — leaf water_level=0 was treated as "dead" → every leaf amber-tinted. Now 0 = healthy.
+- [x] **Species foliage diversity** — Wider color range: birch=lime, oak=dark forest, willow=sage, pine=dark blue-green, fern=emerald
+- [x] **Gnome visibility** — 1.8x base scale + warm glow disc at feet (additive, gold)
+- [x] **Fauna visibility** — 60-70% size boost + per-type warm glow halo sprites
+
 ## P0 — Cohesion Breaks (DONE)
 
 - [x] **HUD palette unification** — Quest panel already matched warm amber palette. Verified.
