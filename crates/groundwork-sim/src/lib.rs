@@ -66,7 +66,7 @@ impl DayPhase {
 ///
 /// Milestones are one-way (once reached, they stay reached) so the player
 /// never loses access to unlocked species.
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Default)]
 pub struct EcoMilestones {
     /// Tier 0: always available (moss, grass, clover)
     /// Tier 1: groundcover established (10+ groundcover leaf voxels)
@@ -80,20 +80,6 @@ pub struct EcoMilestones {
     pub pollinator_count: u16,
     pub fauna_count: u16,
     pub species_diversity: u8,
-}
-
-impl Default for EcoMilestones {
-    fn default() -> Self {
-        Self {
-            tier1_flowers: false,
-            tier2_shrubs: false,
-            tier3_trees: false,
-            groundcover_count: 0,
-            pollinator_count: 0,
-            fauna_count: 0,
-            species_diversity: 0,
-        }
-    }
 }
 
 /// Focus/cursor position in the world. Shared by CLI and TUI.

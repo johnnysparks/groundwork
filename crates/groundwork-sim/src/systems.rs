@@ -2450,7 +2450,7 @@ pub fn milestone_tracker(
                 if let Some(v) = grid.get(x, y, z) {
                     if v.material == Material::Leaf {
                         let sid = v.nutrient_level;
-                        if matches!(sid, 9 | 10 | 11) {
+                        if matches!(sid, 9..=11) {
                             groundcover_count += 1;
                         }
                     }
@@ -2477,7 +2477,7 @@ pub fn milestone_tracker(
     for f in &fauna_list.fauna {
         species_seen[f.fauna_type as usize] = true;
     }
-    let species_diversity = species_seen.iter().filter(|&&s| s).count() as u8;
+    let _species_diversity = species_seen.iter().filter(|&&s| s).count() as u8;
 
     // Count plant species diversity (from Tree entities)
     let mut plant_species_seen = [false; 12]; // 12 plant species

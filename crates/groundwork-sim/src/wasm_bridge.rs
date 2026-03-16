@@ -423,13 +423,21 @@ pub fn milestone_tier3_trees() -> bool {
 /// Groundcover leaf voxel count (progress toward tier 1).
 #[wasm_bindgen]
 pub fn milestone_groundcover_count() -> u16 {
-    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().groundcover_count)
+    with_sim(|sim| {
+        sim.world
+            .resource::<crate::EcoMilestones>()
+            .groundcover_count
+    })
 }
 
 /// Active pollinator count (progress toward tier 2).
 #[wasm_bindgen]
 pub fn milestone_pollinator_count() -> u16 {
-    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().pollinator_count)
+    with_sim(|sim| {
+        sim.world
+            .resource::<crate::EcoMilestones>()
+            .pollinator_count
+    })
 }
 
 /// Total active fauna count (progress toward tier 3).
@@ -441,5 +449,9 @@ pub fn milestone_fauna_count() -> u16 {
 /// Plant species diversity count (progress toward tier 3).
 #[wasm_bindgen]
 pub fn milestone_species_diversity() -> u8 {
-    with_sim(|sim| sim.world.resource::<crate::EcoMilestones>().species_diversity)
+    with_sim(|sim| {
+        sim.world
+            .resource::<crate::EcoMilestones>()
+            .species_diversity
+    })
 }
