@@ -22,11 +22,11 @@ export interface ToolUIDef {
 
 /** UI metadata for tools (icon, hotkey, description). Keyed by tool name. */
 const TOOL_UI: Record<string, { icon: string; description: string }> = {
-  Shovel: { icon: 'S', description: 'Dig / remove' },
-  Seed:   { icon: 'P', description: 'Plant a seed' },
-  Water:  { icon: 'W', description: 'Pour water' },
-  Soil:   { icon: 'D', description: 'Place soil' },
-  Stone:  { icon: 'R', description: 'Place stone' },
+  Shovel: { icon: 'Dig', description: 'Clear an area' },
+  Seed:   { icon: 'Plant', description: 'Zone with seeds (costs 15 water)' },
+  Water:  { icon: 'Water', description: 'Irrigate an area (costs 20 water)' },
+  Soil:   { icon: 'Soil', description: 'Place soil (costs 10 water)' },
+  Stone:  { icon: 'Stone', description: 'Place stone (costs 10 water)' },
 };
 
 /** Build tool UI definitions from engine-provided tool list */
@@ -95,7 +95,7 @@ export class Hud {
       btn.className = 'tool-btn';
       btn.dataset.tool = String(tool.code);
       btn.title = `${tool.name} [${tool.key}] — ${tool.description}`;
-      btn.innerHTML = `<span class="tool-icon">${tool.icon}</span><span class="tool-label">${tool.name}</span>`;
+      btn.innerHTML = `<span class="tool-icon">${tool.icon}</span><span class="tool-key">${tool.key}</span>`;
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.selectTool(tool.code);
@@ -326,11 +326,7 @@ export class Hud {
 
   private renderStatus(): void {
     const tickState = this.state.autoTick ? 'ON' : 'OFF';
-    const stats = this.state.gardenStats;
-    const statsStr = stats
-      ? ` | 🌿 ${stats.plants} | 🦋 ${stats.fauna} | Species: ${stats.species}`
-      : '';
-    this.statusEl.textContent = `Tick: ${this.state.tickCount} | Auto: ${tickState} [Space]${statsStr}`;
+    this.statusEl.textContent = `Tick: ${this.state.tickCount} | Auto: ${tickState} [Space]`;
   }
 }
 
@@ -413,9 +409,13 @@ const HUD_CSS = `
   color: #ffe4b5;
 }
 .tool-icon {
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1;
+}
+.tool-key {
+  font-size: 9px;
+  opacity: 0.5;
 }
 .tool-label {
   font-size: 10px;
