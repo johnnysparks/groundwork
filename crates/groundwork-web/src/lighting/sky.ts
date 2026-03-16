@@ -19,17 +19,32 @@ void main() {
 const fragmentShader = /* glsl */ `
 uniform vec3 topColor;
 uniform vec3 bottomColor;
+uniform vec3 horizonColor;
 varying vec3 vWorldPosition;
 void main() {
-  float h = normalize(vWorldPosition).y * 0.5 + 0.5;
-  h = smoothstep(0.0, 1.0, h);
-  gl_FragColor = vec4(mix(bottomColor, topColor, h), 1.0);
+  float h = normalize(vWorldPosition).y; // -1 (nadir) to +1 (zenith)
+
+  // Three-band gradient: bottom → horizon → top
+  // Horizon band sits at h=0 (eye level), blends with fog for seamless depth
+  vec3 color;
+  if (h > 0.0) {
+    // Above horizon: horizon → sky top
+    float t = smoothstep(0.0, 0.6, h);
+    color = mix(horizonColor, topColor, t);
+  } else {
+    // Below horizon: ground bottom → horizon
+    float t = smoothstep(-0.5, 0.0, h);
+    color = mix(bottomColor, horizonColor, t);
+  }
+
+  gl_FragColor = vec4(color, 1.0);
 }
 `;
 
 export interface SkyUniforms {
   topColor: THREE.IUniform<THREE.Color>;
   bottomColor: THREE.IUniform<THREE.Color>;
+  horizonColor: THREE.IUniform<THREE.Color>;
   [key: string]: THREE.IUniform<unknown>;
 }
 
@@ -39,8 +54,9 @@ export interface SkyUniforms {
  */
 export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
   const uniforms: SkyUniforms = {
-    topColor: { value: new THREE.Color(0x5599dd) },    // bright sky blue
-    bottomColor: { value: new THREE.Color(0x5C4A3A) },  // warm earth — below-horizon blends with underground
+    topColor: { value: new THREE.Color(0x5599dd) },      // bright sky blue
+    horizonColor: { value: new THREE.Color(0xccddcc) },   // haze — matches fog color
+    bottomColor: { value: new THREE.Color(0x3a3228) },    // dark earth (below-horizon, rarely seen)
   };
 
   const skyMat = new THREE.ShaderMaterial({

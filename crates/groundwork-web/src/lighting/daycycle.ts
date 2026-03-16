@@ -205,6 +205,10 @@ export class DayCycle {
     if (skyUniforms) {
       lerpColor(skyUniforms.topColor.value, a.skyTop, b.skyTop, t);
       lerpColor(skyUniforms.bottomColor.value, a.skyBottom, b.skyBottom, t);
+      // Horizon color matches fog — seamless blend at any camera angle
+      if (skyUniforms.horizonColor) {
+        lerpColor(skyUniforms.horizonColor.value, a.fogColor, b.fogColor, t);
+      }
     }
   }
 
