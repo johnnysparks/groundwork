@@ -103,7 +103,7 @@ const PRESETS: LightPreset[] = [
 ];
 
 /** Duration of one full day cycle in seconds. */
-const DAY_LENGTH_S = 120;
+const DAY_LENGTH_S = 600; // 10 minutes per full day — slow enough to enjoy each mood
 
 /** Smoothly lerp two colors. */
 function lerpColor(out: THREE.Color, a: THREE.Color, b: THREE.Color, t: number): THREE.Color {
@@ -121,7 +121,7 @@ function lerp(a: number, b: number, t: number): number {
 export class DayCycle {
   /** Normalized time of day: 0.0–1.0 */
   private time = 0.5; // Start at noon — bright blue sky
-  private autoCycle = false;
+  private autoCycle = true; // ON by default — player experiences all lighting moods
 
   /** Scratch colors to avoid allocation in the loop. */
   private readonly _c1 = new THREE.Color();
@@ -160,7 +160,7 @@ export class DayCycle {
     deltaS: number,
     lights: Lights,
     scene: THREE.Scene,
-    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color> },
+    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color> },
   ): void {
     if (this.autoCycle) {
       this.time = (this.time + deltaS / DAY_LENGTH_S) % 1;
