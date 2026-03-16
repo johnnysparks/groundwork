@@ -645,7 +645,9 @@ pub fn tree_growth(
             // Only check a small sample to stay fast
             for cy in ry.saturating_sub(check_r)..=(ry + check_r).min(GRID_Y - 1) {
                 for cx in rx.saturating_sub(check_r)..=(rx + check_r).min(GRID_X - 1) {
-                    if cx == rx && cy == ry { continue; }
+                    if cx == rx && cy == ry {
+                        continue;
+                    }
                     // Check at trunk height (surface + 2..5)
                     for cz in (GROUND_LEVEL + 2)..=(GROUND_LEVEL + 5).min(GRID_Z - 1) {
                         if let Some(v) = grid.get(cx, cy, cz) {
@@ -656,7 +658,11 @@ pub fn tree_growth(
                     }
                 }
             }
-            if nearby_trunks == 0 { 1.5_f32 } else { 1.0 }
+            if nearby_trunks == 0 {
+                1.5_f32
+            } else {
+                1.0
+            }
         } else {
             1.0
         };
@@ -678,7 +684,11 @@ pub fn tree_growth(
                     }
                 }
             }
-            if nearby_birds > 0 { 1.5_f32 } else { 1.0 }
+            if nearby_birds > 0 {
+                1.5_f32
+            } else {
+                1.0
+            }
         } else {
             1.0
         };
@@ -686,8 +696,11 @@ pub fn tree_growth(
         // Use diminishing returns so more roots/light don't trivially blast
         // through all growth stages in a single tick. sqrt gives gentle scaling:
         // 100 water_intake → +10, 10000 → +100, 50000 → +224
-        let total_boost =
-            nitrogen_boost * canopy_boost * water_affinity_boost * pioneer_boost * bird_symbiosis_boost;
+        let total_boost = nitrogen_boost
+            * canopy_boost
+            * water_affinity_boost
+            * pioneer_boost
+            * bird_symbiosis_boost;
         tree.accumulated_water += water_intake.sqrt() * species.growth_rate * total_boost;
         tree.accumulated_light += light_intake.sqrt() * species.growth_rate * total_boost;
 
@@ -2010,12 +2023,24 @@ pub fn soil_evolution(
                             }
                         };
                     }
-                    if x > 0 { check_grass!(idx - 1); }
-                    if x + 1 < GRID_X { check_grass!(idx + 1); }
-                    if y > 0 { check_grass!(idx - GRID_X); }
-                    if y + 1 < GRID_Y { check_grass!(idx + GRID_X); }
-                    if z > 0 { check_grass!(idx - z_stride); }
-                    if z + 1 < GRID_Z { check_grass!(idx + z_stride); }
+                    if x > 0 {
+                        check_grass!(idx - 1);
+                    }
+                    if x + 1 < GRID_X {
+                        check_grass!(idx + 1);
+                    }
+                    if y > 0 {
+                        check_grass!(idx - GRID_X);
+                    }
+                    if y + 1 < GRID_Y {
+                        check_grass!(idx + GRID_X);
+                    }
+                    if z > 0 {
+                        check_grass!(idx - z_stride);
+                    }
+                    if z + 1 < GRID_Z {
+                        check_grass!(idx + z_stride);
+                    }
                     if has_grass_root && comp.clay < 200 {
                         // Grass/clover roots bind soil particles, increasing clay
                         comp.clay = comp.clay.saturating_add(1);
