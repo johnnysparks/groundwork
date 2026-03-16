@@ -38,7 +38,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient } from './audio/ambient';
-import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery } from './audio/sfx';
+import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -1075,8 +1075,8 @@ async function main() {
         // Weather transition events
         const newWeather = getWeatherState();
         if (newWeather !== prevWeatherState) {
-          if (newWeather === 1) hud.addEvent('Rain begins \u2014 the garden drinks deeply');
-          else if (newWeather === 2) hud.addEvent('Drought \u2014 water runs low, roots dig deep');
+          if (newWeather === 1) { hud.addEvent('Rain begins \u2014 the garden drinks deeply'); playRainStart(); }
+          else if (newWeather === 2) { hud.addEvent('Drought \u2014 water runs low, roots dig deep'); playDroughtStart(); }
           else if (prevWeatherState === 1) hud.addEvent('The rain passes \u2014 skies clear');
           else if (prevWeatherState === 2) hud.addEvent('Drought breaks \u2014 the soil can breathe');
           prevWeatherState = newWeather;

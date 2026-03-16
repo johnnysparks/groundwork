@@ -241,6 +241,64 @@ export function playDiscovery(): void {
   }
 }
 
+/** Play a gentle rain onset — descending filtered noise, like first drops */
+export function playRainStart(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Band-pass filtered noise — descending center frequency
+  const bufSize = c.sampleRate * 0.8;
+  const buf = c.createBuffer(1, bufSize, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const filter = c.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(2000, t);
+  filter.frequency.exponentialRampToValueAtTime(400, t + 0.7);
+  filter.Q.value = 2;
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.06, t + 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  src.connect(filter).connect(gain).connect(c.destination);
+  src.start(t);
+  src.stop(t + 0.8);
+}
+
+/** Play a dry wind whistle for drought onset */
+export function playDroughtStart(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Gentle wind — sine with slow vibrato
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(200, t);
+  osc.frequency.linearRampToValueAtTime(150, t + 1.0);
+
+  const lfo = c.createOscillator();
+  lfo.frequency.value = 3;
+  const lfoGain = c.createGain();
+  lfoGain.gain.value = 15;
+  lfo.connect(lfoGain).connect(osc.frequency);
+  lfo.start(t);
+  lfo.stop(t + 1.0);
+
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.04, t + 0.2);
+  gain.gain.linearRampToValueAtTime(0.04, t + 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 1.0);
+}
+
 /** Play a fauna arrival sound based on type */
 export function playFaunaArrival(faunaType: number): void {
   // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle
