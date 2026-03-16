@@ -46,7 +46,7 @@ const QUEST_DEFS: QuestDef[] = [
     id: 'panAround',
     name: 'Look around',
     chapter: 0,
-    detail: 'Drag to orbit, scroll to zoom, WASD to pan. This is your garden — a small glen waiting to come alive.',
+    detail: 'Drag to orbit, pinch to zoom. On desktop: WASD to pan. This is your garden — a small glen waiting to come alive.',
   },
   {
     id: 'orbitCamera',
@@ -345,7 +345,8 @@ export class QuestLog {
       let complete = false;
       switch (quest.id) {
         case 'panAround':
-          complete = this.actions.panCount >= 4;
+          // Accept either WASD pan OR touch orbit — mobile players orbit instead of pan
+          complete = this.actions.panCount >= 4 || this.actions.orbited;
           break;
         case 'changeDepth':
           complete = this.actions.depthChanged;

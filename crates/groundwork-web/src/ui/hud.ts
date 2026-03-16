@@ -107,7 +107,17 @@ export class Hud {
       this.toolButtons.push(btn);
     }
 
-    // Wire up species picker (data comes from the engine via bridge)
+    // Wire up species picker with progressive unlocking:
+    // Tier 0 (start): Groundcover (moss, grass, clover)
+    // Tier 1 (score 500): Flowers (wildflower, daisy)
+    // Tier 2 (score 1500): Shrubs (fern, berry bush, holly)
+    // Tier 3 (score 3000): Trees (oak, birch, willow, pine)
+    const UNLOCK_TIERS: Record<string, number> = {
+      'Groundcover': 0,
+      'Flower': 500,
+      'Shrub': 1500,
+      'Tree': 3000,
+    };
     this.speciesPanel = this.container.querySelector('#species-panel')! as HTMLElement;
     const speciesList = this.speciesPanel.querySelector('#species-list')!;
     let currentType = '';
@@ -116,20 +126,33 @@ export class Hud {
         currentType = sp.type;
         const header = document.createElement('div');
         header.className = 'species-group-header';
-        header.textContent = sp.type;
+        const threshold = UNLOCK_TIERS[sp.type] ?? 0;
+        header.textContent = threshold > 0 ? `${sp.type} (score ${threshold})` : sp.type;
+        header.dataset.unlockType = sp.type;
         speciesList.appendChild(header);
       }
       const btn = document.createElement('button');
       btn.className = 'species-btn';
       btn.dataset.speciesIndex = String(sp.index);
+      btn.dataset.speciesType = sp.type;
       btn.textContent = sp.name;
+      // Lock non-groundcover species initially
+      const threshold = UNLOCK_TIERS[sp.type] ?? 0;
+      if (threshold > 0) {
+        btn.classList.add('locked');
+        btn.title = `Unlocks at score ${threshold}`;
+      }
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (btn.classList.contains('locked')) return;
         this.selectSpecies(sp.index);
       });
       speciesList.appendChild(btn);
       this.speciesButtons.push(btn);
     }
+    // Select first groundcover species by default
+    const firstGround = this.species.find(s => s.type === 'Groundcover');
+    if (firstGround) this.selectSpecies(firstGround.index);
 
     // Status element
     this.statusEl = this.container.querySelector('#hud-status')! as HTMLElement;
@@ -262,6 +285,23 @@ export class Hud {
     this.renderStatus();
     // Update score panel
     const score = Math.round(stats.plants * 0.1 + stats.fauna * 50 + stats.species * 100);
+
+    // Progressive species unlocking based on score
+    const unlocks: [string, number][] = [['Flower', 500], ['Shrub', 1500], ['Tree', 3000]];
+    for (const [type, threshold] of unlocks) {
+      if (score >= threshold) {
+        for (const btn of this.speciesButtons) {
+          if (btn.dataset.speciesType === type && btn.classList.contains('locked')) {
+            btn.classList.remove('locked');
+            btn.title = '';
+            this.addEvent(`New species unlocked: ${type}s are now available!`);
+          }
+        }
+        // Update header
+        const header = this.container.querySelector(`[data-unlock-type="${type}"]`);
+        if (header) header.textContent = type;
+      }
+    }
 
     // Check milestones
     const milestones = [500, 1000, 2000, 5000, 10000];
@@ -570,6 +610,14 @@ const HUD_CSS = `
   background: rgba(80, 120, 50, 0.5);
   border-color: rgba(140, 190, 80, 0.6);
   color: #c4e890;
+}
+.species-btn.locked {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: transparent;
+}
+.species-btn.locked:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* --- Top bar (status + controls) --- */
