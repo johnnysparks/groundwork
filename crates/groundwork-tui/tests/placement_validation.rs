@@ -19,12 +19,12 @@ fn new_world() -> NamedTempFile {
     f
 }
 
-/// Query the surface height at (x, y) via `inspect` at GROUND_LEVEL.
-/// Returns the z of the first air cell by binary searching upward.
+/// Query the surface height at (x, y) via `inspect`.
+/// Returns the z of the topmost non-air voxel (the surface).
 fn find_surface(p: &str, x: u32, y: u32) -> u32 {
-    // GROUND_LEVEL is 30 in the 120×120×60 grid. Surface is usually within ±4.
-    // Search upward from z=25 to find the first air cell.
-    for z in 25..=40 {
+    // GROUND_LEVEL is 40 in the 80×80×100 grid. Surface is usually within ±2.
+    // Search upward from z=35 to find the first air cell.
+    for z in 35..=50 {
         let out = groundwork()
             .args([
                 "inspect",
@@ -37,11 +37,11 @@ fn find_surface(p: &str, x: u32, y: u32) -> u32 {
             .output()
             .unwrap();
         let stdout = String::from_utf8_lossy(&out.stdout);
-        if stdout.contains("air") {
+        if stdout.contains("material: air") {
             return z - 1; // surface is the last non-air
         }
     }
-    30 // fallback
+    40 // fallback
 }
 
 // ── Shovel removes anything ───────────────────────────────────────────
@@ -344,9 +344,9 @@ fn seed_dies_on_stone() {
 
     let surface = find_surface(p, 10, 10);
 
-    // Dig out everything above stone at (10,10). Stone top is at z=9.
-    // Dig surface down through soil layers to expose stone.
-    for z in (10..=surface).rev() {
+    // Dig out everything above stone at (10,10). Stone top is at z=19 (1m / 0.05m/voxel).
+    // Dig soil layers from surface down to z=20 to expose stone at z=19.
+    for z in (20..=surface).rev() {
         let out = groundwork()
             .args(["place", "dig", "10", "10", &z.to_string(), "--state", p])
             .output()

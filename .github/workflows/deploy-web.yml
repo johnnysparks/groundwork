@@ -43,10 +43,7 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
 
       - name: Rust tests
-        run: cargo test --workspace --exclude groundwork-tui
-
-      - name: TUI tests (known failures excluded)
-        run: cargo test -p groundwork-tui --test placement_validation -- --skip stone_does_not_fall --skip soil_falls_through_air --skip place_into_air_succeeds --skip fill_air_with_soil
+        run: cargo test --workspace
 
       # --- TypeScript checks ---
       - uses: actions/setup-node@v4
