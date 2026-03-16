@@ -22,13 +22,14 @@ pub fn tree_hash(seed: u64, step: u64) -> u64 {
 
 /// Growth stage of a tree.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum GrowthStage {
-    Seedling,
-    Sapling,
-    YoungTree,
-    Mature,
-    OldGrowth,
-    Dead,
+    Seedling = 0,
+    Sapling = 1,
+    YoungTree = 2,
+    Mature = 3,
+    OldGrowth = 4,
+    Dead = 5,
 }
 
 impl GrowthStage {

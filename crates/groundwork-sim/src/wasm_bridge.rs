@@ -527,3 +527,74 @@ pub fn pick_discovered_species(plant_type: u8, rng_hint: u32) -> u8 {
         }
     })
 }
+
+// --- Tree Stats Export (SIM-14: Root War Visualization) ---
+
+thread_local! {
+    static TREE_STATS_BUF: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+}
+
+/// Pack tree stats into an export buffer for root war visualization.
+/// Each tree: 12 bytes [species_id: u8, health_u8: u8, stage: u8, _pad: u8,
+///   root_x: u16le, root_y: u16le, root_count: u16le, water_intake: u16le]
+/// Call this before reading tree_stats_ptr/len.
+#[wasm_bindgen]
+pub fn pack_tree_stats() -> usize {
+    with_sim(|sim| {
+        use crate::tree::Tree;
+        use bevy_ecs::prelude::*;
+
+        let grid = sim.world.resource::<crate::grid::VoxelGrid>();
+        let mut trees = sim.world.query::<&Tree>();
+        let tree_count = trees.iter(&sim.world).count();
+
+        TREE_STATS_BUF.with(|buf| {
+            let mut buf = buf.borrow_mut();
+            buf.clear();
+            buf.resize(tree_count * 12, 0);
+
+            let mut i = 0;
+            for tree in trees.iter(&sim.world) {
+                let off = i * 12;
+                if off + 12 > buf.len() { break; }
+
+                // Count roots and compute water intake
+                let mut root_count = 0u16;
+                let mut water_total = 0u16;
+                for &(vx, vy, vz) in &tree.voxel_footprint {
+                    if let Some(v) = grid.get(vx, vy, vz) {
+                        if v.material == crate::voxel::Material::Root {
+                            root_count += 1;
+                            water_total = water_total.saturating_add(v.water_level as u16);
+                        }
+                    }
+                }
+
+                buf[off] = tree.species_id as u8;
+                buf[off + 1] = (tree.health * 255.0) as u8;
+                buf[off + 2] = tree.stage as u8;
+                buf[off + 3] = 0; // pad
+                buf[off + 4..off + 6].copy_from_slice(&(tree.root_pos.0 as u16).to_le_bytes());
+                buf[off + 6..off + 8].copy_from_slice(&(tree.root_pos.1 as u16).to_le_bytes());
+                buf[off + 8..off + 10].copy_from_slice(&root_count.to_le_bytes());
+                buf[off + 10..off + 12].copy_from_slice(&water_total.to_le_bytes());
+
+                i += 1;
+            }
+
+            tree_count
+        })
+    })
+}
+
+/// Pointer to packed tree stats buffer. Call pack_tree_stats() first.
+#[wasm_bindgen]
+pub fn tree_stats_ptr() -> *const u8 {
+    TREE_STATS_BUF.with(|buf| buf.borrow().as_ptr())
+}
+
+/// Length of packed tree stats buffer in bytes.
+#[wasm_bindgen]
+pub fn tree_stats_len() -> usize {
+    TREE_STATS_BUF.with(|buf| buf.borrow().len())
+}
