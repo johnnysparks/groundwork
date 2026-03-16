@@ -41,37 +41,37 @@ interface QuestDef {
 }
 
 const QUEST_DEFS: QuestDef[] = [
-  // Chapter 0: Welcome
+  // Chapter 0: Welcome — just you, your gnome, and the garden
   {
     id: 'panAround',
     name: 'Look around',
     chapter: 0,
-    detail: 'Drag to orbit, pinch to zoom. On desktop: WASD to pan. This is your garden — a small glen waiting to come alive.',
+    detail: 'Drag to orbit, scroll to zoom. This is your garden — a small glen waiting to come alive.',
   },
   {
     id: 'orbitCamera',
     name: 'Find the spring',
     chapter: 0,
-    detail: 'There\'s a water spring at the center. Orbit the camera until you spot the blue water column.',
+    detail: 'There\'s a water spring at the center. Orbit the camera until you spot the blue water column. Your gnome is waiting nearby.',
   },
-  // Chapter 1: Groundcover (the foundation)
-  {
-    id: 'placeWater',
-    name: 'Irrigate',
-    chapter: 1,
-    detail: 'Press 3 for the watering can, then click near the spring. Water spreads to moisten nearby soil.',
-  },
+  // Chapter 1: First Plants — tools appear, zone your first groundcover
   {
     id: 'plantFirstSeed',
     name: 'Plant groundcover',
     chapter: 1,
-    detail: 'Press 2 for seeds. You start with moss, grass, and clover — the foundation of every garden. Click near water to zone them.',
+    detail: 'Click near the spring to zone small plants. Your gnome will walk over and do the planting for you.',
   },
   {
     id: 'watchItGrow',
     name: 'Watch it spread',
     chapter: 1,
-    detail: 'Groundcover grows fast and spreads. Clover fixes nitrogen in the soil — it helps everything planted nearby.',
+    detail: 'Groundcover grows fast and spreads. Watch the roots appear underground. Clover fixes nitrogen — it helps everything nearby.',
+  },
+  {
+    id: 'placeWater',
+    name: 'Water your garden',
+    chapter: 1,
+    detail: 'Select the watering can and click near your plants. Water spreads through soil and helps everything grow.',
   },
   // Chapter 2: Flowers & Fauna (score 500 unlocks flowers)
   {
@@ -116,7 +116,7 @@ const QUEST_DEFS: QuestDef[] = [
 
 const CHAPTER_NAMES = [
   'Welcome',
-  'Groundcover',
+  'First Plants',
   'Flowers & Fauna',
   'Shrubs & Roots',
   'Trees',
@@ -178,6 +178,7 @@ export class QuestLog {
   private expanded = true;
   private panel: HTMLElement;
   private notificationEl: HTMLElement;
+  private _onChapterChange: ((chapter: number) => void) | null = null;
 
   constructor() {
     this.quests = QUEST_DEFS.map(def => ({
@@ -223,6 +224,13 @@ export class QuestLog {
     });
 
     this.render();
+  }
+
+  /** Register a callback for chapter changes (used for progressive UI reveal) */
+  onChapterChange(cb: (chapter: number) => void): void {
+    this._onChapterChange = cb;
+    // Fire immediately with current chapter so HUD can set initial state
+    cb(this.currentChapter);
   }
 
   // -------------------------------------------------------------------------
@@ -412,9 +420,11 @@ export class QuestLog {
       if (this.currentChapter < CHAPTER_NAMES.length - 1) {
         this.currentChapter++;
         this.showNotification(`Chapter: ${CHAPTER_NAMES[this.currentChapter]}`);
+        this._onChapterChange?.(this.currentChapter);
       } else {
         this.allComplete = true;
         this.showNotification('All missions complete!');
+        this._onChapterChange?.(CHAPTER_NAMES.length);
       }
     }
   }
