@@ -1284,8 +1284,8 @@ pub fn branch_growth(
             // next stage transition (which could be hundreds of ticks away).
             let new_crown_r = species.crown_radius() as isize;
             let new_leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => (new_crown_r / 3).clamp(4, 8),
-                GrowthStage::Mature | GrowthStage::OldGrowth => (new_crown_r / 3).clamp(5, 10),
+                GrowthStage::YoungTree => (new_crown_r / 2).clamp(4, 10),
+                GrowthStage::Mature | GrowthStage::OldGrowth => (new_crown_r / 2).clamp(5, 12),
                 _ => 1,
             };
             let new_leaf_r_sq = new_leaf_r * new_leaf_r;
@@ -1633,12 +1633,12 @@ pub fn tree_rasterize(
             // instead of just sitting at the branch tips like green caps.
             let crown_r = species.crown_radius() as isize;
             let tip_leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => (crown_r / 3).clamp(4, 8),
-                GrowthStage::Mature | GrowthStage::OldGrowth => (crown_r / 3).clamp(5, 10),
+                GrowthStage::YoungTree => (crown_r / 2).clamp(4, 10),
+                GrowthStage::Mature | GrowthStage::OldGrowth => (crown_r / 2).clamp(5, 12),
                 _ => 1,
             };
             // Interior branch nodes get smaller leaf spheres to fill gaps
-            let interior_leaf_r = (tip_leaf_r * 2 / 3).max(2);
+            let interior_leaf_r = (tip_leaf_r * 2 / 3).max(3);
             // Crown start: only add interior leaf spheres above this height
             let crown_z_start = match tree.stage {
                 GrowthStage::YoungTree => (trunk_h * 25 / 100).max(2),
