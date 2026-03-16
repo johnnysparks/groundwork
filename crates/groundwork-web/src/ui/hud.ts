@@ -274,7 +274,10 @@ export class Hud {
     this._lastScore = score;
 
     const scoreEl = this.container.querySelector('#score-number');
-    if (scoreEl) scoreEl.textContent = score.toLocaleString();
+    if (scoreEl) {
+      const trend = score > prevScore ? ' +' : score < prevScore ? ' -' : '';
+      scoreEl.textContent = score.toLocaleString() + trend;
+    }
     const plantsEl = this.container.querySelector('#stat-plants');
     if (plantsEl) plantsEl.textContent = stats.plants.toLocaleString();
     const faunaEl = this.container.querySelector('#stat-fauna');
