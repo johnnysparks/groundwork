@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T13:30:00
-**Status:** Alpha complete. 88 sprints. Gnome fully sim-driven, canopy improved, dense groundcover.
+**Last updated:** 2026-03-16T14:15:00
+**Status:** Alpha complete. 93 sprints. Dense canopy, multi-voxel flowers, sim-driven gnome.
 
 ---
 
@@ -18,11 +18,11 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Phase 4: Idle wandering (targeted wander→inspect, task interrupts, JS visual sync)
 - Phase 5: Sim→JS position sync (sim is single authority for position, state, task execution)
 
-### Canopy Fix (Sprints 83-84)
-- Crown envelope lowered to 30% of trunk height
-- Branch stubs at multiple heights for space colonization starting points
-- Branch growth rate 10/tick, larger YoungTree leaf spheres
-- Trees now grow canopy that wraps the trunk, not perches on top
+### Canopy Density (Sprints 83-84, 92-93)
+- Crown envelope lowered to 25% (YoungTree) / 15% (Mature) of trunk height
+- Leaf spheres at crown_r/2 with interior branch node coverage
+- Pending_voxels drain rate 200/tick for fast canopy reveal
+- Multi-voxel flower blooms using crown_radius disc
 
 ### Dense Starter Garden (Sprint 87)
 - 21 seed spots (was 7): 5 moss, 5 grass, 5 clover for green carpet
