@@ -35,7 +35,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { initAmbientAudio, setRaining } from './audio/ambient';
-import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz } from './audio/sfx';
+import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -478,6 +478,15 @@ async function main() {
     foliage.rebuild(freshGrid);
     seeds.rebuild(freshGrid);
     particles.detectGrowth(freshGrid);
+
+    // Growth sound: soft shimmer when vegetation increases noticeably
+    if (growthSoundCooldown > 0) growthSoundCooldown--;
+    const plantCount = foliage.count;
+    if (plantCount > prevPlantCount + 30 && growthSoundCooldown <= 0) {
+      playGrowth();
+      growthSoundCooldown = 15; // ~15 ticks cooldown (~1.5s at 100ms/tick)
+    }
+    prevPlantCount = plantCount;
   }
 
   // New Garden button — resets sim, HUD, and re-meshes
@@ -631,6 +640,8 @@ async function main() {
   let tickSpeed = 1; // 1x, 2x, 5x
   let prevWeatherState = 0; // 0=Clear, 1=Rain, 2=Drought
   let ambientSoundTimer = 0; // seconds until next ambient fauna sound
+  let growthSoundCooldown = 0; // ticks until next growth sound can play
+  let prevPlantCount = 0; // for detecting growth bursts
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 

@@ -183,6 +183,38 @@ export function playBuzz(): void {
   osc.stop(t + 0.15);
 }
 
+/** Play a soft ascending "growth" shimmer — gentle reward for plant growth */
+export function playGrowth(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Gentle ascending sine — like something unfurling
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(300, t);
+  osc.frequency.exponentialRampToValueAtTime(600, t + 0.3);
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0.04, t);
+  gain.gain.setValueAtTime(0.04, t + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.4);
+
+  // Soft shimmer overtone
+  const osc2 = c.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(900, t + 0.05);
+  osc2.frequency.exponentialRampToValueAtTime(1200, t + 0.25);
+  const g2 = c.createGain();
+  g2.gain.setValueAtTime(0.02, t + 0.05);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+  osc2.connect(g2).connect(c.destination);
+  osc2.start(t + 0.05);
+  osc2.stop(t + 0.3);
+}
+
 /** Play a fauna arrival sound based on type */
 export function playFaunaArrival(faunaType: number): void {
   // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle
