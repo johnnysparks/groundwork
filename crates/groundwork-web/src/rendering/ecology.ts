@@ -14,7 +14,7 @@
 import * as THREE from 'three';
 import {
   GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, GROUND_LEVEL,
-  getFaunaCount, getFaunaView, readFauna, FaunaType,
+  getFaunaCount, getFaunaView, readFauna, FaunaType, FaunaState,
 } from '../bridge';
 
 /** Maximum ecology particles */
@@ -154,8 +154,9 @@ export class EcologyParticles {
       for (let i = 0; i < faunaCount; i++) {
         const f = readFauna(faunaView, i);
         if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) {
-          // Golden pollen trail behind pollinator
-          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.pollination, 5);
+          // Golden pollen trail behind pollinator — stronger when actively pollinating
+          const count = f.state === FaunaState.Acting ? 10 : 5;
+          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.pollination, count);
         } else if (f.type === FaunaType.Worm) {
           // Nutrient particles rising from worm activity (underground)
           this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.nutrient, 3);
