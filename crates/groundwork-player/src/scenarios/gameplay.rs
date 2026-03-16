@@ -2123,7 +2123,7 @@ pub fn milestone_progression_arc() -> Scenario {
                 }
 
                 // Tier 1: flowers added
-                let (_, t1_leaf, _, _, t1_total) = tier_data[1];
+                let (_, _t1_leaf, _, _, t1_total) = tier_data[1];
                 if t1_total > t0_total {
                     tiers_reached += 1;
                     report.push(format!(

@@ -12,11 +12,7 @@ use crate::{Tick, Weather, WeatherState};
 /// Weather system: transitions between Clear, Rain, and Drought states.
 /// Rain adds water to the surface; drought evaporates surface water.
 /// Creates dramatic garden-wide events every ~200-400 ticks.
-pub fn weather_system(
-    mut grid: ResMut<VoxelGrid>,
-    tick: Res<Tick>,
-    mut weather: ResMut<Weather>,
-) {
+pub fn weather_system(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>, mut weather: ResMut<Weather>) {
     // Advance weather state
     if weather.duration > 0 {
         weather.duration -= 1;
@@ -106,8 +102,7 @@ pub fn weather_system(
                             let idx = x + y * GRID_X + sz * z_stride;
                             if cells[idx].material == Material::Soil && cells[idx].water_level > 10
                             {
-                                cells[idx].water_level =
-                                    cells[idx].water_level.saturating_sub(3);
+                                cells[idx].water_level = cells[idx].water_level.saturating_sub(3);
                             }
                         }
                     }

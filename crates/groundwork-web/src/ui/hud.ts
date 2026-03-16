@@ -297,22 +297,7 @@ export class Hud {
     // Update score panel
     const score = Math.round(stats.plants * 0.1 + stats.fauna * 50 + stats.species * 100);
 
-    // Progressive species unlocking based on score
-    const unlocks: [string, number][] = [['Flower', 500], ['Shrub', 1500], ['Tree', 3000]];
-    for (const [type, threshold] of unlocks) {
-      if (score >= threshold) {
-        for (const btn of this.speciesButtons) {
-          if (btn.dataset.speciesType === type && btn.classList.contains('locked')) {
-            btn.classList.remove('locked');
-            btn.title = '';
-            this.addEvent(`New species unlocked: ${type}s are now available!`);
-          }
-        }
-        // Update header
-        const header = this.container.querySelector(`[data-unlock-type="${type}"]`);
-        if (header) header.textContent = type;
-      }
-    }
+    // Score-based unlocking as fallback (sim milestones take priority via updateMilestones)
 
     // Check milestones
     const milestones = [500, 1000, 2000, 5000, 10000];
@@ -448,6 +433,28 @@ export class Hud {
       el.classList.add('fading');
       setTimeout(() => el.remove(), 500);
     }, 8000);
+  }
+
+  /** Update species unlocks from sim-side ecological milestones */
+  updateMilestones(milestones: { tier1Flowers: boolean; tier2Shrubs: boolean; tier3Trees: boolean }): void {
+    const tiers: [string, boolean][] = [
+      ['Flower', milestones.tier1Flowers],
+      ['Shrub', milestones.tier2Shrubs],
+      ['Tree', milestones.tier3Trees],
+    ];
+    for (const [type, unlocked] of tiers) {
+      if (unlocked) {
+        for (const btn of this.speciesButtons) {
+          if (btn.dataset.speciesType === type && btn.classList.contains('locked')) {
+            btn.classList.remove('locked');
+            btn.title = '';
+            this.addEvent(`${type}s unlocked! Your ecosystem earned it.`);
+          }
+        }
+        const header = this.container.querySelector(`[data-unlock-type="${type}"]`);
+        if (header && header.textContent?.includes('score')) header.textContent = type;
+      }
+    }
   }
 
   /** Update gnome status display */

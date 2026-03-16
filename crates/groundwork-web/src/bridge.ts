@@ -272,6 +272,31 @@ export function getTick(): bigint {
   return wasmModule.get_tick();
 }
 
+/** Ecological milestone state from the sim (drives species unlocking) */
+export interface SimMilestones {
+  tier1Flowers: boolean;
+  tier2Shrubs: boolean;
+  tier3Trees: boolean;
+  groundcoverCount: number;
+  pollinatorCount: number;
+  faunaCount: number;
+  speciesDiversity: number;
+}
+
+/** Read milestone state from WASM sim */
+export function getMilestones(): SimMilestones | null {
+  if (!wasmModule?.milestone_tier1_flowers) return null;
+  return {
+    tier1Flowers: wasmModule.milestone_tier1_flowers(),
+    tier2Shrubs: wasmModule.milestone_tier2_shrubs(),
+    tier3Trees: wasmModule.milestone_tier3_trees(),
+    groundcoverCount: wasmModule.milestone_groundcover_count(),
+    pollinatorCount: wasmModule.milestone_pollinator_count(),
+    faunaCount: wasmModule.milestone_fauna_count(),
+    speciesDiversity: wasmModule.milestone_species_diversity(),
+  };
+}
+
 /** Save the voxel grid to a Uint8Array (copy from WASM memory) */
 export function saveGrid(): Uint8Array | null {
   if (!wasmModule?.grid_ptr || !wasmMemory) return null;
