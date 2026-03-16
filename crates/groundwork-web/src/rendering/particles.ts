@@ -56,13 +56,13 @@ const PARTICLE_FRAG = /* glsl */ `
   }
 `;
 
-/** Growth burst color palette — greens and golds */
+/** Growth burst color palette — warm greens and golds matching the garden palette */
 const BURST_COLORS = [
-  new THREE.Color(0.4, 0.8, 0.3),   // bright green
-  new THREE.Color(0.5, 0.9, 0.4),   // light green
-  new THREE.Color(0.8, 0.75, 0.3),  // golden
-  new THREE.Color(0.9, 0.85, 0.4),  // light gold
-  new THREE.Color(0.6, 0.9, 0.5),   // spring green
+  new THREE.Color(0.35, 0.65, 0.25),  // forest green (matches foliage)
+  new THREE.Color(0.45, 0.70, 0.30),  // warm green
+  new THREE.Color(0.80, 0.70, 0.25),  // warm golden
+  new THREE.Color(0.85, 0.75, 0.30),  // light gold
+  new THREE.Color(0.40, 0.60, 0.28),  // earthy green
 ];
 
 interface Particle {
