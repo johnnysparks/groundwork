@@ -2121,12 +2121,24 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                         }
                     };
                 }
-                if x > 0 { check_wet!(idx - 1); }
-                if !has_wet_neighbor && x + 1 < GRID_X { check_wet!(idx + 1); }
-                if !has_wet_neighbor && y > 0 { check_wet!(idx - GRID_X); }
-                if !has_wet_neighbor && y + 1 < GRID_Y { check_wet!(idx + GRID_X); }
-                if !has_wet_neighbor && z > 0 { check_wet!(idx - z_stride); }
-                if !has_wet_neighbor && z + 1 < GRID_Z { check_wet!(idx + z_stride); }
+                if x > 0 {
+                    check_wet!(idx - 1);
+                }
+                if !has_wet_neighbor && x + 1 < GRID_X {
+                    check_wet!(idx + 1);
+                }
+                if !has_wet_neighbor && y > 0 {
+                    check_wet!(idx - GRID_X);
+                }
+                if !has_wet_neighbor && y + 1 < GRID_Y {
+                    check_wet!(idx + GRID_X);
+                }
+                if !has_wet_neighbor && z > 0 {
+                    check_wet!(idx - z_stride);
+                }
+                if !has_wet_neighbor && z + 1 < GRID_Z {
+                    check_wet!(idx + z_stride);
+                }
 
                 if !has_wet_neighbor {
                     cells[idx].water_level = cells[idx].water_level.saturating_sub(2);
