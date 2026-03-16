@@ -1701,10 +1701,15 @@ pub fn seed_dispersal(
 
         let species = &species_table.species[tree.species_id];
 
-        // Dispersal period varies per species and per individual tree
+        // Dispersal period varies per species and per individual tree.
+        // OldGrowth trees disperse 2× more frequently — established trees
+        // produce more seeds, creating visible "seed rain" during idle time.
         let base_period = species.dispersal_period;
-        let period =
-            base_period + (tree_hash(tree.rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
+        let age_factor = if tree.stage == GrowthStage::OldGrowth { 2 } else { 1 };
+        let period = (base_period
+            + (tree_hash(tree.rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32)
+            / age_factor;
+        let period = period.max(10); // don't go below 10 ticks
         if tree.age < period || tree.age % period != 0 {
             continue;
         }

@@ -255,12 +255,35 @@ pub fn fauna_spawn(
         let h = tree_hash(t + si as u64, 999);
 
         // --- Pollinators: spawn near leaf clusters (flowers/foliage) ---
+        // Flower species (wildflower=7, daisy=8) double the spawn probability,
+        // creating pollinator "meadows" when flowers cluster together.
+        // Discovery: "My flower patch is swarming with bees!"
         let leaf_count = count_material_nearby(&grid, sx, sy, sz, 8, Material::Leaf);
+        let flower_bonus = {
+            let mut flower_leaves = 0u64;
+            let r = 6_usize;
+            for fz in GROUND_LEVEL..=(GROUND_LEVEL + 3).min(GRID_Z - 1) {
+                for fy in sy.saturating_sub(r)..=(sy + r).min(GRID_Y - 1) {
+                    for fx in sx.saturating_sub(r)..=(sx + r).min(GRID_X - 1) {
+                        if let Some(v) = grid.get(fx, fy, fz) {
+                            if v.material == Material::Leaf
+                                && (v.nutrient_level == 7 || v.nutrient_level == 8)
+                            {
+                                flower_leaves += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            if flower_leaves >= 5 { 2u64 } else { 1 }
+        };
         if leaf_count >= 6 {
-            // Probability increases with more flowers
-            let prob = (leaf_count as u64).min(30);
+            // Probability increases with more flowers; flower clusters double it
+            let prob = (leaf_count as u64).min(30) * flower_bonus;
+            let max_pollinators = if flower_bonus > 1 { 5 } else { 3 }; // meadows support more
             if h % 100 < prob
-                && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bee) < 3
+                && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bee)
+                    < max_pollinators
             {
                 let seed = fauna_list.next_seed();
                 let fauna_type = if tree_hash(seed, 1).is_multiple_of(3) {
