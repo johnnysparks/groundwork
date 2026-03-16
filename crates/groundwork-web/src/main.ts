@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, getTick } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { createPlantDemoGrid } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -30,6 +30,25 @@ import { initScreenshot, captureScreenshot } from './ui/screenshot';
 import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
+
+/** Scan the grid and count plant voxels, unique species, and fauna */
+function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number } {
+  let plants = 0;
+  const speciesSet = new Set<number>();
+  const total = GRID_X * GRID_Y * GRID_Z;
+  for (let i = 0; i < total; i++) {
+    const mat = grid[i * VOXEL_BYTES];
+    if (mat === Material.Trunk || mat === Material.Leaf || mat === Material.Branch) {
+      plants++;
+      const speciesId = grid[i * VOXEL_BYTES + 3];
+      speciesSet.add(speciesId);
+    }
+  }
+  // Fauna count from bridge
+  let fauna = 0;
+  try { fauna = getFaunaCount(); } catch {}
+  return { plants, fauna, species: speciesSet.size };
+}
 
 async function main() {
   // --- WASM init ---
@@ -180,7 +199,10 @@ async function main() {
   // --- HUD & Controls ---
 
   const hud = new Hud();
-  if (isInitialized()) hud.setTickCount(Number(getTick()));
+  if (isInitialized()) {
+    hud.setTickCount(Number(getTick()));
+    hud.setAutoTick(true);
+  }
   const questLog = new QuestLog();
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
@@ -262,12 +284,15 @@ async function main() {
     terrainGroup,
     canvas: renderer.domElement,
     onToolPlaced: (hit) => {
+      // Zone-based placement: fill a radius instead of a single voxel.
+      // Seeds fill a 5-voxel radius zone, water fills 4, shovel clears 3.
+      const tool = hud.state.activeTool;
+      const r = tool === ToolCode.Seed ? 4 : tool === ToolCode.Shovel ? 3 : 3;
       if (isInitialized()) {
-        // WASM mode: use the real sim's place_tool (handles gravity, validation)
-        placeTool(hud.state.activeTool, hit.x, hit.y, hit.z);
+        fillTool(tool, hit.x - r, hit.y - r, hit.z, hit.x + r, hit.y + r, hit.z);
       } else {
-        // Mock mode: apply directly to the grid
-        applyToolToMockGrid(hud.state.activeTool, hit.x, hit.y, hit.z);
+        // Mock mode: single voxel fallback
+        applyToolToMockGrid(tool, hit.x, hit.y, hit.z);
       }
       // Record tool use for quest tracking
       const speciesIdx = hud.state.activeSpeciesIndex;
@@ -296,9 +321,9 @@ async function main() {
 
   // --- Sim state ---
 
-  let autoTick = false;
+  let autoTick = wasmReady; // Auto-tick ON by default when sim is ready
   let tickAccumulator = 0;
-  const TICK_INTERVAL_MS = 200;
+  const TICK_INTERVAL_MS = 100; // Fast ticks for responsive zone-and-watch gameplay
 
   // --- Camera orbit input ---
 
@@ -446,6 +471,8 @@ async function main() {
         const freshGrid = getGridView();
         questLog.check(freshGrid);
         if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
+        // Update garden stats for HUD
+        hud.setGardenStats(computeGardenStats(freshGrid));
       }
       remeshDirty();
     }

@@ -44,6 +44,7 @@ export interface HudState {
   activeSpeciesIndex: number;
   autoTick: boolean;
   tickCount: number;
+  gardenStats?: { plants: number; fauna: number; species: number };
 }
 
 type HudChangeCallback = (state: HudState) => void;
@@ -219,9 +220,19 @@ export class Hud {
     this.renderStatus();
   }
 
+  /** Update garden stats (call after tick with fresh grid data) */
+  setGardenStats(stats: { plants: number; fauna: number; species: number }): void {
+    this.state.gardenStats = stats;
+    this.renderStatus();
+  }
+
   private renderStatus(): void {
     const tickState = this.state.autoTick ? 'ON' : 'OFF';
-    this.statusEl.textContent = `Tick: ${this.state.tickCount} | Auto: ${tickState} [Space]`;
+    const stats = this.state.gardenStats;
+    const statsStr = stats
+      ? ` | 🌿 ${stats.plants} | 🦋 ${stats.fauna} | Species: ${stats.species}`
+      : '';
+    this.statusEl.textContent = `Tick: ${this.state.tickCount} | Auto: ${tickState} [Space]${statsStr}`;
   }
 }
 
