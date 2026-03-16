@@ -1512,6 +1512,10 @@ pub fn tree_rasterize(
             let trunk_r = species.trunk_radius().max(1) as isize;
             let trunk_h = species.max_height() as isize;
 
+            // Collect skeleton voxels instead of placing immediately.
+            // This lets trunk grow gradually via pending_voxels.
+            let mut skeleton_voxels: Vec<(usize, usize, usize, Material)> = Vec::new();
+
             for (i, node) in tree.branches.iter().enumerate() {
                 if !node.alive && node.material != Material::DeadWood {
                     continue;
@@ -1556,31 +1560,7 @@ pub fn tree_rasterize(
                             continue;
                         }
 
-                        if let Some(cell) = grid.get_mut(ax, ay, az) {
-                            let can_place = match mat {
-                                Material::Root => {
-                                    cell.material == Material::Soil
-                                        || cell.material == Material::Root
-                                }
-                                _ => {
-                                    cell.material == Material::Air
-                                        || cell.material == Material::Trunk
-                                        || cell.material == Material::Branch
-                                        || cell.material == Material::Leaf
-                                        || cell.material == Material::DeadWood
-                                }
-                            };
-                            if can_place {
-                                cell.set_material(mat);
-                                // Tag with species_id for renderer color differentiation
-                                cell.nutrient_level = tree.species_id as u8;
-                                // Store health in water_level for leaf/branch visual stress
-                                if mat == Material::Leaf || mat == Material::Branch {
-                                    cell.water_level = (tree.health * 255.0) as u8;
-                                }
-                                new_footprint.push((ax, ay, az));
-                            }
-                        }
+                        skeleton_voxels.push((ax, ay, az, mat));
                     }
                 }
             }
@@ -1623,9 +1603,54 @@ pub fn tree_rasterize(
                     }
                 }
             }
-            // Move collected leaves to pending queue, sorted bottom-to-top
+            // Dedup skeleton voxels: later entries overwrite earlier (branch tip
+            // overwrites inflated trunk at the same position, matching old behavior).
+            let mut voxel_map: std::collections::HashMap<(usize, usize, usize), Material> =
+                std::collections::HashMap::new();
+            for (x, y, z, mat) in skeleton_voxels {
+                voxel_map.insert((x, y, z), mat);
+            }
+            let skeleton_voxels: Vec<(usize, usize, usize, Material)> = voxel_map
+                .into_iter()
+                .map(|((x, y, z), mat)| (x, y, z, mat))
+                .collect();
+
+            // Dedup leaves against skeleton positions and against each other
+            let mut seen_pos: std::collections::HashSet<(usize, usize, usize)> = skeleton_voxels
+                .iter()
+                .map(|&(x, y, z, _)| (x, y, z))
+                .collect();
+            pending_leaves.retain(|&(x, y, z, _)| seen_pos.insert((x, y, z)));
+
+            // Place roots immediately (underground, no visual snap needed)
+            for &(x, y, z, mat) in &skeleton_voxels {
+                if mat == Material::Root {
+                    if let Some(cell) = grid.get_mut(x, y, z) {
+                        if cell.material == Material::Soil || cell.material == Material::Root {
+                            cell.set_material(mat);
+                            cell.nutrient_level = tree.species_id as u8;
+                            new_footprint.push((x, y, z));
+                        }
+                    }
+                }
+            }
+
+            // Queue above-ground skeleton voxels (trunk/branch) for gradual growth.
+            // Sort descending Z so pop() yields lowest Z first → trunk grows bottom-up.
+            let mut pending_trunk: Vec<(usize, usize, usize, Material)> = skeleton_voxels
+                .into_iter()
+                .filter(|&(_, _, _, mat)| mat != Material::Root)
+                .collect();
+            pending_trunk.sort_by_key(|&(_, _, z, _)| std::cmp::Reverse(z));
+
+            // Leaves sorted ascending Z — pop() yields highest Z → crown fills top-down.
             pending_leaves.sort_by_key(|&(_, _, z, _)| z);
-            tree.pending_voxels = pending_leaves;
+
+            // Combine: leaves first (popped last), trunk last (popped first).
+            // Growth order: trunk bottom→up, then leaves top→down.
+            let mut pending = pending_leaves;
+            pending.extend(pending_trunk);
+            tree.pending_voxels = pending;
         } else {
             // Template path: Seedling/Sapling/Dead use static templates
             let template = TreeTemplate::generate(species, &tree.stage, tree.rng_seed);
@@ -1773,8 +1798,10 @@ pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>
         if tree.pending_voxels.is_empty() {
             continue;
         }
-        // Place up to 3 voxels per tick (smooth growth rate)
-        let count = tree.pending_voxels.len().min(3);
+        // Adaptive drain rate: faster for large queues (trunk + leaves).
+        // Small queue (≤24): 3/tick. Large queue (200+): up to 12/tick.
+        let count = (tree.pending_voxels.len() / 8).clamp(3, 12);
+        let count = count.min(tree.pending_voxels.len());
         for _ in 0..count {
             if let Some((x, y, z, mat)) = tree.pending_voxels.pop() {
                 if let Some(cell) = grid.get_mut(x, y, z) {
@@ -1784,8 +1811,10 @@ pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>
                         }
                         _ => {
                             cell.material == Material::Air
-                                || cell.material == Material::Leaf
+                                || cell.material == Material::Trunk
                                 || cell.material == Material::Branch
+                                || cell.material == Material::Leaf
+                                || cell.material == Material::DeadWood
                         }
                     };
                     if can_place {
@@ -4240,10 +4269,16 @@ mod tests {
             revealed_z: 0,
         });
 
-        crate::tick(&mut world, &mut schedule);
+        // Trunk+leaf voxels now grow gradually via pending_voxels.
+        // Run enough ticks to drain the queue (roots are placed immediately).
+        for _ in 0..30 {
+            crate::tick(&mut world, &mut schedule);
+        }
 
         let grid = world.resource::<VoxelGrid>();
-        // Trunk at root_pos
+        // Root below (pos (0,0,-1) = tz-1) — placed immediately
+        assert_eq!(grid.get(tx, ty, tz - 1).unwrap().material, Material::Root);
+        // Trunk at root_pos — placed via pending_voxels
         assert_eq!(grid.get(tx, ty, tz).unwrap().material, Material::Trunk);
         // Trunk at z+1
         assert_eq!(grid.get(tx, ty, tz + 1).unwrap().material, Material::Trunk);
@@ -4254,8 +4289,6 @@ mod tests {
             grid.get(tx + 1, ty, tz + 2).unwrap().material,
             Material::Leaf
         );
-        // Root below (pos (0,0,-1) = tz-1)
-        assert_eq!(grid.get(tx, ty, tz - 1).unwrap().material, Material::Root);
     }
 
     #[test]
