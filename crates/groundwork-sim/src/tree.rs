@@ -738,6 +738,7 @@ impl TreeTemplate {
     fn flower(species: &Species, stage: &GrowthStage, _rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
         let max_h = species.max_height().max(1) as isize;
+        let bloom_r = species.crown_radius().max(1) as isize;
 
         let (stem_h, has_bloom) = match stage {
             GrowthStage::Sapling => (1isize, false),
@@ -750,9 +751,24 @@ impl TreeTemplate {
             voxels.push((0, 0, z, Material::Trunk));
         }
 
-        // Bloom at top (leaf voxel)
+        // Bloom: disc of leaf voxels at the top for visibility
         if has_bloom {
-            voxels.push((0, 0, stem_h, Material::Leaf));
+            let r = match stage {
+                GrowthStage::YoungTree => (bloom_r / 2).max(1),
+                _ => bloom_r,
+            };
+            let r_sq = r * r;
+            for dx in -r..=r {
+                for dy in -r..=r {
+                    if dx * dx + dy * dy <= r_sq {
+                        voxels.push((dx, dy, stem_h, Material::Leaf));
+                    }
+                }
+            }
+            // Small leaf accent one voxel above center for 3D shape
+            if r >= 2 && stem_h + 1 <= max_h {
+                voxels.push((0, 0, stem_h + 1, Material::Leaf));
+            }
         }
 
         // Shallow root

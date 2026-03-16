@@ -4329,6 +4329,11 @@ mod tests {
             },
         ];
 
+        // Provide 10 dummy attraction points far from any branch tip so
+        // branch_growth doesn't regenerate new ones and flood pending_voxels
+        // with leaf spheres that delay trunk reveal during the test window.
+        let dummy_points = vec![(10000, 10000, 10000); 10];
+
         world.spawn(Tree {
             species_id: 0,
             root_pos: (tx, ty, tz),
@@ -4341,7 +4346,7 @@ mod tests {
             dirty: true,
             voxel_footprint: Vec::new(),
             branches,
-            attraction_points: Vec::new(),
+            attraction_points: dummy_points,
             skeleton_initialized: true,
             stage_changed: true,
             pending_voxels: Vec::new(),
