@@ -23,9 +23,21 @@ export function createLighting(scene: THREE.Scene): Lights {
   sun.position.set(cx + 60, GROUND_LEVEL + 40, cz - 20);  // front-right, golden hour
   sun.target.position.set(cx, GROUND_LEVEL, cz);
 
-  // Shadows disabled — they darken the diorama too much at this scale.
-  // Re-enable after shadow camera is properly tuned for the 120x120 grid.
-  sun.castShadow = false;
+  // Shadows: tuned for the 80×80 garden diorama.
+  // The shadow camera frustum covers the full garden + a margin for
+  // trees near the edge. Bias prevents shadow acne on flat surfaces.
+  sun.castShadow = true;
+  const shadowSize = Math.max(GRID_X, GRID_Y) * 0.8;
+  sun.shadow.camera.left = -shadowSize;
+  sun.shadow.camera.right = shadowSize;
+  sun.shadow.camera.top = shadowSize;
+  sun.shadow.camera.bottom = -shadowSize;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 200;
+  sun.shadow.mapSize.width = 2048;
+  sun.shadow.mapSize.height = 2048;
+  sun.shadow.bias = -0.002;
+  sun.shadow.normalBias = 0.5;
 
   scene.add(sun);
   scene.add(sun.target);
