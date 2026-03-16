@@ -152,7 +152,7 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
 pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
     // Pre-compute attenuation values (they're constant across the grid).
     let att_soil = crate::scale::scale_attenuation(30);
-    let att_leaf = crate::scale::scale_attenuation(50);
+    let att_leaf = crate::scale::scale_attenuation(100);
     let att_trunk = crate::scale::scale_attenuation(30);
     let att_branch = crate::scale::scale_attenuation(20);
     let att_dead = crate::scale::scale_attenuation(10);
@@ -238,6 +238,26 @@ pub fn seed_growth(
         let cells = grid.cells();
         let cell_water = cells[idx].water_level;
         let cell_light = cells[idx].light_level;
+
+        // Territorial suppression: seeds near established trunks can't germinate.
+        // This prevents trees from growing on top of each other. Check a radius
+        // around the seed for Trunk voxels — if found, skip this seed.
+        let suppress_radius: usize = 6; // ~30cm at 5cm/voxel
+        let mut suppressed = false;
+        'suppress: for sz in z.saturating_sub(4)..=(z + 4).min(GRID_Z - 1) {
+            for sy in y.saturating_sub(suppress_radius)..=(y + suppress_radius).min(GRID_Y - 1) {
+                for sx in x.saturating_sub(suppress_radius)..=(x + suppress_radius).min(GRID_X - 1) {
+                    let sidx = sx + sy * GRID_X + sz * z_stride;
+                    if cells[sidx].material == Material::Trunk {
+                        suppressed = true;
+                        break 'suppress;
+                    }
+                }
+            }
+        }
+        if suppressed {
+            continue;
+        }
 
         // Check own water or adjacent water.
         let mut has_water = cell_water >= 30;
@@ -556,15 +576,27 @@ pub fn tree_growth(
         let shade_factor = 1.0 - species.shade_tolerance as f32 / 255.0; // 0=tolerant, 1=needs sun
         let light_threshold = 10.0 + shade_factor * 40.0; // range: 10 (tolerant) to 50 (sun-loving)
         let light_ok = light_intake >= light_threshold;
+
+        // Young plants are more vulnerable to stress — seedlings and saplings
+        // die 3× faster in shade/drought than mature trees. This creates natural
+        // thinning: only well-placed seedlings survive to maturity.
+        let youth_multiplier = match tree.stage {
+            GrowthStage::Seedling => 4.0,
+            GrowthStage::Sapling => 3.0,
+            GrowthStage::YoungTree => 2.0,
+            _ => 1.0,
+        };
+
         if !water_ok && !light_ok {
             // Severe stress: both resources missing (crowded conditions)
-            tree.health = (tree.health - 0.015).max(0.0);
+            // Youth multiplier: seedlings die 4× faster, saplings 3×, etc.
+            tree.health = (tree.health - 0.015 * youth_multiplier).max(0.0);
         } else if !water_ok {
-            tree.health = (tree.health - 0.005).max(0.0);
+            tree.health = (tree.health - 0.005 * youth_multiplier).max(0.0);
         } else if !light_ok {
             // Shade stress: sun-loving species decline faster in shade
             let shade_penalty = 0.003 + (1.0 - species.shade_tolerance as f32 / 255.0) * 0.005;
-            tree.health = (tree.health - shade_penalty).max(0.0);
+            tree.health = (tree.health - shade_penalty * youth_multiplier).max(0.0);
         }
         if water_ok && light_ok {
             // Healthy plants recover quickly — the garden should be mostly green
@@ -574,19 +606,23 @@ pub fn tree_growth(
             tree.health = (tree.health + 0.005).min(1.0);
         }
 
-        // Re-rasterize every 50 ticks to update health visual stress on foliage
-        if tree.age > 0 && tree.age % 50 == 0 {
+        // Re-rasterize every 30 ticks to update health visual stress on foliage
+        // (was 50 — more frequent updates make stress visible sooner)
+        if tree.age > 0 && tree.age % 30 == 0 {
             tree.dirty = true;
         }
 
-        // Crowding death: sustained zero health kills the plant.
-        // Trees die after 100 ticks at health < 0.05 (about 10 seconds at 10 ticks/s).
+        // Crowding death: sustained low health kills the plant.
+        // Young plants die faster (age > 20 for seedlings, > 50 for mature).
         // This creates natural thinning — only the fittest survive in crowded zones.
-        if tree.health < 0.05 && tree.age > 50 {
-            tree.health = (tree.health - 0.005).max(0.0);
+        let death_age_threshold = match tree.stage {
+            GrowthStage::Seedling | GrowthStage::Sapling => 20,
+            _ => 50,
+        };
+        if tree.health < 0.1 && tree.age > death_age_threshold {
+            tree.health = (tree.health - 0.01 * youth_multiplier).max(0.0);
             if tree.health == 0.0
                 && tree.stage != GrowthStage::Dead
-                && tree.stage != GrowthStage::Seedling
             {
                 tree.stage = GrowthStage::Dead;
                 tree.dirty = true;
@@ -1536,8 +1572,10 @@ pub fn seed_dispersal(
 }
 
 /// Roots absorb water from adjacent Soil voxels.
-/// Transfer ~4 units per adjacent wet soil per tick. Root's water_level increases.
-/// Visible effect: wet soil near roots dries out over time.
+/// Transfer ~4 units per adjacent wet soil per tick, divided by competing root count.
+/// When multiple roots neighbor the same soil cell, they share the water — creating
+/// real resource competition between overlapping root zones.
+/// Visible effect: wet soil near roots dries out faster with more roots competing.
 pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
     // Single snapshot: (material_u8, water_level, nutrient_level) tuples for cache-friendly reads.
     let snapshot: Vec<(u8, u8, u8)> = grid
@@ -1552,6 +1590,29 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
     let max_nutrient_transfer: u8 = 2; // nutrients move slower than water
     let z_stride = GRID_X * GRID_Y;
 
+    // Pre-compute root competition: for each soil cell, count adjacent root voxels.
+    // More roots competing for the same soil = less water per root.
+    let total = GRID_X * GRID_Y * GRID_Z;
+    let mut root_neighbor_count: Vec<u8> = vec![0; total];
+    for z in 0..GRID_Z {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let idx = x + y * GRID_X + z * z_stride;
+                if snapshot[idx].0 != soil_u8 {
+                    continue;
+                }
+                let mut count = 0u8;
+                if x > 0 && snapshot[idx - 1].0 == root_u8 { count += 1; }
+                if x + 1 < GRID_X && snapshot[idx + 1].0 == root_u8 { count += 1; }
+                if y > 0 && snapshot[idx - GRID_X].0 == root_u8 { count += 1; }
+                if y + 1 < GRID_Y && snapshot[idx + GRID_X].0 == root_u8 { count += 1; }
+                if z > 0 && snapshot[idx - z_stride].0 == root_u8 { count += 1; }
+                if z + 1 < GRID_Z && snapshot[idx + z_stride].0 == root_u8 { count += 1; }
+                root_neighbor_count[idx] = count;
+            }
+        }
+    }
+
     let cells = grid.cells_mut();
     for z in 0..GRID_Z {
         for y in 0..GRID_Y {
@@ -1565,22 +1626,30 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                     ($nidx:expr) => {{
                         let nidx = $nidx;
                         if snapshot[nidx].0 == soil_u8 {
+                            // Root competition: divide transfer by number of roots
+                            // competing for this soil cell. More roots = less per root.
+                            let competitors = root_neighbor_count[nidx].max(1);
                             // Water absorption
                             if snapshot[nidx].1 > 0 {
-                                let transfer = snapshot[nidx].1.min(max_transfer);
-                                cells[nidx].water_level =
-                                    cells[nidx].water_level.saturating_sub(transfer);
-                                cells[idx].water_level =
-                                    cells[idx].water_level.saturating_add(transfer);
+                                let base_transfer = snapshot[nidx].1.min(max_transfer);
+                                let transfer = base_transfer / competitors;
+                                if transfer > 0 {
+                                    cells[nidx].water_level =
+                                        cells[nidx].water_level.saturating_sub(transfer);
+                                    cells[idx].water_level =
+                                        cells[idx].water_level.saturating_add(transfer);
+                                }
                             }
-                            // Nutrient absorption
+                            // Nutrient absorption (also competed)
                             if snapshot[nidx].2 > 0 {
-                                let transfer = snapshot[nidx].2.min(max_nutrient_transfer);
-                                cells[nidx].nutrient_level =
-                                    cells[nidx].nutrient_level.saturating_sub(transfer);
-                                // Root stores absorbed nutrients (visible in inspect)
-                                cells[idx].nutrient_level =
-                                    cells[idx].nutrient_level.saturating_add(transfer);
+                                let base_transfer = snapshot[nidx].2.min(max_nutrient_transfer);
+                                let transfer = base_transfer / competitors;
+                                if transfer > 0 {
+                                    cells[nidx].nutrient_level =
+                                        cells[nidx].nutrient_level.saturating_sub(transfer);
+                                    cells[idx].nutrient_level =
+                                        cells[idx].nutrient_level.saturating_add(transfer);
+                                }
                             }
                         }
                     }};
@@ -1746,10 +1815,14 @@ mod tests {
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
-        // Use position away from grid edges so soil is loam (higher nutrient capacity).
+        // Place seed near the center spring so it gets sustained water.
+        // Position (GRID_X/2 + 6, GRID_Y/2) is close enough for water flow
+        // but far enough to avoid the water voxels themselves.
+        let sx = GRID_X / 2 + 6;
+        let sy = GRID_Y / 2;
         {
             let mut grid = world.resource_mut::<VoxelGrid>();
-            if let Some(cell) = grid.get_mut(30, 10, GROUND_LEVEL + 1) {
+            if let Some(cell) = grid.get_mut(sx, sy, GROUND_LEVEL + 1) {
                 cell.material = Material::Seed;
                 cell.water_level = 100;
                 cell.light_level = 0;
@@ -1763,7 +1836,7 @@ mod tests {
         }
 
         let grid = world.resource::<VoxelGrid>();
-        let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
+        let cell = grid.get(sx, sy, GROUND_LEVEL + 1).unwrap();
         assert_eq!(
             cell.material,
             Material::Trunk,
@@ -1771,7 +1844,7 @@ mod tests {
         );
 
         // Root should have been placed in the soil below
-        let below = grid.get(30, 10, GROUND_LEVEL).unwrap();
+        let below = grid.get(sx, sy, GROUND_LEVEL).unwrap();
         assert_eq!(
             below.material,
             Material::Root,
@@ -3427,5 +3500,129 @@ mod tests {
         }
         // If one of them didn't grow (e.g., seed placement issue), that's OK —
         // the test structure is correct, we just need both seeds to germinate.
+    }
+
+    #[test]
+    fn territorial_suppression_prevents_crowded_germination() {
+        // A seed next to an existing trunk should not germinate.
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let cx = GRID_X / 2 + 10;
+        let cy = GRID_Y / 2;
+        let sz = GROUND_LEVEL + 1;
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place an existing trunk (simulating a mature tree)
+            if let Some(cell) = grid.get_mut(cx, cy, sz) {
+                cell.set_material(Material::Trunk);
+            }
+            // Place a seed 3 voxels away (within suppress_radius of 6)
+            if let Some(cell) = grid.get_mut(cx + 3, cy, sz) {
+                cell.material = Material::Seed;
+                cell.water_level = 200;
+                cell.light_level = 200;
+                cell.nutrient_level = 0;
+            }
+            // Place a seed 10 voxels away (outside suppress_radius)
+            if let Some(cell) = grid.get_mut(cx + 10, cy, sz) {
+                cell.material = Material::Seed;
+                cell.water_level = 200;
+                cell.light_level = 200;
+                cell.nutrient_level = 0;
+            }
+        }
+
+        // Run enough ticks for seeds to accumulate growth
+        for _ in 0..60 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let grid = world.resource::<VoxelGrid>();
+        // Seed near trunk should still be a seed (suppressed — not growing)
+        let near = grid.get(cx + 3, cy, sz).unwrap();
+        assert_eq!(
+            near.material,
+            Material::Seed,
+            "Seed near existing trunk should be suppressed (not germinate)"
+        );
+
+        // Seed far from trunk should have germinated into trunk
+        let far = grid.get(cx + 10, cy, sz).unwrap();
+        assert_eq!(
+            far.material,
+            Material::Trunk,
+            "Seed far from existing trunk should germinate normally"
+        );
+    }
+
+    #[test]
+    fn crowded_seedlings_die_from_shade() {
+        // Two trees planted close together: the one in shade should lose health.
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let cx = GRID_X / 2 + 10;
+        let cy = GRID_Y / 2;
+        let sz = GROUND_LEVEL + 1;
+
+        // Spawn a mature tree that will cast shade
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Place trunk column (5 voxels tall) and leaf canopy
+            for z in sz..sz + 10 {
+                if let Some(cell) = grid.get_mut(cx, cy, z) {
+                    cell.set_material(Material::Trunk);
+                    cell.nutrient_level = 0; // species_id 0 = oak
+                }
+            }
+            // Dense leaf layer at top
+            for dx in -3i32..=3 {
+                for dy in -3i32..=3 {
+                    for dz in 8i32..=12 {
+                        let lx = (cx as i32 + dx) as usize;
+                        let ly = (cy as i32 + dy) as usize;
+                        let lz = (sz as i32 + dz) as usize;
+                        if let Some(cell) = grid.get_mut(lx, ly, lz) {
+                            if cell.material == Material::Air {
+                                cell.set_material(Material::Leaf);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Spawn a seedling directly under the canopy
+        let shaded_tree = world.spawn(Tree {
+            species_id: 0,
+            root_pos: (cx + 1, cy, sz),
+            age: 0,
+            stage: GrowthStage::Seedling,
+            health: 1.0,
+            accumulated_water: 0.0,
+            accumulated_light: 0.0,
+            rng_seed: 999,
+            dirty: false,
+            voxel_footprint: vec![(cx + 1, cy, sz)],
+            branches: Vec::new(),
+            attraction_points: Vec::new(),
+            skeleton_initialized: false,
+        }).id();
+
+        // Run ticks — the shaded seedling should lose health quickly
+        for _ in 0..50 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let tree = world.entity(shaded_tree).get::<Tree>().unwrap();
+        assert!(
+            tree.health < 0.5,
+            "Shaded seedling should have significantly reduced health ({} >= 0.5)",
+            tree.health
+        );
     }
 }

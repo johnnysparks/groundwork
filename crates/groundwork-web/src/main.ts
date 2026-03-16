@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -481,10 +481,19 @@ async function main() {
       }
 
       // Queue tasks instead of instant execution — gnome will do the work.
-      // Smart spacing for seeds, radius fill for other tools.
+      // Species-aware spacing: trees need territory, groundcover can pack tight.
       if (tool === ToolCode.Seed) {
-        const spacing = 4;
-        const r = 6;
+        const speciesIdx = hud.state.activeSpeciesIndex;
+        const speciesType = SPECIES[speciesIdx]?.type ?? 'Ground';
+        // Trees: wide spacing (crown_radius ~24 voxels), place 1-2 per click
+        // Shrubs: medium spacing, Flowers/Ground: tight packing
+        const spacing = speciesType === 'Tree' ? 16
+          : speciesType === 'Shrub' ? 8
+          : speciesType === 'Flower' ? 4
+          : 3;
+        const r = speciesType === 'Tree' ? 16
+          : speciesType === 'Shrub' ? 8
+          : 6;
         for (let dy = -r; dy <= r; dy += spacing) {
           for (let dx = -r; dx <= r; dx += spacing) {
             const sx = hit.x + dx;
