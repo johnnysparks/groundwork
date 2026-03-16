@@ -105,6 +105,11 @@ const FAUNA_MESSAGES: Record<number, string[]> = {
     'A beetle appeared near dead wood — it breaks down old plants into soil',
     'Beetle at work — decomposition feeds the next generation',
   ],
+  5: [ // Squirrel
+    'A squirrel is caching seeds — some may sprout in unexpected places',
+    'Squirrel spotted! It buries acorns — watch for surprise oak seedlings',
+    'A squirrel is foraging — the gnome can befriend it with patience',
+  ],
 };
 
 /** Periodic ecology tips — teach interactions through play */
@@ -912,6 +917,16 @@ async function main() {
 
     // Update day cycle (sun position, colors, sky gradient)
     dayCycle.update(dt, lights, scene, skyUniforms);
+
+    // Drought visual: warmer, hazier atmosphere
+    if (isInitialized()) {
+      const ws = getWeatherState();
+      if (ws === 2 && scene.fog instanceof THREE.FogExp2) {
+        // Push fog toward warm amber and slightly thicker
+        scene.fog.color.lerp(new THREE.Color(0.65, 0.50, 0.35), 0.02);
+        scene.fog.density = Math.min(scene.fog.density * 1.001, 0.004);
+      }
+    }
 
     // Animate foliage wind sway
     foliage.update(elapsed);
