@@ -81,6 +81,7 @@ let _dayCycle: any = null;
 let _setXrayMode: ((active: boolean) => void) | null = null;
 let _setTickCount: ((count: number) => void) | null = null;
 let _overlay: any = null;
+let _taskQueue: any = null;
 
 export interface AgentAPIConfig {
   orbitCamera: any;
@@ -89,6 +90,7 @@ export interface AgentAPIConfig {
   setXrayMode?: (active: boolean) => void;
   setTickCount?: (count: number) => void;
   overlay?: any;
+  taskQueue?: any;
 }
 
 /** Initialize the agent API with references to scene objects */
@@ -99,6 +101,7 @@ export function initAgentAPI(config: AgentAPIConfig): void {
   _setXrayMode = config.setXrayMode ?? null;
   _setTickCount = config.setTickCount ?? null;
   _overlay = config.overlay ?? null;
+  _taskQueue = config.taskQueue ?? null;
 
   const api = {
     /** Check if sim is ready */
@@ -115,6 +118,16 @@ export function initAgentAPI(config: AgentAPIConfig): void {
 
     /** Set time of day (0–1): 0.25=dawn, 0.5=noon, 0.75=golden, 0.0=blue hour */
     setTimeOfDay: (t: number) => { if (_dayCycle) _dayCycle.setTime(t); },
+
+    /** Queue a task for the garden gnome (instead of instant placement) */
+    queueTask: (tool: number, x: number, y: number, z: number, species?: number) => {
+      if (_taskQueue) {
+        _taskQueue.enqueue({ tool, x, y, z, species });
+      }
+    },
+
+    /** Get gnome task queue length */
+    getQueueLength: () => _taskQueue?.length ?? 0,
 
     /** Set overlay mode: 0=off, 1=water, 2=light, 3=nutrient */
     setOverlay: (mode: number) => {
