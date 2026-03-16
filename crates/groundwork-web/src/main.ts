@@ -593,6 +593,52 @@ async function main() {
     }
   }, { passive: false });
 
+  // --- Touch controls: 1-finger orbit, 2-finger pinch zoom ---
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let lastPinchDist = 0;
+
+  renderer.domElement.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isDragging = true;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  }, { passive: true });
+
+  renderer.domElement.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && isDragging) {
+      // 1-finger drag → orbit
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      orbit.rotate(-dx * 0.005, -dy * 0.005);
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      if (Math.abs(dx) + Math.abs(dy) > 3) questLog.recordOrbit();
+    } else if (e.touches.length === 2) {
+      // 2-finger pinch → zoom
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy);
+      if (lastPinchDist > 0) {
+        const scale = pinchDist / lastPinchDist;
+        orbit.zoom(scale);
+      }
+      lastPinchDist = pinchDist;
+    }
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchend', () => {
+    isDragging = false;
+    lastPinchDist = 0;
+  }, { passive: true });
+
   // Keyboard: WASD/arrows for pan, Q for x-ray toggle, R for reset, Space for auto-tick
   document.addEventListener('keydown', (e) => {
     // Pass to camera for continuous movement keys

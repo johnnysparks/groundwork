@@ -660,4 +660,21 @@ const QUEST_CSS = `
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* --- Mobile responsive --- */
+@media (max-width: 768px) {
+  #quest-panel {
+    top: 42px;
+    left: 6px;
+    width: min(260px, calc(100vw - 120px));
+  }
+  #quest-header { padding: 6px 10px; }
+  #quest-body { padding: 0 10px 8px; }
+  .quest-name { font-size: 12px; }
+  .quest-detail { font-size: 10px; }
+}
+
+@media (max-width: 480px) {
+  #quest-panel { width: min(220px, calc(100vw - 100px)); }
+}
 `;

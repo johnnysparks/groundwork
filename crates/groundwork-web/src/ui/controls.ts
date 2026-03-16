@@ -105,15 +105,50 @@ export function setupControls(config: ControlsConfig): () => void {
     }
   }
 
+  // --- Touch tap-to-place ---
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+
+  function onTouchStart(e: TouchEvent): void {
+    if (e.touches.length !== 1) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = performance.now();
+  }
+
+  function onTouchEnd(e: TouchEvent): void {
+    if (e.changedTouches.length !== 1) return;
+
+    // Ignore if tapping on HUD
+    if (hud.containsElement(e.target)) return;
+
+    const tx = e.changedTouches[0].clientX;
+    const ty = e.changedTouches[0].clientY;
+    const dx = tx - touchStartX;
+    const dy = ty - touchStartY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const elapsed = performance.now() - touchStartTime;
+
+    // Only treat as tap (not drag) if short and close
+    if (dist > DRAG_THRESHOLD || elapsed > CLICK_MAX_MS) return;
+
+    handleClick(tx, ty);
+  }
+
   // --- Bind events ---
   canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('mouseup', onMouseUp);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+  canvas.addEventListener('touchend', onTouchEnd, { passive: true });
   document.addEventListener('keydown', onKeyDown);
 
   // --- Cleanup ---
   return () => {
     canvas.removeEventListener('mousedown', onMouseDown);
     canvas.removeEventListener('mouseup', onMouseUp);
+    canvas.removeEventListener('touchstart', onTouchStart);
+    canvas.removeEventListener('touchend', onTouchEnd);
     document.removeEventListener('keydown', onKeyDown);
   };
 }

@@ -825,4 +825,87 @@ const HUD_CSS = `
 #scene-select option:disabled {
   color: #665e50;
 }
+
+/* --- Mobile responsive: larger touch targets and readable text --- */
+@media (max-width: 768px) {
+  #hud-top-bar {
+    top: 6px;
+    left: 6px;
+    padding: 4px 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  #hud-status { font-size: 11px; }
+
+  #tool-bar {
+    bottom: 10px;
+    gap: 2px;
+    padding: 5px;
+  }
+  .tool-btn {
+    padding: 10px 10px;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .tool-icon { font-size: 14px; }
+  .tool-key { display: none; }
+
+  #species-panel {
+    bottom: 75px;
+    max-width: 90vw;
+    padding: 6px;
+  }
+  .species-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    min-height: 36px;
+  }
+
+  #garden-score {
+    top: 6px;
+    right: 6px;
+    padding: 8px 12px;
+    min-width: 90px;
+  }
+  #score-number { font-size: 24px; }
+  #score-title { font-size: 10px; }
+  .score-row { font-size: 11px; }
+
+  #hud-help { display: none; }
+
+  #event-feed {
+    bottom: 70px;
+    left: 6px;
+    max-width: 60vw;
+  }
+  .event-item { font-size: 11px; }
+
+  #new-garden-btn {
+    bottom: 10px;
+    right: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+
+  #tick-toggle,
+  #screenshot-btn {
+    padding: 6px 10px;
+    min-height: 32px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  #garden-score {
+    top: auto;
+    bottom: 70px;
+    right: 6px;
+    padding: 6px 10px;
+  }
+  #score-number { font-size: 20px; }
+  #score-details { display: none; }
+  #water-bar-container { display: none; }
+}
 `;
