@@ -77,6 +77,8 @@
 - **Discovery:** "Most of my crowded oaks died, but the survivors exploded with growth"
 
 ### 9. Drought Recovery
+![Competition and thinning](images/interactions/competition.png)
+
 `wet roots -> dead tree revives`
 
 - **Mechanism:** Dead trees with root water_level > 100 recover health at +0.006/tick. At health 0.3: revive as Sapling with fresh branches.

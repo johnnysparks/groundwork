@@ -101,6 +101,8 @@
 ### Fern (id: 4)
 **The shade-loving understory.**
 
+![Fern growth](images/species/fern-seedling-t20.png) ![](images/species/fern-sapling-t60.png) ![](images/species/fern-young-t150.png)
+
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.4m (8 voxels) |
@@ -114,6 +116,8 @@
 ### Berry Bush (id: 5)
 **The bird attractor.**
 
+![Berry Bush growth](images/species/berry-bush-seedling-t20.png) ![](images/species/berry-bush-sapling-t60.png) ![](images/species/berry-bush-young-t150.png)
+
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.6m (12 voxels) |
@@ -126,6 +130,8 @@
 
 ### Holly (id: 6)
 **The tough survivor.**
+
+![Holly growth](images/species/holly-seedling-t20.png) ![](images/species/holly-sapling-t60.png) ![](images/species/holly-young-t150.png)
 
 | Parameter | Value |
 |-----------|-------|
@@ -144,6 +150,8 @@
 ### Wildflower (id: 7)
 **The pollinator magnet.**
 
+![Wildflower growth](images/species/wildflower-seedling-t15.png) ![](images/species/wildflower-sapling-t40.png) ![](images/species/wildflower-young-t80.png)
+
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.25m (5 voxels) |
@@ -156,6 +164,8 @@
 
 ### Daisy (id: 8)
 **The prolific spreader.**
+
+![Daisy growth](images/species/daisy-seedling-t15.png) ![](images/species/daisy-sapling-t40.png) ![](images/species/daisy-young-t80.png)
 
 | Parameter | Value |
 |-----------|-------|
@@ -174,6 +184,8 @@
 ### Moss (id: 9)
 **Pioneer species #1.**
 
+![Moss growth](images/species/moss-seedling-t15.png) ![](images/species/moss-sapling-t40.png) ![](images/species/moss-young-t80.png)
+
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.05m (1 voxel) |
@@ -187,6 +199,8 @@
 ### Grass (id: 10)
 **Pioneer species #2 + soil binder.**
 
+![Grass growth](images/species/grass-seedling-t15.png) ![](images/species/grass-sapling-t40.png) ![](images/species/grass-young-t80.png)
+
 | Parameter | Value |
 |-----------|-------|
 | Max height | 0.1m (2 voxels) |
@@ -198,6 +212,8 @@
 
 ### Clover (id: 11)
 **The nitrogen fixer.**
+
+![Clover growth](images/species/clover-seedling-t15.png) ![](images/species/clover-sapling-t40.png) ![](images/species/clover-young-t80.png)
 
 | Parameter | Value |
 |-----------|-------|
