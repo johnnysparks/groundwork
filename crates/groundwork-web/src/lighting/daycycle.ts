@@ -84,21 +84,21 @@ const PRESETS: LightPreset[] = [
     fogDensity: 0.003,
   },
   {
-    // Blue hour — cool blue-purple twilight, dramatic contrast
+    // Night / Blue hour — cool blue moonlight, stars visible, cozy not dark
     time: 1.0, // wraps to 0.0
-    sunColor: new THREE.Color(0x6677aa),
-    sunIntensity: 0.25,
-    sunElevation: 0.05,
+    sunColor: new THREE.Color(0x334466),
+    sunIntensity: 0.05,    // barely visible moon-like glow from horizon
+    sunElevation: 0.03,
     sunAzimuth: Math.PI * 0.8,
-    hemiSkyColor: new THREE.Color(0x445588),
-    hemiGroundColor: new THREE.Color(0x1a1a2a),
-    hemiIntensity: 0.25,
-    ambientColor: new THREE.Color(0x5566aa),
-    ambientIntensity: 0.3,
-    skyTop: new THREE.Color(0x111133),
-    skyBottom: new THREE.Color(0x332244),
-    fogColor: new THREE.Color(0x334466),
-    fogDensity: 0.005,
+    hemiSkyColor: new THREE.Color(0x223355),
+    hemiGroundColor: new THREE.Color(0x111122),
+    hemiIntensity: 0.15,
+    ambientColor: new THREE.Color(0x4466aa),  // cool blue moonlight fill
+    ambientIntensity: 0.35,                   // enough to see garden silhouettes
+    skyTop: new THREE.Color(0x0a0a22),        // deep night sky (stars show here)
+    skyBottom: new THREE.Color(0x1a1528),
+    fogColor: new THREE.Color(0x1a2233),
+    fogDensity: 0.006,
   },
 ];
 
