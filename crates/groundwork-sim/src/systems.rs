@@ -552,7 +552,9 @@ pub fn tree_growth(
     grid: Res<VoxelGrid>,
     species_table: Res<SpeciesTable>,
     fauna_list: Res<crate::fauna::FaunaList>,
+    day_phase: Res<crate::DayPhase>,
 ) {
+    let seasonal_mult = day_phase.growth_multiplier();
     // --- Nitrogen handshake ---
     // Clover/groundcover near a tree's root zone enriches soil nitrogen,
     // boosting growth by 1.5x. Detected by scanning for Leaf voxels at ground
@@ -734,7 +736,8 @@ pub fn tree_growth(
             * canopy_boost
             * water_affinity_boost
             * pioneer_boost
-            * bird_symbiosis_boost;
+            * bird_symbiosis_boost
+            * seasonal_mult;
         tree.accumulated_water += water_intake.sqrt() * species.growth_rate * total_boost;
         tree.accumulated_light += light_intake.sqrt() * species.growth_rate * total_boost;
 

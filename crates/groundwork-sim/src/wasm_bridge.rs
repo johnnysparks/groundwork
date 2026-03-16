@@ -122,6 +122,21 @@ pub fn get_tick() -> u64 {
     with_sim(|sim| sim.world.resource::<Tick>().0)
 }
 
+/// Current day phase (0-99). Dawn=0-24, Day=25-49, Dusk=50-74, Night=75-99.
+/// JS can use this to sync the visual day cycle with the sim's growth rhythm.
+#[wasm_bindgen]
+pub fn get_day_phase() -> u8 {
+    with_sim(|sim| sim.world.resource::<crate::DayPhase>().0)
+}
+
+/// Set the day phase explicitly (for syncing JS day cycle to sim).
+#[wasm_bindgen]
+pub fn set_day_phase(phase: u8) {
+    with_sim(|sim| {
+        sim.world.resource_mut::<crate::DayPhase>().0 = phase % 100;
+    });
+}
+
 /// Place a tool at (x, y, z). Tool codes: 0=shovel, 1=seed, 2=water, 3=soil, 4=stone.
 /// Returns the landing z coordinate, or -1 if the action had no effect.
 #[wasm_bindgen]

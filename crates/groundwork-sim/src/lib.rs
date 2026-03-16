@@ -27,6 +27,36 @@ use voxel::Material;
 #[derive(Resource, Default)]
 pub struct Tick(pub u64);
 
+/// Day phase resource: cycles 0→99, representing time-of-day.
+/// 0-24 = dawn, 25-49 = day, 50-74 = dusk, 75-99 = night.
+/// Growth rates scale with phase: day=1.0×, dawn/dusk=0.75×, night=0.5×.
+/// Advances 1 per tick, wraps at 100. JS can sync this with the visual day cycle.
+#[derive(Resource)]
+pub struct DayPhase(pub u8);
+
+impl Default for DayPhase {
+    fn default() -> Self {
+        Self(30) // start at midday
+    }
+}
+
+impl DayPhase {
+    /// Growth multiplier based on time-of-day. Full sun at day, reduced at night.
+    pub fn growth_multiplier(&self) -> f32 {
+        match self.0 {
+            25..=49 => 1.0,  // day: full growth
+            0..=24 => 0.75,  // dawn: moderate
+            50..=74 => 0.75, // dusk: moderate
+            _ => 0.5,        // night: half growth
+        }
+    }
+
+    /// Advance the phase by 1, wrapping at 100.
+    pub fn advance(&mut self) {
+        self.0 = (self.0 + 1) % 100;
+    }
+}
+
 /// Focus/cursor position in the world. Shared by CLI and TUI.
 #[derive(Resource, Debug, Clone)]
 pub struct FocusState {
@@ -62,6 +92,7 @@ pub fn create_world() -> World {
     world.insert_resource(VoxelGrid::new());
     world.insert_resource(SoilGrid::new());
     world.insert_resource(Tick::default());
+    world.insert_resource(DayPhase::default());
     world.insert_resource(FocusState::default());
     world.insert_resource(SpeciesTable::default());
     world.insert_resource(SeedSpeciesMap::default());
@@ -229,6 +260,7 @@ pub fn tick(world: &mut World, schedule: &mut Schedule) {
     schedule.run(world);
 }
 
-fn tick_counter(mut t: ResMut<Tick>) {
+fn tick_counter(mut t: ResMut<Tick>, mut phase: ResMut<DayPhase>) {
     t.0 += 1;
+    phase.advance();
 }
