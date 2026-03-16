@@ -31,3 +31,7 @@
 - The renderer (Three.js, x-ray, overlays, day cycle)
 - The cozy aesthetic
 - Species interactions and ecological discovery
+
+## Extended By
+
+**Garden Gnome Character & Zone-Planning System** (`decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`) — Executive mandate. Zones are no longer instant; a garden gnome character walks to each zone and executes the work. Adds ghost overlays, task queue, and character pacing to the zone concept.

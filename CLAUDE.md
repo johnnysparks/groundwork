@@ -10,6 +10,8 @@ GROUNDWORK is a cozy ecological voxel garden builder game. The player composes e
 
 **What makes it replayable:** Two pillars drive "one more garden" across hundreds of hours. First, *knowledge transfer* — each garden teaches something that changes how you start the next one. Your tenth garden looks different from your first not because of unlocks, but because you *understand ecology now*. Second, *biome variety* — each biome is a complete ecosystem with its own species, interactions, fauna, and visual identity. Mastering temperate doesn't prepare you for desert. Systemic intuition transfers; specific recipes don't. And each biome's art, lighting, and atmosphere is a pull motivator on its own — you want to see what that world *looks and feels like*. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
 
+**The gardener gnome:** The player doesn't directly manipulate voxels. Instead, you **zone areas** (drag-to-paint) and a charming **garden gnome** character waddles over and does the work — planting seeds, digging trenches, watering soil. Ghost overlays show planned-but-not-yet-executed work. This Timberborn-inspired pacing creates natural observation time, character delight, and planning-as-gameplay. The gnome is the soul of the garden. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
+
 **Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
 
 ## Sprint Session (one-liner)
@@ -114,9 +116,13 @@ crates/
       lighting/sky.ts     Sky gradient background shader
       lighting/daycycle.ts  Time-of-day cycle controller
       postprocessing/effects.ts  SSAO, bloom, DOF, color grading
+      gardener/queue.ts   Task queue for zone-planned work items
+      gardener/gardener.ts  Garden gnome billboard sprite with walk/work/idle animations
+      gardener/ghosts.ts  Ghost overlay: InstancedMesh for planned-but-not-executed zones
+      gardener/movement.ts  Simple surface-walking movement for gnome
       ui/raycaster.ts     Mouse click → voxel coordinate raycasting
-      ui/controls.ts      Input controls and keyboard shortcuts
-      ui/hud.ts           HUD overlay: tool palette, species picker, status
+      ui/controls.ts      Input controls, keyboard shortcuts, drag-to-zone painting
+      ui/hud.ts           HUD overlay: tool palette, species picker, task queue counter
     vite.config.ts        WASM plugin, COOP/COEP headers, GitHub Pages base
     package.json          three, vite, vite-plugin-wasm, typescript
 
@@ -160,6 +166,7 @@ crates/
 - **Flat voxel array**: 640K voxels in contiguous Vec. Z=0 is deepest, Z=GROUND_LEVEL (~50) is surface, Z=99 is sky.
 - **12 species, 4 plant types**: Tree/Shrub/Groundcover/Flower. Trees use space colonization branching, others use templates.
 - **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
+- **Garden gnome mediated actions**: Player zones are queued in JS-side TaskQueue. A renderer-side gnome sprite walks to tasks and calls `placeTool()` on arrival. No sim changes — the gnome is a visual pacing layer. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`.
 
 ### Sim API
 
@@ -193,11 +200,14 @@ JS reads:
 ```
 
 ## Gardening Tools
-- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone)
-- `seed` = **seed bag** — plants a seed; falls through air; dies on stone
-- `water` = **watering can** — pours water; falls through air; no-op on water
-- `soil` = **soil** — places soil; falls through air
-- `stone` = **stone** — places stone directly (no gravity)
+
+All tools are used by **painting zones** (drag-to-select area). The garden gnome then walks to each zoned voxel and executes the action. Ghost overlays show planned work before execution.
+
+- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone). Ghost: red-brown wireframe.
+- `seed` = **seed bag** — plants a seed; falls through air; dies on stone. Ghost: soft green pulse.
+- `water` = **watering can** — pours water; falls through air; no-op on water. Ghost: translucent blue shimmer.
+- `soil` = **soil** — places soil; falls through air. Ghost: translucent warm brown.
+- `stone` = **stone** — places stone directly (no gravity). Ghost: translucent gray.
 
 ## Species
 - **Trees:** `oak`, `birch`, `willow`, `pine` — tall, space colonization branching

@@ -11,7 +11,11 @@ GROUNDWORK is a cozy ecological builder where the player grows a self-sustaining
 **Player experience:** The player is composing an ecosystem, not managing units in a spreadsheet. Every choice changes the conditions for what grows next. A thriving garden should feel *earned* — and then it should surprise you. The oak you planted attracts a bird that carries a seed to the far corner. The wildflowers you grew near water attract pollinators that make your berry bush fruit. The garden develops relationships you didn't design but can understand once you see them.
 
 ## CORE PLAY
-- **Plant:** choose species and place seeds
+
+The player doesn't directly manipulate voxels. Instead, you **plan zones** and a charming **garden gnome** carries out the work. Ghost overlays show planned-but-not-yet-executed zones. The gnome waddles to each task, executes it, and moves to the next. This Timberborn-inspired pacing creates natural observation time and character delight. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
+
+- **Plan:** drag-to-paint zones — designate areas for planting, digging, watering, or soil placement
+- **Watch:** the garden gnome walks to your zones and does the work, one task at a time
 - **Sculpt:** shape terrain to influence water and space
 - **Prune:** cut, weed, thin, deadhead, redirect growth
 - **Irrigate:** route water and place structures that shift ecology
@@ -70,11 +74,11 @@ See `decisions/2026-03-15T18:00:00_replayability_model.md` for the full replayab
 
 The autonomous simulation loop exists to make the game feel like this for a new player:
 
-- **Minute 1:** Place soil, water, a seed. It sprouts in golden light. Warm, clear, satisfying. You smile.
-- **Minute 5:** Multiple species growing at different speeds. Tiny particles drift between wildflowers. What are those? Lean forward.
-- **Minute 15:** Dip underground for the first time. Roots spreading like fingers. A worm trail. Back up top — a wildflower appeared where you didn't plant one. Where did it come from?
-- **Minute 30:** Diagnose a struggling birch by looking at the oak's root network underground. Replant it with space. It thrives. You feel clever — you *observed* your way to understanding.
-- **Hour 1:** Stop playing. Just watch. Light shifts. Pollinators move. A bird drops a seed. Your garden is making itself better without you. Pride and wonder.
+- **Minute 1:** Paint a zone of soil, then water, then a seed. Ghost overlay appears. Your garden gnome picks up the seed bag and waddles over. Plants the first seed in golden light. Warm, clear, satisfying. You smile.
+- **Minute 5:** Multiple species growing at different speeds. The gnome is still working through your planting queue. Tiny particles drift between wildflowers. What are those? Lean forward.
+- **Minute 15:** Dip underground for the first time. Roots spreading like fingers. A worm trail. Your gnome is digging a trench nearby, lantern glowing underground. Back up top — a wildflower appeared where you didn't plant one. Where did it come from?
+- **Minute 30:** Diagnose a struggling birch by looking at the oak's root network underground. Zone a new planting area with space. The gnome waddles over and replants. It thrives. You feel clever — you *observed* your way to understanding.
+- **Hour 1:** Stop playing. Just watch. The gnome sits on a rock, admiring the garden. Light shifts. Pollinators move. A bird drops a seed. Your garden is making itself better without you. Pride and wonder.
 - **Hour 3:** Third garden. You know clover-first for nitrogen, flowers-near-water for pollinators. But a moss carpet spreads under the oak canopy, ferns follow, and a shaded undergrowth micro-ecosystem forms that you didn't design. Beautiful.
 - **Hour 10:** You design gardens like a landscape architect. Every plant has a role. But the garden still surprises you. You start your eleventh garden not because you haven't "won" but because you want to see what *this* combination will create.
 - **Hour 15:** You notice the desert biome. The art preview pulls you in — stark dawn light, sand textures, unfamiliar silhouettes. You start a desert garden and suddenly you're a beginner again. Clover doesn't exist here. Water is precious. But you know to look underground, to watch fauna, to space plants. You know *how to learn*. The discovery arc reignites.
@@ -93,7 +97,7 @@ These are the specific feelings the game must reliably produce. Reference them b
 | **The Underground Revelation** | "Oh. *That's* why." | Camera dips below; oak roots have stolen the birch's water |
 | **The Slow Bloom** | "This garden is better than my last" | Third garden thrives faster because the player *understands ecology now* |
 | **The Gift** | "I didn't plant that there" | A bird carries a seed; a perfect tree grows where the player never touched |
-| **The Living Painting** | "I just want to watch" | Golden hour, drifting pollinators, breathing garden — peace |
+| **The Living Painting** | "I just want to watch" | Golden hour, the gnome sitting on a rock, drifting pollinators, breathing garden — peace |
 | **The Chain Reaction** | "One thing led to another" | One wildflower → bees → pollination spread → butterflies → nesting bird → new seedling |
 | **The Recovery** | "It came back" | Over-watered section recovers: pioneer moss, then grass, then life returns |
 | **The Seasonal Shift** | "Same garden, new world" | Autumn transforms the canopy; different fauna appear; the garden reinvents itself |
