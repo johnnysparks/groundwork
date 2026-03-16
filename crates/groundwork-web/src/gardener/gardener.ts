@@ -162,6 +162,7 @@ const MAX_EMOTIONS = 20;
 export class GardenerSprite {
   readonly group: THREE.Group;
   private parts: GnomeParts;
+  private glowDisc: THREE.Mesh;
   private state = GnomeState.Idle;
 
   /** Current position in sim coordinates */
@@ -241,6 +242,21 @@ export class GardenerSprite {
     // Build 3D gnome model
     this.parts = buildGnomeModel();
     this.group.add(this.parts.root);
+
+    // Warm glow disc on the ground beneath the gnome — a "spotlight" that
+    // helps the player locate the gnome at default zoom without breaking
+    // the cozy aesthetic. Soft warm gold circle, additive blending.
+    const glowGeo = new THREE.CircleGeometry(3.5, 24);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0xffcc66,
+      transparent: true,
+      opacity: 0.25,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.glowDisc = new THREE.Mesh(glowGeo, glowMat);
+    this.glowDisc.rotation.x = -Math.PI / 2; // lay flat on ground
+    this.group.add(this.glowDisc);
 
     // Emotion particle system (same as before — point sprites work well)
     this.emotionPositions = new Float32Array(MAX_EMOTIONS * 3);
@@ -787,6 +803,9 @@ export class GardenerSprite {
     // Y position set by applyAnimation (includes bounce + bodyY)
     const baseY = this.z + 1.5;
     this.parts.root.position.y = baseY + this.sBounce + this.sBodyY;
+
+    // Glow disc stays flat on the ground at the gnome's feet
+    this.glowDisc.position.set(this.x + 0.5, this.z + 0.15, this.y + 0.5);
   }
 
   dispose(): void {

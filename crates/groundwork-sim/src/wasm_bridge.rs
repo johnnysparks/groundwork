@@ -544,9 +544,9 @@ pub fn pack_tree_stats() -> usize {
         use crate::tree::Tree;
         use bevy_ecs::prelude::*;
 
-        // Collect tree data first to avoid borrow conflicts
-        let mut trees = sim.world.query::<&Tree>();
-        let tree_data: Vec<_> = trees
+        // Collect tree data first to avoid overlapping borrows with VoxelGrid.
+        let mut trees_query = sim.world.query::<&Tree>();
+        let tree_data: Vec<_> = trees_query
             .iter(&sim.world)
             .map(|t| {
                 (
@@ -558,6 +558,7 @@ pub fn pack_tree_stats() -> usize {
                 )
             })
             .collect();
+
         let grid = sim.world.resource::<crate::grid::VoxelGrid>();
 
         TREE_STATS_BUF.with(|buf| {
@@ -565,8 +566,9 @@ pub fn pack_tree_stats() -> usize {
             buf.clear();
             buf.resize(tree_data.len() * 12, 0);
 
-            let mut i = 0;
-            for (species_id, health, stage, root_pos, footprint) in &tree_data {
+            for (i, (species_id, health, stage, root_pos, footprint)) in
+                tree_data.iter().enumerate()
+            {
                 let off = i * 12;
                 if off + 12 > buf.len() {
                     break;
@@ -592,8 +594,6 @@ pub fn pack_tree_stats() -> usize {
                 buf[off + 6..off + 8].copy_from_slice(&(root_pos.1 as u16).to_le_bytes());
                 buf[off + 8..off + 10].copy_from_slice(&root_count.to_le_bytes());
                 buf[off + 10..off + 12].copy_from_slice(&water_total.to_le_bytes());
-
-                i += 1;
             }
 
             tree_data.len()

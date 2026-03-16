@@ -35,6 +35,32 @@ const FAUNA_SIZES: Record<number, number> = {
   [FaunaType.Beetle]: 2.0,
 };
 
+/** Warm glow halo colors per fauna type — draws the eye to creatures. */
+const FAUNA_GLOW_COLORS: Record<number, number> = {
+  [FaunaType.Bee]: 0xffdd44,      // honey gold
+  [FaunaType.Butterfly]: 0xffaa55, // warm amber
+  [FaunaType.Bird]: 0xddcc88,     // soft tan
+  [FaunaType.Worm]: 0xcc9966,     // earthy
+  [FaunaType.Beetle]: 0x99aa66,   // moss green
+};
+
+/** Create a glow halo sprite for a fauna creature.
+ *  Uses THREE.Sprite which auto-billboards toward the camera. */
+function createFaunaGlow(faunaType: number): THREE.Sprite {
+  const color = FAUNA_GLOW_COLORS[faunaType] ?? 0xffdd44;
+  const mat = new THREE.SpriteMaterial({
+    color,
+    transparent: true,
+    opacity: 0.3,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const glow = new THREE.Sprite(mat);
+  glow.name = 'glow';
+  glow.scale.set(1.8, 1.8, 1);
+  return glow;
+}
+
 /** Pre-built model pool entry. */
 interface FaunaSlot {
   model: THREE.Group;
@@ -56,6 +82,7 @@ export class FaunaRenderer {
     // Each slot starts as a bee; we swap model types as needed.
     for (let i = 0; i < MAX_FAUNA; i++) {
       const model = buildFaunaModel(FaunaType.Bee, i);
+      model.add(createFaunaGlow(FaunaType.Bee));
       model.visible = false;
       this.group.add(model);
       this.pool.push({ model, type: FaunaType.Bee, active: false });
@@ -90,6 +117,7 @@ export class FaunaRenderer {
       if (slot.type !== f.type) {
         this.group.remove(slot.model);
         const newModel = buildFaunaModel(f.type, i);
+        newModel.add(createFaunaGlow(f.type));
         slot.model = newModel;
         slot.type = f.type;
         this.group.add(newModel);
