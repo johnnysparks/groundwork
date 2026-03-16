@@ -126,7 +126,7 @@ const ECO_TIPS = [
   'Tip: Birds near trees carry seeds to surprising new spots',
   'Tip: Pine roots acidify soil — fern and moss tolerate it, others struggle',
   'Tip: Groundcover enriches soil for everyone nearby',
-  'Tip: Shade-loving ferns thrive under oak canopy — wildflowers need sun',
+  'Tip: Blue particles under trees = dappled shade. Ferns and moss love it!',
   'Tip: Crowded plants die — give trees space to claim territory',
   'Tip: The garden gnome does the work — zone areas and watch',
   'Tip: Trees share nutrients through underground mycorrhizal networks',
@@ -159,9 +159,11 @@ function getContextualTip(stats: { plants: number; fauna: number; species: numbe
   if (hasTree && !hasClover)
     return 'Tip: Plant clover near your tree — nitrogen fixing boosts growth 50%';
   if (hasTree && hasClover)
-    return 'Tip: Press Q for x-ray — watch the roots of your tree and clover intertwine';
+    return 'Tip: See green shimmer near your tree? Clover is fixing nitrogen — 50% growth boost!';
   if (hasTree && !hasBerryBush)
     return 'Tip: Berry bushes attract birds — birds carry seeds to surprising new spots';
+  if (hasBerryBush && stats.fauna > 2)
+    return 'Tip: Watch the blue particles under the canopy — shade-loving plants thrive there';
   if (stats.fauna > 3)
     return 'Tip: Your ecosystem is thriving! Watch how species affect each other';
 
