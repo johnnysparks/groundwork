@@ -86,6 +86,8 @@ let _birdDropNotified = false;
 /** Species the player has deliberately planted (via seed tool) */
 const _playerPlantedSpecies = new Set<number>();
 let _xrayTipShown = false;
+let _recentDieOff = false;
+let _dieOffPlantCount = 0;
 
 /** Companion species suggestions — shown once per species per session */
 const _companionSuggested = new Set<number>();
@@ -307,8 +309,27 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
 
   // Plant die-off from competition
   if (_prevStats.plants > 100 && stats.plants < _prevStats.plants - 200) {
-    hud.addEvent('A plant died from competition — the strongest survive');
+    const msgs = [
+      'A plant died from competition — the strongest survive',
+      'Overcrowding! Plants are competing for water and light',
+      'Natural selection at work — the garden finds its balance',
+    ];
+    hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+    _recentDieOff = true;
+    _dieOffPlantCount = stats.plants;
     _eventCooldown = 40;
+  }
+
+  // Recovery after die-off — pioneer species recolonize
+  if (_recentDieOff && stats.plants > _dieOffPlantCount + 100) {
+    const msgs = [
+      'The garden is recovering — pioneer species are recolonizing!',
+      'Life finds a way — new growth is filling the gaps',
+      'Recovery in progress — the ecosystem is resilient',
+    ];
+    hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+    _recentDieOff = false;
+    _eventCooldown = 30;
   }
 
   // Contextual ecology tips — suggest next discovery based on garden state
