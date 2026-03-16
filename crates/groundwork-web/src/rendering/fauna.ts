@@ -44,20 +44,41 @@ const FAUNA_GLOW_COLORS: Record<number, number> = {
   [FaunaType.Beetle]: 0x99aa66,   // moss green
 };
 
-/** Create a glow halo sprite for a fauna creature.
- *  Uses THREE.Sprite which auto-billboards toward the camera. */
+/** Shared radial gradient texture for fauna glow halos. */
+let _glowTexture: THREE.Texture | null = null;
+function getGlowTexture(): THREE.Texture {
+  if (_glowTexture) return _glowTexture;
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, 'rgba(255,255,255,0.6)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.2)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  _glowTexture = new THREE.CanvasTexture(canvas);
+  return _glowTexture;
+}
+
+/** Create a soft radial glow halo for a fauna creature.
+ *  Uses THREE.Sprite with a radial gradient texture for a gentle
+ *  circular glow instead of a hard rectangular box. */
 function createFaunaGlow(faunaType: number): THREE.Sprite {
   const color = FAUNA_GLOW_COLORS[faunaType] ?? 0xffdd44;
   const mat = new THREE.SpriteMaterial({
+    map: getGlowTexture(),
     color,
     transparent: true,
-    opacity: 0.3,
+    opacity: 0.5,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
   const glow = new THREE.Sprite(mat);
   glow.name = 'glow';
-  glow.scale.set(1.8, 1.8, 1);
+  glow.scale.set(2.2, 2.2, 1);
   return glow;
 }
 
