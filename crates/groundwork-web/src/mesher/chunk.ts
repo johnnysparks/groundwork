@@ -103,10 +103,12 @@ export class ChunkManager {
    * Re-mesh all dirty chunks. Returns the chunks that were updated.
    * Call after detectChanges().
    */
-  rebuildDirty(grid: Uint8Array): ChunkMesh[] {
+  rebuildDirty(grid: Uint8Array, maxChunks?: number): ChunkMesh[] {
     const updated: ChunkMesh[] = [];
+    const limit = maxChunks ?? Infinity;
     for (const chunk of this.chunks) {
       if (!chunk.dirty) continue;
+      if (updated.length >= limit) break;
       chunk.quads = meshChunk(grid, chunk.cx, chunk.cy, chunk.cz);
       chunk.dirty = false;
       updated.push(chunk);

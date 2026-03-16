@@ -190,9 +190,11 @@ export function createPostProcessing(
   renderer: THREE.WebGLRenderer,
   scene: THREE.Scene,
   camera: THREE.Camera,
+  opts?: { mobile?: boolean },
 ): PostProcessing {
   const width = renderer.domElement.clientWidth;
   const height = renderer.domElement.clientHeight;
+  const mobile = opts?.mobile ?? false;
 
   const composer = new EffectComposer(renderer);
 
@@ -210,18 +212,25 @@ export function createPostProcessing(
   // composer.addPass(ssaoPass);
 
   // 3. Bloom — warm glow on sunlit edges and golden foliage
+  // On mobile: half resolution for cheaper fill rate
+  const bloomRes = mobile
+    ? new THREE.Vector2(Math.floor(width / 2), Math.floor(height / 2))
+    : new THREE.Vector2(width, height);
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(width, height),
-    0.25,   // strength — visible but not overpowering
+    bloomRes,
+    mobile ? 0.20 : 0.25,   // slightly reduced on mobile
     0.9,    // radius — wide, soft glow
     0.80,   // threshold — catches sunlit canopy highlights
   );
   composer.addPass(bloomPass);
 
-  // 4. Tilt-shift DOF — diorama miniature effect
-  const tiltShiftPass = new ShaderPass(TiltShiftShader);
-  tiltShiftPass.uniforms.resolution.value.set(width, height);
-  composer.addPass(tiltShiftPass);
+  // 4. Tilt-shift DOF — diorama miniature effect (skip on mobile — expensive blur)
+  let tiltShiftPass: ShaderPass | null = null;
+  if (!mobile) {
+    tiltShiftPass = new ShaderPass(TiltShiftShader);
+    tiltShiftPass.uniforms.resolution.value.set(width, height);
+    composer.addPass(tiltShiftPass);
+  }
 
   // 5. Color grading — warm, cozy tones
   const colorGradePass = new ShaderPass(ColorGradeShader);
@@ -239,7 +248,9 @@ export function createPostProcessing(
     composer,
     resize(w: number, h: number) {
       composer.setSize(w, h);
-      tiltShiftPass.uniforms.resolution.value.set(w, h);
+      if (tiltShiftPass) {
+        tiltShiftPass.uniforms.resolution.value.set(w, h);
+      }
     },
   };
 }

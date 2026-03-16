@@ -196,8 +196,12 @@ async function main() {
 
   // --- Scene setup ---
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  // Mobile detection: touch-primary devices or narrow viewports
+  const isMobile = navigator.maxTouchPoints > 0 && window.innerWidth < 1024;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, preserveDrawingBuffer: true });
+  // Clamp DPR to 2 — 3x devices render 9x pixels for negligible visual gain
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -216,7 +220,7 @@ async function main() {
   const orbit = new OrbitCamera(window.innerWidth / window.innerHeight);
 
   // Lighting
-  const lights = createLighting(scene);
+  const lights = createLighting(scene, { mobile: isMobile });
 
   // Sky gradient dome (replaces flat background color)
   const skyUniforms = createSkyGradient(scene);
@@ -366,7 +370,7 @@ async function main() {
 
   // --- Post-processing ---
 
-  const postProcessing = createPostProcessing(renderer, scene, orbit.camera);
+  const postProcessing = createPostProcessing(renderer, scene, orbit.camera, { mobile: isMobile });
 
   // --- HUD & Controls ---
 
@@ -420,11 +424,12 @@ async function main() {
     }
   }
 
-  /** Re-mesh dirty chunks, re-fetching the grid view if using WASM */
+  /** Re-mesh dirty chunks, re-fetching the grid view if using WASM.
+   *  On mobile, budgets to 4 chunks per call to avoid frame stutter. */
   function remeshDirty(): void {
     const freshGrid = isInitialized() ? getGridView() : grid;
     chunkManager.detectChanges(freshGrid);
-    const rebuilt = chunkManager.rebuildDirty(freshGrid);
+    const rebuilt = chunkManager.rebuildDirty(freshGrid, isMobile ? 4 : undefined);
     for (const chunk of rebuilt) {
       // Remove old solid, soil, and root meshes for this chunk
       const solidName = `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`;

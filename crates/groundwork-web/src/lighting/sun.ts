@@ -15,7 +15,7 @@ export interface Lights {
 /**
  * Create the default "golden hour" lighting setup.
  */
-export function createLighting(scene: THREE.Scene): Lights {
+export function createLighting(scene: THREE.Scene, opts?: { mobile?: boolean }): Lights {
   // Warm directional sun — golden hour side-light (Y-up)
   const cx = GRID_X / 2;
   const cz = GRID_Y / 2;
@@ -34,8 +34,9 @@ export function createLighting(scene: THREE.Scene): Lights {
   sun.shadow.camera.bottom = -shadowSize;
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 200;
-  sun.shadow.mapSize.width = 2048;
-  sun.shadow.mapSize.height = 2048;
+  const shadowRes = opts?.mobile ? 1024 : 2048;
+  sun.shadow.mapSize.width = shadowRes;
+  sun.shadow.mapSize.height = shadowRes;
   sun.shadow.bias = -0.002;
   sun.shadow.normalBias = 0.5;
 
