@@ -38,7 +38,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient } from './audio/ambient';
-import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth } from './audio/sfx';
+import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -224,6 +224,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
             const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
             hud.addEvent(`A wild ${name} appeared — the garden is planting itself!`);
           }
+          playDiscovery();
         } else {
           const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
           hud.addEvent(`${name} is now growing in your garden (+100 score)`);
@@ -249,6 +250,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
           'Squirrel at work — it buries acorns that become oak trees',
         ];
         hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+        playDiscovery();
         _squirrelCacheNotified = true;
         _eventCooldown = 40;
         break;
@@ -259,6 +261,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
           'Bird at work — it picks up seeds and drops them in new spots',
         ];
         hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+        playDiscovery();
         _birdDropNotified = true;
         _eventCooldown = 40;
         break;

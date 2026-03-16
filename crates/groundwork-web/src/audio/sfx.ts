@@ -215,6 +215,32 @@ export function playGrowth(): void {
   osc2.stop(t + 0.3);
 }
 
+/** Play a gentle "wonder" chime for ecological discoveries.
+ *  Three ascending notes (major triad) — quieter and more delicate
+ *  than the milestone chime. Used for wild plant appearances,
+ *  first-time ecological interactions, and surprise events. */
+export function playDiscovery(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Ascending major triad: C5 → E5 → G5, each slightly delayed
+  const notes = [523, 659, 784];
+  for (let i = 0; i < notes.length; i++) {
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = notes[i];
+    const gain = c.createGain();
+    const start = t + i * 0.12;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.06, start + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.5);
+    osc.connect(gain).connect(c.destination);
+    osc.start(start);
+    osc.stop(start + 0.5);
+  }
+}
+
 /** Play a fauna arrival sound based on type */
 export function playFaunaArrival(faunaType: number): void {
   // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle
