@@ -3,7 +3,7 @@
 Trees (PlantType::Tree only) use space colonization for organic branching. Other plant types use static templates at all stages.
 
 ## Algorithm
-1. **Attraction points** scattered in the crown envelope (species-specific shape: Round, Narrow, Wide, Conical). The crown starts well below the trunk top (30-40% of trunk height) so the canopy wraps the upper trunk rather than sitting on top like a cap.
+1. **Attraction points** scattered in the crown envelope (species-specific shape: Round, Narrow, Wide, Conical). The crown starts well below the trunk top (15-25% of trunk height) so the canopy wraps nearly the full trunk rather than sitting on top like a cap.
 2. **Branch stubs** are placed at multiple heights along the trunk during skeleton init, giving space colonization starting points throughout the crown zone — not just the trunk tip.
 3. **Branch tips** grow toward nearest attraction points
 4. **Phototropism** biases growth toward brightest neighbors (species.phototropism: 0.0-0.6)
@@ -31,8 +31,10 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 | Willow | 0.2 | Weak (follows water instead) |
 
 ## Leaf Placement
-- Dense spherical leaf shells around alive branch tips
-- Radius is **species-dependent** via `crown_radius`: YoungTree = `(crown_r / 3).clamp(3, 5)`, Mature/OldGrowth = `(crown_r / 3).clamp(4, 6)`, Seedling = 1
+- Dense spherical leaf shells around **all branch nodes** (not just tips)
+- **Tips** get large spheres: YoungTree = `(crown_r / 3).clamp(4, 8)`, Mature/OldGrowth = `(crown_r / 3).clamp(5, 10)`, Seedling = 1
+- **Interior nodes** above crown_start get smaller spheres (2/3 of tip radius, min 2) — fills gaps around the trunk so canopy isn't just green caps at branch ends
+- Crown start for interior leaves: YoungTree at 25% trunk height, Mature at 15%
 - Oak/willow get lush crowns, birch stays slim — each species has a distinct canopy size
 - Leaf voxels store species_id (nutrient_level) and health (water_level)
 

@@ -69,9 +69,9 @@ Stage transitions use **gradual voxel placement** instead of snapping. When a tr
 1. **Roots** are placed immediately (underground, no visual snap needed)
 2. **Trunk/branch voxels** are queued in `pending_voxels`, sorted bottom→up
 3. **Leaf voxels** are queued after trunk, sorted top→down
-4. The `tree_grow_visual` system drains the queue at an adaptive rate: `(queue_len / 4).clamp(3, 40)` voxels per tick
+4. The `tree_grow_visual` system drains the queue at an adaptive rate: `(queue_len / 4).clamp(3, 200)` voxels per tick
 
-This means trunk grows upward from the ground, then leaves fill in from the crown downward. Small trees (≤12 pending voxels) place 3 voxels/tick. Large trees with 1000+ queued voxels place up to 40/tick to keep canopy growth snappy.
+This means trunk grows upward from the ground, then leaves fill in from the crown downward. Small trees (≤12 pending voxels) place 3 voxels/tick. Dense canopies with thousands of queued voxels drain up to 200/tick so they fully appear within the 100-tick pre-tick window at world creation.
 
 **Incremental canopy:** Beyond stage transitions, `branch_growth` also pushes leaf spheres to `pending_voxels` whenever a new branch tip forms. This means canopies fill continuously between stages, not just on transition.
 
