@@ -127,7 +127,6 @@ fn scenario_willow_loves_water() {
 // Run with: cargo test -p groundwork-player -- --ignored
 
 #[test]
-#[ignore]
 fn scenario_nitrogen_handshake() {
     run_and_assert(gameplay::nitrogen_handshake);
 }
@@ -135,6 +134,21 @@ fn scenario_nitrogen_handshake() {
 #[test]
 fn scenario_pioneer_succession() {
     run_and_assert(gameplay::pioneer_succession);
+}
+
+#[test]
+fn scenario_fauna_near_flowers() {
+    run_and_assert(gameplay::fauna_near_flowers);
+}
+
+#[test]
+fn scenario_crowding_thins_forest() {
+    run_and_assert(gameplay::crowding_thins_forest);
+}
+
+#[test]
+fn scenario_diversity_beats_monoculture() {
+    run_and_assert(gameplay::diversity_beats_monoculture);
 }
 
 // ---------------------------------------------------------------------------
