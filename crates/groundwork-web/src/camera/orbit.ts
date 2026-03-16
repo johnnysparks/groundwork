@@ -59,6 +59,12 @@ export class OrbitCamera {
   /** Frustum half-size (for resize) — scales with grid dimensions */
   private frustumSize = 80;
 
+  /** Idle auto-orbit: slow rotation after no interaction for 45s */
+  private idleTimer = 0;
+  private idleOrbitActive = false;
+  private static readonly IDLE_THRESHOLD = 45; // seconds
+  private static readonly IDLE_ORBIT_SPEED = 0.04; // radians per second — very slow
+
   constructor(aspect: number, opts?: { mobile?: boolean }) {
     // Compute defaults from live grid dimensions (may have been overridden by demo grid)
     const cx = GRID_X / 2;
@@ -95,6 +101,13 @@ export class OrbitCamera {
     // --- Keyboard-driven panning ---
     this.applyKeyboardPan(dt);
 
+    // --- Idle auto-orbit ---
+    this.idleTimer += dt;
+    if (this.idleTimer >= OrbitCamera.IDLE_THRESHOLD) {
+      this.idleOrbitActive = true;
+      this.targetTheta += OrbitCamera.IDLE_ORBIT_SPEED * dt;
+    }
+
     // --- Damped interpolation ---
     this.theta += (this.targetTheta - this.theta) * this.damping;
     this.phi += (this.targetPhi - this.phi) * this.damping;
@@ -112,22 +125,37 @@ export class OrbitCamera {
 
   /** Rotate camera by delta angles (from mouse drag) */
   rotate(dTheta: number, dPhi: number): void {
+    this.resetIdle();
     this.targetTheta += dTheta;
     this.targetPhi = Math.max(MIN_PHI, Math.min(MAX_PHI, this.targetPhi + dPhi));
   }
 
   /** Zoom in/out by factor */
   zoom(factor: number): void {
+    this.resetIdle();
     this.targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.targetZoom * factor));
+  }
+
+  /** Reset idle timer — call on any user interaction */
+  resetIdle(): void {
+    this.idleTimer = 0;
+    this.idleOrbitActive = false;
+  }
+
+  /** Whether the camera is in idle auto-orbit mode */
+  get isIdleOrbiting(): boolean {
+    return this.idleOrbitActive;
   }
 
   /** Set the look-at target directly */
   setCenter(x: number, y: number, z: number): void {
+    this.resetIdle();
     this.targetCenter.set(x, y, z);
   }
 
   /** Reset camera to default diorama view */
   reset(): void {
+    this.resetIdle();
     this.targetTheta = DEFAULT_THETA;
     this.targetPhi = DEFAULT_PHI;
     this.targetZoom = DEFAULT_ZOOM;
@@ -146,6 +174,7 @@ export class OrbitCamera {
 
   /** Notify that a key was pressed */
   keyDown(key: string): void {
+    this.resetIdle();
     this.keys.add(key.toLowerCase());
   }
 

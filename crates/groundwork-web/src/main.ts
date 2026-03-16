@@ -809,6 +809,7 @@ async function main() {
     isDragging = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
+    orbit.resetIdle();
   });
 
   renderer.domElement.addEventListener('mousemove', (e) => {
