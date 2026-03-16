@@ -264,8 +264,8 @@ impl GnomeData {
 // --- Systems ---
 
 /// Pick the next task from the queue and set target. Transitions Idle → Walking.
-/// When no tasks are queued, the gnome wanders to nearby spots after a cooldown.
-pub fn gnome_plan(mut gd: ResMut<GnomeData>) {
+/// When no tasks are queued, the gnome wanders to nearby plants/water after a cooldown.
+pub fn gnome_plan(mut gd: ResMut<GnomeData>, grid: Res<VoxelGrid>) {
     // Interrupt idle behaviors if tasks are queued
     if !gd.tasks.is_empty()
         && matches!(
@@ -302,10 +302,10 @@ pub fn gnome_plan(mut gd: ResMut<GnomeData>) {
         return;
     }
 
-    // Pick a wander target and go
+    // Pick a wander target — prefer interesting spots (plants, water, trees)
     let seed = gd.gnome.idle_seed;
     gd.gnome.idle_seed = gd.gnome.idle_seed.wrapping_add(1);
-    let (wx, wy) = pick_wander_target(gd.gnome.x, gd.gnome.y, seed);
+    let (wx, wy) = find_interesting_target(gd.gnome.x, gd.gnome.y, seed, &grid);
     gd.gnome.target_x = wx;
     gd.gnome.target_y = wy;
     gd.gnome.target_z = surface_z(wx as usize, wy as usize);
@@ -551,14 +551,54 @@ fn surface_z(x: usize, y: usize) -> f32 {
     (z + 1) as f32
 }
 
-/// Pick a pseudo-random wander target near the gnome's current position.
-fn pick_wander_target(cx: f32, cy: f32, seed: u16) -> (f32, f32) {
-    let hash = (seed as u32).wrapping_mul(2654435761);
-    let angle = (hash & 0xFF) as f32 / 255.0 * std::f32::consts::TAU;
-    let dist = ((hash >> 8) & 0xFF) as f32 / 255.0 * WANDER_RADIUS + 3.0;
-    let wx = (cx + angle.cos() * dist).clamp(2.0, (GRID_X - 2) as f32);
-    let wy = (cy + angle.sin() * dist).clamp(2.0, (GRID_Y - 2) as f32);
-    (wx, wy)
+/// Sample nearby spots and prefer those with interesting voxels (plants, water, trees).
+/// Falls back to a random wander target if nothing interesting is nearby.
+fn find_interesting_target(gx: f32, gy: f32, seed: u16, grid: &VoxelGrid) -> (f32, f32) {
+    let mut candidates = [(0.0f32, 0.0f32); 8];
+    let mut count = 0usize;
+
+    for i in 0..24u16 {
+        if count >= 8 {
+            break;
+        }
+        let hash = (seed.wrapping_add(i) as u32).wrapping_mul(2654435761);
+        let angle = (hash & 0xFF) as f32 / 255.0 * std::f32::consts::TAU;
+        let dist = ((hash >> 8) & 0xFF) as f32 / 255.0 * WANDER_RADIUS + 3.0;
+        let wx = (gx + angle.cos() * dist).clamp(2.0, (GRID_X - 2) as f32);
+        let wy = (gy + angle.sin() * dist).clamp(2.0, (GRID_Y - 2) as f32);
+        let x = wx as usize;
+        let y = wy as usize;
+        let z = VoxelGrid::surface_height(x, y);
+        let mut interesting = false;
+        for dz in 0..=3 {
+            if let Some(v) = grid.get(x, y, z + dz) {
+                if matches!(
+                    v.material,
+                    Material::Leaf | Material::Trunk | Material::Seed | Material::Water
+                ) {
+                    interesting = true;
+                    break;
+                }
+            }
+        }
+        if interesting {
+            candidates[count] = (wx, wy);
+            count += 1;
+        }
+    }
+
+    if count == 0 {
+        // Fallback: random wander
+        let hash = (seed as u32).wrapping_mul(2654435761);
+        let angle = (hash & 0xFF) as f32 / 255.0 * std::f32::consts::TAU;
+        let dist = ((hash >> 8) & 0xFF) as f32 / 255.0 * WANDER_RADIUS + 3.0;
+        let wx = (gx + angle.cos() * dist).clamp(2.0, (GRID_X - 2) as f32);
+        let wy = (gy + angle.sin() * dist).clamp(2.0, (GRID_Y - 2) as f32);
+        return (wx, wy);
+    }
+
+    let idx = (seed as usize).wrapping_mul(7) % count;
+    candidates[idx]
 }
 
 /// Apply a gardening tool at the task position, same logic as wasm_bridge::place_tool.
