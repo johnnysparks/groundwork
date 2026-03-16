@@ -47,7 +47,7 @@ const PRESETS: LightPreset[] = [
     skyTop: new THREE.Color(0x5566bb),
     skyBottom: new THREE.Color(0xdd8866),
     fogColor: new THREE.Color(0xddaa88),
-    fogDensity: 0.001,
+    fogDensity: 0.003,
   },
   {
     // Noon — bright, clean, slightly cool white light
@@ -64,7 +64,7 @@ const PRESETS: LightPreset[] = [
     skyTop: new THREE.Color(0x3388dd),
     skyBottom: new THREE.Color(0x88aa77),
     fogColor: new THREE.Color(0xccddcc),
-    fogDensity: 0.0006,
+    fogDensity: 0.003,
   },
   {
     // Golden hour — deep warm amber, long shadows
@@ -81,7 +81,7 @@ const PRESETS: LightPreset[] = [
     skyTop: new THREE.Color(0x5588bb),
     skyBottom: new THREE.Color(0xcc8844),
     fogColor: new THREE.Color(0xddaa66),
-    fogDensity: 0.001,
+    fogDensity: 0.003,
   },
   {
     // Blue hour — cool blue-purple twilight, dramatic contrast
@@ -98,7 +98,7 @@ const PRESETS: LightPreset[] = [
     skyTop: new THREE.Color(0x111133),
     skyBottom: new THREE.Color(0x332244),
     fogColor: new THREE.Color(0x334466),
-    fogDensity: 0.0025,
+    fogDensity: 0.005,
   },
 ];
 

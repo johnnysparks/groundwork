@@ -196,9 +196,9 @@ async function main() {
   initScreenshot(renderer.domElement);
 
   const scene = new THREE.Scene();
-  // Very light fog for subtle depth. The sky dome paints the full landscape
-  // backdrop, so fog only needs to soften the 3D tree ring slightly.
-  scene.fog = new THREE.FogExp2(0xc8ddb8, 0.001);
+  // Atmospheric fog: blends the peripheral forest ring into the sky gradient.
+  // Color and density are updated each frame by the DayCycle to match lighting.
+  scene.fog = new THREE.FogExp2(0xccddcc, 0.0025);
 
   // Camera
   const orbit = new OrbitCamera(window.innerWidth / window.innerHeight);
