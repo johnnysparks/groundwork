@@ -24,15 +24,15 @@
 - **Overgrowth Carrying Capacity** — Dense root zones (4+ adjacent roots) suppress soil bacteria. Self-regulating ecosystem density.
 - **OldGrowth Seed Rain** — OldGrowth trees disperse seeds 2× more frequently. Visible autonomous garden spread.
 - **Flower Meadow Effect** — Flower clusters double pollinator spawn probability and support more pollinators (5 vs 3).
+- **Mycorrhizal Network** — Same-species trees with nearby roots share health. Healthier trees support struggling neighbors.
+- **Wind Seed Drift** — Seeds high in air drift with rotating wind direction. Creates directional spread patterns.
 
 ---
 
 ## Next Up — P1
 
 ### SIM-14: Root War Visualization Data
-Export per-tree root count and water intake via WASM so the renderer can show:
-- Root territory boundaries in x-ray mode
-- Which tree is "winning" the root competition
+Export per-tree root count and water intake via WASM for x-ray mode.
 
 ### SIM-15: Seasonal Growth Variation
 Tie growth rates to the day cycle phase — needs sim-side time-of-day resource.
@@ -41,7 +41,7 @@ Tie growth rates to the day cycle phase — needs sim-side time-of-day resource.
 
 ## P2 — Future
 
-- Wind-based seed dispersal (seeds drift laterally)
-- Mycorrhizal networks (trees sharing nutrients underground)
 - Fire mechanics (dry gardens can burn, pioneer succession follows)
 - Disease spread (fungal infections between crowded same-species)
+- Symbiotic fauna pairs (squirrel+oak acorn caching)
+- Weather events (rain bursts, drought periods)
