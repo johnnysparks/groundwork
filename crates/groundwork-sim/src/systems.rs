@@ -339,8 +339,11 @@ pub fn seed_growth(
             }
 
             if !blocked_by_compaction {
+                // Base growth rate: 12/tick → germination in ~17 ticks (200/12).
+                // Previously 5/tick → 40 ticks. The feedback says 4 seconds of
+                // staring at a seed with no feedback is the #1 retention killer.
                 let soil_bonus = (best_nutrient as u16 * 5 / 255) as u8;
-                let mut growth_rate = 5 + soil_bonus;
+                let mut growth_rate = 12 + soil_bonus;
 
                 // --- Allelopathy: acidic soil slows non-tolerant seed growth ---
                 // Pine roots acidify soil (pH < 40). Most species grow at half speed.
@@ -2795,7 +2798,7 @@ mod tests {
     fn seed_growth_stages_visible() {
         // Verify that a seed's nutrient_level passes through the 100 threshold
         // (used by the display layer to show 's' vs 'S') on its way to 200.
-        // Growth rate is soil-dependent (3-8/tick). Using inland position for loam soil (~5/tick).
+        // Growth rate is ~12/tick base. Using inland position for loam soil.
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
 
@@ -2809,8 +2812,8 @@ mod tests {
             }
         }
 
-        // After 10 ticks with soil-aware growth (3-8/tick): at most 80, should be < 100.
-        for _ in 0..10 {
+        // After 5 ticks: seed should be partway through growth (~60 nutrient)
+        for _ in 0..5 {
             crate::tick(&mut world, &mut schedule);
         }
 
@@ -2820,32 +2823,32 @@ mod tests {
             assert_eq!(
                 cell.material,
                 Material::Seed,
-                "Should still be a seed at 10 ticks"
+                "Should still be a seed at 5 ticks"
             );
             assert!(
                 cell.nutrient_level < 100,
-                "At 10 ticks, nutrient_level ({}) should be < 100 (small seed stage)",
+                "At 5 ticks, nutrient_level ({}) should be < 100 (small seed stage)",
                 cell.nutrient_level
             );
         }
 
-        // After 25 more ticks (35 total): growth should cross 100 threshold
-        // Even at minimum rate 3/tick: 34 growing ticks * 3 = 102 >= 100
-        for _ in 0..25 {
+        // After 8 more ticks (13 total): growth should cross 100 threshold
+        // At 12/tick: 13 * 12 = 156 >= 100
+        for _ in 0..8 {
             crate::tick(&mut world, &mut schedule);
         }
 
         {
             let grid = world.resource::<VoxelGrid>();
             let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
-            assert_eq!(
-                cell.material,
-                Material::Seed,
-                "Should still be a seed at 35 ticks"
-            );
+            // With growth rate 12/tick, at 13 ticks: ~156 nutrient.
+            // Seed either has high nutrient_level or already germinated to trunk.
+            let progressed = cell.material == Material::Trunk
+                || (cell.material == Material::Seed && cell.nutrient_level >= 100);
             assert!(
-                cell.nutrient_level >= 100,
-                "At 35 ticks, nutrient_level ({}) should be >= 100 (growing seed stage 'S')",
+                progressed,
+                "At 13 ticks, seed should have progressed: material={:?}, nutrient={}",
+                cell.material,
                 cell.nutrient_level
             );
         }

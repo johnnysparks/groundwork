@@ -45,14 +45,19 @@ impl GrowthStage {
         }
         match self {
             GrowthStage::Seedling => {
-                if accumulated_water >= 200.0 && accumulated_light >= 200.0 {
+                // Fast first transition: seedling → sapling in ~8 ticks after germination.
+                // The sapling template has visible leaves — this is the "first sprout" moment.
+                // Previously 200 → took ~20 ticks. At 80, takes ~8 ticks.
+                if accumulated_water >= 80.0 && accumulated_light >= 80.0 {
                     Some(GrowthStage::Sapling)
                 } else {
                     None
                 }
             }
             GrowthStage::Sapling => {
-                if accumulated_water >= 800.0 && accumulated_light >= 800.0 {
+                // Sapling → YoungTree: first significant canopy. Target: ~40 ticks after sapling.
+                // Previously 800. At 500, takes ~35-40 ticks with typical resource rates.
+                if accumulated_water >= 500.0 && accumulated_light >= 500.0 {
                     Some(GrowthStage::YoungTree)
                 } else {
                     None
@@ -1045,19 +1050,19 @@ mod tests {
 
     #[test]
     fn stage_transitions_in_order() {
-        // Seedling → Sapling
+        // Seedling → Sapling (threshold: 80)
         assert_eq!(
-            GrowthStage::Seedling.next_stage(10, 200.0, 200.0, 1.0),
+            GrowthStage::Seedling.next_stage(10, 80.0, 80.0, 1.0),
             Some(GrowthStage::Sapling)
         );
         // Not enough resources
         assert_eq!(
-            GrowthStage::Seedling.next_stage(10, 100.0, 200.0, 1.0),
+            GrowthStage::Seedling.next_stage(10, 50.0, 80.0, 1.0),
             None
         );
-        // Sapling → YoungTree
+        // Sapling → YoungTree (threshold: 500)
         assert_eq!(
-            GrowthStage::Sapling.next_stage(100, 1500.0, 1500.0, 1.0),
+            GrowthStage::Sapling.next_stage(100, 500.0, 500.0, 1.0),
             Some(GrowthStage::YoungTree)
         );
         // YoungTree → Mature
