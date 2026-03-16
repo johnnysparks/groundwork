@@ -112,9 +112,9 @@ const FAUNA_FRAG = /* glsl */ `
       alpha = 1.0 - smoothstep(0.25, 0.5, beetleDist * 2.0);
     }
 
-    // Outer glow halo — makes fauna visible from any distance
+    // Warm soft halo — keeps fauna visible without neon glow
     float halo = 1.0 - smoothstep(0.0, 1.0, dist);
-    float haloAlpha = halo * 0.35;
+    float haloAlpha = halo * 0.20;
 
     // Combine body + halo
     float finalAlpha = max(alpha, haloAlpha);
@@ -125,24 +125,28 @@ const FAUNA_FRAG = /* glsl */ `
       finalAlpha *= 0.5;
     }
 
-    // Brighten body, softer halo
+    // Body is opaque with warm tint, halo is softer
     float bodyMask = step(0.1, alpha);
-    float brightness = mix(0.8, 1.5, bodyMask);
+    float brightness = mix(0.7, 1.2, bodyMask);
 
-    // Acting state: extra glow
-    if (vState > 1.5 && vState < 2.5) brightness *= 1.3;
+    // Acting state: warm glow (pollinating, working)
+    if (vState > 1.5 && vState < 2.5) brightness *= 1.15;
 
-    gl_FragColor = vec4(vColor * brightness, finalAlpha);
+    // Warm tint on halo to match golden hour palette
+    vec3 warmHalo = vColor * 0.8 + vec3(0.15, 0.10, 0.03);
+    vec3 finalColor = mix(warmHalo, vColor, bodyMask) * brightness;
+
+    gl_FragColor = vec4(finalColor, finalAlpha);
   }
 `;
 
-/** Fauna type colors — bright for additive glow visibility */
+/** Fauna type colors — warm earthy tones matching the garden palette */
 const FAUNA_COLORS: Record<number, THREE.Color> = {
-  [FaunaType.Bee]: new THREE.Color(1.0, 0.85, 0.25),         // bright golden
-  [FaunaType.Butterfly]: new THREE.Color(0.90, 0.50, 0.70),   // bright pink
-  [FaunaType.Bird]: new THREE.Color(0.40, 0.35, 0.50),        // soft purple-gray
-  [FaunaType.Worm]: new THREE.Color(0.80, 0.60, 0.45),        // warm tan
-  [FaunaType.Beetle]: new THREE.Color(0.50, 0.35, 0.20),      // amber brown
+  [FaunaType.Bee]: new THREE.Color(0.90, 0.75, 0.20),         // warm honey gold
+  [FaunaType.Butterfly]: new THREE.Color(0.85, 0.60, 0.30),   // warm amber-orange
+  [FaunaType.Bird]: new THREE.Color(0.35, 0.30, 0.25),        // soft brown-gray
+  [FaunaType.Worm]: new THREE.Color(0.70, 0.50, 0.38),        // earthy tan
+  [FaunaType.Beetle]: new THREE.Color(0.45, 0.30, 0.18),      // dark amber
 };
 
 /** Fauna sprite sizes — deliberately oversized for diorama readability.
@@ -181,7 +185,6 @@ export class FaunaRenderer {
       },
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
     });
 
