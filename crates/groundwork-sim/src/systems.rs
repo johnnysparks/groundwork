@@ -1315,7 +1315,9 @@ pub fn pioneer_succession(
     mut seed_map: ResMut<SeedSpeciesMap>,
     tick: Res<Tick>,
 ) {
-    if tick.0 % 50 != 0 { return; }
+    if !tick.0.is_multiple_of(50) {
+        return;
+    }
 
     let t = tick.0;
     // Sample ~20 random surface positions
@@ -1326,13 +1328,19 @@ pub fn pioneer_succession(
         let sz = GROUND_LEVEL + 1; // just above surface
 
         if let Some(cell) = grid.get(sx, sy, sz) {
-            if cell.material != Material::Air { continue; }
-        } else { continue; }
+            if cell.material != Material::Air {
+                continue;
+            }
+        } else {
+            continue;
+        }
 
         // Check if the soil below is moist enough
         let soil_below = grid.get(sx, sy, GROUND_LEVEL);
         let water_level = soil_below.map_or(0, |v| v.water_level);
-        if water_level < 20 { continue; } // need some moisture
+        if water_level < 20 {
+            continue;
+        } // need some moisture
 
         // Count nearby groundcover types to determine succession stage
         let mut has_moss = false;
@@ -1344,8 +1352,12 @@ pub fn pioneer_succession(
                     if let Some(v) = grid.get(dx, dy, dz) {
                         if v.material == Material::Leaf {
                             let species_id = v.nutrient_level;
-                            if species_id == 9 { has_moss = true; }
-                            if species_id == 10 { has_grass = true; }
+                            if species_id == 9 {
+                                has_moss = true;
+                            }
+                            if species_id == 10 {
+                                has_grass = true;
+                            }
                         }
                     }
                 }
@@ -1356,15 +1368,27 @@ pub fn pioneer_succession(
         let species_id = if has_grass {
             // Grass present → wildflower can appear (low probability)
             let h2 = tree_hash(t + i, 6666);
-            if h2 % 8 == 0 { Some(7_usize) } else { None } // wildflower
+            if h2.is_multiple_of(8) {
+                Some(7_usize)
+            } else {
+                None
+            } // wildflower
         } else if has_moss {
             // Moss present → grass can appear
             let h2 = tree_hash(t + i, 7777);
-            if h2 % 5 == 0 { Some(10) } else { None } // grass
+            if h2.is_multiple_of(5) {
+                Some(10)
+            } else {
+                None
+            } // grass
         } else {
             // Bare moist soil → moss appears (the pioneer)
             let h2 = tree_hash(t + i, 8888);
-            if h2 % 4 == 0 { Some(9) } else { None } // moss
+            if h2.is_multiple_of(4) {
+                Some(9)
+            } else {
+                None
+            } // moss
         };
 
         if let Some(sid) = species_id {
