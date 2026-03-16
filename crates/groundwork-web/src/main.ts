@@ -34,6 +34,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { initAmbientAudio } from './audio/ambient';
+import { playPlant, playWater, playDig } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -530,8 +531,12 @@ async function main() {
         }
       }
 
-      // Visual feedback: particle burst + event
+      // Visual + audio feedback
       particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      if (tool === ToolCode.Seed) playPlant();
+      else if (tool === ToolCode.Water) playWater();
+      else if (tool === ToolCode.Shovel) playDig();
+      else playPlant(); // soil/stone use plant sound
       const toolNames: Record<number, string> = {
         [ToolCode.Seed]: 'planting', [ToolCode.Water]: 'watering',
         [ToolCode.Shovel]: 'digging', [ToolCode.Soil]: 'soil', [ToolCode.Stone]: 'stone',

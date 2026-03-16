@@ -7,6 +7,7 @@
 
 import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized } from '../bridge';
 import { SCENES, getSceneId, switchScene } from '../mesher/mockGrid';
+import { playMilestone } from '../audio/sfx';
 
 /** Re-export SPECIES so other UI modules can import from hud */
 export { BRIDGE_SPECIES as SPECIES };
@@ -305,6 +306,7 @@ export class Hud {
     for (const m of milestones) {
       if (prevScore < m && score >= m) {
         this.showMilestone(m);
+        playMilestone();
       }
     }
     this._lastScore = score;
