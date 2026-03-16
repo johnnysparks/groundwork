@@ -151,6 +151,11 @@ fn scenario_diversity_beats_monoculture() {
     run_and_assert(gameplay::diversity_beats_monoculture);
 }
 
+#[test]
+fn scenario_player_journey_pacing() {
+    run_and_assert(gameplay::player_journey_pacing);
+}
+
 // ---------------------------------------------------------------------------
 
 /// Verify that traces are serializable (important for artifact storage).

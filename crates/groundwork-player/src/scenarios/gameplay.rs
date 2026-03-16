@@ -1244,3 +1244,168 @@ pub fn diversity_beats_monoculture() -> Scenario {
         })
         .build()
 }
+
+// ---------------------------------------------------------------------------
+// 17. Full Player Journey — pacing and learning arc test
+// ---------------------------------------------------------------------------
+
+/// Simulate the full first-session learning arc:
+///   Minute 0: discover the garden (look around, find spring)
+///   Minute 1: first planting (water + seed → sprout)
+///   Minute 3: diversify (3 species, start seeing variety)
+///   Minute 5: ecosystem forming (trees, flowers, groundcover coexisting)
+///   Minute 10: garden has agency (idle time produces visible change)
+///
+/// Measures: does growth feel responsive? Is there enough change per checkpoint
+/// to keep the player engaged? Does idle time produce surprise?
+pub fn player_journey_pacing() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    Scenario::new("player_journey_pacing")
+        .description(
+            "Full first-session arc: plant → grow → diversify → observe. \
+             Tests whether pacing delivers visible change at each milestone.",
+        )
+        // --- Phase 1: Discovery (tick 0-10) ---
+        .checkpoint("discovery")
+        .status()
+        .orbit(45.0, 60.0)
+        .orbit(135.0, 60.0)
+        // Find the spring
+        .probe(cx, cy, GROUND_LEVEL + 1) // spring should have water nearby
+        .tick(10)
+        // --- Phase 2: First planting (tick 10-60) ---
+        .checkpoint("first_planting")
+        .place("water", cx - 3, cy, GROUND_LEVEL + 2)
+        .place("water", cx - 3, cy, GROUND_LEVEL + 3)
+        .plant("oak", cx - 3, cy, GROUND_LEVEL + 4)
+        .tick(50)
+        .status()
+        .probe(cx - 3, cy, GROUND_LEVEL + 1) // check if seed grew
+        // --- Phase 3: Diversify (tick 60-160) ---
+        .checkpoint("diversify")
+        .plant("wildflower", cx + 3, cy - 2, GROUND_LEVEL + 4)
+        .plant("fern", cx - 1, cy + 3, GROUND_LEVEL + 4)
+        .plant("moss", cx + 2, cy + 2, GROUND_LEVEL + 4)
+        .plant("clover", cx - 2, cy - 3, GROUND_LEVEL + 4)
+        .tick(100)
+        .status()
+        // --- Phase 4: Ecosystem forming (tick 160-360) ---
+        .checkpoint("ecosystem_forming")
+        .plant("birch", cx + 5, cy + 1, GROUND_LEVEL + 4)
+        .plant("berry-bush", cx - 4, cy - 2, GROUND_LEVEL + 4)
+        .tick(200)
+        .status()
+        .probe(cx - 3, cy, GROUND_LEVEL + 3) // oak should be growing
+        .probe(cx - 3, cy, GROUND_LEVEL - 2) // check for roots underground
+        // --- Phase 5: Idle observation (tick 360-560) ---
+        .checkpoint("idle_observation")
+        // Don't plant or water — just watch
+        .tick(200)
+        .status()
+        // --- Evaluators ---
+        .eval(NoCrash)
+        // Phase 2: first planting should produce visible growth
+        .eval(MaterialMinimum::new("plant", 3))
+        // Phase 4: ecosystem should have diversity
+        .eval(Custom {
+            name: "pacing_growth_across_journey".into(),
+            f: Box::new(|trace| {
+                // Sample plant counts at intervals through the trace
+                let steps = &trace.steps;
+                let n = steps.len();
+                if n < 4 {
+                    return Verdict {
+                        evaluator: "pacing_growth_across_journey".into(),
+                        passed: false,
+                        reason: "too few steps to measure pacing".into(),
+                        score: Some(0.0),
+                    };
+                }
+
+                // Sample at 25%, 50%, 75%, 100% through the trace
+                let quarters: Vec<(usize, u64)> = [n / 4, n / 2, 3 * n / 4, n - 1]
+                    .iter()
+                    .map(|&i| (i, steps[i].oracle.material_counts.total_plant()))
+                    .collect();
+
+                // Check monotonic increase
+                let increasing = quarters.windows(2).all(|w| w[1].1 >= w[0].1);
+                let final_plant = quarters.last().map(|(_, c)| *c).unwrap_or(0);
+                let passed = increasing && final_plant >= 10;
+
+                let detail: Vec<String> = quarters
+                    .iter()
+                    .map(|(i, c)| format!("step {}: {} plants", i, c))
+                    .collect();
+
+                Verdict {
+                    evaluator: "pacing_growth_across_journey".into(),
+                    passed,
+                    reason: format!(
+                        "[{}]. {}",
+                        detail.join(", "),
+                        if increasing {
+                            "Growth increases throughout journey."
+                        } else {
+                            "WARNING: growth stalled or regressed!"
+                        }
+                    ),
+                    score: Some(if passed {
+                        1.0
+                    } else if increasing {
+                        0.5
+                    } else {
+                        0.0
+                    }),
+                }
+            }),
+        })
+        // Idle time should produce change
+        .eval(Custom {
+            name: "idle_produces_change".into(),
+            f: Box::new(|trace| {
+                let steps = &trace.steps;
+                let n = steps.len();
+                if n < 2 {
+                    return Verdict {
+                        evaluator: "idle_produces_change".into(),
+                        passed: false,
+                        reason: "too few steps".into(),
+                        score: Some(0.0),
+                    };
+                }
+                // Compare 75% mark (before idle) to final (after idle)
+                let before_idle = steps[3 * n / 4].oracle.material_counts.total_plant();
+                let after_idle = steps[n - 1].oracle.material_counts.total_plant();
+                let changed = after_idle != before_idle;
+                let grew = after_idle > before_idle;
+
+                Verdict {
+                    evaluator: "idle_produces_change".into(),
+                    passed: changed,
+                    reason: format!(
+                        "before idle: {} plants → after: {} plants. {}",
+                        before_idle,
+                        after_idle,
+                        if grew {
+                            "Garden grew during idle — alive!"
+                        } else if changed {
+                            "Garden changed during idle."
+                        } else {
+                            "PROBLEM: no change during 200 idle ticks."
+                        }
+                    ),
+                    score: Some(if grew {
+                        1.0
+                    } else if changed {
+                        0.5
+                    } else {
+                        0.0
+                    }),
+                }
+            }),
+        })
+        .build()
+}
