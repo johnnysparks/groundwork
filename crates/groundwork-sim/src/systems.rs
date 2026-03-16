@@ -1931,17 +1931,30 @@ pub fn soil_evolution(
                     let mut has_pine_root = false;
                     macro_rules! check_pine {
                         ($nidx:expr) => {
-                            if snapshot[$nidx].0 == root_u8 && snapshot[$nidx].2 == pine_species_id {
+                            if snapshot[$nidx].0 == root_u8 && snapshot[$nidx].2 == pine_species_id
+                            {
                                 has_pine_root = true;
                             }
                         };
                     }
-                    if x > 0 { check_pine!(idx - 1); }
-                    if x + 1 < GRID_X { check_pine!(idx + 1); }
-                    if y > 0 { check_pine!(idx - GRID_X); }
-                    if y + 1 < GRID_Y { check_pine!(idx + GRID_X); }
-                    if z > 0 { check_pine!(idx - z_stride); }
-                    if z + 1 < GRID_Z { check_pine!(idx + z_stride); }
+                    if x > 0 {
+                        check_pine!(idx - 1);
+                    }
+                    if x + 1 < GRID_X {
+                        check_pine!(idx + 1);
+                    }
+                    if y > 0 {
+                        check_pine!(idx - GRID_X);
+                    }
+                    if y + 1 < GRID_Y {
+                        check_pine!(idx + GRID_X);
+                    }
+                    if z > 0 {
+                        check_pine!(idx - z_stride);
+                    }
+                    if z + 1 < GRID_Z {
+                        check_pine!(idx + z_stride);
+                    }
                     if has_pine_root && comp.ph > 0 {
                         // Pine roots aggressively lower pH (5× faster than organic decay)
                         comp.ph = comp.ph.saturating_sub(5);
