@@ -547,17 +547,31 @@ pub fn tree_growth(
         tree.accumulated_water += water_intake.sqrt() * species.growth_rate * nitrogen_boost;
         tree.accumulated_light += light_intake.sqrt() * species.growth_rate * nitrogen_boost;
 
-        // Health declines without resources, recovers when well-supplied
+        // Health declines without resources, recovers when well-supplied.
+        // Both missing = severe stress (crowded, shaded, dry).
         let water_ok = water_intake >= species.water_need.threshold();
         let light_ok = light_intake >= species.light_need.threshold();
-        if !water_ok {
+        if !water_ok && !light_ok {
+            // Severe stress: both resources missing (crowded conditions)
+            tree.health = (tree.health - 0.02).max(0.0);
+        } else if !water_ok {
             tree.health = (tree.health - 0.01).max(0.0);
-        }
-        if !light_ok {
-            tree.health = (tree.health - 0.005).max(0.0);
+        } else if !light_ok {
+            tree.health = (tree.health - 0.008).max(0.0);
         }
         if water_ok && light_ok {
             tree.health = (tree.health + 0.005).min(1.0);
+        }
+
+        // Crowding death: sustained zero health kills the plant.
+        // Trees die after 100 ticks at health < 0.05 (about 10 seconds at 10 ticks/s).
+        // This creates natural thinning — only the fittest survive in crowded zones.
+        if tree.health < 0.05 && tree.age > 50 {
+            tree.health = (tree.health - 0.005).max(0.0);
+            if tree.health == 0.0 && tree.stage != GrowthStage::Dead && tree.stage != GrowthStage::Seedling {
+                tree.stage = GrowthStage::Dead;
+                tree.dirty = true;
+            }
         }
 
         // Check stage transition

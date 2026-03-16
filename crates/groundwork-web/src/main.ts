@@ -451,10 +451,8 @@ async function main() {
     terrainGroup,
     canvas: renderer.domElement,
     onToolPlaced: (hit) => {
-      // Zone-based placement with water cost.
       const tool = hud.state.activeTool;
-      const r = tool === ToolCode.Seed ? 4 : tool === ToolCode.Shovel ? 3 : 3;
-      // Water costs: seeds=15, water=20, soil=10, shovel=5, stone=10
+      // Water costs
       const costs: Record<number, number> = {
         [ToolCode.Seed]: 15, [ToolCode.Water]: 20,
         [ToolCode.Soil]: 10, [ToolCode.Shovel]: 5, [ToolCode.Stone]: 10,
@@ -465,7 +463,41 @@ async function main() {
         return;
       }
       if (isInitialized()) {
-        fillTool(tool, hit.x - r, hit.y - r, hit.z, hit.x + r, hit.y + r, hit.z);
+        if (tool === ToolCode.Seed) {
+          // Smart zone spacing: place seeds 4 voxels apart, skip occupied cells.
+          // Seeds need territory — don't dump them all in one spot.
+          const spacing = 4;
+          const r = 6; // scan radius
+          const grid = getGridView();
+          for (let dy = -r; dy <= r; dy += spacing) {
+            for (let dx = -r; dx <= r; dx += spacing) {
+              const sx = hit.x + dx;
+              const sy = hit.y + dy;
+              if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
+              // Check if there's already a plant nearby (within 2 voxels)
+              let blocked = false;
+              for (let cz = GROUND_LEVEL; cz <= GROUND_LEVEL + 5; cz++) {
+                for (let cy = sy - 1; cy <= sy + 1; cy++) {
+                  for (let cx = sx - 1; cx <= sx + 1; cx++) {
+                    if (cx < 0 || cy < 0 || cx >= GRID_X || cy >= GRID_Y || cz >= GRID_Z) continue;
+                    const idx = (cx + cy * GRID_X + cz * GRID_X * GRID_Y) * VOXEL_BYTES;
+                    const mat = grid[idx];
+                    if (mat === Material.Trunk || mat === Material.Seed || mat === Material.Root) {
+                      blocked = true;
+                    }
+                  }
+                }
+              }
+              if (!blocked) {
+                placeTool(ToolCode.Seed, sx, sy, hit.z);
+              }
+            }
+          }
+        } else {
+          // Non-seed tools: fill normally
+          const r = tool === ToolCode.Shovel ? 3 : 3;
+          fillTool(tool, hit.x - r, hit.y - r, hit.z, hit.x + r, hit.y + r, hit.z);
+        }
       } else {
         applyToolToMockGrid(tool, hit.x, hit.y, hit.z);
       }

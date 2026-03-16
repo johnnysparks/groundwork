@@ -291,28 +291,25 @@ async function main() {
       // Water basin near center for root access
       await exec({ type: 'Fill', tool: 'water', x1: 30, y1: 30, z1: 50, x2: 50, y2: 50, z2: 50 });
 
-      // Trees: spread across the garden bed
-      await exec({ type: 'Place', tool: 'seed', x: 35, y: 35, z: 55, species: 'oak' });
-      await exec({ type: 'Place', tool: 'seed', x: 45, y: 35, z: 55, species: 'birch' });
-      await exec({ type: 'Place', tool: 'seed', x: 35, y: 45, z: 55, species: 'pine' });
-      await exec({ type: 'Place', tool: 'seed', x: 45, y: 45, z: 55, species: 'willow' });
+      // Trees: well-spaced, each claiming its own territory (12+ voxels apart)
+      await exec({ type: 'Place', tool: 'seed', x: 32, y: 32, z: 55, species: 'oak' });
+      await exec({ type: 'Place', tool: 'seed', x: 48, y: 32, z: 55, species: 'birch' });
+      await exec({ type: 'Place', tool: 'seed', x: 32, y: 48, z: 55, species: 'pine' });
+      await exec({ type: 'Place', tool: 'seed', x: 48, y: 48, z: 55, species: 'willow' });
 
-      // Shrubs: between trees
-      await exec({ type: 'Place', tool: 'seed', x: 40, y: 33, z: 55, species: 'fern' });
-      await exec({ type: 'Place', tool: 'seed', x: 33, y: 40, z: 55, species: 'berry-bush' });
-      await exec({ type: 'Place', tool: 'seed', x: 47, y: 40, z: 55, species: 'holly' });
+      // Shrubs: in gaps between trees (6+ voxels from nearest tree)
+      await exec({ type: 'Place', tool: 'seed', x: 40, y: 30, z: 55, species: 'fern' });
+      await exec({ type: 'Place', tool: 'seed', x: 28, y: 40, z: 55, species: 'berry-bush' });
+      await exec({ type: 'Place', tool: 'seed', x: 52, y: 40, z: 55, species: 'holly' });
 
-      // Flowers: clusters for pollinators
-      await exec({ type: 'Place', tool: 'seed', x: 38, y: 38, z: 55, species: 'wildflower' });
-      await exec({ type: 'Place', tool: 'seed', x: 42, y: 38, z: 55, species: 'wildflower' });
-      await exec({ type: 'Place', tool: 'seed', x: 38, y: 42, z: 55, species: 'daisy' });
-      await exec({ type: 'Place', tool: 'seed', x: 42, y: 42, z: 55, species: 'daisy' });
+      // Flowers: in open ground between trees (not under canopy)
+      await exec({ type: 'Place', tool: 'seed', x: 40, y: 36, z: 55, species: 'wildflower' });
+      await exec({ type: 'Place', tool: 'seed', x: 40, y: 44, z: 55, species: 'daisy' });
 
-      // Groundcover: nitrogen-fixing clover near oaks, moss for moisture
-      await exec({ type: 'Place', tool: 'seed', x: 36, y: 36, z: 55, species: 'clover' });
-      await exec({ type: 'Place', tool: 'seed', x: 44, y: 36, z: 55, species: 'clover' });
-      await exec({ type: 'Place', tool: 'seed', x: 37, y: 43, z: 55, species: 'moss' });
-      await exec({ type: 'Place', tool: 'seed', x: 43, y: 43, z: 55, species: 'grass' });
+      // Groundcover: near specific trees for nitrogen interaction
+      await exec({ type: 'Place', tool: 'seed', x: 34, y: 34, z: 55, species: 'clover' });
+      await exec({ type: 'Place', tool: 'seed', x: 46, y: 34, z: 55, species: 'moss' });
+      await exec({ type: 'Place', tool: 'seed', x: 34, y: 46, z: 55, species: 'grass' });
 
       console.log('Planted 16 species, advancing 300 ticks...');
       await exec({ type: 'Tick', n: 300 });
