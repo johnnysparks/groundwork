@@ -24,8 +24,13 @@ Run a full development cycle: sync, prioritize, build, ship, playtest. Repeat un
 - When done, capture the full screenshot tour and verify
 
 ### 4. SHIP
-- Commit with descriptive message (use `--no-verify`)
-- Push to origin/main (`--no-verify`)
+- **Run CI checks locally before committing** — for every file you touched:
+  - Rust changes: `cargo fmt --check` (formatting) + `cargo clippy` (lints) on affected crates
+  - TypeScript changes: `cd crates/groundwork-web && npx tsc --noEmit` (type check)
+  - Sim changes: `cargo test -p groundwork-sim` (must pass)
+  - Fix any errors before proceeding — do not skip or bypass checks
+- Commit with a descriptive message
+- Push to origin/main
 - Write build notes to `build_notes/` and dev→manager handoff to `handoffs/dev_to_manager/`
 
 ### 5. PLAYTEST
