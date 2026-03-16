@@ -122,6 +122,7 @@ export class DayCycle {
   /** Normalized time of day: 0.0–1.0 */
   private time = 0.5; // Start at noon — bright blue sky
   private autoCycle = true; // ON by default — player experiences all lighting moods
+  private elapsedTime = 0; // total elapsed seconds for sky animations
 
   /** Scratch colors to avoid allocation in the loop. */
   private readonly _c1 = new THREE.Color();
@@ -160,8 +161,9 @@ export class DayCycle {
     deltaS: number,
     lights: Lights,
     scene: THREE.Scene,
-    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color>; uNightAmount?: THREE.IUniform<number> },
+    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color>; uNightAmount?: THREE.IUniform<number>; uTime?: THREE.IUniform<number> },
   ): void {
+    this.elapsedTime += deltaS;
     if (this.autoCycle) {
       this.time = (this.time + deltaS / DAY_LENGTH_S) % 1;
     }
@@ -208,6 +210,10 @@ export class DayCycle {
       // Horizon color matches fog — seamless blend at any camera angle
       if (skyUniforms.horizonColor) {
         lerpColor(skyUniforms.horizonColor.value, a.fogColor, b.fogColor, t);
+      }
+      // Elapsed time for sky animations (shooting stars)
+      if (skyUniforms.uTime) {
+        skyUniforms.uTime.value = this.elapsedTime;
       }
       // Night amount for star visibility: peaks at midnight (0.0), zero at noon (0.5)
       if (skyUniforms.uNightAmount) {

@@ -21,11 +21,15 @@ uniform vec3 topColor;
 uniform vec3 bottomColor;
 uniform vec3 horizonColor;
 uniform float uNightAmount;
+uniform float uTime;
 varying vec3 vWorldPosition;
 
 // Simple pseudo-random hash for star placement
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float hash1(float p) {
+  return fract(sin(p * 78.233) * 43758.5453);
 }
 
 void main() {
@@ -50,13 +54,35 @@ void main() {
     float starVal = hash(cell);
     // ~5% of cells have a star
     if (starVal > 0.95) {
-      // Star brightness varies and twinkles slightly
-      vec2 cellCenter = cell + 0.5;
       float dist = length(fract(starUV) - 0.5);
       float star = smoothstep(0.15, 0.0, dist) * (0.5 + 0.5 * starVal);
-      // Fade with height (more stars at zenith) and night amount
       float heightFade = smoothstep(0.05, 0.4, h);
       color += vec3(star * uNightAmount * heightFade * 0.7);
+    }
+
+    // Shooting star: one every ~45 seconds, lasts 0.6 seconds
+    float shootSlot = floor(uTime / 45.0); // which shooting star event
+    float shootPhase = fract(uTime / 45.0) * 45.0; // time within this slot
+    if (shootPhase < 0.6) {
+      // Shooting star path: random start direction, streaks across sky
+      float seed = shootSlot * 7.13;
+      vec2 startDir = normalize(vec2(hash1(seed) - 0.5, hash1(seed + 1.0) - 0.5));
+      float startAngle = hash1(seed + 2.0) * 3.14159;
+      float startH = 0.3 + hash1(seed + 3.0) * 0.5; // height 0.3-0.8
+      float progress = shootPhase / 0.6; // 0→1
+
+      // Streak position in sky-UV space
+      vec2 meteorUV = dir.xz / max(dir.y, 0.1);
+      vec2 meteorStart = startDir * 3.0;
+      vec2 meteorPos = meteorStart + normalize(vec2(cos(startAngle), sin(startAngle))) * progress * 4.0;
+      float meteorDist = length(meteorUV - meteorPos);
+
+      // Streak shape: bright head + fading tail
+      float headBright = smoothstep(0.3, 0.0, meteorDist) * (1.0 - progress);
+      // Only show above horizon and at the right height range
+      if (dir.y > 0.1 && headBright > 0.01) {
+        color += vec3(1.0, 0.95, 0.8) * headBright * uNightAmount * 0.8;
+      }
     }
   }
 
@@ -69,6 +95,7 @@ export interface SkyUniforms {
   bottomColor: THREE.IUniform<THREE.Color>;
   horizonColor: THREE.IUniform<THREE.Color>;
   uNightAmount: THREE.IUniform<number>;
+  uTime: THREE.IUniform<number>;
   [key: string]: THREE.IUniform<unknown>;
 }
 
@@ -82,6 +109,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     horizonColor: { value: new THREE.Color(0xccddcc) },   // haze — matches fog color
     bottomColor: { value: new THREE.Color(0x3a3228) },    // dark earth (below-horizon, rarely seen)
     uNightAmount: { value: 0.0 },                          // 0=day, 1=full night (drives star visibility)
+    uTime: { value: 0.0 },                                 // elapsed time for shooting stars
   };
 
   const skyMat = new THREE.ShaderMaterial({
