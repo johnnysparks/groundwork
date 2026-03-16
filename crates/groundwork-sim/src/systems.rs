@@ -1172,10 +1172,10 @@ pub fn branch_growth(
             }
         }
 
-        // Grow up to 6 new nodes per tick for denser branching
+        // Grow up to 10 new nodes per tick for full canopy coverage
         let mut grown = 0u32;
         for (ti, &tip_idx) in tips.iter().enumerate() {
-            if grown >= 6 {
+            if grown >= 10 {
                 break;
             }
             let (dx, dy, dz, count) = tip_directions[ti];
@@ -1284,7 +1284,7 @@ pub fn branch_growth(
             // next stage transition (which could be hundreds of ticks away).
             let new_crown_r = species.crown_radius() as isize;
             let new_leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => (new_crown_r / 4).clamp(3, 5),
+                GrowthStage::YoungTree => (new_crown_r / 3).clamp(3, 5),
                 GrowthStage::Mature | GrowthStage::OldGrowth => (new_crown_r / 3).clamp(4, 6),
                 _ => 1,
             };
@@ -1632,7 +1632,7 @@ pub fn tree_rasterize(
             // a distinct canopy size: oak/willow get lush crowns, birch stays slim.
             let crown_r = species.crown_radius() as isize;
             let leaf_r: isize = match tree.stage {
-                GrowthStage::YoungTree => (crown_r / 4).clamp(3, 5),
+                GrowthStage::YoungTree => (crown_r / 3).clamp(3, 5),
                 GrowthStage::Mature | GrowthStage::OldGrowth => (crown_r / 3).clamp(4, 6),
                 _ => 1,
             };
