@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T15:00:00
-**Status:** Alpha complete. 106 sprints. Multi-sensory weather, seed sparkles, mobile perf, rain audio.
+**Last updated:** 2026-03-16T15:10:00
+**Status:** Alpha complete. 109 sprints. Full audio landscape, weather wind, growth sounds.
 
 ---
 
@@ -45,6 +45,11 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Squirrel fauna arrival messages added
 - Weather-driven wind: gusty rain (0.7), still drought (0.12), gentle clear (0.35)
 - Rain ambient audio: procedural patter fades in/out with weather
+
+### Sound & Ambient Life (Sprints 105-109)
+- Ambient fauna sounds: bird chirps + bee buzzes every 8-20s
+- Growth shimmer sound: soft ascending sweep when vegetation increases
+- Full procedural audio landscape (no audio files)
 
 ---
 
