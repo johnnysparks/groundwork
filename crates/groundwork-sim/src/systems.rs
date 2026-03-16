@@ -1172,10 +1172,10 @@ pub fn branch_growth(
             }
         }
 
-        // Grow up to 10 new nodes per tick for full canopy coverage
+        // Grow up to 15 new nodes per tick for denser canopy coverage
         let mut grown = 0u32;
         for (ti, &tip_idx) in tips.iter().enumerate() {
-            if grown >= 10 {
+            if grown >= 15 {
                 break;
             }
             let (dx, dy, dz, count) = tip_directions[ti];

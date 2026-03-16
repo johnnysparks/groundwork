@@ -1027,17 +1027,27 @@ pub fn init_skeleton(
 
     // Branch stubs at multiple heights so space colonization grows
     // a full canopy from the crown zone, not just the trunk tip.
+    // 8 stubs in cardinal + diagonal directions for denser, more natural branching.
     let crown_start = match stage {
         GrowthStage::YoungTree => (trunk_h * 25 / 100).max(2),
         _ => (trunk_h * 15 / 100).max(2),
     };
-    let stub_dirs: [(isize, isize); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
-    let num_stubs = 4_isize;
+    let stub_dirs: [(isize, isize); 8] = [
+        (1, 0),
+        (0, 1),
+        (-1, 0),
+        (0, -1),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    ];
+    let num_stubs = 8_isize;
     let stub_spacing = ((trunk_h - crown_start) / (num_stubs + 1)).max(1);
     for i in 0..num_stubs {
         let sz = crown_start + (i + 1) * stub_spacing;
         if sz > 0 && sz < trunk_h {
-            let (dx, dy) = stub_dirs[i as usize % 4];
+            let (dx, dy) = stub_dirs[i as usize % 8];
             branches.push(BranchNode {
                 pos: (dx, dy, sz),
                 parent: sz as u16,
