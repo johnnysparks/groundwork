@@ -132,6 +132,37 @@ const ECO_TIPS = [
   'Tip: Each new species adds +100 to your garden score',
 ];
 let _tipIndex = 0;
+
+/** Pick the most relevant tip based on current garden state */
+function getContextualTip(stats: { plants: number; fauna: number; species: number; speciesIds?: Set<number> }): string {
+  const ids = stats.speciesIds ?? new Set<number>();
+  const hasTree = ids.has(0) || ids.has(1) || ids.has(2) || ids.has(3);   // oak/birch/willow/pine
+  const hasFlower = ids.has(7) || ids.has(8);                               // wildflower/daisy
+  const hasGroundcover = ids.has(9) || ids.has(10) || ids.has(11);          // moss/grass/clover
+  const hasClover = ids.has(11);
+  const hasBerryBush = ids.has(5);
+
+  // Prioritized contextual advice
+  if (stats.plants < 50)
+    return 'Tip: Plant groundcover near the spring — it needs water to germinate';
+  if (hasGroundcover && !hasFlower && stats.plants > 200)
+    return 'Tip: Plant flowers next — they attract pollinators that boost everyone';
+  if (hasFlower && stats.fauna === 0)
+    return 'Tip: More flowers = more pollinators. Cluster them together for bees';
+  if (stats.fauna > 0 && !hasTree && stats.plants > 500)
+    return 'Tip: Your ecosystem earned trees! Plant an oak — it will dominate the garden';
+  if (hasTree && !hasClover)
+    return 'Tip: Plant clover near your tree — nitrogen fixing boosts growth 50%';
+  if (hasTree && hasClover)
+    return 'Tip: Press Q for x-ray — watch the roots of your tree and clover intertwine';
+  if (hasTree && !hasBerryBush)
+    return 'Tip: Berry bushes attract birds — birds carry seeds to surprising new spots';
+  if (stats.fauna > 3)
+    return 'Tip: Your ecosystem is thriving! Watch how species affect each other';
+
+  // Fallback to random tips
+  return ECO_TIPS[_tipIndex++ % ECO_TIPS.length];
+}
 let _tipTimer = 0;
 
 /** Detect ecological events by comparing with previous stats */
@@ -183,11 +214,11 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
     _eventCooldown = 40;
   }
 
-  // Periodic ecology tips (every ~60 ticks when nothing else happens)
+  // Contextual ecology tips — suggest next discovery based on garden state
   _tipTimer++;
   if (_tipTimer > 60 && _eventCooldown <= 0) {
-    hud.addEvent(ECO_TIPS[_tipIndex % ECO_TIPS.length]);
-    _tipIndex++;
+    const tip = getContextualTip(stats);
+    hud.addEvent(tip);
     _tipTimer = 0;
     _eventCooldown = 10;
   }
