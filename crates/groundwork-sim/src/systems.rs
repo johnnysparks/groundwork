@@ -527,6 +527,35 @@ pub fn tree_growth(
 
     for mut tree in trees.iter_mut() {
         if tree.stage == GrowthStage::Dead {
+            // --- Drought Recovery ---
+            // Dead trees with roots in wet soil can recover. This rewards the player
+            // for adding water near a dead tree — "My tree came back to life!"
+            // Recovery requires: root voxels with water_level > 50.
+            tree.age += 1;
+            let mut root_water: f32 = 0.0;
+            for &(vx, vy, vz) in &tree.voxel_footprint {
+                if let Some(voxel) = grid.get(vx, vy, vz) {
+                    if voxel.material == Material::Root {
+                        root_water += voxel.water_level as f32;
+                    }
+                }
+            }
+            // Need meaningful water flow to roots
+            if root_water > 100.0 {
+                // Slow health recovery while dead — takes ~50 ticks to reach 0.3
+                tree.health = (tree.health + 0.006).min(1.0);
+                if tree.health >= 0.3 {
+                    // Resurrection! Tree revives as a sapling with new growth
+                    tree.stage = GrowthStage::Sapling;
+                    tree.dirty = true;
+                    // Reset skeleton so it regrows fresh branches
+                    tree.branches.clear();
+                    tree.attraction_points.clear();
+                    tree.skeleton_initialized = false;
+                }
+            }
+            // Don't set dirty while dead — rasterizing a dead tree clears its roots,
+            // which would prevent recovery. Only set dirty on actual revival (above).
             continue;
         }
         let species = &species_table.species[tree.species_id];
@@ -596,13 +625,21 @@ pub fn tree_growth(
             1.0
         };
 
+        // --- Species Water Affinity ---
+        // Willow (species_id=2) thrives near water — 2× growth when roots are well-watered.
+        // Discovery: "My willow by the stream is growing twice as fast as the one on dry ground!"
+        let water_affinity_boost = if tree.species_id == 2 && water_intake > 50.0 {
+            2.0_f32
+        } else {
+            1.0
+        };
+
         // Use diminishing returns so more roots/light don't trivially blast
         // through all growth stages in a single tick. sqrt gives gentle scaling:
         // 100 water_intake → +10, 10000 → +100, 50000 → +224
-        tree.accumulated_water +=
-            water_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
-        tree.accumulated_light +=
-            light_intake.sqrt() * species.growth_rate * nitrogen_boost * canopy_boost;
+        let total_boost = nitrogen_boost * canopy_boost * water_affinity_boost;
+        tree.accumulated_water += water_intake.sqrt() * species.growth_rate * total_boost;
+        tree.accumulated_light += light_intake.sqrt() * species.growth_rate * total_boost;
 
         // Health declines without resources, recovers when well-supplied.
         // Light check uses shade_tolerance: low tolerance = sun-loving = dies faster in shade.
@@ -3970,6 +4007,166 @@ mod tests {
             tree.health > 0.5,
             "Tree near pollinator should have recovered some health (health={})",
             tree.health
+        );
+    }
+
+    #[test]
+    fn dead_tree_recovers_with_water() {
+        // A dead tree with wet roots should slowly recover and revive.
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let cx = GRID_X / 2 + 10;
+        let cy = GRID_Y / 2;
+        let sz = GROUND_LEVEL + 1;
+
+        // Place a root with good water access
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            if let Some(cell) = grid.get_mut(cx, cy, sz) {
+                cell.set_material(Material::Trunk);
+            }
+            // Root below with water nearby
+            if let Some(cell) = grid.get_mut(cx, cy, sz - 1) {
+                cell.set_material(Material::Root);
+                cell.water_level = 200;
+            }
+            // Water source adjacent to root
+            if let Some(cell) = grid.get_mut(cx + 1, cy, sz - 1) {
+                cell.material = Material::Water;
+                cell.water_level = 255;
+            }
+        }
+
+        // Spawn a dead tree
+        let tree_id = world
+            .spawn(Tree {
+                species_id: 0, // Oak
+                root_pos: (cx, cy, sz),
+                age: 200,
+                stage: GrowthStage::Dead,
+                health: 0.0,
+                accumulated_water: 2000.0,
+                accumulated_light: 2000.0,
+                rng_seed: 42,
+                dirty: false,
+                voxel_footprint: vec![(cx, cy, sz), (cx, cy, sz - 1)],
+                branches: Vec::new(),
+                attraction_points: Vec::new(),
+                skeleton_initialized: false,
+            })
+            .id();
+
+        // Run enough ticks for recovery (~50 ticks to reach health 0.3)
+        for _ in 0..60 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let tree = world.entity(tree_id).get::<Tree>().unwrap();
+        assert!(
+            tree.health > 0.0,
+            "Dead tree with wet roots should start recovering (health={})",
+            tree.health
+        );
+        assert_ne!(
+            tree.stage,
+            GrowthStage::Dead,
+            "Dead tree should have revived to Sapling after sustained water"
+        );
+    }
+
+    #[test]
+    fn willow_grows_faster_near_water() {
+        // A willow with good water access should accumulate resources faster.
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        // Willow near water
+        let wx = GRID_X / 2 + 5;
+        let wy = GRID_Y / 2;
+        let wz = GROUND_LEVEL + 1;
+
+        // Oak in same conditions for comparison
+        let ox = GRID_X / 2 + 20;
+        let oy = GRID_Y / 2;
+        let oz = GROUND_LEVEL + 1;
+
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Willow trunk + root with water
+            if let Some(cell) = grid.get_mut(wx, wy, wz) {
+                cell.set_material(Material::Trunk);
+                cell.nutrient_level = 2; // willow species_id
+            }
+            if let Some(cell) = grid.get_mut(wx, wy, wz - 1) {
+                cell.set_material(Material::Root);
+                cell.water_level = 200;
+                cell.nutrient_level = 2;
+            }
+            // Oak trunk + root with same water
+            if let Some(cell) = grid.get_mut(ox, oy, oz) {
+                cell.set_material(Material::Trunk);
+                cell.nutrient_level = 0; // oak species_id
+            }
+            if let Some(cell) = grid.get_mut(ox, oy, oz - 1) {
+                cell.set_material(Material::Root);
+                cell.water_level = 200;
+                cell.nutrient_level = 0;
+            }
+        }
+
+        let willow_id = world
+            .spawn(Tree {
+                species_id: 2, // Willow
+                root_pos: (wx, wy, wz),
+                age: 0,
+                stage: GrowthStage::Sapling,
+                health: 1.0,
+                accumulated_water: 0.0,
+                accumulated_light: 0.0,
+                rng_seed: 42,
+                dirty: false,
+                voxel_footprint: vec![(wx, wy, wz), (wx, wy, wz - 1)],
+                branches: Vec::new(),
+                attraction_points: Vec::new(),
+                skeleton_initialized: false,
+            })
+            .id();
+
+        let oak_id = world
+            .spawn(Tree {
+                species_id: 0, // Oak
+                root_pos: (ox, oy, oz),
+                age: 0,
+                stage: GrowthStage::Sapling,
+                health: 1.0,
+                accumulated_water: 0.0,
+                accumulated_light: 0.0,
+                rng_seed: 42,
+                dirty: false,
+                voxel_footprint: vec![(ox, oy, oz), (ox, oy, oz - 1)],
+                branches: Vec::new(),
+                attraction_points: Vec::new(),
+                skeleton_initialized: false,
+            })
+            .id();
+
+        for _ in 0..50 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let willow = world.entity(willow_id).get::<Tree>().unwrap();
+        let oak = world.entity(oak_id).get::<Tree>().unwrap();
+
+        assert!(
+            willow.accumulated_water > oak.accumulated_water,
+            "Willow near water should accumulate more resources than oak: willow={}, oak={}",
+            willow.accumulated_water,
+            oak.accumulated_water
         );
     }
 }
