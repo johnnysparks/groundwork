@@ -766,7 +766,7 @@ impl TreeTemplate {
                 }
             }
             // Small leaf accent one voxel above center for 3D shape
-            if r >= 2 && stem_h + 1 <= max_h {
+            if r >= 2 && stem_h < max_h {
                 voxels.push((0, 0, stem_h + 1, Material::Leaf));
             }
         }
