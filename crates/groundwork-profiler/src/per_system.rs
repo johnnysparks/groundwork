@@ -24,7 +24,13 @@ impl SystemProfile {
 
 pub fn run_per_system_profile(num_ticks: u64) {
     eprintln!("=== Per-System Profiling ({} ticks) ===", num_ticks);
-    eprintln!("Grid: {}x{}x{} = {} voxels", GRID_X, GRID_Y, GRID_Z, GRID_X * GRID_Y * GRID_Z);
+    eprintln!(
+        "Grid: {}x{}x{} = {} voxels",
+        GRID_X,
+        GRID_Y,
+        GRID_Z,
+        GRID_X * GRID_Y * GRID_Z
+    );
     eprintln!();
 
     let mut world = create_world();
@@ -94,7 +100,9 @@ pub fn run_per_system_profile(num_ticks: u64) {
 
     // tick_counter
     let mut tick_sched = Schedule::default();
-    tick_sched.add_systems(|mut t: ResMut<Tick>| { t.0 += 1; });
+    tick_sched.add_systems(|mut t: ResMut<Tick>| {
+        t.0 += 1;
+    });
     systems.push(SystemProfile::new("tick_counter", tick_sched));
 
     let num_systems = systems.len();
@@ -126,7 +134,10 @@ pub fn run_per_system_profile(num_ticks: u64) {
 
     eprintln!();
     eprintln!("=== Per-System Breakdown ===");
-    eprintln!("{:<25} {:>10} {:>10} {:>10} {:>8}", "System", "Total(ms)", "Avg(ms)", "Max(ms)", "% Time");
+    eprintln!(
+        "{:<25} {:>10} {:>10} {:>10} {:>8}",
+        "System", "Total(ms)", "Avg(ms)", "Max(ms)", "% Time"
+    );
     eprintln!("{}", "-".repeat(73));
 
     // Sort by total time descending for the display
@@ -143,23 +154,36 @@ pub fn run_per_system_profile(num_ticks: u64) {
     }
 
     eprintln!("{}", "-".repeat(73));
-    eprintln!("{:<25} {:>10.2} {:>10.3} {:>10} {:>7}",
-        "TOTAL (systems)", grand_total_system_ms,
-        grand_total_system_ms / num_ticks as f64, "", "100.0%");
+    eprintln!(
+        "{:<25} {:>10.2} {:>10.3} {:>10} {:>7}",
+        "TOTAL (systems)",
+        grand_total_system_ms,
+        grand_total_system_ms / num_ticks as f64,
+        "",
+        "100.0%"
+    );
     eprintln!("{:<25} {:>10.2}", "Wall clock", total_ms);
-    eprintln!("{:<25} {:>10.2}ms ({:.1}%)", "Overhead",
+    eprintln!(
+        "{:<25} {:>10.2}ms ({:.1}%)",
+        "Overhead",
         total_ms - grand_total_system_ms,
-        (total_ms - grand_total_system_ms) / total_ms * 100.0);
+        (total_ms - grand_total_system_ms) / total_ms * 100.0
+    );
     eprintln!();
-    eprintln!("Avg tick: {:.3}ms | Throughput: {:.1} ticks/sec",
+    eprintln!(
+        "Avg tick: {:.3}ms | Throughput: {:.1} ticks/sec",
         total_ms / num_ticks as f64,
-        num_ticks as f64 / total_time.as_secs_f64());
+        num_ticks as f64 / total_time.as_secs_f64()
+    );
 
     // CSV output
     println!("system,total_ms,avg_ms,max_ms,pct");
     for &i in &indices {
         let avg = totals[i] / num_ticks as f64;
         let pct = totals[i] / grand_total_system_ms * 100.0;
-        println!("{},{:.4},{:.4},{:.4},{:.2}", systems[i].name, totals[i], avg, maxes[i], pct);
+        println!(
+            "{},{:.4},{:.4},{:.4},{:.2}",
+            systems[i].name, totals[i], avg, maxes[i], pct
+        );
     }
 }

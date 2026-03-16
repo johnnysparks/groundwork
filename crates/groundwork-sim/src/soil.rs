@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Resource;
 
-use crate::grid::{GRID_X, GRID_Y, GRID_Z, VoxelGrid};
+use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use crate::scale::meters_to_voxels;
 use crate::voxel::Material;
 
@@ -77,23 +77,58 @@ impl SoilComposition {
     // --- Preset constructors ---
 
     pub fn rocky() -> Self {
-        Self { sand: 40, clay: 20, organic: 10, rock: 200, ph: 128, bacteria: 5 }
+        Self {
+            sand: 40,
+            clay: 20,
+            organic: 10,
+            rock: 200,
+            ph: 128,
+            bacteria: 5,
+        }
     }
 
     pub fn clay() -> Self {
-        Self { sand: 30, clay: 200, organic: 20, rock: 30, ph: 110, bacteria: 20 }
+        Self {
+            sand: 30,
+            clay: 200,
+            organic: 20,
+            rock: 30,
+            ph: 110,
+            bacteria: 20,
+        }
     }
 
     pub fn sandy() -> Self {
-        Self { sand: 200, clay: 30, organic: 15, rock: 40, ph: 135, bacteria: 15 }
+        Self {
+            sand: 200,
+            clay: 30,
+            organic: 15,
+            rock: 40,
+            ph: 135,
+            bacteria: 15,
+        }
     }
 
     pub fn loam() -> Self {
-        Self { sand: 100, clay: 80, organic: 80, rock: 30, ph: 128, bacteria: 60 }
+        Self {
+            sand: 100,
+            clay: 80,
+            organic: 80,
+            rock: 30,
+            ph: 128,
+            bacteria: 60,
+        }
     }
 
     pub fn peat() -> Self {
-        Self { sand: 40, clay: 40, organic: 220, rock: 10, ph: 80, bacteria: 100 }
+        Self {
+            sand: 40,
+            clay: 40,
+            organic: 220,
+            rock: 10,
+            ph: 80,
+            bacteria: 100,
+        }
     }
 }
 
@@ -103,6 +138,12 @@ impl SoilComposition {
 #[derive(Resource)]
 pub struct SoilGrid {
     cells: Vec<SoilComposition>,
+}
+
+impl Default for SoilGrid {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SoilGrid {
@@ -132,26 +173,27 @@ impl SoilGrid {
                     // Depth below surface determines composition
                     let depth_below = surface.saturating_sub(z);
                     let deep_thresh = meters_to_voxels(1.4);
-                    let comp = if depth_below >= surface.saturating_sub(deep_thresh) || z <= deep_thresh {
-                        // Deep soil near stone: rocky
-                        SoilComposition::rocky()
-                    } else if depth_below >= meters_to_voxels(0.5) {
-                        // Subsoil: clay-heavy
-                        SoilComposition::clay()
-                    } else if depth_below >= meters_to_voxels(0.3) {
-                        // Transition: blend of clay and loam
-                        SoilComposition {
-                            sand: 70,
-                            clay: 130,
-                            organic: 50,
-                            rock: 30,
-                            ph: 120,
-                            bacteria: 35,
-                        }
-                    } else {
-                        // Topsoil: loam
-                        SoilComposition::loam()
-                    };
+                    let comp =
+                        if depth_below >= surface.saturating_sub(deep_thresh) || z <= deep_thresh {
+                            // Deep soil near stone: rocky
+                            SoilComposition::rocky()
+                        } else if depth_below >= meters_to_voxels(0.5) {
+                            // Subsoil: clay-heavy
+                            SoilComposition::clay()
+                        } else if depth_below >= meters_to_voxels(0.3) {
+                            // Transition: blend of clay and loam
+                            SoilComposition {
+                                sand: 70,
+                                clay: 130,
+                                organic: 50,
+                                rock: 30,
+                                ph: 120,
+                                bacteria: 35,
+                            }
+                        } else {
+                            // Topsoil: loam
+                            SoilComposition::loam()
+                        };
 
                     cells[idx] = comp;
                 }
@@ -166,8 +208,10 @@ impl SoilGrid {
                 let cx = GRID_X / 2;
                 let cy = GRID_Y / 2;
                 let spring_range = meters_to_voxels(0.3);
-                let near_spring = x >= cx.saturating_sub(spring_range) && x <= cx + spring_range - 1
-                               && y >= cy.saturating_sub(spring_range) && y <= cy + spring_range - 1;
+                let near_spring = x >= cx.saturating_sub(spring_range)
+                    && x < cx + spring_range
+                    && y >= cy.saturating_sub(spring_range)
+                    && y < cy + spring_range;
                 let near_stream = VoxelGrid::is_stream(x, y)
                     || (x > 0 && VoxelGrid::is_stream(x - 1, y))
                     || (y > 0 && VoxelGrid::is_stream(x, y - 1))
@@ -181,17 +225,35 @@ impl SoilGrid {
                 for z in meters_to_voxels(1.0)..=surface {
                     let idx = VoxelGrid::index(x, y, z);
                     let depth_below = surface.saturating_sub(z);
-                    let peat_strength = if depth_below <= meters_to_voxels(0.4) { 200u16 } else if depth_below <= meters_to_voxels(0.5) { 100 } else { 50 };
+                    let peat_strength = if depth_below <= meters_to_voxels(0.4) {
+                        200u16
+                    } else if depth_below <= meters_to_voxels(0.5) {
+                        100
+                    } else {
+                        50
+                    };
                     // Weaker peat along stream than at spring
-                    let peat_strength = if near_spring { peat_strength } else { peat_strength / 2 };
+                    let peat_strength = if near_spring {
+                        peat_strength
+                    } else {
+                        peat_strength / 2
+                    };
                     let base = &cells[idx];
                     cells[idx] = SoilComposition {
-                        sand: ((base.sand as u16 * (255 - peat_strength) + 40 * peat_strength) / 255) as u8,
-                        clay: ((base.clay as u16 * (255 - peat_strength) + 40 * peat_strength) / 255) as u8,
-                        organic: ((base.organic as u16 * (255 - peat_strength) + 220 * peat_strength) / 255) as u8,
-                        rock: ((base.rock as u16 * (255 - peat_strength) + 10 * peat_strength) / 255) as u8,
-                        ph: ((base.ph as u16 * (255 - peat_strength) + 80 * peat_strength) / 255) as u8,
-                        bacteria: ((base.bacteria as u16 * (255 - peat_strength) + 100 * peat_strength) / 255) as u8,
+                        sand: ((base.sand as u16 * (255 - peat_strength) + 40 * peat_strength)
+                            / 255) as u8,
+                        clay: ((base.clay as u16 * (255 - peat_strength) + 40 * peat_strength)
+                            / 255) as u8,
+                        organic: ((base.organic as u16 * (255 - peat_strength)
+                            + 220 * peat_strength)
+                            / 255) as u8,
+                        rock: ((base.rock as u16 * (255 - peat_strength) + 10 * peat_strength)
+                            / 255) as u8,
+                        ph: ((base.ph as u16 * (255 - peat_strength) + 80 * peat_strength) / 255)
+                            as u8,
+                        bacteria: ((base.bacteria as u16 * (255 - peat_strength)
+                            + 100 * peat_strength)
+                            / 255) as u8,
                     };
                 }
             }
@@ -214,12 +276,20 @@ impl SoilGrid {
                     let sand_strength = ((edge_band - edge_dist) as u16 * 32).min(255);
                     let base = &cells[idx];
                     cells[idx] = SoilComposition {
-                        sand: ((base.sand as u16 * (255 - sand_strength) + 200 * sand_strength) / 255) as u8,
-                        clay: ((base.clay as u16 * (255 - sand_strength) + 30 * sand_strength) / 255) as u8,
-                        organic: ((base.organic as u16 * (255 - sand_strength) + 15 * sand_strength) / 255) as u8,
-                        rock: ((base.rock as u16 * (255 - sand_strength) + 40 * sand_strength) / 255) as u8,
-                        ph: ((base.ph as u16 * (255 - sand_strength) + 135 * sand_strength) / 255) as u8,
-                        bacteria: ((base.bacteria as u16 * (255 - sand_strength) + 15 * sand_strength) / 255) as u8,
+                        sand: ((base.sand as u16 * (255 - sand_strength) + 200 * sand_strength)
+                            / 255) as u8,
+                        clay: ((base.clay as u16 * (255 - sand_strength) + 30 * sand_strength)
+                            / 255) as u8,
+                        organic: ((base.organic as u16 * (255 - sand_strength)
+                            + 15 * sand_strength)
+                            / 255) as u8,
+                        rock: ((base.rock as u16 * (255 - sand_strength) + 40 * sand_strength)
+                            / 255) as u8,
+                        ph: ((base.ph as u16 * (255 - sand_strength) + 135 * sand_strength) / 255)
+                            as u8,
+                        bacteria: ((base.bacteria as u16 * (255 - sand_strength)
+                            + 15 * sand_strength)
+                            / 255) as u8,
                     };
                 }
             }
@@ -295,31 +365,76 @@ mod tests {
     #[test]
     fn preset_water_retention() {
         // Clay retains most water
-        assert!(SoilComposition::clay().water_retention() > SoilComposition::sandy().water_retention());
+        assert!(
+            SoilComposition::clay().water_retention() > SoilComposition::sandy().water_retention()
+        );
         // Peat also retains well
-        assert!(SoilComposition::peat().water_retention() > SoilComposition::sandy().water_retention());
+        assert!(
+            SoilComposition::peat().water_retention() > SoilComposition::sandy().water_retention()
+        );
     }
 
     #[test]
     fn preset_nutrient_capacity() {
         // Peat has highest nutrients (organic + bacteria)
-        assert!(SoilComposition::peat().nutrient_capacity() > SoilComposition::rocky().nutrient_capacity());
+        assert!(
+            SoilComposition::peat().nutrient_capacity()
+                > SoilComposition::rocky().nutrient_capacity()
+        );
         // Loam is well-balanced
-        assert!(SoilComposition::loam().nutrient_capacity() > SoilComposition::sandy().nutrient_capacity());
+        assert!(
+            SoilComposition::loam().nutrient_capacity()
+                > SoilComposition::sandy().nutrient_capacity()
+        );
     }
 
     #[test]
     fn compaction_detection() {
-        assert!(SoilComposition { sand: 20, clay: 210, organic: 10, rock: 20, ph: 128, bacteria: 5 }.is_compacted());
+        assert!(SoilComposition {
+            sand: 20,
+            clay: 210,
+            organic: 10,
+            rock: 20,
+            ph: 128,
+            bacteria: 5
+        }
+        .is_compacted());
         assert!(!SoilComposition::loam().is_compacted());
         assert!(!SoilComposition::peat().is_compacted());
     }
 
     #[test]
     fn ph_value_range() {
-        assert!((SoilComposition { ph: 0, ..Default::default() }.ph_value() - 3.0).abs() < 0.01);
-        assert!((SoilComposition { ph: 128, ..Default::default() }.ph_value() - 6.0).abs() < 0.1);
-        assert!((SoilComposition { ph: 255, ..Default::default() }.ph_value() - 9.0).abs() < 0.01);
+        assert!(
+            (SoilComposition {
+                ph: 0,
+                ..Default::default()
+            }
+            .ph_value()
+                - 3.0)
+                .abs()
+                < 0.01
+        );
+        assert!(
+            (SoilComposition {
+                ph: 128,
+                ..Default::default()
+            }
+            .ph_value()
+                - 6.0)
+                .abs()
+                < 0.1
+        );
+        assert!(
+            (SoilComposition {
+                ph: 255,
+                ..Default::default()
+            }
+            .ph_value()
+                - 9.0)
+                .abs()
+                < 0.01
+        );
     }
 
     #[test]
@@ -347,7 +462,8 @@ mod tests {
         assert_eq!(deep.type_name(), "rocky");
         // Subsoil should be clay (0.5+ meters below surface)
         let sub_z = surface.saturating_sub(meters_to_voxels(0.6));
-        if sub_z > meters_to_voxels(1.4) { // only test if there's room
+        if sub_z > meters_to_voxels(1.4) {
+            // only test if there's room
             let sub = soil.get(tx, ty, sub_z).unwrap();
             assert_eq!(sub.type_name(), "clay");
         }
@@ -364,7 +480,11 @@ mod tests {
         let sy = GRID_Y / 2 - 1;
         let surface = VoxelGrid::surface_height(sx, sy);
         let near_spring = soil.get(sx, sy, surface).unwrap();
-        assert!(near_spring.organic > 100, "Near-spring topsoil should be organic-rich, got {}", near_spring.organic);
+        assert!(
+            near_spring.organic > 100,
+            "Near-spring topsoil should be organic-rich, got {}",
+            near_spring.organic
+        );
     }
 
     #[test]
@@ -373,6 +493,10 @@ mod tests {
         // Corner of grid at surface should be sandy
         let surface = VoxelGrid::surface_height(0, 0);
         let edge = soil.get(0, 0, surface).unwrap();
-        assert!(edge.sand > 100, "Edge topsoil should be sandy, got sand={}", edge.sand);
+        assert!(
+            edge.sand > 100,
+            "Edge topsoil should be sandy, got sand={}",
+            edge.sand
+        );
     }
 }

@@ -67,7 +67,10 @@ pub fn explore_above_and_below() -> Scenario {
                     .map(|s| s.oracle.camera.cutaway_z)
                     .collect();
                 let min = cutaway_values.iter().cloned().fold(f64::INFINITY, f64::min);
-                let max = cutaway_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                let max = cutaway_values
+                    .iter()
+                    .cloned()
+                    .fold(f64::NEG_INFINITY, f64::max);
                 let range = max - min;
                 let passed = range >= 15.0; // Should span at least 15 Z-levels
                 Verdict {

@@ -100,7 +100,11 @@ pub fn snapshot(world: &World, camera: &CameraState) -> OracleSnapshot {
 }
 
 /// Take an oracle snapshot with specific voxel probes.
-pub fn snapshot_with_probes(world: &World, probe_coords: &[(usize, usize, usize)], camera: &CameraState) -> OracleSnapshot {
+pub fn snapshot_with_probes(
+    world: &World,
+    probe_coords: &[(usize, usize, usize)],
+    camera: &CameraState,
+) -> OracleSnapshot {
     let grid = world.resource::<VoxelGrid>();
     let tick = world.resource::<Tick>().0;
 

@@ -18,7 +18,15 @@ pub fn diverse_garden() -> Scenario {
         .description("Plant a diverse garden near water and verify ecosystem emerges")
         .checkpoint("start")
         // Add extra water for a larger growing area
-        .fill("water", cx - 5, cy - 5, GROUND_LEVEL + 5, cx + 5, cy + 5, GROUND_LEVEL + 5)
+        .fill(
+            "water",
+            cx - 5,
+            cy - 5,
+            GROUND_LEVEL + 5,
+            cx + 5,
+            cy + 5,
+            GROUND_LEVEL + 5,
+        )
         // Plant a variety of species
         .plant("oak", cx - 4, cy - 2, seed_z)
         .plant("birch", cx + 4, cy - 2, seed_z)

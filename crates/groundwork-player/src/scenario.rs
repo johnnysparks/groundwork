@@ -22,6 +22,7 @@ pub struct Scenario {
 
 impl Scenario {
     /// Create a new scenario builder.
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(name: &str) -> ScenarioBuilder {
         ScenarioBuilder {
             name: name.to_string(),
@@ -93,6 +94,7 @@ impl ScenarioBuilder {
     }
 
     /// Fill a region with a tool.
+    #[allow(clippy::too_many_arguments)]
     pub fn fill(
         mut self,
         tool: &str,
@@ -131,7 +133,8 @@ impl ScenarioBuilder {
 
     /// Orbit camera to specific angles.
     pub fn orbit(mut self, theta_deg: f64, phi_deg: f64) -> Self {
-        self.actions.push(Action::CameraOrbit { theta_deg, phi_deg });
+        self.actions
+            .push(Action::CameraOrbit { theta_deg, phi_deg });
         self
     }
 

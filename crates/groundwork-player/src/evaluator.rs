@@ -24,7 +24,13 @@ impl std::fmt::Display for Verdict {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let icon = if self.passed { "PASS" } else { "FAIL" };
         if let Some(score) = self.score {
-            write!(f, "[{icon}] {} ({:.0}%): {}", self.evaluator, score * 100.0, self.reason)
+            write!(
+                f,
+                "[{icon}] {} ({:.0}%): {}",
+                self.evaluator,
+                score * 100.0,
+                self.reason
+            )
         } else {
             write!(f, "[{icon}] {}: {}", self.evaluator, self.reason)
         }
@@ -71,7 +77,11 @@ impl Evaluator for MaterialMinimum {
         let actual = get_count(&oracle.material_counts, &self.material);
         let passed = actual >= self.minimum;
         let score = if self.minimum == 0 {
-            if passed { 1.0 } else { 0.0 }
+            if passed {
+                1.0
+            } else {
+                0.0
+            }
         } else {
             (actual as f64 / self.minimum as f64).min(1.0)
         };
@@ -217,14 +227,20 @@ impl Evaluator for VoxelMaterial {
             };
         };
 
-        let probe = oracle.probes.iter().find(|p| p.x == self.x && p.y == self.y && p.z == self.z);
+        let probe = oracle
+            .probes
+            .iter()
+            .find(|p| p.x == self.x && p.y == self.y && p.z == self.z);
         match probe {
             Some(p) => {
                 let passed = p.material == self.expected;
                 Verdict {
                     evaluator: self.name.clone(),
                     passed,
-                    reason: format!("({},{},{}) is {} (expected {})", self.x, self.y, self.z, p.material, self.expected),
+                    reason: format!(
+                        "({},{},{}) is {} (expected {})",
+                        self.x, self.y, self.z, p.material, self.expected
+                    ),
                     score: Some(if passed { 1.0 } else { 0.0 }),
                 }
             }
@@ -261,6 +277,12 @@ pub struct CameraWentUnderground {
     pub max_z: f64,
 }
 
+impl Default for CameraWentUnderground {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CameraWentUnderground {
     pub fn new() -> Self {
         Self {
@@ -279,7 +301,10 @@ impl CameraWentUnderground {
 
 impl Evaluator for CameraWentUnderground {
     fn evaluate(&self, trace: &Trace) -> Verdict {
-        let went_under = trace.steps.iter().any(|s| s.oracle.camera.cutaway_z <= self.max_z);
+        let went_under = trace
+            .steps
+            .iter()
+            .any(|s| s.oracle.camera.cutaway_z <= self.max_z);
         Verdict {
             evaluator: self.name.clone(),
             passed: went_under,
@@ -298,7 +323,11 @@ pub struct CameraOrbited;
 
 impl Evaluator for CameraOrbited {
     fn evaluate(&self, trace: &Trace) -> Verdict {
-        let thetas: Vec<f64> = trace.steps.iter().map(|s| s.oracle.camera.theta_deg).collect();
+        let thetas: Vec<f64> = trace
+            .steps
+            .iter()
+            .map(|s| s.oracle.camera.theta_deg)
+            .collect();
         let orbited = thetas.windows(2).any(|w| (w[1] - w[0]).abs() > 1.0);
         Verdict {
             evaluator: "camera_orbited".into(),

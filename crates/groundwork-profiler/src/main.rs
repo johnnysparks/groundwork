@@ -15,12 +15,12 @@ use std::time::Instant;
 
 use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use groundwork_sim::voxel::Material;
-use groundwork_sim::{create_world, create_schedule, tick, Tick};
+use groundwork_sim::{create_schedule, create_world, tick, Tick};
 
 fn parse_ticks(args: &[String], skip_flags: &[&str]) -> u64 {
     args.iter()
         .skip(1)
-        .filter(|a| !skip_flags.iter().any(|f| a.as_str() == *f))
+        .filter(|a| !skip_flags.contains(&a.as_str()))
         .find_map(|s| s.parse().ok())
         .unwrap_or(500)
 }
@@ -44,7 +44,13 @@ fn main() {
 
 fn run_full_profile(num_ticks: u64) {
     eprintln!("=== Groundwork Sim Profiler ===");
-    eprintln!("Grid: {}x{}x{} = {} voxels", GRID_X, GRID_Y, GRID_Z, GRID_X * GRID_Y * GRID_Z);
+    eprintln!(
+        "Grid: {}x{}x{} = {} voxels",
+        GRID_X,
+        GRID_Y,
+        GRID_Z,
+        GRID_X * GRID_Y * GRID_Z
+    );
     eprintln!("Ticks: {}", num_ticks);
     eprintln!();
 
@@ -135,7 +141,10 @@ fn run_full_profile(num_ticks: u64) {
     eprintln!();
 
     // --- Statistics ---
-    let times_ms: Vec<f64> = tick_times.iter().map(|d| d.as_secs_f64() * 1000.0).collect();
+    let times_ms: Vec<f64> = tick_times
+        .iter()
+        .map(|d| d.as_secs_f64() * 1000.0)
+        .collect();
     let total_ms = total_time.as_secs_f64() * 1000.0;
     let avg_ms = times_ms.iter().sum::<f64>() / times_ms.len() as f64;
     let min_ms = times_ms.iter().cloned().fold(f64::INFINITY, f64::min);
@@ -148,11 +157,16 @@ fn run_full_profile(num_ticks: u64) {
     let p99 = sorted[(sorted.len() as f64 * 0.99) as usize];
 
     // Variance and stddev
-    let variance = times_ms.iter().map(|t| (t - avg_ms).powi(2)).sum::<f64>() / times_ms.len() as f64;
+    let variance =
+        times_ms.iter().map(|t| (t - avg_ms).powi(2)).sum::<f64>() / times_ms.len() as f64;
     let stddev = variance.sqrt();
 
     eprintln!("=== Results ===");
-    eprintln!("Total:   {:>10.2}ms ({:.2}s)", total_ms, total_time.as_secs_f64());
+    eprintln!(
+        "Total:   {:>10.2}ms ({:.2}s)",
+        total_ms,
+        total_time.as_secs_f64()
+    );
     eprintln!("Avg:     {:>10.2}ms/tick", avg_ms);
     eprintln!("Min:     {:>10.2}ms", min_ms);
     eprintln!("Max:     {:>10.2}ms", max_ms);
@@ -160,7 +174,10 @@ fn run_full_profile(num_ticks: u64) {
     eprintln!("P50:     {:>10.2}ms", p50);
     eprintln!("P90:     {:>10.2}ms", p90);
     eprintln!("P99:     {:>10.2}ms", p99);
-    eprintln!("Throughput: {:.1} ticks/sec", num_ticks as f64 / total_time.as_secs_f64());
+    eprintln!(
+        "Throughput: {:.1} ticks/sec",
+        num_ticks as f64 / total_time.as_secs_f64()
+    );
     eprintln!();
 
     // --- Material census at end ---
@@ -174,10 +191,17 @@ fn run_full_profile(num_ticks: u64) {
     }
     let tick_count = world.resource::<Tick>().0;
     eprintln!("=== World State at tick {} ===", tick_count);
-    let names = ["air", "soil", "stone", "water", "root", "seed", "trunk", "branch", "leaf", "deadwood"];
+    let names = [
+        "air", "soil", "stone", "water", "root", "seed", "trunk", "branch", "leaf", "deadwood",
+    ];
     for (i, name) in names.iter().enumerate() {
         if counts[i] > 0 {
-            eprintln!("  {:>10}: {:>8} ({:.1}%)", name, counts[i], counts[i] as f64 / (GRID_X * GRID_Y * GRID_Z) as f64 * 100.0);
+            eprintln!(
+                "  {:>10}: {:>8} ({:.1}%)",
+                name,
+                counts[i],
+                counts[i] as f64 / (GRID_X * GRID_Y * GRID_Z) as f64 * 100.0
+            );
         }
     }
     eprintln!();
@@ -259,12 +283,22 @@ fn run_with_flamegraph(num_ticks: u64) {
 
         // Also write a collapsed stacks file for further analysis
         let collapsed_path = "profile_collapsed.txt";
-        let mut collapsed = std::fs::File::create(collapsed_path).expect("failed to create collapsed file");
+        let mut collapsed =
+            std::fs::File::create(collapsed_path).expect("failed to create collapsed file");
         use std::io::Write;
         for (frames, count) in report.data.iter() {
-            let symbols: Vec<String> = frames.frames.iter().rev().map(|frame_vec| {
-                frame_vec.iter().map(|s| s.name()).collect::<Vec<_>>().join(";")
-            }).collect();
+            let symbols: Vec<String> = frames
+                .frames
+                .iter()
+                .rev()
+                .map(|frame_vec| {
+                    frame_vec
+                        .iter()
+                        .map(|s| s.name())
+                        .collect::<Vec<_>>()
+                        .join(";")
+                })
+                .collect();
             writeln!(collapsed, "{} {}", symbols.join(";"), count).ok();
         }
         eprintln!("Collapsed stacks written to {}", collapsed_path);

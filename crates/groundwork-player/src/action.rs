@@ -9,12 +9,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Action {
     // --- Simulation ---
-
     /// Advance the simulation by N ticks.
     Tick { n: u64 },
 
     // --- Tool use ---
-
     /// Place a tool at a single coordinate.
     /// Tool: "seed", "water", "soil", "stone", "air"/"dig"
     /// Species: optional species name for seed tool (e.g. "oak", "fern")
@@ -38,7 +36,6 @@ pub enum Action {
     },
 
     // --- Camera ---
-
     /// Orbit the camera to a specific angle.
     /// theta: azimuth angle in degrees (0-360, default 45)
     /// phi: elevation angle in degrees (11-85, default 60)
@@ -60,7 +57,6 @@ pub enum Action {
     CameraReset,
 
     // --- Observation ---
-
     /// Inspect a voxel (actor-visible observation).
     Inspect { x: usize, y: usize, z: usize },
 
@@ -71,7 +67,6 @@ pub enum Action {
     View { z: usize },
 
     // --- Visual capture ---
-
     /// Capture a screenshot at this point.
     /// In headless Rust mode, this records the intent (label + camera state).
     /// In browser mode (Playwright harness), this captures an actual PNG from the
@@ -79,7 +74,6 @@ pub enum Action {
     Screenshot { label: String },
 
     // --- Meta ---
-
     /// A labeled checkpoint for trace readability.
     /// Does nothing to the sim; just marks a point in the trace.
     Checkpoint { label: String },
@@ -89,14 +83,28 @@ impl std::fmt::Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Action::Tick { n } => write!(f, "tick {n}"),
-            Action::Place { tool, x, y, z, species } => {
+            Action::Place {
+                tool,
+                x,
+                y,
+                z,
+                species,
+            } => {
                 if let Some(sp) = species {
                     write!(f, "place {sp} {x} {y} {z}")
                 } else {
                     write!(f, "place {tool} {x} {y} {z}")
                 }
             }
-            Action::Fill { tool, x1, y1, z1, x2, y2, z2 } => {
+            Action::Fill {
+                tool,
+                x1,
+                y1,
+                z1,
+                x2,
+                y2,
+                z2,
+            } => {
                 write!(f, "fill {tool} {x1} {y1} {z1} {x2} {y2} {z2}")
             }
             Action::CameraOrbit { theta_deg, phi_deg } => {

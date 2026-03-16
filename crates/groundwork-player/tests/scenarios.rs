@@ -6,7 +6,9 @@
 
 use groundwork_player::planner_scripted::ScriptedPlanner;
 use groundwork_player::runner;
-use groundwork_player::scenarios::{autonomous, basic_growth, camera_exploration, ecosystem, water_system};
+use groundwork_player::scenarios::{
+    autonomous, basic_growth, camera_exploration, ecosystem, water_system,
+};
 
 fn run_and_assert(scenario_fn: fn() -> groundwork_player::scenario::Scenario) {
     let scenario = scenario_fn();
@@ -70,7 +72,8 @@ fn trace_serialization() {
     assert!(json.contains("spring_exists"));
     assert!(json.contains("material_counts"));
     // Verify it's valid JSON
-    let parsed: serde_json::Value = serde_json::from_str(&json).expect("trace should be valid JSON");
+    let parsed: serde_json::Value =
+        serde_json::from_str(&json).expect("trace should be valid JSON");
     assert!(parsed.is_object());
 }
 
@@ -137,8 +140,18 @@ fn autonomous_deterministic_replay() {
     let mut p1 = ScriptedPlanner::new();
     let mut p2 = ScriptedPlanner::new();
 
-    let r1 = runner::run_autonomous(&mut p1, &scenario.probes, &scenario.evaluators, scenario.max_steps);
-    let r2 = runner::run_autonomous(&mut p2, &scenario.probes, &scenario.evaluators, scenario.max_steps);
+    let r1 = runner::run_autonomous(
+        &mut p1,
+        &scenario.probes,
+        &scenario.evaluators,
+        scenario.max_steps,
+    );
+    let r2 = runner::run_autonomous(
+        &mut p2,
+        &scenario.probes,
+        &scenario.evaluators,
+        scenario.max_steps,
+    );
 
     assert_eq!(r1.trace.steps.len(), r2.trace.steps.len());
     for (i, (s1, s2)) in r1.trace.steps.iter().zip(r2.trace.steps.iter()).enumerate() {
@@ -170,4 +183,3 @@ fn deterministic_replay() {
         assert_eq!(o1.seed, o2.seed, "step {i}: seed count diverged");
     }
 }
-

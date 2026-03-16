@@ -10,7 +10,6 @@
 /// possible input patterns. The atlas covers all 16 with Unicode block elements
 /// for precise shape matching, plus ASCII characters as softer alternatives
 /// that win when their descriptors are a closer fit.
-
 /// A glyph with its precomputed shape descriptor.
 struct GlyphEntry {
     ch: char,
@@ -45,115 +44,299 @@ impl GlyphAtlas {
             // Pattern [TL, TR, BL, BR]
 
             // 0 quadrants filled
-            GlyphEntry { ch: ' ',  coverage: [0.0, 0.0, 0.0, 0.0] },
-
+            GlyphEntry {
+                ch: ' ',
+                coverage: [0.0, 0.0, 0.0, 0.0],
+            },
             // 1 quadrant filled
-            GlyphEntry { ch: '▘',  coverage: [1.0, 0.0, 0.0, 0.0] }, // top-left
-            GlyphEntry { ch: '▝',  coverage: [0.0, 1.0, 0.0, 0.0] }, // top-right
-            GlyphEntry { ch: '▖',  coverage: [0.0, 0.0, 1.0, 0.0] }, // bottom-left
-            GlyphEntry { ch: '▗',  coverage: [0.0, 0.0, 0.0, 1.0] }, // bottom-right
-
+            GlyphEntry {
+                ch: '▘',
+                coverage: [1.0, 0.0, 0.0, 0.0],
+            }, // top-left
+            GlyphEntry {
+                ch: '▝',
+                coverage: [0.0, 1.0, 0.0, 0.0],
+            }, // top-right
+            GlyphEntry {
+                ch: '▖',
+                coverage: [0.0, 0.0, 1.0, 0.0],
+            }, // bottom-left
+            GlyphEntry {
+                ch: '▗',
+                coverage: [0.0, 0.0, 0.0, 1.0],
+            }, // bottom-right
             // 2 quadrants filled — halves
-            GlyphEntry { ch: '▀',  coverage: [1.0, 1.0, 0.0, 0.0] }, // upper half
-            GlyphEntry { ch: '▄',  coverage: [0.0, 0.0, 1.0, 1.0] }, // lower half
-            GlyphEntry { ch: '▌',  coverage: [1.0, 0.0, 1.0, 0.0] }, // left half
-            GlyphEntry { ch: '▐',  coverage: [0.0, 1.0, 0.0, 1.0] }, // right half
-
+            GlyphEntry {
+                ch: '▀',
+                coverage: [1.0, 1.0, 0.0, 0.0],
+            }, // upper half
+            GlyphEntry {
+                ch: '▄',
+                coverage: [0.0, 0.0, 1.0, 1.0],
+            }, // lower half
+            GlyphEntry {
+                ch: '▌',
+                coverage: [1.0, 0.0, 1.0, 0.0],
+            }, // left half
+            GlyphEntry {
+                ch: '▐',
+                coverage: [0.0, 1.0, 0.0, 1.0],
+            }, // right half
             // 2 quadrants filled — diagonals
-            GlyphEntry { ch: '▚',  coverage: [1.0, 0.0, 0.0, 1.0] }, // TL + BR diagonal
-            GlyphEntry { ch: '▞',  coverage: [0.0, 1.0, 1.0, 0.0] }, // TR + BL diagonal
-
+            GlyphEntry {
+                ch: '▚',
+                coverage: [1.0, 0.0, 0.0, 1.0],
+            }, // TL + BR diagonal
+            GlyphEntry {
+                ch: '▞',
+                coverage: [0.0, 1.0, 1.0, 0.0],
+            }, // TR + BL diagonal
             // 3 quadrants filled
-            GlyphEntry { ch: '▛',  coverage: [1.0, 1.0, 1.0, 0.0] }, // missing BR
-            GlyphEntry { ch: '▜',  coverage: [1.0, 1.0, 0.0, 1.0] }, // missing BL
-            GlyphEntry { ch: '▙',  coverage: [1.0, 0.0, 1.0, 1.0] }, // missing TR
-            GlyphEntry { ch: '▟',  coverage: [0.0, 1.0, 1.0, 1.0] }, // missing TL
-
+            GlyphEntry {
+                ch: '▛',
+                coverage: [1.0, 1.0, 1.0, 0.0],
+            }, // missing BR
+            GlyphEntry {
+                ch: '▜',
+                coverage: [1.0, 1.0, 0.0, 1.0],
+            }, // missing BL
+            GlyphEntry {
+                ch: '▙',
+                coverage: [1.0, 0.0, 1.0, 1.0],
+            }, // missing TR
+            GlyphEntry {
+                ch: '▟',
+                coverage: [0.0, 1.0, 1.0, 1.0],
+            }, // missing TL
             // 4 quadrants filled
-            GlyphEntry { ch: '█',  coverage: [1.0, 1.0, 1.0, 1.0] }, // full block
-
+            GlyphEntry {
+                ch: '█',
+                coverage: [1.0, 1.0, 1.0, 1.0],
+            }, // full block
             // ── Tier 2: ASCII shape characters ──────────────────────────
             // Softer alternatives at fractional descriptors. These win when
             // the renderer produces non-binary coverage (future) or when
             // material-specific overrides route through here.
 
             // Near-empty / sparse
-            GlyphEntry { ch: '.',  coverage: [0.0, 0.0, 0.15, 0.15] },
-            GlyphEntry { ch: ',',  coverage: [0.0, 0.0, 0.15, 0.0] },
-            GlyphEntry { ch: '\'', coverage: [0.1, 0.1, 0.0, 0.0] },
-            GlyphEntry { ch: ':',  coverage: [0.2, 0.2, 0.2, 0.2] },
-            GlyphEntry { ch: ';',  coverage: [0.2, 0.2, 0.15, 0.0] },
-
+            GlyphEntry {
+                ch: '.',
+                coverage: [0.0, 0.0, 0.15, 0.15],
+            },
+            GlyphEntry {
+                ch: ',',
+                coverage: [0.0, 0.0, 0.15, 0.0],
+            },
+            GlyphEntry {
+                ch: '\'',
+                coverage: [0.1, 0.1, 0.0, 0.0],
+            },
+            GlyphEntry {
+                ch: ':',
+                coverage: [0.2, 0.2, 0.2, 0.2],
+            },
+            GlyphEntry {
+                ch: ';',
+                coverage: [0.2, 0.2, 0.15, 0.0],
+            },
             // Horizontal lines / top surfaces
-            GlyphEntry { ch: '_',  coverage: [0.0, 0.0, 0.85, 0.85] },
-            GlyphEntry { ch: '‾',  coverage: [0.85, 0.85, 0.0, 0.0] }, // overline
-            GlyphEntry { ch: '-',  coverage: [0.35, 0.35, 0.35, 0.35] },
-            GlyphEntry { ch: '─',  coverage: [0.35, 0.35, 0.35, 0.35] }, // box horizontal
-            GlyphEntry { ch: '=',  coverage: [0.45, 0.45, 0.45, 0.45] },
-            GlyphEntry { ch: '≡',  coverage: [0.55, 0.55, 0.55, 0.55] }, // triple bar
-
+            GlyphEntry {
+                ch: '_',
+                coverage: [0.0, 0.0, 0.85, 0.85],
+            },
+            GlyphEntry {
+                ch: '‾',
+                coverage: [0.85, 0.85, 0.0, 0.0],
+            }, // overline
+            GlyphEntry {
+                ch: '-',
+                coverage: [0.35, 0.35, 0.35, 0.35],
+            },
+            GlyphEntry {
+                ch: '─',
+                coverage: [0.35, 0.35, 0.35, 0.35],
+            }, // box horizontal
+            GlyphEntry {
+                ch: '=',
+                coverage: [0.45, 0.45, 0.45, 0.45],
+            },
+            GlyphEntry {
+                ch: '≡',
+                coverage: [0.55, 0.55, 0.55, 0.55],
+            }, // triple bar
             // Vertical lines / walls
-            GlyphEntry { ch: '│',  coverage: [0.3, 0.3, 0.3, 0.3] }, // box vertical
-            GlyphEntry { ch: '|',  coverage: [0.3, 0.3, 0.3, 0.3] },
-            GlyphEntry { ch: '!',  coverage: [0.4, 0.4, 0.1, 0.1] },
-
+            GlyphEntry {
+                ch: '│',
+                coverage: [0.3, 0.3, 0.3, 0.3],
+            }, // box vertical
+            GlyphEntry {
+                ch: '|',
+                coverage: [0.3, 0.3, 0.3, 0.3],
+            },
+            GlyphEntry {
+                ch: '!',
+                coverage: [0.4, 0.4, 0.1, 0.1],
+            },
             // Diagonal / contour edges
-            GlyphEntry { ch: '/',  coverage: [0.05, 0.65, 0.65, 0.05] },
-            GlyphEntry { ch: '\\', coverage: [0.65, 0.05, 0.05, 0.65] },
-            GlyphEntry { ch: '╱',  coverage: [0.05, 0.7, 0.7, 0.05] }, // box diagonal
-            GlyphEntry { ch: '╲',  coverage: [0.7, 0.05, 0.05, 0.7] }, // box diagonal
-
+            GlyphEntry {
+                ch: '/',
+                coverage: [0.05, 0.65, 0.65, 0.05],
+            },
+            GlyphEntry {
+                ch: '\\',
+                coverage: [0.65, 0.05, 0.05, 0.65],
+            },
+            GlyphEntry {
+                ch: '╱',
+                coverage: [0.05, 0.7, 0.7, 0.05],
+            }, // box diagonal
+            GlyphEntry {
+                ch: '╲',
+                coverage: [0.7, 0.05, 0.05, 0.7],
+            }, // box diagonal
             // Corner pieces — box drawing
-            GlyphEntry { ch: '┌',  coverage: [0.0, 0.0, 0.5, 0.5] },
-            GlyphEntry { ch: '┐',  coverage: [0.0, 0.0, 0.5, 0.5] },
-            GlyphEntry { ch: '└',  coverage: [0.5, 0.5, 0.0, 0.0] },
-            GlyphEntry { ch: '┘',  coverage: [0.5, 0.5, 0.0, 0.0] },
-
+            GlyphEntry {
+                ch: '┌',
+                coverage: [0.0, 0.0, 0.5, 0.5],
+            },
+            GlyphEntry {
+                ch: '┐',
+                coverage: [0.0, 0.0, 0.5, 0.5],
+            },
+            GlyphEntry {
+                ch: '└',
+                coverage: [0.5, 0.5, 0.0, 0.0],
+            },
+            GlyphEntry {
+                ch: '┘',
+                coverage: [0.5, 0.5, 0.0, 0.0],
+            },
             // Brackets — left/right heavy
-            GlyphEntry { ch: '[',  coverage: [0.65, 0.15, 0.65, 0.15] },
-            GlyphEntry { ch: ']',  coverage: [0.15, 0.65, 0.15, 0.65] },
-            GlyphEntry { ch: '(',  coverage: [0.3, 0.0, 0.3, 0.0] },
-            GlyphEntry { ch: ')',  coverage: [0.0, 0.3, 0.0, 0.3] },
-            GlyphEntry { ch: '{',  coverage: [0.35, 0.1, 0.35, 0.1] },
-            GlyphEntry { ch: '}',  coverage: [0.1, 0.35, 0.1, 0.35] },
-
+            GlyphEntry {
+                ch: '[',
+                coverage: [0.65, 0.15, 0.65, 0.15],
+            },
+            GlyphEntry {
+                ch: ']',
+                coverage: [0.15, 0.65, 0.15, 0.65],
+            },
+            GlyphEntry {
+                ch: '(',
+                coverage: [0.3, 0.0, 0.3, 0.0],
+            },
+            GlyphEntry {
+                ch: ')',
+                coverage: [0.0, 0.3, 0.0, 0.3],
+            },
+            GlyphEntry {
+                ch: '{',
+                coverage: [0.35, 0.1, 0.35, 0.1],
+            },
+            GlyphEntry {
+                ch: '}',
+                coverage: [0.1, 0.35, 0.1, 0.35],
+            },
             // Arrow/pointer shapes
-            GlyphEntry { ch: '^',  coverage: [0.45, 0.45, 0.15, 0.15] },
-            GlyphEntry { ch: 'v',  coverage: [0.15, 0.15, 0.5, 0.5] },
-            GlyphEntry { ch: '<',  coverage: [0.3, 0.0, 0.3, 0.0] },
-            GlyphEntry { ch: '>',  coverage: [0.0, 0.3, 0.0, 0.3] },
-
+            GlyphEntry {
+                ch: '^',
+                coverage: [0.45, 0.45, 0.15, 0.15],
+            },
+            GlyphEntry {
+                ch: 'v',
+                coverage: [0.15, 0.15, 0.5, 0.5],
+            },
+            GlyphEntry {
+                ch: '<',
+                coverage: [0.3, 0.0, 0.3, 0.0],
+            },
+            GlyphEntry {
+                ch: '>',
+                coverage: [0.0, 0.3, 0.0, 0.3],
+            },
             // ── Tier 3: Dense / textured fills ──────────────────────────
             // Medium to full density — used for fully covered cells where
             // material styling wants a textured look over solid blocks.
-
-            GlyphEntry { ch: '░',  coverage: [0.25, 0.25, 0.25, 0.25] }, // light shade
-            GlyphEntry { ch: '▒',  coverage: [0.5, 0.5, 0.5, 0.5] },    // medium shade
-            GlyphEntry { ch: '▓',  coverage: [0.75, 0.75, 0.75, 0.75] }, // dark shade
-            GlyphEntry { ch: '#',  coverage: [0.7, 0.7, 0.7, 0.7] },
-            GlyphEntry { ch: '%',  coverage: [0.6, 0.6, 0.6, 0.6] },
-            GlyphEntry { ch: '@',  coverage: [0.85, 0.85, 0.85, 0.85] },
-            GlyphEntry { ch: '&',  coverage: [0.65, 0.65, 0.65, 0.65] },
-            GlyphEntry { ch: '*',  coverage: [0.4, 0.4, 0.4, 0.4] },
-            GlyphEntry { ch: '+',  coverage: [0.3, 0.3, 0.3, 0.3] },
-            GlyphEntry { ch: '×',  coverage: [0.35, 0.35, 0.35, 0.35] },
-
+            GlyphEntry {
+                ch: '░',
+                coverage: [0.25, 0.25, 0.25, 0.25],
+            }, // light shade
+            GlyphEntry {
+                ch: '▒',
+                coverage: [0.5, 0.5, 0.5, 0.5],
+            }, // medium shade
+            GlyphEntry {
+                ch: '▓',
+                coverage: [0.75, 0.75, 0.75, 0.75],
+            }, // dark shade
+            GlyphEntry {
+                ch: '#',
+                coverage: [0.7, 0.7, 0.7, 0.7],
+            },
+            GlyphEntry {
+                ch: '%',
+                coverage: [0.6, 0.6, 0.6, 0.6],
+            },
+            GlyphEntry {
+                ch: '@',
+                coverage: [0.85, 0.85, 0.85, 0.85],
+            },
+            GlyphEntry {
+                ch: '&',
+                coverage: [0.65, 0.65, 0.65, 0.65],
+            },
+            GlyphEntry {
+                ch: '*',
+                coverage: [0.4, 0.4, 0.4, 0.4],
+            },
+            GlyphEntry {
+                ch: '+',
+                coverage: [0.3, 0.3, 0.3, 0.3],
+            },
+            GlyphEntry {
+                ch: '×',
+                coverage: [0.35, 0.35, 0.35, 0.35],
+            },
             // ── Tier 4: Partial fills — asymmetric weight ───────────────
             // Characters with visual weight concentrated in specific regions.
             // These help when coverage is fractional or for future sub-pixel
             // refinement.
-
-            GlyphEntry { ch: '⌐',  coverage: [0.7, 0.7, 0.3, 0.0] }, // top + left stub
-            GlyphEntry { ch: '¬',  coverage: [0.7, 0.7, 0.0, 0.3] }, // top + right stub
-            GlyphEntry { ch: '"',  coverage: [0.45, 0.45, 0.0, 0.0] },
-            GlyphEntry { ch: '„',  coverage: [0.0, 0.0, 0.45, 0.45] }, // bottom double quote
-            GlyphEntry { ch: '¡',  coverage: [0.1, 0.1, 0.4, 0.4] }, // inverted !
-            GlyphEntry { ch: '·',  coverage: [0.15, 0.15, 0.15, 0.15] }, // middle dot
-            GlyphEntry { ch: '•',  coverage: [0.35, 0.35, 0.35, 0.35] }, // bullet
-
+            GlyphEntry {
+                ch: '⌐',
+                coverage: [0.7, 0.7, 0.3, 0.0],
+            }, // top + left stub
+            GlyphEntry {
+                ch: '¬',
+                coverage: [0.7, 0.7, 0.0, 0.3],
+            }, // top + right stub
+            GlyphEntry {
+                ch: '"',
+                coverage: [0.45, 0.45, 0.0, 0.0],
+            },
+            GlyphEntry {
+                ch: '„',
+                coverage: [0.0, 0.0, 0.45, 0.45],
+            }, // bottom double quote
+            GlyphEntry {
+                ch: '¡',
+                coverage: [0.1, 0.1, 0.4, 0.4],
+            }, // inverted !
+            GlyphEntry {
+                ch: '·',
+                coverage: [0.15, 0.15, 0.15, 0.15],
+            }, // middle dot
+            GlyphEntry {
+                ch: '•',
+                coverage: [0.35, 0.35, 0.35, 0.35],
+            }, // bullet
             // ── Special: water/organic ──────────────────────────────────
-            GlyphEntry { ch: '~',  coverage: [0.3, 0.4, 0.4, 0.3] },
-            GlyphEntry { ch: '≈',  coverage: [0.4, 0.5, 0.5, 0.4] }, // double tilde
+            GlyphEntry {
+                ch: '~',
+                coverage: [0.3, 0.4, 0.4, 0.3],
+            },
+            GlyphEntry {
+                ch: '≈',
+                coverage: [0.4, 0.5, 0.5, 0.4],
+            }, // double tilde
         ];
 
         Self { glyphs }

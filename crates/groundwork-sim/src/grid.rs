@@ -18,6 +18,12 @@ pub struct VoxelGrid {
     cells: Vec<Voxel>,
 }
 
+impl Default for VoxelGrid {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VoxelGrid {
     /// Create a new grid with default terrain: stone at the bottom,
     /// soil in the middle, air above ground, and a small water spring.
@@ -90,9 +96,11 @@ impl VoxelGrid {
         for (fx, fy, r_sq) in clusters {
             let cx = (fx * GRID_X as f64).round() as isize;
             let cy = (fy * GRID_Y as f64).round() as isize;
-            let d = ((x as isize - cx) * (x as isize - cx)
-                   + (y as isize - cy) * (y as isize - cy)) as f64;
-            if d < r_sq { return true; }
+            let d = ((x as isize - cx) * (x as isize - cx) + (y as isize - cy) * (y as isize - cy))
+                as f64;
+            if d < r_sq {
+                return true;
+            }
         }
         false
     }
@@ -120,7 +128,8 @@ impl VoxelGrid {
                 // Stone outcrops: low boulders near surface
                 let out_above = crate::scale::meters_to_voxels(0.1).max(1);
                 let out_below = crate::scale::meters_to_voxels(0.5).max(1);
-                for z in (surface.saturating_sub(out_below))..=(surface + out_above).min(GRID_Z - 1) {
+                for z in (surface.saturating_sub(out_below))..=(surface + out_above).min(GRID_Z - 1)
+                {
                     if Self::is_stone_outcrop(x, y, z) {
                         let idx = Self::index(x, y, z);
                         cells[idx].material = Material::Stone;
@@ -262,7 +271,10 @@ mod tests {
         let cx = GRID_X / 2;
         let cy = GRID_Y / 2;
         let spring_z = VoxelGrid::surface_height(cx, cy);
-        assert_eq!(grid.get(cx, cy, spring_z).unwrap().material, Material::Water);
+        assert_eq!(
+            grid.get(cx, cy, spring_z).unwrap().material,
+            Material::Water
+        );
     }
 
     #[test]

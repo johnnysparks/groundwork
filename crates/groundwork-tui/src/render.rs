@@ -13,7 +13,12 @@ use crate::app::App;
 
 /// Map a voxel to a 2-char ASCII string + foreground color.
 /// Colors are dimmed by light level to show underground darkness.
-fn voxel_style(mat: Material, water_level: u8, light_level: u8, nutrient_level: u8) -> (&'static str, Color) {
+fn voxel_style(
+    mat: Material,
+    water_level: u8,
+    light_level: u8,
+    nutrient_level: u8,
+) -> (&'static str, Color) {
     let dim = |c: u8| -> u8 {
         ((c as u16 * light_level as u16) / 255).max(if light_level > 0 { 20 } else { 0 }) as u8
     };
@@ -68,9 +73,12 @@ fn in_tool_range(x: usize, y: usize, z: usize, app: &App) -> bool {
         let ex = app.focus_x;
         let ey = app.focus_y;
         let ez = app.focus_z;
-        x >= sx.min(ex) && x <= sx.max(ex)
-            && y >= sy.min(ey) && y <= sy.max(ey)
-            && z >= sz.min(ez) && z <= sz.max(ez)
+        x >= sx.min(ex)
+            && x <= sx.max(ex)
+            && y >= sy.min(ey)
+            && y <= sy.max(ey)
+            && z >= sz.min(ez)
+            && z <= sz.max(ez)
     } else {
         false
     }
@@ -115,11 +123,19 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             let (wx, wy) = (wx as usize, wy as usize);
 
             if let Some(voxel) = grid.get(wx, wy, z) {
-                let (s, fg) = voxel_style(voxel.material, voxel.water_level, voxel.light_level, voxel.nutrient_level);
+                let (s, fg) = voxel_style(
+                    voxel.material,
+                    voxel.water_level,
+                    voxel.light_level,
+                    voxel.nutrient_level,
+                );
                 let is_in_range = app.tool_active && in_tool_range(wx, wy, z, app);
 
                 let style = if is_focus {
-                    Style::default().fg(fg).bg(Color::Yellow).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(fg)
+                        .bg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD)
                 } else if is_in_range {
                     Style::default().fg(fg).bg(Color::Rgb(60, 60, 100))
                 } else {
@@ -189,7 +205,10 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             ]));
             panel_lines.push(Line::from(vec![
                 Span::styled(" mat  ", label),
-                Span::styled(voxel.material.name().to_string(), Style::default().fg(mat_color)),
+                Span::styled(
+                    voxel.material.name().to_string(),
+                    Style::default().fg(mat_color),
+                ),
             ]));
             panel_lines.push(Line::from(""));
             panel_lines.push(Line::from(vec![
@@ -224,27 +243,44 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                     panel_lines.push(Line::from(""));
                     panel_lines.push(Line::from(vec![Span::styled(
                         format!(" {} SOIL ", comp.type_name().to_uppercase()),
-                        Style::default().fg(Color::Black).bg(Color::Rgb(139, 90, 43)),
+                        Style::default()
+                            .fg(Color::Black)
+                            .bg(Color::Rgb(139, 90, 43)),
                     )]));
                     panel_lines.push(Line::from(vec![
                         Span::styled(" sand ", label),
-                        Span::styled(format!("{} {:>3}", bar(comp.sand, 8), comp.sand), Style::default().fg(Color::Rgb(194, 178, 128))),
+                        Span::styled(
+                            format!("{} {:>3}", bar(comp.sand, 8), comp.sand),
+                            Style::default().fg(Color::Rgb(194, 178, 128)),
+                        ),
                     ]));
                     panel_lines.push(Line::from(vec![
                         Span::styled(" clay ", label),
-                        Span::styled(format!("{} {:>3}", bar(comp.clay, 8), comp.clay), Style::default().fg(Color::Rgb(180, 120, 80))),
+                        Span::styled(
+                            format!("{} {:>3}", bar(comp.clay, 8), comp.clay),
+                            Style::default().fg(Color::Rgb(180, 120, 80)),
+                        ),
                     ]));
                     panel_lines.push(Line::from(vec![
                         Span::styled(" org  ", label),
-                        Span::styled(format!("{} {:>3}", bar(comp.organic, 8), comp.organic), Style::default().fg(Color::Rgb(80, 60, 30))),
+                        Span::styled(
+                            format!("{} {:>3}", bar(comp.organic, 8), comp.organic),
+                            Style::default().fg(Color::Rgb(80, 60, 30)),
+                        ),
                     ]));
                     panel_lines.push(Line::from(vec![
                         Span::styled(" rock ", label),
-                        Span::styled(format!("{} {:>3}", bar(comp.rock, 8), comp.rock), Style::default().fg(Color::Rgb(150, 150, 160))),
+                        Span::styled(
+                            format!("{} {:>3}", bar(comp.rock, 8), comp.rock),
+                            Style::default().fg(Color::Rgb(150, 150, 160)),
+                        ),
                     ]));
                     panel_lines.push(Line::from(vec![
                         Span::styled(" bact ", label),
-                        Span::styled(format!("{} {:>3}", bar(comp.bacteria, 8), comp.bacteria), Style::default().fg(Color::Rgb(100, 200, 100))),
+                        Span::styled(
+                            format!("{} {:>3}", bar(comp.bacteria, 8), comp.bacteria),
+                            Style::default().fg(Color::Rgb(100, 200, 100)),
+                        ),
                     ]));
                     panel_lines.push(Line::from(vec![
                         Span::styled(" pH   ", label),
@@ -264,7 +300,9 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
                 panel_lines.push(Line::from(""));
                 panel_lines.push(Line::from(vec![Span::styled(
                     " SEED ",
-                    Style::default().fg(Color::Black).bg(Color::Rgb(200, 180, 60)),
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(200, 180, 60)),
                 )]));
 
                 let growth = voxel.nutrient_level;
@@ -277,15 +315,22 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
 
                 let has_water = voxel.water_level >= 30 || {
                     let dirs: [(isize, isize, isize); 6] = [
-                        (-1,0,0),(1,0,0),(0,-1,0),(0,1,0),(0,0,-1),(0,0,1)
+                        (-1, 0, 0),
+                        (1, 0, 0),
+                        (0, -1, 0),
+                        (0, 1, 0),
+                        (0, 0, -1),
+                        (0, 0, 1),
                     ];
-                    dirs.iter().any(|&(dx,dy,dz)| {
+                    dirs.iter().any(|&(dx, dy, dz)| {
                         let nx = app.focus_x as isize + dx;
                         let ny = app.focus_y as isize + dy;
                         let nz = z as isize + dz;
-                        if nx < 0 || ny < 0 || nz < 0 { return false; }
+                        if nx < 0 || ny < 0 || nz < 0 {
+                            return false;
+                        }
                         grid.get(nx as usize, ny as usize, nz as usize)
-                            .map_or(false, |v| v.water_level >= 30)
+                            .is_some_and(|v| v.water_level >= 30)
                     })
                 };
                 let has_light = voxel.light_level >= 30;
@@ -306,10 +351,13 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
 
                 if has_water && has_light {
                     let remaining = growth_max.saturating_sub(growth as u16);
-                    let ticks_left = (remaining + 4) / 5;
+                    let ticks_left = remaining.div_ceil(5);
                     panel_lines.push(Line::from(vec![
                         Span::styled(" status ", label),
-                        Span::styled(format!("~{ticks_left} ticks"), Style::default().fg(Color::Green)),
+                        Span::styled(
+                            format!("~{ticks_left} ticks"),
+                            Style::default().fg(Color::Green),
+                        ),
                     ]));
                 } else {
                     panel_lines.push(Line::from(vec![
@@ -350,9 +398,16 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
             panel_lines.push(Line::from(vec![
                 Span::styled(" tool ", label),
                 Span::styled(
-                    format!("{} ({},{},{}) \u{2192} ({},{},{})",
-                        app.selected_tool().name(), sx, sy, sz,
-                        app.focus_x, app.focus_y, app.focus_z),
+                    format!(
+                        "{} ({},{},{}) \u{2192} ({},{},{})",
+                        app.selected_tool().name(),
+                        sx,
+                        sy,
+                        sz,
+                        app.focus_x,
+                        app.focus_y,
+                        app.focus_z
+                    ),
                     Style::default().fg(Color::Magenta),
                 ),
             ]));
@@ -361,7 +416,10 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
     panel_lines.push(Line::from(""));
 
     // Missions
-    panel_lines.extend(app.quest_log.render_lines(app.show_missions, panel_width as usize));
+    panel_lines.extend(
+        app.quest_log
+            .render_lines(app.show_missions, panel_width as usize),
+    );
 
     // Status
     panel_lines.push(badge("STATUS (T)"));
@@ -378,15 +436,60 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         }
 
         let mat_entries: [(&str, &str, usize, Color); 10] = [
-            ("~~", "water", Material::Water as usize, Color::Rgb(80, 140, 255)),
-            ("##", "soil", Material::Soil as usize, Color::Rgb(139, 90, 43)),
-            ("@@", "stone", Material::Stone as usize, Color::Rgb(170, 170, 180)),
-            ("**", "root", Material::Root as usize, Color::Rgb(80, 180, 60)),
-            ("()", "seed", Material::Seed as usize, Color::Rgb(200, 180, 60)),
-            ("||", "trunk", Material::Trunk as usize, Color::Rgb(139, 90, 43)),
-            ("--", "branch", Material::Branch as usize, Color::Rgb(120, 80, 40)),
-            ("&&", "leaf", Material::Leaf as usize, Color::Rgb(60, 160, 40)),
-            ("XX", "dead", Material::DeadWood as usize, Color::Rgb(100, 80, 60)),
+            (
+                "~~",
+                "water",
+                Material::Water as usize,
+                Color::Rgb(80, 140, 255),
+            ),
+            (
+                "##",
+                "soil",
+                Material::Soil as usize,
+                Color::Rgb(139, 90, 43),
+            ),
+            (
+                "@@",
+                "stone",
+                Material::Stone as usize,
+                Color::Rgb(170, 170, 180),
+            ),
+            (
+                "**",
+                "root",
+                Material::Root as usize,
+                Color::Rgb(80, 180, 60),
+            ),
+            (
+                "()",
+                "seed",
+                Material::Seed as usize,
+                Color::Rgb(200, 180, 60),
+            ),
+            (
+                "||",
+                "trunk",
+                Material::Trunk as usize,
+                Color::Rgb(139, 90, 43),
+            ),
+            (
+                "--",
+                "branch",
+                Material::Branch as usize,
+                Color::Rgb(120, 80, 40),
+            ),
+            (
+                "&&",
+                "leaf",
+                Material::Leaf as usize,
+                Color::Rgb(60, 160, 40),
+            ),
+            (
+                "XX",
+                "dead",
+                Material::DeadWood as usize,
+                Color::Rgb(100, 80, 60),
+            ),
             (". ", "air", Material::Air as usize, Color::Gray),
         ];
 
@@ -403,7 +506,10 @@ pub fn draw(frame: &mut Frame, world: &World, app: &App) {
         if wet_soil > 0 {
             panel_lines.push(Line::from(vec![
                 Span::styled(" %% ", Style::default().fg(Color::Rgb(80, 70, 100))),
-                Span::styled(format!("{:<6}", "wet"), Style::default().fg(Color::Rgb(80, 70, 100))),
+                Span::styled(
+                    format!("{:<6}", "wet"),
+                    Style::default().fg(Color::Rgb(80, 70, 100)),
+                ),
                 Span::styled(format!("{:>6}", wet_soil), value_style),
             ]));
         }

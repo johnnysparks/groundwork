@@ -408,24 +408,18 @@ impl QuestLog {
                 QuestId::SwitchTo3D => self.actions.switched_3d,
                 QuestId::FindTheSpring => focus_mat == Some(Material::Water),
                 QuestId::PlaceWater => self.actions.placed_water,
-                QuestId::ObserveWetSoil => {
-                    focus_mat == Some(Material::Soil) && focus_water > 50
-                }
+                QuestId::ObserveWetSoil => focus_mat == Some(Material::Soil) && focus_water > 50,
                 QuestId::PlantFirstSeed => self.actions.planted_seed,
                 QuestId::WatchItGrow => has_trunk,
                 QuestId::ChangeSpecies => self.actions.cycled_species,
                 QuestId::ToggleAutoTick => self.actions.toggled_auto_tick,
                 QuestId::StepManually => self.actions.stepped_manually,
                 QuestId::OpenInspect => self.actions.toggled_inspect,
-                QuestId::InspectSoil => {
-                    show_inspect && focus_mat == Some(Material::Soil)
-                }
+                QuestId::InspectSoil => show_inspect && focus_mat == Some(Material::Soil),
                 QuestId::ViewUnderground => focus.2 < GROUND_LEVEL,
                 QuestId::FindRoots => focus_mat == Some(Material::Root),
                 QuestId::PlantThreeSpecies => self.actions.species_planted.len() >= 3,
-                QuestId::PlantAllTypes => {
-                    has_all_plant_types(&self.actions.species_planted, table)
-                }
+                QuestId::PlantAllTypes => has_all_plant_types(&self.actions.species_planted, table),
                 QuestId::UseShovel => self.actions.used_shovel,
                 QuestId::ShapeTerrain => self.actions.used_tool_range,
                 QuestId::GrowATree => tree_grown,
@@ -552,18 +546,9 @@ impl QuestLog {
             let (done, total) = self.chapter_progress();
             let label = Style::default().fg(Color::DarkGray);
             lines.push(Line::from(vec![
-                Span::styled(
-                    format!(" Ch.{} ", self.current_chapter + 1),
-                    label,
-                ),
-                Span::styled(
-                    format!("{done}/{total}"),
-                    Style::default().fg(Color::White),
-                ),
-                Span::styled(
-                    format!(" {}", CHAPTER_NAMES[self.current_chapter]),
-                    label,
-                ),
+                Span::styled(format!(" Ch.{} ", self.current_chapter + 1), label),
+                Span::styled(format!("{done}/{total}"), Style::default().fg(Color::White)),
+                Span::styled(format!(" {}", CHAPTER_NAMES[self.current_chapter]), label),
             ]));
             lines.push(Line::from(""));
             return lines;

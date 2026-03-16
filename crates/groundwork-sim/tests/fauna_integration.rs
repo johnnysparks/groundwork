@@ -83,11 +83,18 @@ fn fauna_spawn_near_flowers() {
 
     // Count leaves in garden to verify growth happened
     let grid = world.resource::<VoxelGrid>();
-    let leaf_count: usize = grid.cells().iter().filter(|v| v.material == Material::Leaf).count();
+    let leaf_count: usize = grid
+        .cells()
+        .iter()
+        .filter(|v| v.material == Material::Leaf)
+        .count();
 
     // If no leaves grew, the garden didn't develop enough for fauna
     if leaf_count < 6 {
-        println!("Only {} leaves grew — skipping fauna spawn check (need >= 6)", leaf_count);
+        println!(
+            "Only {} leaves grew — skipping fauna spawn check (need >= 6)",
+            leaf_count
+        );
         return;
     }
 
@@ -97,16 +104,25 @@ fn fauna_spawn_near_flowers() {
     }
 
     let fauna = world.resource::<FaunaList>();
-    let pollinator_count = fauna.fauna.iter().filter(|f| {
-        matches!(f.fauna_type, FaunaType::Bee | FaunaType::Butterfly)
-    }).count();
+    let pollinator_count = fauna
+        .fauna
+        .iter()
+        .filter(|f| matches!(f.fauna_type, FaunaType::Bee | FaunaType::Butterfly))
+        .count();
 
-    println!("After 500 ticks: {} leaves, {} pollinators, {} total fauna",
-        leaf_count, pollinator_count, fauna.count());
+    println!(
+        "After 500 ticks: {} leaves, {} pollinators, {} total fauna",
+        leaf_count,
+        pollinator_count,
+        fauna.count()
+    );
 
     // With enough foliage, pollinators should have spawned
-    assert!(pollinator_count > 0,
-        "Pollinators should spawn near flower clusters ({} leaves present)", leaf_count);
+    assert!(
+        pollinator_count > 0,
+        "Pollinators should spawn near flower clusters ({} leaves present)",
+        leaf_count
+    );
 }
 
 #[test]
@@ -120,21 +136,37 @@ fn fauna_positions_are_valid() {
 
     let fauna = world.resource::<FaunaList>();
     for f in &fauna.fauna {
-        assert!(f.x >= 0.0 && f.x < GRID_X as f32,
-            "Fauna x={} out of bounds [0, {})", f.x, GRID_X);
-        assert!(f.y >= 0.0 && f.y < GRID_Y as f32,
-            "Fauna y={} out of bounds [0, {})", f.y, GRID_Y);
+        assert!(
+            f.x >= 0.0 && f.x < GRID_X as f32,
+            "Fauna x={} out of bounds [0, {})",
+            f.x,
+            GRID_X
+        );
+        assert!(
+            f.y >= 0.0 && f.y < GRID_Y as f32,
+            "Fauna y={} out of bounds [0, {})",
+            f.y,
+            GRID_Y
+        );
 
         // Pollinators should be above ground
         if matches!(f.fauna_type, FaunaType::Bee | FaunaType::Butterfly) {
-            assert!(f.z >= GROUND_LEVEL as f32,
-                "Pollinator z={} should be above ground level {}", f.z, GROUND_LEVEL);
+            assert!(
+                f.z >= GROUND_LEVEL as f32,
+                "Pollinator z={} should be above ground level {}",
+                f.z,
+                GROUND_LEVEL
+            );
         }
 
         // Worms should be underground
         if f.fauna_type == FaunaType::Worm {
-            assert!(f.z < GROUND_LEVEL as f32,
-                "Worm z={} should be below ground level {}", f.z, GROUND_LEVEL);
+            assert!(
+                f.z < GROUND_LEVEL as f32,
+                "Worm z={} should be below ground level {}",
+                f.z,
+                GROUND_LEVEL
+            );
         }
     }
 }
@@ -154,8 +186,11 @@ fn fauna_export_data_is_packed_correctly() {
     }
 
     let export_len = fauna.export_len();
-    assert_eq!(export_len, fauna.count() * 16,
-        "Export length should be 16 bytes per fauna");
+    assert_eq!(
+        export_len,
+        fauna.count() * 16,
+        "Export length should be 16 bytes per fauna"
+    );
 
     // Verify packed data matches internal state
     let ptr = fauna.export_ptr();
@@ -163,12 +198,19 @@ fn fauna_export_data_is_packed_correctly() {
 
     for (i, f) in fauna.fauna.iter().enumerate() {
         let off = i * 16;
-        assert_eq!(buf[off], f.fauna_type as u8,
-            "Packed type mismatch for fauna {}", i);
+        assert_eq!(
+            buf[off], f.fauna_type as u8,
+            "Packed type mismatch for fauna {}",
+            i
+        );
 
-        let x = f32::from_le_bytes(buf[off+4..off+8].try_into().unwrap());
-        assert!((x - f.x).abs() < 0.001,
-            "Packed x={} doesn't match internal x={}", x, f.x);
+        let x = f32::from_le_bytes(buf[off + 4..off + 8].try_into().unwrap());
+        assert!(
+            (x - f.x).abs() < 0.001,
+            "Packed x={} doesn't match internal x={}",
+            x,
+            f.x
+        );
     }
 
     println!("Export pack validated for {} fauna", fauna.count());
@@ -216,7 +258,11 @@ fn worm_enriches_soil() {
     }
 
     let fauna = world.resource::<FaunaList>();
-    let worm_count = fauna.fauna.iter().filter(|f| f.fauna_type == FaunaType::Worm).count();
+    let worm_count = fauna
+        .fauna
+        .iter()
+        .filter(|f| f.fauna_type == FaunaType::Worm)
+        .count();
     println!("Worm count after 500 ticks: {}", worm_count);
 
     // Worms may or may not spawn depending on exact conditions,

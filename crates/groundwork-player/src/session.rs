@@ -77,10 +77,7 @@ impl SessionPlanner {
 
         if self.wait_for_input {
             // Poll for the file to appear (external agent writes it)
-            eprintln!(
-                "\n>>> Waiting for actions at: {}",
-                path.display()
-            );
+            eprintln!("\n>>> Waiting for actions at: {}", path.display());
             eprintln!(">>> Write a JSON array of actions to that file, then I'll execute them.\n");
 
             for _ in 0..600 {

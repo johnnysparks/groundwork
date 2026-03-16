@@ -12,10 +12,14 @@ pub mod wasm_bridge;
 
 use bevy_ecs::prelude::*;
 
-use fauna::{FaunaList, fauna_spawn, fauna_update, fauna_effects};
+use fauna::{fauna_effects, fauna_spawn, fauna_update, FaunaList};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
-use systems::{branch_growth, light_propagation, pioneer_succession, root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring};
+use systems::{
+    branch_growth, light_propagation, pioneer_succession, root_growth, root_water_absorption,
+    seed_dispersal, seed_growth, self_pruning, soil_absorption, soil_evolution, tree_growth,
+    tree_rasterize, water_flow, water_spring,
+};
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
 
@@ -105,9 +109,13 @@ fn plant_starter_garden(world: &mut World) {
             let ax = oak_x as isize + dx;
             let ay = oak_y as isize + dy;
             let az = oak_z as isize + dz;
-            if ax < 0 || ay < 0 || az < 0 { continue; }
+            if ax < 0 || ay < 0 || az < 0 {
+                continue;
+            }
             let (ax, ay, az) = (ax as usize, ay as usize, az as usize);
-            if !VoxelGrid::in_bounds(ax, ay, az) { continue; }
+            if !VoxelGrid::in_bounds(ax, ay, az) {
+                continue;
+            }
             if let Some(cell) = grid.get_mut(ax, ay, az) {
                 let can_place = match mat {
                     Material::Root => cell.material == Material::Soil,
@@ -139,13 +147,13 @@ fn plant_starter_garden(world: &mut World) {
     // -- Scatter seeds of varied species around the spring --
     // Each (species_id, dx_from_center, dy_from_center)
     let seed_spots: &[(usize, isize, isize)] = &[
-        (1, -6, 3),   // birch
-        (4, 3, -5),    // fern
-        (7, -4, -3),   // wildflower
-        (9, 5, 6),     // moss
-        (10, -2, 5),   // grass
-        (11, 4, -7),   // clover
-        (5, -7, -6),   // berry bush
+        (1, -6, 3),  // birch
+        (4, 3, -5),  // fern
+        (7, -4, -3), // wildflower
+        (9, 5, 6),   // moss
+        (10, -2, 5), // grass
+        (11, 4, -7), // clover
+        (5, -7, -6), // berry bush
     ];
 
     // Collect which seeds landed, then update the species map separately
@@ -177,7 +185,30 @@ fn plant_starter_garden(world: &mut World) {
 /// Create the simulation schedule with all systems in order.
 pub fn create_schedule() -> Schedule {
     let mut schedule = Schedule::default();
-    schedule.add_systems((water_spring, water_flow, soil_absorption, root_water_absorption, soil_evolution, light_propagation, seed_growth, ApplyDeferred, tree_growth, branch_growth, self_pruning, tree_rasterize, root_growth, seed_dispersal, pioneer_succession, fauna_spawn, fauna_update, fauna_effects, tick_counter).chain());
+    schedule.add_systems(
+        (
+            water_spring,
+            water_flow,
+            soil_absorption,
+            root_water_absorption,
+            soil_evolution,
+            light_propagation,
+            seed_growth,
+            ApplyDeferred,
+            tree_growth,
+            branch_growth,
+            self_pruning,
+            tree_rasterize,
+            root_growth,
+            seed_dispersal,
+            pioneer_succession,
+            fauna_spawn,
+            fauna_update,
+            fauna_effects,
+            tick_counter,
+        )
+            .chain(),
+    );
     schedule
 }
 

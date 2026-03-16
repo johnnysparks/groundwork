@@ -55,9 +55,9 @@ impl Trace {
 
     /// Find a checkpoint step by label.
     pub fn checkpoint(&self, label: &str) -> Option<&TraceStep> {
-        self.steps.iter().find(|s| {
-            matches!(&s.action, Action::Checkpoint { label: l } if l == label)
-        })
+        self.steps
+            .iter()
+            .find(|s| matches!(&s.action, Action::Checkpoint { label: l } if l == label))
     }
 
     /// Oracle snapshot at a specific step index.
@@ -86,12 +86,7 @@ impl TraceBuilder {
     }
 
     /// Record a completed step.
-    pub fn record(
-        &mut self,
-        action: Action,
-        observation: Observation,
-        oracle: OracleSnapshot,
-    ) {
+    pub fn record(&mut self, action: Action, observation: Observation, oracle: OracleSnapshot) {
         let duration = self.step_start.elapsed();
         self.steps.push(TraceStep {
             action,

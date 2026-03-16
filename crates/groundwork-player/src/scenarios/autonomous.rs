@@ -4,9 +4,7 @@
 //! The scripted planner runs deterministically in CI; the LLM planner runs
 //! manually with `cargo test -- --ignored`.
 
-use crate::evaluator::{
-    CameraOrbited, CameraWentUnderground, Evaluator, MaterialMinimum, NoCrash,
-};
+use crate::evaluator::{CameraOrbited, CameraWentUnderground, Evaluator, MaterialMinimum, NoCrash};
 
 /// Configuration for an autonomous scenario.
 pub struct AutonomousScenario {

@@ -1,8 +1,11 @@
 use bevy_ecs::prelude::*;
 
-use crate::grid::{VoxelGrid, GROUND_LEVEL, GRID_X, GRID_Y, GRID_Z};
+use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use crate::soil::SoilGrid;
-use crate::tree::{tree_hash, init_skeleton, generate_attraction_points, BranchNode, GrowthStage, PlantType, SeedSpeciesMap, SpeciesTable, Tree, TreeTemplate};
+use crate::tree::{
+    generate_attraction_points, init_skeleton, tree_hash, BranchNode, GrowthStage, PlantType,
+    SeedSpeciesMap, SpeciesTable, Tree, TreeTemplate,
+};
 use crate::voxel::Material;
 use crate::Tick;
 
@@ -97,10 +100,18 @@ pub fn water_flow(mut grid: ResMut<VoxelGrid>) {
                     }};
                 }
 
-                if x > 0 { lateral!(idx - 1); }
-                if x + 1 < GRID_X { lateral!(idx + 1); }
-                if y > 0 { lateral!(idx - GRID_X); }
-                if y + 1 < GRID_Y { lateral!(idx + GRID_X); }
+                if x > 0 {
+                    lateral!(idx - 1);
+                }
+                if x + 1 < GRID_X {
+                    lateral!(idx + 1);
+                }
+                if y > 0 {
+                    lateral!(idx - GRID_X);
+                }
+                if y + 1 < GRID_Y {
+                    lateral!(idx + GRID_X);
+                }
             }
         }
     }
@@ -198,7 +209,13 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
 /// Seeds grow into tree seedlings when they have enough water and light.
 /// Uses nutrient_level as a growth counter: increments by 3-8 each tick
 /// (based on adjacent soil quality) when conditions are met, spawns a Tree entity at 200.
-pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut commands: Commands, tick: Res<Tick>, mut seed_species: ResMut<SeedSpeciesMap>) {
+pub fn seed_growth(
+    mut grid: ResMut<VoxelGrid>,
+    soil_grid: ResMut<SoilGrid>,
+    mut commands: Commands,
+    tick: Res<Tick>,
+    mut seed_species: ResMut<SeedSpeciesMap>,
+) {
     // No snapshot needed: seeds only read neighbor water/material and write to
     // themselves. Seeds don't affect each other's neighbor checks.
     let z_stride = GRID_X * GRID_Y;
@@ -227,15 +244,29 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
         if !has_water {
             macro_rules! check_water {
                 ($nidx:expr) => {
-                    if cells[$nidx].water_level >= 30 { has_water = true; }
+                    if cells[$nidx].water_level >= 30 {
+                        has_water = true;
+                    }
                 };
             }
-            if x > 0 { check_water!(idx - 1); }
-            if !has_water && x + 1 < GRID_X { check_water!(idx + 1); }
-            if !has_water && y > 0 { check_water!(idx - GRID_X); }
-            if !has_water && y + 1 < GRID_Y { check_water!(idx + GRID_X); }
-            if !has_water && z > 0 { check_water!(idx - z_stride); }
-            if !has_water && z + 1 < GRID_Z { check_water!(idx + z_stride); }
+            if x > 0 {
+                check_water!(idx - 1);
+            }
+            if !has_water && x + 1 < GRID_X {
+                check_water!(idx + 1);
+            }
+            if !has_water && y > 0 {
+                check_water!(idx - GRID_X);
+            }
+            if !has_water && y + 1 < GRID_Y {
+                check_water!(idx + GRID_X);
+            }
+            if !has_water && z > 0 {
+                check_water!(idx - z_stride);
+            }
+            if !has_water && z + 1 < GRID_Z {
+                check_water!(idx + z_stride);
+            }
         }
 
         let has_light = cell_light >= 30;
@@ -253,18 +284,34 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
                         // Use actual nutrient_level if available, fall back to capacity
                         let nl = cells[nidx].nutrient_level;
                         let effective = if nl > 0 { nl } else { comp.nutrient_capacity() };
-                        if effective > best_nutrient { best_nutrient = effective; }
-                        if comp.is_compacted() { blocked_by_compaction = true; }
+                        if effective > best_nutrient {
+                            best_nutrient = effective;
+                        }
+                        if comp.is_compacted() {
+                            blocked_by_compaction = true;
+                        }
                     }
                 }};
             }
 
-            if x > 0 { check_soil!(idx - 1); }
-            if x + 1 < GRID_X { check_soil!(idx + 1); }
-            if y > 0 { check_soil!(idx - GRID_X); }
-            if y + 1 < GRID_Y { check_soil!(idx + GRID_X); }
-            if z > 0 { check_soil!(idx - z_stride); }
-            if z + 1 < GRID_Z { check_soil!(idx + z_stride); }
+            if x > 0 {
+                check_soil!(idx - 1);
+            }
+            if x + 1 < GRID_X {
+                check_soil!(idx + 1);
+            }
+            if y > 0 {
+                check_soil!(idx - GRID_X);
+            }
+            if y + 1 < GRID_Y {
+                check_soil!(idx + GRID_X);
+            }
+            if z > 0 {
+                check_soil!(idx - z_stride);
+            }
+            if z + 1 < GRID_Z {
+                check_soil!(idx + z_stride);
+            }
 
             if !blocked_by_compaction {
                 let soil_bonus = (best_nutrient as u16 * 5 / 255) as u8;
@@ -293,9 +340,7 @@ pub fn seed_growth(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>, mut
                         }
 
                         let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or(0);
-                        let rng_seed = (tick.0 as u64)
-                            .wrapping_mul(x as u64 + 1)
-                            .wrapping_mul(y as u64 + 1);
+                        let rng_seed = tick.0.wrapping_mul(x as u64 + 1).wrapping_mul(y as u64 + 1);
                         commands.spawn(Tree {
                             species_id,
                             root_pos: (x, y, z),
@@ -368,23 +413,39 @@ pub fn soil_absorption(mut grid: ResMut<VoxelGrid>, soil_grid: ResMut<SoilGrid>)
                         let (nmat, nwater) = snapshot[nidx];
                         if nmat == water_u8 && nwater > 0 && my_water < max_water {
                             let space = max_water - my_water;
-                            water_absorbed[idx] = water_absorbed[idx].saturating_add(absorption.min(space));
+                            water_absorbed[idx] =
+                                water_absorbed[idx].saturating_add(absorption.min(space));
                         } else if nmat == soil_u8 && my_water > nwater.saturating_add(5) {
-                            let avg_drainage = (my_drainage + soil_cells[nidx].drainage_rate() as u16) / 2;
+                            let avg_drainage =
+                                (my_drainage + soil_cells[nidx].drainage_rate() as u16) / 2;
                             let diff = my_water - nwater;
-                            let transfer = ((diff as u16 * avg_drainage) / (255 * 2)).max(1).min(max_diffusion) as i16;
+                            let transfer = ((diff as u16 * avg_drainage) / (255 * 2))
+                                .max(1)
+                                .min(max_diffusion) as i16;
                             diffusion_deltas[nidx] += transfer;
                             diffusion_deltas[idx] -= transfer;
                         }
                     }};
                 }
 
-                if x > 0 { check_neighbor!(idx - 1); }
-                if x + 1 < GRID_X { check_neighbor!(idx + 1); }
-                if y > 0 { check_neighbor!(idx - GRID_X); }
-                if y + 1 < GRID_Y { check_neighbor!(idx + GRID_X); }
-                if z > 0 { check_neighbor!(idx - z_stride); }
-                if z + 1 < GRID_Z { check_neighbor!(idx + z_stride); }
+                if x > 0 {
+                    check_neighbor!(idx - 1);
+                }
+                if x + 1 < GRID_X {
+                    check_neighbor!(idx + 1);
+                }
+                if y > 0 {
+                    check_neighbor!(idx - GRID_X);
+                }
+                if y + 1 < GRID_Y {
+                    check_neighbor!(idx + GRID_X);
+                }
+                if z > 0 {
+                    check_neighbor!(idx - z_stride);
+                }
+                if z + 1 < GRID_Z {
+                    check_neighbor!(idx + z_stride);
+                }
             }
         }
     }
@@ -471,7 +532,11 @@ pub fn tree_growth(
                 }
             }
             // Need at least 3 groundcover leaf voxels for the boost
-            if ground_leaf_count >= 3 { 1.5_f32 } else { 1.0 }
+            if ground_leaf_count >= 3 {
+                1.5_f32
+            } else {
+                1.0
+            }
         } else {
             1.0
         };
@@ -511,25 +576,25 @@ pub fn tree_growth(
             if species.uses_skeleton() {
                 match next {
                     GrowthStage::YoungTree => {
-                        let (branches, points) =
-                            init_skeleton(species, &next, tree.rng_seed);
+                        let (branches, points) = init_skeleton(species, &next, tree.rng_seed);
                         tree.branches = branches;
                         tree.attraction_points = points;
                         tree.skeleton_initialized = true;
                     }
                     GrowthStage::Mature | GrowthStage::OldGrowth => {
                         // Add more attraction points for larger crown
-                        let new_points =
-                            generate_attraction_points(species, &next, tree.rng_seed);
+                        let new_points = generate_attraction_points(species, &next, tree.rng_seed);
                         tree.attraction_points.extend(new_points);
                         // Extend trunk if needed
                         if prev == GrowthStage::YoungTree {
                             let old_trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
                             let new_trunk_h = species.max_height() as isize;
                             for z in old_trunk_h..new_trunk_h {
-                                let parent_idx = tree.branches.iter()
-                                    .position(|b| b.pos == (0, 0, z - 1))
-                                    .unwrap_or(0) as u16;
+                                let parent_idx =
+                                    tree.branches
+                                        .iter()
+                                        .position(|b| b.pos == (0, 0, z - 1))
+                                        .unwrap_or(0) as u16;
                                 tree.branches.push(BranchNode {
                                     pos: (0, 0, z),
                                     parent: parent_idx,
@@ -584,12 +649,16 @@ pub fn branch_growth(
 
         // Regenerate attraction points when running low — ensures continuous
         // branch growth instead of stalling after initial points are consumed.
-        if tree.attraction_points.len() < 10 && matches!(
-            tree.stage,
-            GrowthStage::YoungTree | GrowthStage::Mature | GrowthStage::OldGrowth
-        ) {
+        if tree.attraction_points.len() < 10
+            && matches!(
+                tree.stage,
+                GrowthStage::YoungTree | GrowthStage::Mature | GrowthStage::OldGrowth
+            )
+        {
             let new_points = crate::tree::generate_attraction_points(
-                species, &tree.stage, tree.rng_seed.wrapping_add(tree.age as u64),
+                species,
+                &tree.stage,
+                tree.rng_seed.wrapping_add(tree.age as u64),
             );
             tree.attraction_points.extend(new_points);
         }
@@ -672,11 +741,7 @@ pub fn branch_growth(
 
             // Phototropism: bias toward brightest neighbor
             let tp = tree.branches[tip_idx].pos;
-            let world_pos = (
-                rx as isize + tp.0,
-                ry as isize + tp.1,
-                rz as isize + tp.2,
-            );
+            let world_pos = (rx as isize + tp.0, ry as isize + tp.1, rz as isize + tp.2);
 
             let light_neighbors: [(isize, isize, isize); 5] =
                 [(0, 0, 1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)];
@@ -729,7 +794,11 @@ pub fn branch_growth(
             if world_new.0 < 0 || world_new.1 < 0 || world_new.2 < 0 {
                 continue;
             }
-            let (wnx, wny, wnz) = (world_new.0 as usize, world_new.1 as usize, world_new.2 as usize);
+            let (wnx, wny, wnz) = (
+                world_new.0 as usize,
+                world_new.1 as usize,
+                world_new.2 as usize,
+            );
             if !VoxelGrid::in_bounds(wnx, wny, wnz) {
                 continue;
             }
@@ -786,9 +855,27 @@ fn quantize_direction(dx: f32, dy: f32, dz: f32) -> (isize, isize, isize) {
         return (0, 0, 1); // Default upward
     }
 
-    let sx = if dx > 0.0 { 1isize } else if dx < 0.0 { -1 } else { 0 };
-    let sy = if dy > 0.0 { 1isize } else if dy < 0.0 { -1 } else { 0 };
-    let sz = if dz > 0.0 { 1isize } else if dz < 0.0 { -1 } else { 0 };
+    let sx = if dx > 0.0 {
+        1isize
+    } else if dx < 0.0 {
+        -1
+    } else {
+        0
+    };
+    let sy = if dy > 0.0 {
+        1isize
+    } else if dy < 0.0 {
+        -1
+    } else {
+        0
+    };
+    let sz = if dz > 0.0 {
+        1isize
+    } else if dz < 0.0 {
+        -1
+    } else {
+        0
+    };
 
     // Dominant axis gets priority; include secondary if it's > 50% of dominant
     let max_a = ax.max(ay).max(az);
@@ -843,7 +930,11 @@ pub fn self_pruning(
             );
 
             let light = if world_pos.0 >= 0 && world_pos.1 >= 0 && world_pos.2 >= 0 {
-                let (wx, wy, wz) = (world_pos.0 as usize, world_pos.1 as usize, world_pos.2 as usize);
+                let (wx, wy, wz) = (
+                    world_pos.0 as usize,
+                    world_pos.1 as usize,
+                    world_pos.2 as usize,
+                );
                 grid.get(wx, wy, wz).map_or(0, |c| c.light_level)
             } else {
                 0
@@ -890,7 +981,8 @@ pub fn self_pruning(
             }
         }
         let before_len = tree.branches.len();
-        tree.branches.retain(|n| n.alive || n.shade_stress < decay_threshold);
+        tree.branches
+            .retain(|n| n.alive || n.shade_stress < decay_threshold);
         if tree.branches.len() != before_len {
             any_changed = true;
         }
@@ -916,18 +1008,19 @@ pub fn tree_rasterize(
 
         // Collect dynamic root positions (from root_growth, not in skeleton)
         // to preserve them through rasterization.
-        let skeleton_root_positions: std::collections::HashSet<(usize, usize, usize)> =
-            tree.branches.iter()
-                .filter(|b| b.material == Material::Root)
-                .map(|b| {
-                    let (rx, ry, rz) = tree.root_pos;
-                    (
-                        (rx as isize + b.pos.0) as usize,
-                        (ry as isize + b.pos.1) as usize,
-                        (rz as isize + b.pos.2) as usize,
-                    )
-                })
-                .collect();
+        let skeleton_root_positions: std::collections::HashSet<(usize, usize, usize)> = tree
+            .branches
+            .iter()
+            .filter(|b| b.material == Material::Root)
+            .map(|b| {
+                let (rx, ry, rz) = tree.root_pos;
+                (
+                    (rx as isize + b.pos.0) as usize,
+                    (ry as isize + b.pos.1) as usize,
+                    (rz as isize + b.pos.2) as usize,
+                )
+            })
+            .collect();
 
         let mut dynamic_roots: Vec<(usize, usize, usize)> = Vec::new();
 
@@ -939,8 +1032,11 @@ pub fn tree_rasterize(
                         // This is a dynamic root — keep it
                         dynamic_roots.push((x, y, z));
                     }
-                    Material::Trunk | Material::Branch | Material::Leaf
-                    | Material::Root | Material::DeadWood => {
+                    Material::Trunk
+                    | Material::Branch
+                    | Material::Leaf
+                    | Material::Root
+                    | Material::DeadWood => {
                         if z <= GROUND_LEVEL {
                             cell.set_material(Material::Soil);
                         } else {
@@ -1017,7 +1113,8 @@ pub fn tree_rasterize(
                         if let Some(cell) = grid.get_mut(ax, ay, az) {
                             let can_place = match mat {
                                 Material::Root => {
-                                    cell.material == Material::Soil || cell.material == Material::Root
+                                    cell.material == Material::Soil
+                                        || cell.material == Material::Root
                                 }
                                 _ => {
                                     cell.material == Material::Air
@@ -1153,7 +1250,7 @@ pub fn root_growth(
             .iter()
             .filter(|&&(x, y, z)| {
                 grid.get(x, y, z)
-                    .map_or(false, |v| v.material == Material::Root)
+                    .is_some_and(|v| v.material == Material::Root)
             })
             .copied()
             .collect();
@@ -1192,7 +1289,7 @@ pub fn root_growth(
                     let depth_score = GROUND_LEVEL.saturating_sub(nz) as u16 * 3;
                     let score = water_score + depth_score;
 
-                    if best.map_or(true, |(_, _, _, s)| score > s) {
+                    if best.is_none_or(|(_, _, _, s)| score > s) {
                         best = Some((nx, ny, nz, score));
                     }
                 }
@@ -1292,10 +1389,7 @@ pub fn seed_dispersal(
     species_table: Res<SpeciesTable>,
 ) {
     for tree in trees.iter() {
-        if !matches!(
-            tree.stage,
-            GrowthStage::Mature | GrowthStage::OldGrowth
-        ) {
+        if !matches!(tree.stage, GrowthStage::Mature | GrowthStage::OldGrowth) {
             continue;
         }
         if tree.health < 0.5 {
@@ -1306,14 +1400,16 @@ pub fn seed_dispersal(
 
         // Dispersal period varies per species and per individual tree
         let base_period = species.dispersal_period;
-        let period = base_period + (tree_hash(tree.rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
+        let period =
+            base_period + (tree_hash(tree.rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
         if tree.age < period || tree.age % period != 0 {
             continue;
         }
 
         // Pick dispersal direction and distance (species-specific)
         let h = tree_hash(tree.rng_seed, tree.age as u64);
-        let base_dist = crate::scale::meters_to_voxels(species.dispersal_distance_m / 2.0).max(1) as u64;
+        let base_dist =
+            crate::scale::meters_to_voxels(species.dispersal_distance_m / 2.0).max(1) as u64;
         let var_dist = crate::scale::meters_to_voxels(species.dispersal_distance_m).max(1) as u64;
         let dist = base_dist + (h >> 8) % var_dist;
         let (dx, dy): (isize, isize) = match h % 8 {
@@ -1367,7 +1463,9 @@ pub fn seed_dispersal(
         // Place seed and record its species
         if let Some(cell) = grid.get_mut(sx, sy, landing_z) {
             cell.set_material(Material::Seed);
-            seed_species.map.insert((sx, sy, landing_z), tree.species_id);
+            seed_species
+                .map
+                .insert((sx, sy, landing_z), tree.species_id);
         }
     }
 }
@@ -1405,26 +1503,42 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
                             // Water absorption
                             if snapshot[nidx].1 > 0 {
                                 let transfer = snapshot[nidx].1.min(max_transfer);
-                                cells[nidx].water_level = cells[nidx].water_level.saturating_sub(transfer);
-                                cells[idx].water_level = cells[idx].water_level.saturating_add(transfer);
+                                cells[nidx].water_level =
+                                    cells[nidx].water_level.saturating_sub(transfer);
+                                cells[idx].water_level =
+                                    cells[idx].water_level.saturating_add(transfer);
                             }
                             // Nutrient absorption
                             if snapshot[nidx].2 > 0 {
                                 let transfer = snapshot[nidx].2.min(max_nutrient_transfer);
-                                cells[nidx].nutrient_level = cells[nidx].nutrient_level.saturating_sub(transfer);
+                                cells[nidx].nutrient_level =
+                                    cells[nidx].nutrient_level.saturating_sub(transfer);
                                 // Root stores absorbed nutrients (visible in inspect)
-                                cells[idx].nutrient_level = cells[idx].nutrient_level.saturating_add(transfer);
+                                cells[idx].nutrient_level =
+                                    cells[idx].nutrient_level.saturating_add(transfer);
                             }
                         }
                     }};
                 }
 
-                if x > 0 { absorb!(idx - 1); }
-                if x + 1 < GRID_X { absorb!(idx + 1); }
-                if y > 0 { absorb!(idx - GRID_X); }
-                if y + 1 < GRID_Y { absorb!(idx + GRID_X); }
-                if z > 0 { absorb!(idx - z_stride); }
-                if z + 1 < GRID_Z { absorb!(idx + z_stride); }
+                if x > 0 {
+                    absorb!(idx - 1);
+                }
+                if x + 1 < GRID_X {
+                    absorb!(idx + 1);
+                }
+                if y > 0 {
+                    absorb!(idx - GRID_X);
+                }
+                if y + 1 < GRID_Y {
+                    absorb!(idx + GRID_X);
+                }
+                if z > 0 {
+                    absorb!(idx - z_stride);
+                }
+                if z + 1 < GRID_Z {
+                    absorb!(idx + z_stride);
+                }
             }
         }
     }
@@ -1435,10 +1549,14 @@ pub fn root_water_absorption(mut grid: ResMut<VoxelGrid>) {
 /// - Bacteria grow in moist, organic-rich soil; die in dry soil.
 /// - pH drifts acidic with organic decomposition; rock buffers toward neutral.
 /// - Rock fragments slowly weather into clay when wet.
-pub fn soil_evolution(mut grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGrid>, tick: Res<Tick>) {
+pub fn soil_evolution(
+    mut grid: ResMut<VoxelGrid>,
+    mut soil_grid: ResMut<SoilGrid>,
+    tick: Res<Tick>,
+) {
     // Soil chemistry changes slowly — only run every 10 ticks.
     // Organic/bacteria/pH increments are scaled 10× to compensate.
-    if tick.0 % 10 != 0 {
+    if !tick.0.is_multiple_of(10) {
         return;
     }
 
@@ -1475,12 +1593,24 @@ pub fn soil_evolution(mut grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGri
                 // Increases when adjacent to roots (+10/run per adjacent root, compensating for 10-tick skip)
                 let mut adjacent_roots = 0u8;
                 // Inline neighbor checks to avoid isize conversion overhead
-                if x > 0 && snapshot[idx - 1].0 == root_u8 { adjacent_roots += 1; }
-                if x + 1 < GRID_X && snapshot[idx + 1].0 == root_u8 { adjacent_roots += 1; }
-                if y > 0 && snapshot[idx - GRID_X].0 == root_u8 { adjacent_roots += 1; }
-                if y + 1 < GRID_Y && snapshot[idx + GRID_X].0 == root_u8 { adjacent_roots += 1; }
-                if z > 0 && snapshot[idx - z_stride].0 == root_u8 { adjacent_roots += 1; }
-                if z + 1 < GRID_Z && snapshot[idx + z_stride].0 == root_u8 { adjacent_roots += 1; }
+                if x > 0 && snapshot[idx - 1].0 == root_u8 {
+                    adjacent_roots += 1;
+                }
+                if x + 1 < GRID_X && snapshot[idx + 1].0 == root_u8 {
+                    adjacent_roots += 1;
+                }
+                if y > 0 && snapshot[idx - GRID_X].0 == root_u8 {
+                    adjacent_roots += 1;
+                }
+                if y + 1 < GRID_Y && snapshot[idx + GRID_X].0 == root_u8 {
+                    adjacent_roots += 1;
+                }
+                if z > 0 && snapshot[idx - z_stride].0 == root_u8 {
+                    adjacent_roots += 1;
+                }
+                if z + 1 < GRID_Z && snapshot[idx + z_stride].0 == root_u8 {
+                    adjacent_roots += 1;
+                }
 
                 if adjacent_roots > 0 {
                     // 10× because we run every 10 ticks
@@ -1498,30 +1628,22 @@ pub fn soil_evolution(mut grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGri
                     comp.bacteria = comp.bacteria.saturating_add(10);
                 } else if water_level < 10 {
                     comp.bacteria = comp.bacteria.saturating_sub(20);
-                } else if comp.organic < 15 {
-                    if (x + y) % 5 == 0 {
-                        comp.bacteria = comp.bacteria.saturating_sub(10);
-                    }
+                } else if comp.organic < 15 && (x + y) % 5 == 0 {
+                    comp.bacteria = comp.bacteria.saturating_sub(10);
                 }
 
                 // --- pH drift ---
-                if comp.organic > 100 && comp.ph > 0 {
-                    if (x + z) % 20 == 0 {
-                        comp.ph = comp.ph.saturating_sub(1);
-                    }
+                if comp.organic > 100 && comp.ph > 0 && (x + z) % 20 == 0 {
+                    comp.ph = comp.ph.saturating_sub(1);
                 }
-                if comp.rock > 50 && comp.ph < 128 {
-                    if (y + z) % 25 == 0 {
-                        comp.ph = comp.ph.saturating_add(1);
-                    }
+                if comp.rock > 50 && comp.ph < 128 && (y + z) % 25 == 0 {
+                    comp.ph = comp.ph.saturating_add(1);
                 }
 
                 // --- Rock weathering ---
-                if comp.rock > 0 && water_level > 30 {
-                    if (x + y + z) % 50 == 0 {
-                        comp.rock = comp.rock.saturating_sub(1);
-                        comp.clay = comp.clay.saturating_add(1);
-                    }
+                if comp.rock > 0 && water_level > 30 && (x + y + z) % 50 == 0 {
+                    comp.rock = comp.rock.saturating_sub(1);
+                    comp.clay = comp.clay.saturating_add(1);
                 }
 
                 // --- Nutrient generation ---
@@ -1543,7 +1665,8 @@ pub fn soil_evolution(mut grid: ResMut<VoxelGrid>, mut soil_grid: ResMut<SoilGri
     for (idx, gen) in nutrient_deltas {
         let cap = soil_cells[idx].nutrient_capacity();
         if grid_cells[idx].nutrient_level < cap {
-            grid_cells[idx].nutrient_level = grid_cells[idx].nutrient_level.saturating_add(gen).min(cap);
+            grid_cells[idx].nutrient_level =
+                grid_cells[idx].nutrient_level.saturating_add(gen).min(cap);
         }
     }
 }
@@ -1720,7 +1843,10 @@ mod tests {
         );
         // Each wet soil neighbor donates scale_transfer(4), two neighbors.
         let expected = crate::scale::scale_transfer(4) * 2;
-        assert_eq!(root.water_level, expected, "Root should absorb scaled amount from 2 neighbors");
+        assert_eq!(
+            root.water_level, expected,
+            "Root should absorb scaled amount from 2 neighbors"
+        );
 
         let neighbor = grid.get(root_x + 1, root_y, root_z).unwrap();
         assert!(
@@ -1749,11 +1875,15 @@ mod tests {
             for dx in -4i32..=4 {
                 for dy in -4i32..=4 {
                     for dz in -4i32..=4 {
-                        if dx == 0 && dy == 0 && dz == 0 { continue; }
+                        if dx == 0 && dy == 0 && dz == 0 {
+                            continue;
+                        }
                         let nx = root_x as i32 + dx;
                         let ny = root_y as i32 + dy;
                         let nz = root_z as i32 + dz;
-                        if nx < 0 || ny < 0 || nz < 0 { continue; }
+                        if nx < 0 || ny < 0 || nz < 0 {
+                            continue;
+                        }
                         let (nx, ny, nz) = (nx as usize, ny as usize, nz as usize);
                         if let Some(cell) = grid.get_mut(nx, ny, nz) {
                             cell.water_level = 0;
@@ -1799,8 +1929,12 @@ mod tests {
                         let nx = (root_x as i32 + dx) as usize;
                         let ny = (root_y as i32 + dy) as usize;
                         let nz = (root_z as i32 + dz) as usize;
-                        if nx == root_x && ny == root_y && nz == root_z { continue; }
-                        if nx == root_x + 1 && ny == root_y && nz == root_z { continue; }
+                        if nx == root_x && ny == root_y && nz == root_z {
+                            continue;
+                        }
+                        if nx == root_x + 1 && ny == root_y && nz == root_z {
+                            continue;
+                        }
                         if let Some(cell) = grid.get_mut(nx, ny, nz) {
                             cell.water_level = 0;
                         }
@@ -1935,7 +2069,11 @@ mod tests {
         {
             let grid = world.resource::<VoxelGrid>();
             let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
-            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 10 ticks");
+            assert_eq!(
+                cell.material,
+                Material::Seed,
+                "Should still be a seed at 10 ticks"
+            );
             assert!(
                 cell.nutrient_level < 100,
                 "At 10 ticks, nutrient_level ({}) should be < 100 (small seed stage)",
@@ -1952,7 +2090,11 @@ mod tests {
         {
             let grid = world.resource::<VoxelGrid>();
             let cell = grid.get(30, 10, GROUND_LEVEL + 1).unwrap();
-            assert_eq!(cell.material, Material::Seed, "Should still be a seed at 35 ticks");
+            assert_eq!(
+                cell.material,
+                Material::Seed,
+                "Should still be a seed at 35 ticks"
+            );
             assert!(
                 cell.nutrient_level >= 100,
                 "At 35 ticks, nutrient_level ({}) should be >= 100 (growing seed stage 'S')",
@@ -2025,7 +2167,8 @@ mod tests {
         }
         {
             let mut soil = world.resource_mut::<SoilGrid>();
-            *soil.get_mut(sandy_pos.0, sandy_pos.1, sandy_pos.2).unwrap() = SoilComposition::sandy();
+            *soil.get_mut(sandy_pos.0, sandy_pos.1, sandy_pos.2).unwrap() =
+                SoilComposition::sandy();
             *soil.get_mut(clay_pos.0, clay_pos.1, clay_pos.2).unwrap() = SoilComposition::clay();
         }
 
@@ -2035,8 +2178,14 @@ mod tests {
         }
 
         let grid = world.resource::<VoxelGrid>();
-        let sandy_water = grid.get(sandy_pos.0, sandy_pos.1, sandy_pos.2).unwrap().water_level;
-        let clay_water = grid.get(clay_pos.0, clay_pos.1, clay_pos.2).unwrap().water_level;
+        let sandy_water = grid
+            .get(sandy_pos.0, sandy_pos.1, sandy_pos.2)
+            .unwrap()
+            .water_level;
+        let clay_water = grid
+            .get(clay_pos.0, clay_pos.1, clay_pos.2)
+            .unwrap()
+            .water_level;
 
         assert!(
             sandy_water > clay_water,
@@ -2244,7 +2393,12 @@ mod tests {
             let mut soil = world.resource_mut::<SoilGrid>();
             let comp = soil.get_mut(30, 30, GROUND_LEVEL).unwrap();
             *comp = SoilComposition {
-                sand: 42, clay: 99, organic: 150, rock: 77, ph: 200, bacteria: 33,
+                sand: 42,
+                clay: 99,
+                organic: 150,
+                rock: 77,
+                ph: 200,
+                bacteria: 33,
             };
         }
 
@@ -2300,7 +2454,11 @@ mod tests {
         let sy = edge_band + 1;
         let surface = VoxelGrid::surface_height(sx, sy);
         let comp = soil.get(sx, sy, surface).unwrap();
-        assert_eq!(comp.type_name(), "loam", "V2 backward compat should generate loam topsoil");
+        assert_eq!(
+            comp.type_name(),
+            "loam",
+            "V2 backward compat should generate loam topsoil"
+        );
 
         let _ = std::fs::remove_file(&path);
     }
@@ -2327,7 +2485,14 @@ mod tests {
             // Make adjacent soil compacted
             let mut soil = world.resource_mut::<SoilGrid>();
             let comp = soil.get_mut(seed_x, seed_y, GROUND_LEVEL).unwrap();
-            *comp = SoilComposition { sand: 10, clay: 220, organic: 5, rock: 10, ph: 128, bacteria: 2 };
+            *comp = SoilComposition {
+                sand: 10,
+                clay: 220,
+                organic: 5,
+                rock: 10,
+                ph: 128,
+                bacteria: 2,
+            };
         }
 
         for _ in 0..60 {
@@ -2574,7 +2739,8 @@ mod tests {
             // Must match the dispersal period formula in seed_dispersal system
             let species = &world.resource::<crate::tree::SpeciesTable>().species[0];
             let base_period = species.dispersal_period;
-            let period = base_period + (crate::tree::tree_hash(rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
+            let period = base_period
+                + (crate::tree::tree_hash(rng_seed, 0) % (base_period as u64 / 4 + 1)) as u32;
             world.spawn(Tree {
                 species_id: 0,
                 root_pos: (tx, ty, tz),
@@ -2597,7 +2763,9 @@ mod tests {
             let grid = world.resource::<VoxelGrid>();
             for sy in 0..GRID_Y {
                 for sx in 0..GRID_X {
-                    if sx == tx && sy == ty { continue; }
+                    if sx == tx && sy == ty {
+                        continue;
+                    }
                     // Seeds land at surface + 1
                     let sh = VoxelGrid::surface_height(sx, sy);
                     let seed_z = sh + 1;
@@ -2607,7 +2775,9 @@ mod tests {
                         }
                     }
                 }
-                if found_seed { break; }
+                if found_seed {
+                    break;
+                }
             }
 
             if found_seed {
@@ -2692,7 +2862,7 @@ mod tests {
 
     #[test]
     fn branch_growth_produces_nodes() {
-        use crate::tree::{GrowthStage, Tree, init_skeleton};
+        use crate::tree::{init_skeleton, GrowthStage, Tree};
 
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
@@ -2748,7 +2918,8 @@ mod tests {
         }
 
         let mut trees = world.query::<&Tree>();
-        let tree = trees.iter(&world)
+        let tree = trees
+            .iter(&world)
             .find(|t| t.root_pos == (tx, ty, tz))
             .expect("Test tree should exist at expected position");
         assert!(
@@ -2762,7 +2933,8 @@ mod tests {
             &crate::tree::SpeciesTable::default().species[0],
             &GrowthStage::YoungTree,
             42,
-        ).len();
+        )
+        .len();
         assert!(
             tree.attraction_points.len() < initial_points,
             "Some attraction points should have been consumed"
@@ -2771,7 +2943,7 @@ mod tests {
 
     #[test]
     fn skeleton_rasterize_produces_voxels() {
-        use crate::tree::{GrowthStage, Tree, BranchNode};
+        use crate::tree::{BranchNode, GrowthStage, Tree};
 
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
@@ -2800,11 +2972,41 @@ mod tests {
 
         // Manually build a small skeleton
         let branches = vec![
-            BranchNode { pos: (0, 0, 0), parent: u16::MAX, material: Material::Trunk, shade_stress: 0, alive: true },
-            BranchNode { pos: (0, 0, 1), parent: 0, material: Material::Trunk, shade_stress: 0, alive: true },
-            BranchNode { pos: (0, 0, 2), parent: 1, material: Material::Trunk, shade_stress: 0, alive: true },
-            BranchNode { pos: (1, 0, 2), parent: 2, material: Material::Branch, shade_stress: 0, alive: true },
-            BranchNode { pos: (0, 0, -1), parent: 0, material: Material::Root, shade_stress: 0, alive: true },
+            BranchNode {
+                pos: (0, 0, 0),
+                parent: u16::MAX,
+                material: Material::Trunk,
+                shade_stress: 0,
+                alive: true,
+            },
+            BranchNode {
+                pos: (0, 0, 1),
+                parent: 0,
+                material: Material::Trunk,
+                shade_stress: 0,
+                alive: true,
+            },
+            BranchNode {
+                pos: (0, 0, 2),
+                parent: 1,
+                material: Material::Trunk,
+                shade_stress: 0,
+                alive: true,
+            },
+            BranchNode {
+                pos: (1, 0, 2),
+                parent: 2,
+                material: Material::Branch,
+                shade_stress: 0,
+                alive: true,
+            },
+            BranchNode {
+                pos: (0, 0, -1),
+                parent: 0,
+                material: Material::Root,
+                shade_stress: 0,
+                alive: true,
+            },
         ];
 
         world.spawn(Tree {
@@ -2833,14 +3035,17 @@ mod tests {
         // Trunk at z+2
         assert_eq!(grid.get(tx, ty, tz + 2).unwrap().material, Material::Trunk);
         // Branch tip at (1,0,2) should become Leaf (it's a tip)
-        assert_eq!(grid.get(tx + 1, ty, tz + 2).unwrap().material, Material::Leaf);
+        assert_eq!(
+            grid.get(tx + 1, ty, tz + 2).unwrap().material,
+            Material::Leaf
+        );
         // Root below (pos (0,0,-1) = tz-1)
         assert_eq!(grid.get(tx, ty, tz - 1).unwrap().material, Material::Root);
     }
 
     #[test]
     fn self_pruning_kills_shaded_branches() {
-        use crate::tree::{GrowthStage, Tree, BranchNode};
+        use crate::tree::{BranchNode, GrowthStage, Tree};
 
         let mut world = crate::create_world();
         let mut schedule = crate::create_schedule();
@@ -2851,10 +3056,28 @@ mod tests {
 
         // Build a tree with a branch node that will be fully shaded
         let branches = vec![
-            BranchNode { pos: (0, 0, 0), parent: u16::MAX, material: Material::Trunk, shade_stress: 0, alive: true },
-            BranchNode { pos: (0, 0, 1), parent: 0, material: Material::Trunk, shade_stress: 0, alive: true },
+            BranchNode {
+                pos: (0, 0, 0),
+                parent: u16::MAX,
+                material: Material::Trunk,
+                shade_stress: 0,
+                alive: true,
+            },
+            BranchNode {
+                pos: (0, 0, 1),
+                parent: 0,
+                material: Material::Trunk,
+                shade_stress: 0,
+                alive: true,
+            },
             // This branch at z=0 level will be underground/shaded
-            BranchNode { pos: (1, 0, 0), parent: 0, material: Material::Branch, shade_stress: 190, alive: true },
+            BranchNode {
+                pos: (1, 0, 0),
+                parent: 0,
+                material: Material::Branch,
+                shade_stress: 190,
+                alive: true,
+            },
         ];
 
         {

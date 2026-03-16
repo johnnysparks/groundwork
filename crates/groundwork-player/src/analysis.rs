@@ -57,11 +57,7 @@ pub fn summarize(result: &RunResult) -> RunSummary {
     let trace = &result.trace;
 
     // Aggregate score
-    let scores: Vec<f64> = result
-        .verdicts
-        .iter()
-        .filter_map(|v| v.score)
-        .collect();
+    let scores: Vec<f64> = result.verdicts.iter().filter_map(|v| v.score).collect();
     let aggregate_score = if scores.is_empty() {
         0.0
     } else {
@@ -128,10 +124,7 @@ pub fn growth_timeline(trace: &Trace) -> Vec<(u64, u64)> {
 
 /// Generate a machine-readable failure signature for clustering.
 pub fn failure_signature(verdict: &Verdict, trace: &Trace) -> String {
-    let total_ticks = trace
-        .final_oracle()
-        .map(|o| o.tick)
-        .unwrap_or(0);
+    let total_ticks = trace.final_oracle().map(|o| o.tick).unwrap_or(0);
     let final_plants = trace
         .final_oracle()
         .map(|o| o.material_counts.total_plant())

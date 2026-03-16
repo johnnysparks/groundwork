@@ -4,7 +4,7 @@ use bevy_ecs::prelude::*;
 use ratatui::DefaultTerminal;
 
 use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
-use groundwork_sim::tree::{SeedSpeciesMap, SpeciesTable, species_name_to_id};
+use groundwork_sim::tree::{species_name_to_id, SeedSpeciesMap, SpeciesTable};
 use groundwork_sim::voxel::Material;
 use groundwork_sim::Tick;
 
@@ -92,7 +92,13 @@ pub fn parse_tool_and_species(s: &str) -> Option<(Tool, usize)> {
 
 /// Apply a tool at a single cell. Handles gravity and tool-specific rules.
 /// Returns the landing position `(x, y, z)` if the tool had an effect, or `None`.
-pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize) -> Option<(usize, usize, usize)> {
+pub fn apply_tool(
+    grid: &mut VoxelGrid,
+    tool: Tool,
+    x: usize,
+    y: usize,
+    z: usize,
+) -> Option<(usize, usize, usize)> {
     // Shovel: dig out whatever is here, no protection
     if tool == Tool::Shovel {
         if let Some(voxel) = grid.get_mut(x, y, z) {
@@ -141,12 +147,10 @@ pub fn apply_tool(grid: &mut VoxelGrid, tool: Tool, x: usize, y: usize, z: usize
     }
 
     // Watering can: no-op if landing on existing water
-    if tool == Tool::WateringCan {
-        if landing_z > 0 {
-            if let Some(below) = grid.get(x, y, landing_z - 1) {
-                if below.material == Material::Water {
-                    return None;
-                }
+    if tool == Tool::WateringCan && landing_z > 0 {
+        if let Some(below) = grid.get(x, y, landing_z - 1) {
+            if below.material == Material::Water {
+                return None;
             }
         }
     }
@@ -172,7 +176,7 @@ pub struct App {
     pub focus_y: usize,
     pub focus_z: usize,
     // Tool mode
-    pub selected_tool: usize, // index into TOOL_PALETTE
+    pub selected_tool: usize,    // index into TOOL_PALETTE
     pub selected_species: usize, // index into SpeciesTable (used when tool is SeedBag)
     pub tool_active: bool,
     pub tool_start: Option<(usize, usize, usize)>,
@@ -218,11 +222,9 @@ impl App {
         while self.running {
             self.quest_log.tick_notification();
 
-            terminal.draw(|frame| {
-                match self.view_mode {
-                    ViewMode::Slice2D => render::draw(frame, &self.world, self),
-                    ViewMode::Projected3D => render3d::draw_3d(frame, self),
-                }
+            terminal.draw(|frame| match self.view_mode {
+                ViewMode::Slice2D => render::draw(frame, &self.world, self),
+                ViewMode::Projected3D => render3d::draw_3d(frame, self),
             })?;
 
             let timeout = Duration::from_millis(self.tick_rate_ms);
@@ -298,7 +300,10 @@ impl App {
     pub fn viewport_origin(&self, viewport_cols: usize, viewport_rows: usize) -> (isize, isize) {
         let half_w = viewport_cols as isize / 2;
         let half_h = viewport_rows as isize / 2;
-        (self.focus_x as isize - half_w, self.focus_y as isize - half_h)
+        (
+            self.focus_x as isize - half_w,
+            self.focus_y as isize - half_h,
+        )
     }
 
     /// Begin tool operation at current focus.

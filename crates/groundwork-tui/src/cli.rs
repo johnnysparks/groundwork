@@ -3,11 +3,11 @@ use std::path::PathBuf;
 use groundwork_sim::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
 use groundwork_sim::soil::SoilGrid;
 use groundwork_sim::voxel::Material;
-use groundwork_sim::{FocusState, ToolState, Tick};
+use groundwork_sim::{FocusState, Tick, ToolState};
 
 use groundwork_sim::tree::SeedSpeciesMap;
 
-use crate::app::{self, Tool, parse_tool_and_species};
+use crate::app::{self, parse_tool_and_species, Tool};
 
 const DEFAULT_STATE: &str = "groundwork.state";
 
@@ -28,7 +28,9 @@ fn find_value<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
 /// Accepts: "30" -> [30], "20..40" -> [20, 21, ..., 39] (exclusive end).
 fn parse_coord_range(s: &str) -> Result<Vec<usize>, String> {
     if let Some((start_s, end_s)) = s.split_once("..") {
-        let start: usize = start_s.parse().map_err(|e| format!("bad range start: {e}"))?;
+        let start: usize = start_s
+            .parse()
+            .map_err(|e| format!("bad range start: {e}"))?;
         let end: usize = end_s.parse().map_err(|e| format!("bad range end: {e}"))?;
         if start >= end {
             return Err(format!("empty range: {start}..{end} (start must be < end)"));
@@ -82,10 +84,7 @@ fn count_materials(grid: &VoxelGrid) -> ([u64; 10], u64) {
 
 pub fn cmd_tick(args: &[String]) -> std::io::Result<()> {
     let path = state_path(args);
-    let n: u64 = args
-        .first()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(1);
+    let n: u64 = args.first().and_then(|s| s.parse().ok()).unwrap_or(1);
 
     let mut world = groundwork_sim::save::load_world(&path)?;
     let mut schedule = groundwork_sim::create_schedule();
@@ -104,7 +103,9 @@ pub fn cmd_tick(args: &[String]) -> std::io::Result<()> {
 
     // Show changes
     let mut changes = Vec::new();
-    let names = ["air", "soil", "stone", "water", "root", "seed", "trunk", "branch", "leaf", "deadwood"];
+    let names = [
+        "air", "soil", "stone", "water", "root", "seed", "trunk", "branch", "leaf", "deadwood",
+    ];
     for i in 0..10 {
         let diff = after_counts[i] as i64 - before_counts[i] as i64;
         if diff != 0 {
@@ -203,15 +204,12 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
 
     let (tool, species_id) = parse_tool(&args[0])?;
 
-    let xs = parse_coord_range(&args[1]).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("x: {e}"))
-    })?;
-    let ys = parse_coord_range(&args[2]).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("y: {e}"))
-    })?;
-    let zs = parse_coord_range(&args[3]).map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("z: {e}"))
-    })?;
+    let xs = parse_coord_range(&args[1])
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("x: {e}")))?;
+    let ys = parse_coord_range(&args[2])
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("y: {e}")))?;
+    let zs = parse_coord_range(&args[3])
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("z: {e}")))?;
 
     let path = state_path(&args[4..]);
     let mut world = groundwork_sim::save::load_world(&path)?;
@@ -249,7 +247,9 @@ pub fn cmd_place(args: &[String]) -> std::io::Result<()> {
     }
 
     if placed == 0 {
-        eprintln!("Nothing placed ({skipped} cells skipped — occupied, protected, or out of bounds)");
+        eprintln!(
+            "Nothing placed ({skipped} cells skipped — occupied, protected, or out of bounds)"
+        );
         return Ok(());
     }
 
@@ -278,7 +278,10 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
 
     let parse = |i: usize, label: &str| -> std::io::Result<usize> {
         args[i].parse().map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("bad {label}: {e}"))
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("bad {label}: {e}"),
+            )
         })
     };
 
@@ -335,7 +338,14 @@ pub fn cmd_fill(args: &[String]) -> std::io::Result<()> {
 
     let mut msg = format!(
         "Used {} x {} from ({},{},{}) to ({},{},{})",
-        tool.name(), placed, xlo, ylo, zlo, xhi, yhi, zhi
+        tool.name(),
+        placed,
+        xlo,
+        ylo,
+        zlo,
+        xhi,
+        yhi,
+        zhi
     );
     if skipped > 0 {
         msg.push_str(&format!(" ({skipped} skipped)"));
@@ -361,7 +371,9 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
         remaining_args = &args[3..];
     } else {
         remaining_args = args;
-        x = 0; y = 0; z = 0;
+        x = 0;
+        y = 0;
+        z = 0;
     }
 
     let path = state_path(remaining_args);
@@ -371,7 +383,10 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
         (x, y, z)
     } else {
         let focus = world.resource::<FocusState>();
-        println!("(inspecting at focus: {}, {}, {})", focus.x, focus.y, focus.z);
+        println!(
+            "(inspecting at focus: {}, {}, {})",
+            focus.x, focus.y, focus.z
+        );
         (focus.x, focus.y, focus.z)
     };
 
@@ -404,10 +419,22 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
         if let Some(comp) = soil_grid.get(x, y, z) {
             println!();
             println!("  soil type: {}", comp.type_name());
-            println!("  sand: {:>3}  clay: {:>3}  organic: {:>3}", comp.sand, comp.clay, comp.organic);
-            println!("  rock: {:>3}  pH: {:.1}  bacteria: {:>3}", comp.rock, comp.ph_value(), comp.bacteria);
-            println!("  drainage: {:>3}  retention: {:>3}  nutrients: {:>3}",
-                comp.drainage_rate(), comp.water_retention(), comp.nutrient_capacity());
+            println!(
+                "  sand: {:>3}  clay: {:>3}  organic: {:>3}",
+                comp.sand, comp.clay, comp.organic
+            );
+            println!(
+                "  rock: {:>3}  pH: {:.1}  bacteria: {:>3}",
+                comp.rock,
+                comp.ph_value(),
+                comp.bacteria
+            );
+            println!(
+                "  drainage: {:>3}  retention: {:>3}  nutrients: {:>3}",
+                comp.drainage_rate(),
+                comp.water_retention(),
+                comp.nutrient_capacity()
+            );
             if comp.is_compacted() {
                 println!("  WARNING: compacted — blocks root growth");
             }
@@ -468,7 +495,7 @@ pub fn cmd_inspect(args: &[String]) -> std::io::Result<()> {
 
         if has_water && has_light {
             let remaining = growth_max.saturating_sub(growth as u16);
-            let ticks_left = (remaining + 4) / 5;
+            let ticks_left = remaining.div_ceil(5);
             println!("  status: growing (+5/tick, ~{ticks_left} ticks to root)");
         } else {
             let mut missing = Vec::new();
@@ -494,7 +521,10 @@ pub fn cmd_status(args: &[String]) -> std::io::Result<()> {
     let (counts, wet_soil) = count_materials(grid);
 
     println!("Tick: {tick}");
-    println!("Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)", GRID_X * GRID_Y * GRID_Z);
+    println!(
+        "Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)",
+        GRID_X * GRID_Y * GRID_Z
+    );
     println!("Materials:");
     for i in 0..10 {
         if let Some(mat) = Material::from_u8(i) {
@@ -547,15 +577,25 @@ pub fn cmd_focus(args: &[String]) -> std::io::Result<()> {
             format!("below -{}", GROUND_LEVEL - focus.z)
         };
 
-        println!("Focus: ({}, {}, {}) [{}]", focus.x, focus.y, focus.z, depth_label);
+        println!(
+            "Focus: ({}, {}, {}) [{}]",
+            focus.x, focus.y, focus.z, depth_label
+        );
         if let Some(v) = grid.get(focus.x, focus.y, focus.z) {
             println!("  material: {}", v.material.name());
-            println!("  water: {}/255  light: {}/255  nutrient: {}/255",
-                v.water_level, v.light_level, v.nutrient_level);
+            println!(
+                "  water: {}/255  light: {}/255  nutrient: {}/255",
+                v.water_level, v.light_level, v.nutrient_level
+            );
         }
         if let Some(ref tool) = focus.tool {
-            println!("  tool: {} from ({}, {}, {})",
-                tool.material.name(), tool.start_x, tool.start_y, tool.start_z);
+            println!(
+                "  tool: {} from ({}, {}, {})",
+                tool.material.name(),
+                tool.start_x,
+                tool.start_y,
+                tool.start_z
+            );
         }
         return Ok(());
     }
@@ -573,7 +613,12 @@ pub fn cmd_focus(args: &[String]) -> std::io::Result<()> {
     if !VoxelGrid::in_bounds(x, y, z) {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!("out of bounds: ({x}, {y}, {z}) — max ({}, {}, {})", GRID_X - 1, GRID_Y - 1, GRID_Z - 1),
+            format!(
+                "out of bounds: ({x}, {y}, {z}) — max ({}, {}, {})",
+                GRID_X - 1,
+                GRID_Y - 1,
+                GRID_Z - 1
+            ),
         ));
     }
 
@@ -623,7 +668,9 @@ pub fn cmd_tool_start(args: &[String]) -> std::io::Result<()> {
 
     groundwork_sim::save::save_world(&world, &path)?;
     println!("Tool started: {} from ({sx}, {sy}, {sz})", tool.name());
-    println!("  Move focus with `groundwork focus <x> <y> <z>`, then `groundwork tool-end` to apply.");
+    println!(
+        "  Move focus with `groundwork focus <x> <y> <z>`, then `groundwork tool-end` to apply."
+    );
     Ok(())
 }
 
@@ -685,7 +732,14 @@ pub fn cmd_tool_end(args: &[String]) -> std::io::Result<()> {
 
     let mut msg = format!(
         "Tool applied: {} x {} from ({},{},{}) to ({},{},{})",
-        tool.name(), placed, xlo, ylo, zlo, xhi, yhi, zhi
+        tool.name(),
+        placed,
+        xlo,
+        ylo,
+        zlo,
+        xhi,
+        yhi,
+        zhi
     );
     if skipped > 0 {
         msg.push_str(&format!(" ({skipped} skipped)"));

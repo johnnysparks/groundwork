@@ -11,7 +11,11 @@ fn new_world() -> NamedTempFile {
         .args(["new", "--state", f.path().to_str().unwrap()])
         .output()
         .unwrap();
-    assert!(out.status.success(), "new failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "new failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     f
 }
 
@@ -22,7 +26,14 @@ fn find_surface(p: &str, x: u32, y: u32) -> u32 {
     // Search upward from z=25 to find the first air cell.
     for z in 25..=40 {
         let out = groundwork()
-            .args(["inspect", &x.to_string(), &y.to_string(), &z.to_string(), "--state", p])
+            .args([
+                "inspect",
+                &x.to_string(),
+                &y.to_string(),
+                &z.to_string(),
+                "--state",
+                p,
+            ])
             .output()
             .unwrap();
         let stdout = String::from_utf8_lossy(&out.stdout);
@@ -50,7 +61,11 @@ fn shovel_removes_seed() {
         .args(["place", "seed", "60", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
-    assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "seed placement failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 
     // High z should be air (seed fell)
     let out = groundwork()
@@ -58,7 +73,10 @@ fn shovel_removes_seed() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "z={high} should be air after seed fell, got: {stdout}");
+    assert!(
+        stdout.contains("air"),
+        "z={high} should be air after seed fell, got: {stdout}"
+    );
 
     // Seed should have landed at surface+1
     let out = groundwork()
@@ -66,14 +84,21 @@ fn shovel_removes_seed() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("seed"), "expected seed at z={above}, got: {stdout}");
+    assert!(
+        stdout.contains("seed"),
+        "expected seed at z={above}, got: {stdout}"
+    );
 
     // Use shovel to remove it
     let out = groundwork()
         .args(["place", "air", "60", "20", &above.to_string(), "--state", p])
         .output()
         .unwrap();
-    assert!(out.status.success(), "shovel failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "shovel failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 
     // Verify it's gone
     let out = groundwork()
@@ -81,7 +106,10 @@ fn shovel_removes_seed() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "expected air after shovel, got: {stdout}");
+    assert!(
+        stdout.contains("air"),
+        "expected air after shovel, got: {stdout}"
+    );
 }
 
 /// Shovel works with 'dig' alias too.
@@ -94,12 +122,27 @@ fn dig_alias_works() {
 
     // Dig out some soil at the surface
     let out = groundwork()
-        .args(["place", "dig", "20", "20", &surface.to_string(), "--state", p])
+        .args([
+            "place",
+            "dig",
+            "20",
+            "20",
+            &surface.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
-    assert!(out.status.success(), "dig failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "dig failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("shovel"), "should say shovel, got: {stdout}");
+    assert!(
+        stdout.contains("shovel"),
+        "should say shovel, got: {stdout}"
+    );
 }
 
 // ── Protection without --force ────────────────────────────────────────
@@ -114,7 +157,15 @@ fn cant_place_on_occupied_cell() {
 
     // Try to place water on soil (surface is soil) — should skip
     let out = groundwork()
-        .args(["place", "water", "20", "20", &surface.to_string(), "--state", p])
+        .args([
+            "place",
+            "water",
+            "20",
+            "20",
+            &surface.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -138,12 +189,23 @@ fn place_into_air_succeeds() {
 
     // Place stone into air well above ground
     let out = groundwork()
-        .args(["place", "stone", "40", "40", &high.to_string(), "--state", p])
+        .args([
+            "place",
+            "stone",
+            "40",
+            "40",
+            &high.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("stone"), "should confirm stone placement, got: {stdout}");
+    assert!(
+        stdout.contains("stone"),
+        "should confirm stone placement, got: {stdout}"
+    );
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.is_empty(), "should have no warnings, got: {stderr}");
 }
@@ -165,7 +227,11 @@ fn seed_falls_through_air() {
         .args(["place", "seed", "60", "20", &high.to_string(), "--state", p])
         .output()
         .unwrap();
-    assert!(out.status.success(), "seed placement failed: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "seed placement failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 
     // Verify high z is still air (seed fell)
     let out = groundwork()
@@ -173,7 +239,10 @@ fn seed_falls_through_air() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "z={high} should still be air, got: {stdout}");
+    assert!(
+        stdout.contains("air"),
+        "z={high} should still be air, got: {stdout}"
+    );
 
     // Verify seed landed at surface+1
     let out = groundwork()
@@ -181,7 +250,10 @@ fn seed_falls_through_air() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("seed"), "seed should have fallen to z={above}, got: {stdout}");
+    assert!(
+        stdout.contains("seed"),
+        "seed should have fallen to z={above}, got: {stdout}"
+    );
 }
 
 /// Soil falls through air.
@@ -195,7 +267,15 @@ fn soil_falls_through_air() {
 
     // First, dig out the soil at the surface to make air there
     let out = groundwork()
-        .args(["place", "dig", "10", "10", &surface.to_string(), "--state", p])
+        .args([
+            "place",
+            "dig",
+            "10",
+            "10",
+            &surface.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -213,7 +293,10 @@ fn soil_falls_through_air() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("soil"), "soil should have fallen to z={surface}, got: {stdout}");
+    assert!(
+        stdout.contains("soil"),
+        "soil should have fallen to z={surface}, got: {stdout}"
+    );
 }
 
 /// Stone does NOT fall (placed directly).
@@ -227,7 +310,15 @@ fn stone_does_not_fall() {
 
     // Place stone high up — should stay there (no gravity for stone)
     let out = groundwork()
-        .args(["place", "stone", "20", "20", &high.to_string(), "--state", p])
+        .args([
+            "place",
+            "stone",
+            "20",
+            "20",
+            &high.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
     assert!(out.status.success());
@@ -237,7 +328,10 @@ fn stone_does_not_fall() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("stone"), "stone should stay at z={high}, got: {stdout}");
+    assert!(
+        stdout.contains("stone"),
+        "stone should stay at z={high}, got: {stdout}"
+    );
 }
 
 // ── Seeds on stone ────────────────────────────────────────────────────
@@ -288,13 +382,27 @@ fn fill_air_with_soil() {
 
     // Fill a 3x3x1 region of air just above surface with soil
     let out = groundwork()
-        .args(["fill", "soil", "0", "0", &above.to_string(), "2", "2", &above.to_string(), "--state", p])
+        .args([
+            "fill",
+            "soil",
+            "0",
+            "0",
+            &above.to_string(),
+            "2",
+            "2",
+            &above.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
     // Soil has gravity, but just above surface it rests on top
-    assert!(stdout.contains("soil"), "should confirm soil fill, got: {stdout}");
+    assert!(
+        stdout.contains("soil"),
+        "should confirm soil fill, got: {stdout}"
+    );
 }
 
 /// Fill with shovel (dig) removes a region.
@@ -307,12 +415,26 @@ fn fill_dig_removes_region() {
 
     // Fill-dig a 3x3x1 region of soil at the surface
     let out = groundwork()
-        .args(["fill", "dig", "0", "0", &surface.to_string(), "2", "2", &surface.to_string(), "--state", p])
+        .args([
+            "fill",
+            "dig",
+            "0",
+            "0",
+            &surface.to_string(),
+            "2",
+            "2",
+            &surface.to_string(),
+            "--state",
+            p,
+        ])
         .output()
         .unwrap();
     assert!(out.status.success());
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("shovel"), "should say shovel, got: {stdout}");
+    assert!(
+        stdout.contains("shovel"),
+        "should say shovel, got: {stdout}"
+    );
 
     // Verify the cells are now air
     let out = groundwork()
@@ -320,5 +442,8 @@ fn fill_dig_removes_region() {
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
-    assert!(stdout.contains("air"), "cell should be air after dig, got: {stdout}");
+    assert!(
+        stdout.contains("air"),
+        "cell should be air after dig, got: {stdout}"
+    );
 }

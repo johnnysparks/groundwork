@@ -40,7 +40,10 @@ pub fn observe_status(world: &World) -> Observation {
     ];
     let mut lines = vec![
         format!("Tick: {tick}"),
-        format!("Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)", GRID_X * GRID_Y * GRID_Z),
+        format!(
+            "Grid: {GRID_X}x{GRID_Y}x{GRID_Z} ({} voxels)",
+            GRID_X * GRID_Y * GRID_Z
+        ),
         "Materials:".to_string(),
     ];
     for i in 0..10 {

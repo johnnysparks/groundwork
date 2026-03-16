@@ -33,7 +33,9 @@ struct SimState {
 fn with_sim<R>(f: impl FnOnce(&mut SimState) -> R) -> R {
     SIM.with(|cell| {
         let mut borrow = cell.borrow_mut();
-        let sim = borrow.as_mut().expect("sim not initialized — call init() first");
+        let sim = borrow
+            .as_mut()
+            .expect("sim not initialized — call init() first");
         f(sim)
     })
 }
@@ -126,7 +128,7 @@ pub fn get_tick() -> u64 {
 pub fn place_tool(tool: u8, x: usize, y: usize, z: usize) -> i32 {
     with_sim(|sim| {
         let mat = match tool {
-            0 => Material::Air,   // shovel
+            0 => Material::Air, // shovel
             1 => Material::Seed,
             2 => Material::Water,
             3 => Material::Soil,
@@ -325,7 +327,10 @@ pub fn species_count() -> usize {
 pub fn species_name(idx: usize) -> String {
     with_sim(|sim| {
         let table = sim.world.resource::<SpeciesTable>();
-        table.species.get(idx).map_or(String::new(), |s| s.name.to_string())
+        table
+            .species
+            .get(idx)
+            .map_or(String::new(), |s| s.name.to_string())
     })
 }
 
@@ -334,7 +339,10 @@ pub fn species_name(idx: usize) -> String {
 pub fn species_plant_type(idx: usize) -> String {
     with_sim(|sim| {
         let table = sim.world.resource::<SpeciesTable>();
-        table.species.get(idx).map_or(String::new(), |s| s.plant_type.name().to_string())
+        table
+            .species
+            .get(idx)
+            .map_or(String::new(), |s| s.plant_type.name().to_string())
     })
 }
 

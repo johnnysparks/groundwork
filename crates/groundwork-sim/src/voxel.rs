@@ -92,7 +92,18 @@ mod tests {
 
     #[test]
     fn material_u8_round_trip() {
-        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed, Material::Trunk, Material::Branch, Material::Leaf, Material::DeadWood];
+        let all = [
+            Material::Air,
+            Material::Soil,
+            Material::Stone,
+            Material::Water,
+            Material::Root,
+            Material::Seed,
+            Material::Trunk,
+            Material::Branch,
+            Material::Leaf,
+            Material::DeadWood,
+        ];
         for mat in all {
             assert_eq!(Material::from_u8(mat.as_u8()), Some(mat));
         }
@@ -106,7 +117,18 @@ mod tests {
 
     #[test]
     fn material_name_round_trip() {
-        let all = [Material::Air, Material::Soil, Material::Stone, Material::Water, Material::Root, Material::Seed, Material::Trunk, Material::Branch, Material::Leaf, Material::DeadWood];
+        let all = [
+            Material::Air,
+            Material::Soil,
+            Material::Stone,
+            Material::Water,
+            Material::Root,
+            Material::Seed,
+            Material::Trunk,
+            Material::Branch,
+            Material::Leaf,
+            Material::DeadWood,
+        ];
         for mat in all {
             assert_eq!(Material::from_name(mat.name()), Some(mat));
         }

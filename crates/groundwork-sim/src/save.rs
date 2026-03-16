@@ -3,12 +3,12 @@ use std::path::Path;
 
 use bevy_ecs::prelude::*;
 
+use crate::fauna::FaunaList;
 use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use crate::soil::{SoilComposition, SoilGrid};
 use crate::tree::{SeedSpeciesMap, SpeciesTable};
 use crate::voxel::{Material, Voxel};
-use crate::fauna::FaunaList;
-use crate::{FocusState, ToolState, Tick};
+use crate::{FocusState, Tick, ToolState};
 
 const MAGIC: [u8; 4] = *b"GWRK";
 const VERSION: u16 = 4;
@@ -22,7 +22,13 @@ const V2_SIZE: usize = V1_SIZE + FOCUS_BLOCK;
 const SOIL_BYTES_PER_CELL: usize = 6;
 const V3_SIZE: usize = V2_SIZE + VOXEL_COUNT * SOIL_BYTES_PER_CELL;
 
-pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, focus: &FocusState, soil: &SoilGrid, path: &Path) -> io::Result<()> {
+pub fn save_to_file(
+    grid: &VoxelGrid,
+    tick: &Tick,
+    focus: &FocusState,
+    soil: &SoilGrid,
+    path: &Path,
+) -> io::Result<()> {
     let mut buf = Vec::with_capacity(V3_SIZE);
 
     // Header
@@ -70,14 +76,20 @@ pub fn save_to_file(grid: &VoxelGrid, tick: &Tick, focus: &FocusState, soil: &So
     std::fs::write(path, &buf)
 }
 
-pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState, Option<Vec<SoilComposition>>)> {
+#[allow(clippy::type_complexity)]
+pub fn load_from_file(
+    path: &Path,
+) -> io::Result<(Vec<Voxel>, u64, FocusState, Option<Vec<SoilComposition>>)> {
     let data = std::fs::read(path)?;
 
     if data.len() < 16 {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "file too small"));
     }
-    if &data[0..4] != &MAGIC {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "bad magic bytes"));
+    if data[0..4] != MAGIC {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "bad magic bytes",
+        ));
     }
     let version = u16::from_le_bytes([data[4], data[5]]);
     if version == 0 || version > 4 {
@@ -96,7 +108,10 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState, O
     if data.len() != expected_size {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("expected {expected_size} bytes for v{version}, got {}", data.len()),
+            format!(
+                "expected {expected_size} bytes for v{version}, got {}",
+                data.len()
+            ),
         ));
     }
 
@@ -132,11 +147,21 @@ pub fn load_from_file(path: &Path) -> io::Result<(Vec<Voxel>, u64, FocusState, O
             let sx = u16::from_le_bytes([data[fo + 8], data[fo + 9]]) as usize;
             let sy = u16::from_le_bytes([data[fo + 10], data[fo + 11]]) as usize;
             let sz = u16::from_le_bytes([data[fo + 12], data[fo + 13]]) as usize;
-            Some(ToolState { material: mat, start_x: sx, start_y: sy, start_z: sz })
+            Some(ToolState {
+                material: mat,
+                start_x: sx,
+                start_y: sy,
+                start_z: sz,
+            })
         } else {
             None
         };
-        FocusState { x: fx, y: fy, z: fz, tool }
+        FocusState {
+            x: fx,
+            y: fy,
+            z: fz,
+            tool,
+        }
     } else {
         FocusState::default()
     };
@@ -214,10 +239,7 @@ mod tests {
             assert_eq!(a.nutrient_level, b.nutrient_level);
         }
 
-        assert_eq!(
-            world.resource::<Tick>().0,
-            loaded.resource::<Tick>().0,
-        );
+        assert_eq!(world.resource::<Tick>().0, loaded.resource::<Tick>().0,);
 
         // Focus should round-trip
         let orig_focus = world.resource::<FocusState>();

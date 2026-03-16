@@ -3,7 +3,6 @@
 /// The camera orbits around a focus point. Position is derived from
 /// focus + distance + yaw + pitch. Projection is orthographic —
 /// all rays are parallel, giving consistent scale across the view.
-
 use std::f64::consts::PI;
 
 /// Simple 3-component vector for camera math.
@@ -74,9 +73,9 @@ impl Camera {
         Self {
             focus: Vec3::new(focus_x, focus_y, focus_z),
             distance: 40.0,
-            yaw: -PI / 4.0,     // 45° — isometric-ish default
-            pitch: PI / 5.0,    // 36° down — good for terrain overview
-            ortho_scale: 0.6,   // each terminal column ≈ 0.6 world units
+            yaw: -PI / 4.0,   // 45° — isometric-ish default
+            pitch: PI / 5.0,  // 36° down — good for terrain overview
+            ortho_scale: 0.6, // each terminal column ≈ 0.6 world units
         }
     }
 
@@ -158,9 +157,7 @@ impl Camera {
         let world_dy = row_offset * self.ortho_scale * 2.0;
 
         let center = self.position();
-        let origin = center
-            .add(rgt.scale(world_dx))
-            .add(up.scale(-world_dy)); // screen Y is inverted (row 0 = top)
+        let origin = center.add(rgt.scale(world_dx)).add(up.scale(-world_dy)); // screen Y is inverted (row 0 = top)
 
         (origin, fwd)
     }

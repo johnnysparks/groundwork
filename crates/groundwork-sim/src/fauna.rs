@@ -144,7 +144,14 @@ impl FaunaList {
 }
 
 /// Count occurrences of a material in a neighborhood around (cx, cy, cz).
-fn count_material_nearby(grid: &VoxelGrid, cx: usize, cy: usize, cz: usize, radius: usize, mat: Material) -> usize {
+fn count_material_nearby(
+    grid: &VoxelGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+    radius: usize,
+    mat: Material,
+) -> usize {
     let mut count = 0;
     let x_lo = cx.saturating_sub(radius);
     let x_hi = (cx + radius).min(GRID_X - 1);
@@ -167,7 +174,15 @@ fn count_material_nearby(grid: &VoxelGrid, cx: usize, cy: usize, cz: usize, radi
 }
 
 /// Find a random position of a given material in a radius. Returns None if none found.
-fn find_material_nearby(grid: &VoxelGrid, cx: usize, cy: usize, cz: usize, radius: usize, mat: Material, rng: u64) -> Option<(usize, usize, usize)> {
+fn find_material_nearby(
+    grid: &VoxelGrid,
+    cx: usize,
+    cy: usize,
+    cz: usize,
+    radius: usize,
+    mat: Material,
+    rng: u64,
+) -> Option<(usize, usize, usize)> {
     let mut candidates: Vec<(usize, usize, usize)> = Vec::new();
     let x_lo = cx.saturating_sub(radius);
     let x_hi = (cx + radius).min(GRID_X - 1);
@@ -208,7 +223,7 @@ pub fn fauna_spawn(
     mut fauna_list: ResMut<FaunaList>,
 ) {
     // Only check every 20 ticks
-    if tick.0 % 20 != 0 {
+    if !tick.0.is_multiple_of(20) {
         return;
     }
 
@@ -244,9 +259,11 @@ pub fn fauna_spawn(
         if leaf_count >= 6 {
             // Probability increases with more flowers
             let prob = (leaf_count as u64).min(30);
-            if h % 100 < prob && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bee) < 3 {
+            if h % 100 < prob
+                && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bee) < 3
+            {
                 let seed = fauna_list.next_seed();
-                let fauna_type = if tree_hash(seed, 1) % 3 == 0 {
+                let fauna_type = if tree_hash(seed, 1).is_multiple_of(3) {
                     FaunaType::Butterfly
                 } else {
                     FaunaType::Bee
@@ -272,7 +289,9 @@ pub fn fauna_spawn(
         let branch_count = count_material_nearby(&grid, sx, sy, sz + 5, 10, Material::Branch);
         if trunk_count + branch_count >= 8 {
             let h2 = tree_hash(t + si as u64, 1001);
-            if h2 % 150 < 10 && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bird) < 2 {
+            if h2 % 150 < 10
+                && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Bird) < 2
+            {
                 let seed = fauna_list.next_seed();
                 // Birds spawn higher up, near canopy
                 let bz = sz as f32 + 8.0 + (tree_hash(seed, 3) % 5) as f32;
@@ -299,7 +318,10 @@ pub fn fauna_spawn(
                 if let Some(sc) = soil.get(sx, sy, underground_z) {
                     if sc.organic > 20 {
                         let h3 = tree_hash(t + si as u64, 1003);
-                        if h3 % 200 < 15 && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Worm) < 2 {
+                        if h3 % 200 < 15
+                            && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Worm)
+                                < 2
+                        {
                             let seed = fauna_list.next_seed();
                             fauna_list.fauna.push(Fauna {
                                 fauna_type: FaunaType::Worm,
@@ -324,10 +346,14 @@ pub fn fauna_spawn(
         let deadwood_count = count_material_nearby(&grid, sx, sy, sz, 6, Material::DeadWood);
         if deadwood_count >= 2 {
             let h4 = tree_hash(t + si as u64, 1005);
-            if h4 % 120 < 15 && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Beetle) < 2 {
+            if h4 % 120 < 15
+                && count_type_nearby(&fauna_list, sx as f32, sy as f32, FaunaType::Beetle) < 2
+            {
                 let seed = fauna_list.next_seed();
                 // Find a dead wood voxel to spawn near
-                if let Some((dx, dy, dz)) = find_material_nearby(&grid, sx, sy, sz, 6, Material::DeadWood, seed) {
+                if let Some((dx, dy, dz)) =
+                    find_material_nearby(&grid, sx, sy, sz, 6, Material::DeadWood, seed)
+                {
                     fauna_list.fauna.push(Fauna {
                         fauna_type: FaunaType::Beetle,
                         state: FaunaState::Idle,
@@ -350,11 +376,13 @@ pub fn fauna_spawn(
 /// Count how many fauna of a given type are near a position.
 fn count_type_nearby(fauna_list: &FaunaList, x: f32, y: f32, fauna_type: FaunaType) -> usize {
     let radius = 15.0f32;
-    fauna_list.fauna.iter().filter(|f| {
-        f.fauna_type == fauna_type
-            && (f.x - x).abs() < radius
-            && (f.y - y).abs() < radius
-    }).count()
+    fauna_list
+        .fauna
+        .iter()
+        .filter(|f| {
+            f.fauna_type == fauna_type && (f.x - x).abs() < radius && (f.y - y).abs() < radius
+        })
+        .count()
 }
 
 /// System: update fauna movement and behavior.
@@ -363,11 +391,7 @@ fn count_type_nearby(fauna_list: &FaunaList, x: f32, y: f32, fauna_type: FaunaTy
 /// - Birds circle above the canopy, occasionally swooping
 /// - Worms move slowly underground through soil
 /// - Beetles crawl on dead wood surfaces
-pub fn fauna_update(
-    grid: Res<VoxelGrid>,
-    mut fauna_list: ResMut<FaunaList>,
-    tick: Res<Tick>,
-) {
+pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tick: Res<Tick>) {
     let t = tick.0;
 
     // Update each fauna's position and state
@@ -385,7 +409,11 @@ pub fn fauna_update(
         match f.fauna_type {
             FaunaType::Bee | FaunaType::Butterfly => {
                 // Gentle drifting flight pattern with sine-wave offsets
-                let speed = if f.fauna_type == FaunaType::Butterfly { 0.08 } else { 0.12 };
+                let speed = if f.fauna_type == FaunaType::Butterfly {
+                    0.08
+                } else {
+                    0.12
+                };
                 let t_f = t as f32 + f.rng_seed as f32 * 0.1;
 
                 match f.state {
@@ -397,7 +425,7 @@ pub fn fauna_update(
                         f.z += (t_f * 0.08 + phase).sin() * 0.02;
 
                         // Every ~30 ticks, pick a new flower target
-                        if f.age % 30 == 0 {
+                        if f.age.is_multiple_of(30) {
                             if let Some((tx, ty, tz)) = find_material_nearby(
                                 &grid,
                                 f.x as usize,
@@ -436,7 +464,7 @@ pub fn fauna_update(
                         // Hover near flower for a few ticks, then return to idle
                         f.x += (t_f * 0.15).sin() * 0.02;
                         f.y += (t_f * 0.12).cos() * 0.02;
-                        if f.age % 15 == 0 {
+                        if f.age.is_multiple_of(15) {
                             f.state = FaunaState::Idle;
                         }
                     }
@@ -486,7 +514,7 @@ pub fn fauna_update(
                 }
 
                 // Occasionally swoop
-                if f.age % 80 == 0 && f.state == FaunaState::Idle {
+                if f.age.is_multiple_of(80) && f.state == FaunaState::Idle {
                     f.state = FaunaState::Acting;
                 }
             }
@@ -502,8 +530,8 @@ pub fn fauna_update(
                         f.x += t_f.sin() * speed;
                         f.y += (t_f * 1.3).cos() * speed;
                         // Occasionally change depth slightly
-                        if h % 50 == 0 {
-                            f.z += if h % 2 == 0 { 0.1 } else { -0.1 };
+                        if h.is_multiple_of(50) {
+                            f.z += if h.is_multiple_of(2) { 0.1 } else { -0.1 };
                         }
                     }
                     _ => {}
@@ -546,9 +574,9 @@ pub fn fauna_update(
         }
     });
     // Final removal for truly gone fauna
-    fauna_list.fauna.retain(|f| {
-        !(f.state == FaunaState::Leaving && f.age >= f.max_age + 50)
-    });
+    fauna_list
+        .fauna
+        .retain(|f| !(f.state == FaunaState::Leaving && f.age >= f.max_age + 50));
 
     // Pack for WASM export
     fauna_list.pack_export();
@@ -566,7 +594,7 @@ pub fn fauna_effects(
     tick: Res<Tick>,
 ) {
     // Only apply effects every 10 ticks to reduce overhead
-    if tick.0 % 10 != 0 {
+    if !tick.0.is_multiple_of(10) {
         return;
     }
 
@@ -658,7 +686,8 @@ pub fn fauna_effects(
                                 let ny = cy.wrapping_add(dy).wrapping_sub(1);
                                 let nz = cz.wrapping_sub(dz);
                                 if let Some(v) = grid.get(nx, ny, nz) {
-                                    if v.material == Material::Leaf || v.material == Material::Trunk {
+                                    if v.material == Material::Leaf || v.material == Material::Trunk
+                                    {
                                         near_tree = true;
                                     }
                                 }
@@ -668,7 +697,7 @@ pub fn fauna_effects(
                     if near_tree {
                         // ~5% chance per effect tick to drop a seed
                         let h = tree_hash(tick.0 + f.rng_seed, 777);
-                        if h % 20 == 0 {
+                        if h.is_multiple_of(20) {
                             // Pick a random landing spot 10-20 voxels away
                             let dist = 10 + (tree_hash(f.rng_seed, 888) % 12) as usize;
                             let angle = tree_hash(f.rng_seed + tick.0, 999) % 360;

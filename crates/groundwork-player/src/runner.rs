@@ -8,7 +8,7 @@
 use bevy_ecs::prelude::*;
 
 use groundwork_sim::grid::{VoxelGrid, GRID_Z, GROUND_LEVEL};
-use groundwork_sim::tree::{SeedSpeciesMap, species_name_to_id};
+use groundwork_sim::tree::{species_name_to_id, SeedSpeciesMap};
 use groundwork_sim::voxel::Material;
 
 use crate::action::Action;
@@ -194,7 +194,8 @@ pub fn execute_action(
 
             let text = match result {
                 Some(landing_z) => {
-                    drop(grid);
+                    #[allow(clippy::drop_non_drop)]
+                    drop(grid); // release borrow before accessing SeedSpeciesMap
                     if mat == Material::Seed {
                         let mut seed_map = world.resource_mut::<SeedSpeciesMap>();
                         seed_map.map.insert((*x, *y, landing_z), species_id);
@@ -263,7 +264,6 @@ pub fn execute_action(
         }
 
         // --- Camera actions ---
-
         Action::CameraOrbit { theta_deg, phi_deg } => {
             let tick = world.resource::<groundwork_sim::Tick>().0;
             camera.theta_deg = *theta_deg;
@@ -324,7 +324,6 @@ pub fn execute_action(
         }
 
         // --- Observations ---
-
         Action::Inspect { x, y, z } => observer::observe_inspect(world, *x, *y, *z),
 
         Action::Status => observer::observe_status(world),

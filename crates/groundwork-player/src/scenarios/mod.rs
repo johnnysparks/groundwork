@@ -4,8 +4,8 @@
 //! of the game. Scenarios are deterministic and produce traces that
 //! can be evaluated programmatically.
 
+pub mod autonomous;
 pub mod basic_growth;
 pub mod camera_exploration;
-pub mod water_system;
 pub mod ecosystem;
-pub mod autonomous;
+pub mod water_system;

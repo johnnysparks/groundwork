@@ -37,7 +37,13 @@ fn session_play() {
 
     // ===== ROUND 1: Survey the world =====
     eprintln!("\n=== ROUND 1: Survey ===");
-    step(&mut world, &mut schedule, &mut camera, &mut trace_builder, Action::Status);
+    step(
+        &mut world,
+        &mut schedule,
+        &mut camera,
+        &mut trace_builder,
+        Action::Status,
+    );
     step(
         &mut world,
         &mut schedule,
@@ -91,7 +97,13 @@ fn session_play() {
         &mut trace_builder,
         Action::Tick { n: 5 },
     );
-    step(&mut world, &mut schedule, &mut camera, &mut trace_builder, Action::Status);
+    step(
+        &mut world,
+        &mut schedule,
+        &mut camera,
+        &mut trace_builder,
+        Action::Status,
+    );
 
     // ===== ROUND 3: Plant diverse garden =====
     eprintln!("\n=== ROUND 3: Plant ===");
@@ -227,7 +239,13 @@ fn session_play() {
         &mut trace_builder,
         Action::Tick { n: 50 },
     );
-    step(&mut world, &mut schedule, &mut camera, &mut trace_builder, Action::Status);
+    step(
+        &mut world,
+        &mut schedule,
+        &mut camera,
+        &mut trace_builder,
+        Action::Status,
+    );
 
     // Orbit around to see the garden from different angles
     step(
@@ -281,7 +299,13 @@ fn session_play() {
         &mut trace_builder,
         Action::Tick { n: 100 },
     );
-    step(&mut world, &mut schedule, &mut camera, &mut trace_builder, Action::Status);
+    step(
+        &mut world,
+        &mut schedule,
+        &mut camera,
+        &mut trace_builder,
+        Action::Status,
+    );
 
     // ===== ROUND 6: Underground exploration =====
     eprintln!("\n=== ROUND 6: Underground ===");
@@ -350,7 +374,13 @@ fn session_play() {
         &mut trace_builder,
         Action::Tick { n: 150 },
     );
-    step(&mut world, &mut schedule, &mut camera, &mut trace_builder, Action::Status);
+    step(
+        &mut world,
+        &mut schedule,
+        &mut camera,
+        &mut trace_builder,
+        Action::Status,
+    );
 
     // Final panoramic orbit
     step(
@@ -383,10 +413,7 @@ fn session_play() {
     ];
 
     let verdicts: Vec<_> = evaluators.iter().map(|e| e.evaluate(&trace)).collect();
-    let result = groundwork_player::runner::RunResult {
-        trace,
-        verdicts,
-    };
+    let result = groundwork_player::runner::RunResult { trace, verdicts };
 
     eprintln!("\n{}", result.report());
 
@@ -395,10 +422,22 @@ fn session_play() {
     eprintln!("\n=== ANALYSIS ===");
     eprintln!("Steps: {}", summary.step_count);
     eprintln!("Score: {:.0}%", summary.aggregate_score * 100.0);
-    eprintln!("Final plants: {}", summary.final_material_counts.total_plant());
-    eprintln!("Final trees: {}", summary.final_material_counts.total_tree());
-    eprintln!("Camera actions: {}", summary.camera_coverage.total_camera_actions);
-    eprintln!("Went underground: {}", summary.camera_coverage.went_underground);
+    eprintln!(
+        "Final plants: {}",
+        summary.final_material_counts.total_plant()
+    );
+    eprintln!(
+        "Final trees: {}",
+        summary.final_material_counts.total_tree()
+    );
+    eprintln!(
+        "Camera actions: {}",
+        summary.camera_coverage.total_camera_actions
+    );
+    eprintln!(
+        "Went underground: {}",
+        summary.camera_coverage.went_underground
+    );
 
     // Growth timeline
     eprintln!("\n=== GROWTH TIMELINE ===");

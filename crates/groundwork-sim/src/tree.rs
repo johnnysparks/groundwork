@@ -188,9 +188,7 @@ impl Species {
 /// Look up a species by name (case-insensitive, ignores spaces/hyphens/underscores).
 /// Returns the species index in the default SpeciesTable.
 pub fn species_name_to_id(name: &str) -> Option<usize> {
-    let norm = |s: &str| -> String {
-        s.to_ascii_lowercase().replace([' ', '-', '_'], "")
-    };
+    let norm = |s: &str| -> String { s.to_ascii_lowercase().replace([' ', '-', '_'], "") };
     let needle = norm(name);
     let table = SpeciesTable::default();
     table.species.iter().position(|s| norm(s.name) == needle)
@@ -493,10 +491,7 @@ impl TreeTemplate {
     }
 
     fn seedling(_species: &Species) -> Self {
-        let voxels = vec![
-            (0, 0, 0, Material::Trunk),
-            (0, 0, -1, Material::Root),
-        ];
+        let voxels = vec![(0, 0, 0, Material::Trunk), (0, 0, -1, Material::Root)];
         Self { voxels }
     }
 
@@ -583,7 +578,7 @@ impl TreeTemplate {
     fn young_tree(species: &Species, rng_seed: u64) -> Self {
         let mut voxels = Vec::new();
         let trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
-        let crown_r = ((species.crown_radius() + 1) / 2).max(1);
+        let crown_r = species.crown_radius().div_ceil(2).max(1);
         // Young tree trunk is 2/3 adult radius
         let trunk_r = (species.trunk_radius() * 2 / 3).max(1);
 
@@ -591,7 +586,13 @@ impl TreeTemplate {
         Self::add_trunk_column(&mut voxels, 0, trunk_h, trunk_r, Material::Trunk);
 
         // Crown (leaves first so branches can overwrite where they overlap)
-        Self::add_crown(&mut voxels, trunk_h, crown_r, &species.crown_shape, rng_seed);
+        Self::add_crown(
+            &mut voxels,
+            trunk_h,
+            crown_r,
+            &species.crown_shape,
+            rng_seed,
+        );
 
         // Branches near the top — reach scales with crown radius
         let branch_z = trunk_h - 2;
@@ -617,7 +618,13 @@ impl TreeTemplate {
         Self::add_trunk_column(&mut voxels, 0, trunk_h, trunk_r, Material::Trunk);
 
         // Crown (leaves first)
-        Self::add_crown(&mut voxels, trunk_h, crown_r, &species.crown_shape, rng_seed);
+        Self::add_crown(
+            &mut voxels,
+            trunk_h,
+            crown_r,
+            &species.crown_shape,
+            rng_seed,
+        );
 
         // Branches at multiple levels — reach scales with crown
         let branch_start = trunk_h / 2;
@@ -651,7 +658,7 @@ impl TreeTemplate {
         // A dead branch or two
         if trunk_h > 2 {
             let h = tree_hash(rng_seed, 0);
-            let dx: isize = if h % 2 == 0 { 1 } else { -1 };
+            let dx: isize = if h.is_multiple_of(2) { 1 } else { -1 };
             let reach = (species.crown_radius() / 3).max(1) as isize;
             for r in 1..=reach {
                 voxels.push((dx * r, 0, trunk_h - 1, Material::DeadWood));
@@ -669,7 +676,9 @@ impl TreeTemplate {
 
     /// Groundcover seedling: just a single leaf at ground level.
     fn seedling_ground() -> Self {
-        Self { voxels: vec![(0, 0, 0, Material::Leaf), (0, 0, -1, Material::Root)] }
+        Self {
+            voxels: vec![(0, 0, 0, Material::Leaf), (0, 0, -1, Material::Root)],
+        }
     }
 
     /// Dead small plant: single deadwood voxel.
@@ -760,7 +769,7 @@ impl TreeTemplate {
                     if dx * dx + dy * dy <= r_sq {
                         // Use hash to create natural-looking gaps
                         let h = tree_hash(rng_seed, (dx + 100) as u64 * 200 + (dy + 100) as u64);
-                        if h % 4 != 0 {
+                        if !h.is_multiple_of(4) {
                             // ~75% coverage for natural look
                             voxels.push((dx, dy, 0, Material::Leaf));
                         }
@@ -886,7 +895,7 @@ pub fn generate_attraction_points(
         _ => species.max_height() as isize,
     };
     let cr = match stage {
-        GrowthStage::YoungTree => ((species.crown_radius() + 1) / 2).max(1) as isize,
+        GrowthStage::YoungTree => species.crown_radius().div_ceil(2).max(1) as isize,
         _ => species.crown_radius() as isize,
     };
 
@@ -933,7 +942,11 @@ pub fn generate_attraction_points(
             }
             CrownShape::Wide => dx * dx + dy * dy <= cr * cr,
             CrownShape::Conical => {
-                let denom = if crown_height > 1 { crown_height - 1 } else { 1 };
+                let denom = if crown_height > 1 {
+                    crown_height - 1
+                } else {
+                    1
+                };
                 let allowed_r = (cr * (denom - dz) / denom).max(0);
                 dx * dx + dy * dy <= allowed_r * allowed_r
             }
@@ -1100,10 +1113,19 @@ mod tests {
                 continue;
             }
             let points = generate_attraction_points(species, &GrowthStage::Mature, 42);
-            assert!(!points.is_empty(), "{} should have attraction points", species.name);
+            assert!(
+                !points.is_empty(),
+                "{} should have attraction points",
+                species.name
+            );
             // All points should be above trunk base (z > 0)
             for &(_dx, _dy, z) in &points {
-                assert!(z > 0, "{}: attraction point at z={} should be above ground", species.name, z);
+                assert!(
+                    z > 0,
+                    "{}: attraction point at z={} should be above ground",
+                    species.name,
+                    z
+                );
             }
         }
     }
@@ -1122,7 +1144,8 @@ mod tests {
 
         // Trunk should go from z=0 to trunk_h-1
         let trunk_h = (species.max_height() * 2 / 3).max(3) as isize;
-        let trunk_positions: Vec<_> = branches.iter()
+        let trunk_positions: Vec<_> = branches
+            .iter()
             .filter(|b| b.material == Material::Trunk)
             .map(|b| b.pos.2)
             .collect();
@@ -1163,13 +1186,41 @@ mod tests {
     fn plant_types_correct() {
         let table = SpeciesTable::default();
         // 4 trees
-        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Tree).count(), 4);
+        assert_eq!(
+            table
+                .species
+                .iter()
+                .filter(|s| s.plant_type == PlantType::Tree)
+                .count(),
+            4
+        );
         // 3 shrubs
-        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Shrub).count(), 3);
+        assert_eq!(
+            table
+                .species
+                .iter()
+                .filter(|s| s.plant_type == PlantType::Shrub)
+                .count(),
+            3
+        );
         // 2 flowers
-        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Flower).count(), 2);
+        assert_eq!(
+            table
+                .species
+                .iter()
+                .filter(|s| s.plant_type == PlantType::Flower)
+                .count(),
+            2
+        );
         // 3 groundcover
-        assert_eq!(table.species.iter().filter(|s| s.plant_type == PlantType::Groundcover).count(), 3);
+        assert_eq!(
+            table
+                .species
+                .iter()
+                .filter(|s| s.plant_type == PlantType::Groundcover)
+                .count(),
+            3
+        );
     }
 
     #[test]
@@ -1179,9 +1230,18 @@ mod tests {
         let fern = &table.species[4];
         assert_eq!(fern.plant_type, PlantType::Shrub);
         let template = TreeTemplate::generate(fern, &GrowthStage::Mature, 42);
-        let has_branch = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Branch);
-        let has_leaf = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Leaf);
-        let has_root = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Root);
+        let has_branch = template
+            .voxels
+            .iter()
+            .any(|(_, _, _, m)| *m == Material::Branch);
+        let has_leaf = template
+            .voxels
+            .iter()
+            .any(|(_, _, _, m)| *m == Material::Leaf);
+        let has_root = template
+            .voxels
+            .iter()
+            .any(|(_, _, _, m)| *m == Material::Root);
         assert!(has_branch, "Shrub should have branch voxels");
         assert!(has_leaf, "Shrub should have leaf voxels");
         assert!(has_root, "Shrub should have root voxels");
@@ -1194,14 +1254,25 @@ mod tests {
         let wildflower = &table.species[7];
         assert_eq!(wildflower.plant_type, PlantType::Flower);
         let template = TreeTemplate::generate(wildflower, &GrowthStage::Mature, 42);
-        let has_trunk = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Trunk);
-        let has_leaf = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Leaf);
+        let has_trunk = template
+            .voxels
+            .iter()
+            .any(|(_, _, _, m)| *m == Material::Trunk);
+        let has_leaf = template
+            .voxels
+            .iter()
+            .any(|(_, _, _, m)| *m == Material::Leaf);
         assert!(has_trunk, "Flower should have stem (trunk)");
         assert!(has_leaf, "Flower should have bloom (leaf)");
         // Flowers should be short
         let max_z = template.voxels.iter().map(|(_, _, z, _)| *z).max().unwrap();
         let max_height = wildflower.max_height() as isize;
-        assert!(max_z <= max_height, "Flower should be within species height, max_z={} max_height={}", max_z, max_height);
+        assert!(
+            max_z <= max_height,
+            "Flower should be within species height, max_z={} max_height={}",
+            max_z,
+            max_height
+        );
     }
 
     #[test]
@@ -1211,10 +1282,15 @@ mod tests {
         let moss = &table.species[9];
         assert_eq!(moss.plant_type, PlantType::Groundcover);
         let template = TreeTemplate::generate(moss, &GrowthStage::Mature, 42);
-        let has_leaf = template.voxels.iter().any(|(_, _, _, m)| *m == Material::Leaf);
+        let has_leaf = template
+            .voxels
+            .iter()
+            .any(|(_, _, _, m)| *m == Material::Leaf);
         assert!(has_leaf, "Groundcover should have leaf voxels");
         // All above-ground voxels should be at z=0
-        let above_ground: Vec<_> = template.voxels.iter()
+        let above_ground: Vec<_> = template
+            .voxels
+            .iter()
             .filter(|(_, _, z, m)| *z >= 0 && *m != Material::Root)
             .collect();
         assert!(!above_ground.is_empty());
@@ -1228,7 +1304,11 @@ mod tests {
         let table = SpeciesTable::default();
         for species in &table.species {
             if species.plant_type != PlantType::Tree {
-                assert!(!species.uses_skeleton(), "{} should not use skeleton", species.name);
+                assert!(
+                    !species.uses_skeleton(),
+                    "{} should not use skeleton",
+                    species.name
+                );
             }
         }
     }
@@ -1237,14 +1317,21 @@ mod tests {
     fn all_species_have_valid_templates_at_all_stages() {
         let table = SpeciesTable::default();
         let stages = [
-            GrowthStage::Seedling, GrowthStage::Sapling,
-            GrowthStage::YoungTree, GrowthStage::Mature, GrowthStage::Dead,
+            GrowthStage::Seedling,
+            GrowthStage::Sapling,
+            GrowthStage::YoungTree,
+            GrowthStage::Mature,
+            GrowthStage::Dead,
         ];
         for species in &table.species {
             for stage in &stages {
                 let template = TreeTemplate::generate(species, stage, 42);
-                assert!(!template.voxels.is_empty(),
-                    "{} at {:?} should produce voxels", species.name, stage);
+                assert!(
+                    !template.voxels.is_empty(),
+                    "{} at {:?} should produce voxels",
+                    species.name,
+                    stage
+                );
             }
         }
     }

@@ -3,7 +3,6 @@
 /// Pipeline: world state → camera projection → DDA raycast → shape-aware glyph selection.
 /// No intermediate image or framebuffer. Each terminal cell is computed directly from
 /// world voxels via orthographic raycasting.
-
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
@@ -40,9 +39,21 @@ fn raycast(grid: &VoxelGrid, origin: Vec3, dir: Vec3) -> Option<RayHit> {
 
     // If direction component is near-zero, treat as very large step
     let inv_dir = Vec3::new(
-        if dir.x.abs() < 1e-12 { 1e12 } else { 1.0 / dir.x },
-        if dir.y.abs() < 1e-12 { 1e12 } else { 1.0 / dir.y },
-        if dir.z.abs() < 1e-12 { 1e12 } else { 1.0 / dir.z },
+        if dir.x.abs() < 1e-12 {
+            1e12
+        } else {
+            1.0 / dir.x
+        },
+        if dir.y.abs() < 1e-12 {
+            1e12
+        } else {
+            1.0 / dir.y
+        },
+        if dir.z.abs() < 1e-12 {
+            1e12
+        } else {
+            1.0 / dir.z
+        },
     );
 
     // Find entry point into the grid AABB [0, GRID_X] × [0, GRID_Y] × [0, GRID_Z]
@@ -96,7 +107,13 @@ fn raycast(grid: &VoxelGrid, origin: Vec3, dir: Vec3) -> Option<RayHit> {
 
     for _ in 0..max_steps {
         // Check current voxel
-        if vx >= 0 && vx < GRID_X as i32 && vy >= 0 && vy < GRID_Y as i32 && vz >= 0 && vz < GRID_Z as i32 {
+        if vx >= 0
+            && vx < GRID_X as i32
+            && vy >= 0
+            && vy < GRID_Y as i32
+            && vz >= 0
+            && vz < GRID_Z as i32
+        {
             if let Some(voxel) = grid.get(vx as usize, vy as usize, vz as usize) {
                 if voxel.material != Material::Air {
                     let t = t_start + t_max_x.min(t_max_y).min(t_max_z);
@@ -142,7 +159,12 @@ fn raycast(grid: &VoxelGrid, origin: Vec3, dir: Vec3) -> Option<RayHit> {
 }
 
 /// Ray-AABB intersection. Returns (t_enter, t_exit) or None if no intersection.
-fn aabb_intersect(origin: Vec3, inv_dir: Vec3, aabb_min: Vec3, aabb_max: Vec3) -> Option<(f64, f64)> {
+fn aabb_intersect(
+    origin: Vec3,
+    inv_dir: Vec3,
+    aabb_min: Vec3,
+    aabb_max: Vec3,
+) -> Option<(f64, f64)> {
     let t1x = (aabb_min.x - origin.x) * inv_dir.x;
     let t2x = (aabb_max.x - origin.x) * inv_dir.x;
     let t1y = (aabb_min.y - origin.y) * inv_dir.y;
@@ -165,9 +187,9 @@ fn aabb_intersect(origin: Vec3, inv_dir: Vec3, aabb_min: Vec3, aabb_max: Vec3) -
 fn material_color(mat: Material, face: u8, world_z: usize, water_level: u8) -> Color {
     // Brightness factor: top=1.0, front=0.8, side=0.65
     let face_brightness = match face {
-        0 => 1.0f32,   // top/bottom face
-        1 => 0.75,     // X face
-        _ => 0.6,      // Y face
+        0 => 1.0f32, // top/bottom face
+        1 => 0.75,   // X face
+        _ => 0.6,    // Y face
     };
 
     // Height-based ambient: underground is darker
@@ -207,9 +229,12 @@ fn in_tool_range_3d(x: usize, y: usize, z: usize, app: &App, cam: &Camera) -> bo
         let ex = (cam.focus.x as usize).min(GRID_X - 1);
         let ey = (cam.focus.y as usize).min(GRID_Y - 1);
         let ez = (cam.focus.z as usize).min(GRID_Z - 1);
-        x >= sx.min(ex) && x <= sx.max(ex)
-            && y >= sy.min(ey) && y <= sy.max(ey)
-            && z >= sz.min(ez) && z <= sz.max(ez)
+        x >= sx.min(ex)
+            && x <= sx.max(ex)
+            && y >= sy.min(ey)
+            && y <= sy.max(ey)
+            && z >= sz.min(ez)
+            && z <= sz.max(ez)
     } else {
         false
     }
@@ -280,12 +305,10 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
                 let fg = material_color(hit.material, hit.face, hit.world_z, hit.water_level);
 
                 // Highlight: focus voxel or tool range
-                let is_focus = hit.world_x == focus_vx
-                    && hit.world_y == focus_vy
-                    && hit.world_z == focus_vz;
-                let is_in_range = in_tool_range_3d(
-                    hit.world_x, hit.world_y, hit.world_z, app, camera,
-                );
+                let is_focus =
+                    hit.world_x == focus_vx && hit.world_y == focus_vy && hit.world_z == focus_vz;
+                let is_in_range =
+                    in_tool_range_3d(hit.world_x, hit.world_y, hit.world_z, app, camera);
 
                 let style = if is_focus {
                     Style::default().fg(fg).bg(Color::Rgb(180, 160, 40))
@@ -301,30 +324,38 @@ pub fn draw_3d(frame: &mut Frame, app: &App) {
                 let sky_intensity = ((1.0 - row as f32 / rows as f32) * 30.0) as u8 + 10;
 
                 // Crosshair at screen center — visible even when focus is in air
-                let is_crosshair =
-                    (col == center_col && (row == center_row - 1 || row == center_row + 1))
+                let is_crosshair = (col == center_col
+                    && (row == center_row - 1 || row == center_row + 1))
                     || (row == center_row && (col == center_col - 1 || col == center_col + 1));
                 let is_center = col == center_col && row == center_row;
 
                 if is_center {
                     spans.push(Span::styled(
                         "+".to_string(),
-                        Style::default()
-                            .fg(Color::Rgb(255, 220, 60))
-                            .bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
+                        Style::default().fg(Color::Rgb(255, 220, 60)).bg(Color::Rgb(
+                            sky_intensity,
+                            sky_intensity,
+                            sky_intensity + 15,
+                        )),
                     ));
                 } else if is_crosshair {
                     let cross_ch = if col == center_col { "│" } else { "─" };
                     spans.push(Span::styled(
                         cross_ch.to_string(),
-                        Style::default()
-                            .fg(Color::Rgb(180, 160, 40))
-                            .bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
+                        Style::default().fg(Color::Rgb(180, 160, 40)).bg(Color::Rgb(
+                            sky_intensity,
+                            sky_intensity,
+                            sky_intensity + 15,
+                        )),
                     ));
                 } else {
                     spans.push(Span::styled(
                         " ".to_string(),
-                        Style::default().bg(Color::Rgb(sky_intensity, sky_intensity, sky_intensity + 15)),
+                        Style::default().bg(Color::Rgb(
+                            sky_intensity,
+                            sky_intensity,
+                            sky_intensity + 15,
+                        )),
                     ));
                 }
             }
@@ -391,14 +422,22 @@ fn draw_3d_panel(
         panel_lines.push(Line::from(vec![
             Span::styled(" focus ", label),
             Span::styled(
-                format!("({:.0}, {:.0}, {:.0})", camera.focus.x, camera.focus.y, camera.focus.z),
+                format!(
+                    "({:.0}, {:.0}, {:.0})",
+                    camera.focus.x, camera.focus.y, camera.focus.z
+                ),
                 value_style,
             ),
         ]));
         panel_lines.push(Line::from(vec![
             Span::styled(" cam   ", label),
             Span::styled(
-                format!("{:.0}° {:.0}° z{:.2}", camera.yaw.to_degrees(), camera.pitch.to_degrees(), camera.ortho_scale),
+                format!(
+                    "{:.0}° {:.0}° z{:.2}",
+                    camera.yaw.to_degrees(),
+                    camera.pitch.to_degrees(),
+                    camera.ortho_scale
+                ),
                 Style::default().fg(Color::DarkGray),
             ),
         ]));
@@ -431,7 +470,10 @@ fn draw_3d_panel(
             };
             panel_lines.push(Line::from(vec![
                 Span::styled(" mat  ", label),
-                Span::styled(voxel.material.name().to_string(), Style::default().fg(mat_color)),
+                Span::styled(
+                    voxel.material.name().to_string(),
+                    Style::default().fg(mat_color),
+                ),
             ]));
         } else {
             panel_lines.push(Line::from(vec![
@@ -460,12 +502,18 @@ fn draw_3d_panel(
     panel_lines.push(Line::from(vec![
         Span::styled(" TOOL ", Style::default().fg(Color::Black).bg(Color::White)),
         Span::raw(" "),
-        Span::styled(app.selected_tool().name().to_string(), Style::default().fg(Color::Cyan)),
+        Span::styled(
+            app.selected_tool().name().to_string(),
+            Style::default().fg(Color::Cyan),
+        ),
     ]));
     panel_lines.push(Line::from(""));
 
     // Missions
-    panel_lines.extend(app.quest_log.render_lines(app.show_missions, panel_area.width as usize));
+    panel_lines.extend(
+        app.quest_log
+            .render_lines(app.show_missions, panel_area.width as usize),
+    );
 
     // Controls
     panel_lines.push(badge("CONTROLS (H)"));
