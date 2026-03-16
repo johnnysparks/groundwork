@@ -13,6 +13,8 @@ The gnome is a **sim-side entity** (following the fauna pattern): a lightweight 
 | Working | At the task location, applying the tool (takes 3 ticks). |
 | Eating | Hungry gnome pauses to eat (15 ticks, resets hunger to 0). |
 | Resting | Tired gnome rests (20 ticks, restores energy to 255). |
+| Wandering | No tasks queued — gnome ambles to a nearby spot (60% speed). |
+| Inspecting | Arrived at wander target — pauses to look around (12 ticks). |
 
 ## Task Queue
 
@@ -63,6 +65,19 @@ Hunger and energy create a soft pacing constraint — the gnome can always work,
 ### Design Intent
 Needs never create a fail state — the gnome always recovers. They create natural breathing moments: the player zones a big area, the gnome works through it, then pauses to eat and rest before continuing. This makes the gnome feel alive, not robotic. Speed penalties make the player *notice* the gnome is struggling, teaching them to pace their requests.
 
+## Idle Wandering
+
+When the task queue is empty, the gnome doesn't just stand still — it explores the garden autonomously.
+
+- **Cooldown:** 25 ticks idle before picking a wander target
+- **Wander radius:** up to 15 voxels from current position (minimum 3)
+- **Wander speed:** 60% of base (relaxed amble, not purposeful walk)
+- **Inspect:** On arrival, gnome pauses 12 ticks (looking around) then returns to Idle
+- **Cycle:** Idle (25 ticks) -> Wandering -> Inspecting (12 ticks) -> Idle -> repeat
+- **Task interruption:** Queuing a task immediately cancels wandering/inspecting and switches to Walking
+
+This makes the gnome feel alive during idle time — it roams, stops to look at plants, then moves on. The deterministic wander target (hash-based from a counter seed) ensures consistent replay behavior.
+
 ## Ghost Overlays
 
 Pending tasks are exported as **ghost zones** — the renderer draws translucent overlays showing planned-but-not-executed work. Each ghost is 8 bytes: `[x: u16, y: u16, z: u16, tool: u8, species: u8]`. Max 200 ghosts exported per frame.
@@ -70,9 +85,9 @@ Pending tasks are exported as **ghost zones** — the renderer draws translucent
 ## ECS Systems
 
 Runs every tick in this order (after fauna_update, before fauna_effects):
-1. `gnome_plan` — picks next task from queue, sets target, transitions Idle -> Walking
-2. `gnome_move` — moves gnome toward target (speed affected by needs), transitions Walking -> Working on arrival
-3. `gnome_work` — counts work ticks, applies tool on completion, applies hunger/energy cost, transitions Working -> Idle
+1. `gnome_plan` — picks next task or wander target, transitions Idle -> Walking/Wandering (tasks interrupt wander)
+2. `gnome_move` — moves toward target (Walking at full speed, Wandering at 60%), transitions to Working/Inspecting on arrival
+3. `gnome_work` — counts work ticks (or inspect ticks), applies tool on completion, applies hunger/energy cost, transitions to Idle
 4. `gnome_needs` — checks hunger/energy thresholds, triggers Eating/Resting from Idle, counts down needs timers
 5. `gnome_fauna_interact` — fauna proximity checks, trust building, behavior modification (every 5 ticks)
 6. `gnome_export` — packs gnome state + ghost data into export buffers for WASM bridge
