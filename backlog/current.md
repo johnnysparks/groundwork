@@ -1,50 +1,43 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T09:00:00
-**Session:** 61 sprints. Game feature-complete for alpha.
+**Last updated:** 2026-03-16T11:00:00
+**Status:** Alpha complete. 70+ sprints across 4 teams. 99+ tests.
 
 ---
 
-## Alpha Complete
+## Executive Mandate
 
-The game has a complete player experience: title → tutorial → progression → completion → replay. Sound, visuals, ecology, and game loop all working.
+### Garden Gnome → Sim-Side Entity
+**Decision:** `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
+**Current:** JS-side task queue + billboard sprite. Progressive UI reveal wired.
+**Next:** Migrate to Rust sim entity with needs (hunger/energy), fauna interactions (squirrel domestication), deterministic behavior.
 
-## P1 — Next (post-alpha)
+---
 
-### Gnome → Sim-Side Entity (exec mandate)
-Migrate from JS-side task queue to Rust sim entity with needs and fauna interactions.
+## P1 — Next
 
-### Drag-to-zone
-Mouse/touch drag to paint rectangles instead of single-click radius.
+### Fix screenshot pipeline
+Headless Chromium can't load WASM since upstream scene refactor. Blocks visual verification for all teams.
 
-### More sounds
-Bird calls, seed sprout, milestone jingle, tool placement. The water spring is the only sound currently.
+### Drag-to-zone painting
+Mouse/touch drag to paint rectangles. Currently single-click radius.
 
-### Foliage greening
-Healthy plants still lean amber in warm lighting. More saturated species greens needed.
+### Truly smooth trunk growth
+Canopy grows gradually (sprint 69) but trunk still snaps on stage transitions. Need incremental trunk extension.
+
+### More audio
+Bird calls when fauna spawns, growth whoosh, wind in leaves.
 
 ---
 
 ## P2 — Future
 
-- Squirrel domestication
-- Root competition visualization
+- Squirrel domestication (gnome fauna interaction)
+- Root competition visualization in x-ray
 - Multiple gnomes
-- Biome variety
+- Biome variety (desert, forest, wetland)
 - Undo/redo
 - Share garden as URL
 - Leaderboard / garden gallery
-
----
-
-## Session Stats
-- 61 sprints in one session
-- 98+ tests passing
-- 4 concurrent dev teams
-- 14-shot screenshot tour
-- 10+ ecological interactions
-- Progressive species unlocking (sim-driven)
-- Procedural audio (water spring)
-- 3D models (fauna, gnome, trees)
-- GitHub Pages deployment
-- Mobile touch support
+- SSAO (disabled, needs tuning)
+- Shadows (disabled, needs camera tuning)
