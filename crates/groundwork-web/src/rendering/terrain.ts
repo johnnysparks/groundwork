@@ -47,8 +47,8 @@ const SPECIES_TRUNK: THREE.Color[] = [
   new THREE.Color(0.30, 0.28, 0.16),  // Clover: brown-green
 ];
 
-/** Grass-tinted soil for top faces near/above ground level */
-const SOIL_GRASS = new THREE.Color(0.28, 0.40, 0.18); // mossy green-brown
+/** Grass-tinted soil for top and near-surface side faces */
+const SOIL_GRASS = new THREE.Color(0.18, 0.52, 0.14); // lush green
 
 /** Wet soil colors — darker and bluer as moisture increases */
 const SOIL_DAMP = new THREE.Color(0.28, 0.19, 0.12);  // dark moist earth
@@ -250,7 +250,8 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
     // Soil color depends on wetness and whether it's a top face (grass)
     let baseColor: THREE.Color;
     if (quad.material === Material.Soil) {
-      const isGrass = quad.face === 4 && quad.z >= GROUND_LEVEL - 1;
+      // Top faces and upper side faces near surface get grass tint
+      const isGrass = quad.z >= GROUND_LEVEL - 6 && (quad.face === 4 || quad.z >= GROUND_LEVEL - 1);
       if (quad.wetness >= 2) {
         baseColor = isGrass ? SOIL_GRASS_WET : SOIL_WET;
       } else if (quad.wetness >= 1) {
