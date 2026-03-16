@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T18:30:00
-**Status:** Alpha complete. 136 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars and moonlight, discovery feedback loop.
+**Last updated:** 2026-03-16T19:00:00
+**Status:** Alpha complete. 140 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars/moonlight/shooting stars, discovery feedback loop, dawn chorus, welcome flow.
 
 ---
 
@@ -79,6 +79,15 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Stars: procedural star field in sky shader, visible during nighttime
 - Moonlight: cool blue ambient fill, garden visible as atmospheric silhouettes
 - Shooting stars: one every ~45s during night, bright white streak across sky
+
+### Sound Polish (Sprints 135, 138)
+- Ambient wind: continuous filtered noise varies with weather strength
+- Dawn chorus: bird calls every 2-6s at dawn (vs 8-20s normally)
+
+### Onboarding & Feedback (Sprints 137, 139-140)
+- Welcome messages: warm greeting + first action hint on game start
+- Garden recovery messages: encouraging feedback after plant die-off and recolonization
+- Pollination particle boost: 10 particles when actively pollinating (vs 5 drifting)
 
 ### Quality of Life (Sprints 111-112)
 - Auto-save "Saved" indicator (bottom-right, fades after 1.5s)
