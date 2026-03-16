@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, placeTool, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -479,7 +479,8 @@ async function main() {
     hud.addEvent('Fresh garden — the spring is flowing');
   });
 
-  /** Enqueue a task to both the JS gardener queue and the WASM sim gnome */
+  /** Enqueue a task to the WASM sim gnome (single source of truth).
+   *  JS taskQueue is kept in sync for ghost overlay rendering. */
   function enqueueTask(tool: number, x: number, y: number, z: number, species?: number) {
     taskQueue.enqueue({ tool, x, y, z, species });
     if (isInitialized()) {
@@ -841,25 +842,18 @@ async function main() {
       remeshDirty();
     }
 
-    // Update gnome (walks, works, returns completed tasks)
-    const completedTask = gardener.update(dt, elapsed, taskQueue);
-    if (completedTask && isInitialized()) {
-      if (completedTask.species !== undefined) {
-        setSelectedSpecies(completedTask.species);
-      }
-      placeTool(completedTask.tool, completedTask.x, completedTask.y, completedTask.z);
-      particles.emit(completedTask.x + 0.5, completedTask.z + 0.5, completedTask.y + 0.5);
-      remeshDirty();
-    }
-
-    // Sync gnome with sim state (fauna reactions + idle wandering)
+    // Sync gnome from sim (single source of truth for position + state)
     if (isInitialized()) {
       const gnomeSim = getGnomeState();
       if (gnomeSim) {
-        gardener.reactToFauna(gnomeSim.nearbyFauna, gnomeSim.squirrelTrust, dt);
-        // Sync idle wandering from sim (5=Wandering, 6=Inspecting)
-        if ((gnomeSim.state === 5 || gnomeSim.state === 6) && gnomeSim.queueLen === 0) {
-          gardener.setWanderTarget(gnomeSim.targetX, gnomeSim.targetY);
+        const taskCompleted = gardener.syncFromSim(gnomeSim, dt, elapsed);
+        if (taskCompleted) {
+          // Dequeue from JS taskQueue to keep ghost overlay in sync
+          const task = taskQueue.dequeue();
+          if (task) {
+            particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+          }
+          remeshDirty();
         }
       }
     }

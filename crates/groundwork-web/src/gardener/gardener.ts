@@ -1,9 +1,10 @@
 /**
  * Garden gnome — charming 3D model with personality.
  *
- * A toylike gnome figurine built from soft primitives (spheres, cones,
- * cylinders) that walks to task locations and executes garden work.
- * Feels like a hand-painted collectible placed in the diorama.
+ * Sim-driven: the Rust sim is the single authority for gnome position,
+ * state, and task execution. This class handles visual rendering only:
+ * smooth position interpolation, walk/work/idle animations, emotion
+ * particles, and celebrations.
  *
  * Personality comes from idle behaviors (look around, yawn, stretch,
  * inspect plants, sit and rest), celebrations (happy jump on task
@@ -16,17 +17,31 @@
 
 import * as THREE from 'three';
 import { GROUND_LEVEL, GRID_X, GRID_Y, ToolCode } from '../bridge';
-import type { TaskQueue, GardenTask } from './queue';
+import type { GnomeView } from '../bridge';
 import { buildGnomeModel, type GnomeParts } from '../models/gnome';
 
-// ─── State Machine ───────────────────────────────────────────────
+// ─── Sim State Constants (must match gnome.rs GnomeState repr) ────
 
-enum GnomeState {
+const SimState = {
+  Idle: 0,
+  Walking: 1,
+  Working: 2,
+  Eating: 3,
+  Resting: 4,
+  Wandering: 5,
+  Inspecting: 6,
+} as const;
+
+// ─── Animation State (JS-only, for visual rendering) ─────────────
+
+enum AnimState {
   Idle,
   Walking,
   Working,
   Celebrating,
   Wandering,
+  Eating,
+  Resting,
 }
 
 enum IdleBehavior {
@@ -65,14 +80,17 @@ const CELEB_DURATION: Record<CelebType, number> = {
   [CelebType.BigMilestone]: 1.8,
 };
 
-const WALK_SPEED = 8.0;
-const WORK_DURATION = 0.4;
 const BLINK_INTERVAL = 3.0;
 const BLINK_DURATION = 0.15;
 
 /** Base scale for the gnome model — oversized so it's visible at default zoom
  *  among trees and foliage. At 1.8x the gnome is ~8 units tall. */
 const GNOME_BASE_SCALE = 1.8;
+
+/** Position lerp rate — how quickly visual catches up to sim position.
+ *  Higher = snappier, lower = floatier. Tuned for 60fps rendering
+ *  with ~10 ticks/sec sim rate. */
+const POSITION_LERP_SPEED = 12.0;
 
 // ─── Emotion Particles ──────────────────────────────────────────
 
@@ -96,7 +114,7 @@ interface EmotionParticle {
   vy: number;
 }
 
-// Emotion particle shader (kept from previous implementation — works great as point sprites)
+// Emotion particle shader (point sprites)
 const EMOTION_VERT = /* glsl */ `
   attribute float aAge;
   attribute float aMaxAge;
@@ -164,16 +182,22 @@ export class GardenerSprite {
   readonly group: THREE.Group;
   private parts: GnomeParts;
   private glowDisc: THREE.Mesh;
-  private state = GnomeState.Idle;
+  private animState = AnimState.Idle;
 
-  /** Current position in sim coordinates */
-  x: number;
-  y: number;
-  z: number;
+  /** Current visual position (smoothly interpolated toward sim position) */
+  private visualX: number;
+  private visualY: number;
+  private visualZ: number;
 
-  // Task management
-  private currentTask: GardenTask | null = null;
-  private workTimer = 0;
+  /** Last known sim position (updated each syncFromSim call) */
+  private simX: number;
+  private simY: number;
+  private simZ: number;
+
+  /** Previous sim queue length — used to detect task completions */
+  private prevSimQueueLen = 0;
+
+  /** Tasks completed streak (for celebration intensity) */
   private tasksCompletedStreak = 0;
 
   // Idle personality
@@ -188,16 +212,16 @@ export class GardenerSprite {
   private celebElapsed = 0;
 
   // Animation targets (smoothly interpolated)
-  private armLAngle = 0;    // arm rotation in radians
+  private armLAngle = 0;
   private armRAngle = 0;
-  private headTiltY = 0;    // head rotation around Y
-  private headTiltZ = 0;    // head lean
+  private headTiltY = 0;
+  private headTiltZ = 0;
   private hatSway = 0;
   private bodyLean = 0;
   private bounce = 0;
   private squashY = 1;
   private bodyY = 0;
-  private bootSpread = 0;   // extra X offset for sitting
+  private bootSpread = 0;
   private toolType = 0;
   private cheekGlow = 0;
 
@@ -227,30 +251,28 @@ export class GardenerSprite {
   private emotionMaxAges: Float32Array;
   private emotionTypes: Float32Array;
 
-  // Walk direction
-  private walkDirX = 0;
-  private walkDirY = 0;
+  // Walk direction (derived from position delta for facing)
   private facingAngle = 0;
-
-  // Idle wandering (driven by sim)
-  private wanderTargetX = 0;
-  private wanderTargetY = 0;
 
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'gardener';
 
-    this.x = GRID_X / 2;
-    this.y = GRID_Y / 2;
-    this.z = GROUND_LEVEL + 1;
+    const cx = GRID_X / 2;
+    const cy = GRID_Y / 2;
+    const cz = GROUND_LEVEL + 1;
+    this.visualX = cx;
+    this.visualY = cy;
+    this.visualZ = cz;
+    this.simX = cx;
+    this.simY = cy;
+    this.simZ = cz;
 
     // Build 3D gnome model
     this.parts = buildGnomeModel();
     this.group.add(this.parts.root);
 
-    // Warm glow disc on the ground beneath the gnome — a "spotlight" that
-    // helps the player locate the gnome at default zoom without breaking
-    // the cozy aesthetic. Soft warm gold circle, additive blending.
+    // Warm glow disc on the ground beneath the gnome
     const glowGeo = new THREE.CircleGeometry(3.5, 24);
     const glowMat = new THREE.MeshBasicMaterial({
       color: 0xffcc66,
@@ -260,10 +282,10 @@ export class GardenerSprite {
       blending: THREE.AdditiveBlending,
     });
     this.glowDisc = new THREE.Mesh(glowGeo, glowMat);
-    this.glowDisc.rotation.x = -Math.PI / 2; // lay flat on ground
+    this.glowDisc.rotation.x = -Math.PI / 2;
     this.group.add(this.glowDisc);
 
-    // Emotion particle system (same as before — point sprites work well)
+    // Emotion particle system
     this.emotionPositions = new Float32Array(MAX_EMOTIONS * 3);
     this.emotionAges = new Float32Array(MAX_EMOTIONS);
     this.emotionMaxAges = new Float32Array(MAX_EMOTIONS);
@@ -290,54 +312,144 @@ export class GardenerSprite {
     this.updatePosition();
   }
 
-  /** Update gnome each frame. Returns a completed task or null. */
-  update(dt: number, elapsed: number, queue: TaskQueue): GardenTask | null {
-    // Blink system
+  /** Sync visual state from sim gnome. Call once per render frame.
+   *  Returns true if a task was completed this frame (for particles/remesh). */
+  syncFromSim(sim: GnomeView, dt: number, elapsed: number): boolean {
+    // --- Position interpolation ---
+    this.simX = sim.x;
+    this.simY = sim.y;
+    this.simZ = sim.z;
+
+    const lerpFactor = 1.0 - Math.exp(-POSITION_LERP_SPEED * dt);
+    this.visualX += (this.simX - this.visualX) * lerpFactor;
+    this.visualY += (this.simY - this.visualY) * lerpFactor;
+    this.visualZ += (this.simZ - this.visualZ) * lerpFactor;
+
+    // --- Facing direction from movement delta ---
+    const dx = this.simX - this.visualX;
+    const dy = this.simY - this.visualY;
+    const moveDist = Math.sqrt(dx * dx + dy * dy);
+    if (moveDist > 0.05) {
+      this.facingAngle = Math.atan2(dy, dx);
+    }
+
+    // --- Detect task completion (sim queue length decreased) ---
+    let taskCompleted = false;
+    if (sim.queueLen < this.prevSimQueueLen) {
+      taskCompleted = true;
+      this.tasksCompletedStreak++;
+      // Trigger celebration
+      if (sim.queueLen === 0) {
+        this.startCelebration(
+          this.tasksCompletedStreak > 10 ? CelebType.BigMilestone : CelebType.QueueEmpty
+        );
+        this.tasksCompletedStreak = 0;
+      } else if (this.tasksCompletedStreak % 5 === 0) {
+        this.startCelebration(CelebType.TaskDone);
+      }
+      // Emit emotion
+      if (sim.activeTool === ToolCode.Seed) {
+        this.emitEmotion(EmotionType.Heart);
+      } else {
+        this.emitEmotion(EmotionType.Sparkle);
+      }
+    }
+    this.prevSimQueueLen = sim.queueLen;
+
+    // --- Map sim state → animation state ---
+    // Celebrations override sim state until they finish
+    if (this.animState !== AnimState.Celebrating) {
+      this.mapSimStateToAnim(sim);
+    }
+
+    // --- Tool type for work animation ---
+    this.toolType = this.getToolTypeFromCode(sim.activeTool);
+
+    // --- Fauna reactions ---
+    this.reactToFauna(sim.nearbyFauna, sim.squirrelTrust, dt);
+
+    // --- Blink ---
     this.updateBlink(dt);
 
-    // State machine
-    let completedTask: GardenTask | null = null;
-
-    switch (this.state) {
-      case GnomeState.Idle:
-        completedTask = this.updateIdle(dt, elapsed, queue);
+    // --- Run current animation ---
+    switch (this.animState) {
+      case AnimState.Idle:
+        this.animateIdle(dt, elapsed);
         break;
-      case GnomeState.Walking:
-        this.updateWalking(dt);
+      case AnimState.Walking:
+        this.animateWalking();
         break;
-      case GnomeState.Working:
-        completedTask = this.updateWorking(dt, queue);
+      case AnimState.Working:
+        this.animateWorking(dt);
         break;
-      case GnomeState.Celebrating:
-        completedTask = this.updateCelebrating(dt, elapsed, queue);
+      case AnimState.Celebrating:
+        this.animateCelebrating(dt, elapsed);
         break;
-      case GnomeState.Wandering:
-        this.updateWandering(dt, elapsed, queue);
+      case AnimState.Wandering:
+        this.animateWandering();
+        break;
+      case AnimState.Eating:
+        this.animateEating(dt, elapsed);
+        break;
+      case AnimState.Resting:
+        this.animateResting(dt, elapsed);
         break;
     }
 
-    // Smooth interpolation + apply to 3D model
+    // --- Smooth interpolation + apply to 3D model ---
     this.applyAnimation(dt);
 
-    // Emotion particles
+    // --- Emotion particles ---
     this.updateEmotions(dt);
 
+    // --- Position the Three.js group ---
     this.updatePosition();
-    return completedTask;
+
+    return taskCompleted;
   }
 
-  // ─── State Updates ──────────────────────────────────────────
+  // ─── State Mapping ──────────────────────────────────────────
 
-  private updateIdle(dt: number, elapsed: number, queue: TaskQueue): GardenTask | null {
-    if (queue.length > 0) {
-      this.currentTask = queue.peek();
-      this.state = GnomeState.Walking;
-      this.idleBehavior = IdleBehavior.Standing;
-      this.bootSpread = 0;
-      this.toolType = this.getToolType(this.currentTask);
-      return null;
+  private mapSimStateToAnim(sim: GnomeView): void {
+    switch (sim.state) {
+      case SimState.Idle:
+        if (this.animState !== AnimState.Idle) {
+          this.animState = AnimState.Idle;
+          this.idleBehavior = IdleBehavior.Standing;
+          this.idleTimer = randomRange(IDLE_BEHAVIOR_MIN_WAIT, IDLE_BEHAVIOR_MAX_WAIT);
+          this.resetAnimation();
+        }
+        break;
+      case SimState.Walking:
+        this.animState = AnimState.Walking;
+        break;
+      case SimState.Working:
+        this.animState = AnimState.Working;
+        break;
+      case SimState.Eating:
+        this.animState = AnimState.Eating;
+        break;
+      case SimState.Resting:
+        this.animState = AnimState.Resting;
+        break;
+      case SimState.Wandering:
+        this.animState = AnimState.Wandering;
+        break;
+      case SimState.Inspecting:
+        // Inspecting looks like an idle inspect behavior
+        if (this.animState !== AnimState.Idle || this.idleBehavior !== IdleBehavior.InspectingPlant) {
+          this.animState = AnimState.Idle;
+          this.idleBehavior = IdleBehavior.InspectingPlant;
+          this.idleBehaviorTimer = 3.0;
+          this.idleElapsed = 0;
+        }
+        break;
     }
+  }
 
+  // ─── Animation Functions ───────────────────────────────────
+
+  private animateIdle(dt: number, elapsed: number): void {
     if (this.idleBehavior === IdleBehavior.Standing) {
       // Gentle breathing
       this.squashY = 1.0 + Math.sin(elapsed * 1.5) * 0.02;
@@ -358,96 +470,53 @@ export class GardenerSprite {
         this.resetAnimation();
       }
     }
-
-    return null;
   }
 
-  private updateWalking(dt: number): void {
-    if (!this.currentTask) {
-      this.state = GnomeState.Idle;
-      return;
-    }
-
-    const tx = this.currentTask.x;
-    const ty = this.currentTask.y;
-    const speed = WALK_SPEED * dt;
-    const dx = tx - this.x;
-    const dy = ty - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    if (dist < 1.0) {
-      this.x = tx;
-      this.y = ty;
-      this.state = GnomeState.Working;
-      this.workTimer = WORK_DURATION;
-      this.squashY = 0.85;
-      this.bounce = -0.05;
-      return;
-    }
-
-    const ndx = dx / dist;
-    const ndy = dy / dist;
-    this.walkDirX = ndx;
-    this.walkDirY = ndy;
-    this.x += ndx * Math.min(speed, dist);
-    this.y += ndy * Math.min(speed, dist);
-
-    // Face direction of movement
-    this.facingAngle = Math.atan2(ndy, ndx);
-
-    // Walking animation
-    const walkPhase = this.x * 3.0 + this.y * 3.0;
+  private animateWalking(): void {
+    const walkPhase = this.visualX * 3.0 + this.visualY * 3.0;
     this.bounce = Math.abs(Math.sin(walkPhase * 2.0)) * 0.3;
     this.squashY = 1.0 + Math.sin(walkPhase * 4.0) * 0.04;
     this.bodyLean = Math.sin(walkPhase * 2.0) * 0.15;
     this.hatSway = Math.sin(walkPhase * 2.5) * 0.2;
 
-    // Arms swing
     const swing = Math.sin(walkPhase * 2.0);
     this.armLAngle = 0.3 + swing * 0.4;
     this.armRAngle = 0.3 - swing * 0.4;
-
     this.cheekGlow = 0.3;
   }
 
-  private updateWandering(dt: number, elapsed: number, queue: TaskQueue): void {
-    // Interrupt wandering for new tasks
-    if (queue.length > 0) {
-      this.currentTask = queue.peek();
-      this.state = GnomeState.Walking;
-      this.idleBehavior = IdleBehavior.Standing;
-      this.toolType = this.getToolType(this.currentTask);
-      return;
+  private animateWorking(dt: number): void {
+    const t = (Date.now() % 1000) / 1000; // continuous work phase
+    const pump = Math.sin(t * Math.PI * 4);
+
+    if (this.toolType >= 0.5 && this.toolType < 1.5) {
+      // Shovel: dig motion
+      this.armRAngle = 0.5 + pump * 0.6;
+      this.armLAngle = 0.2;
+      this.bodyLean = pump * 0.1;
+      this.bounce = pump * 0.1;
+    } else if (this.toolType >= 1.5 && this.toolType < 2.5) {
+      // Watering can: gentle tipping
+      this.armRAngle = 0.8 + Math.sin(t * Math.PI * 2) * 0.3;
+      this.armLAngle = 0.3;
+      this.bodyLean = Math.sin(t * Math.PI * 2) * 0.08;
+    } else {
+      // Seed bag: sprinkling
+      this.armRAngle = 0.6 + Math.sin(t * Math.PI * 6) * 0.2;
+      this.armLAngle = 0.4;
+      this.bodyLean = Math.sin(t * Math.PI * 3) * 0.05;
+      this.bounce = Math.abs(pump) * 0.06;
     }
 
-    const tx = this.wanderTargetX;
-    const ty = this.wanderTargetY;
-    const speed = WALK_SPEED * 0.5 * dt;
-    const dx = tx - this.x;
-    const dy = ty - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    this.cheekGlow = 0.5;
 
-    if (dist < 1.0) {
-      this.x = tx;
-      this.y = ty;
-      this.state = GnomeState.Idle;
-      // Trigger an inspect behavior immediately
-      this.idleBehavior = IdleBehavior.InspectingPlant;
-      this.idleBehaviorTimer = 3.0;
-      this.idleElapsed = 0;
-      return;
+    if (this.tasksCompletedStreak > 8 && Math.random() < dt * 0.5) {
+      this.emitEmotion(EmotionType.Sweat);
     }
+  }
 
-    const ndx = dx / dist;
-    const ndy = dy / dist;
-    this.walkDirX = ndx;
-    this.walkDirY = ndy;
-    this.x += ndx * Math.min(speed, dist);
-    this.y += ndy * Math.min(speed, dist);
-    this.facingAngle = Math.atan2(ndy, ndx);
-
-    // Gentle wandering animation (slower bounce than walking)
-    const walkPhase = this.x * 2.0 + this.y * 2.0;
+  private animateWandering(): void {
+    const walkPhase = this.visualX * 2.0 + this.visualY * 2.0;
     this.bounce = Math.abs(Math.sin(walkPhase * 2.0)) * 0.15;
     this.squashY = 1.0 + Math.sin(walkPhase * 3.0) * 0.02;
     this.bodyLean = Math.sin(walkPhase * 1.5) * 0.08;
@@ -458,79 +527,36 @@ export class GardenerSprite {
     this.cheekGlow = 0.2;
   }
 
-  /** Called by main loop when sim gnome starts wandering. */
-  setWanderTarget(x: number, y: number): void {
-    if (this.state !== GnomeState.Idle) return;
-    this.wanderTargetX = x;
-    this.wanderTargetY = y;
-    this.state = GnomeState.Wandering;
-    this.idleBehavior = IdleBehavior.Standing;
+  private animateEating(dt: number, elapsed: number): void {
+    // Gnome sits and eats — similar to SittingDown idle but with arm motion
+    this.bodyY = -0.5;
+    this.bootSpread = 0.25;
+    this.armLAngle = 0.6 + Math.sin(elapsed * 4.0) * 0.2; // munching motion
+    this.armRAngle = 0.3;
+    this.headTiltY = Math.sin(elapsed * 1.2) * 0.1;
+    this.cheekGlow = 0.6;
+
+    if (Math.random() < dt * 0.3) {
+      this.emitEmotion(EmotionType.Heart);
+    }
   }
 
-  private updateWorking(dt: number, queue: TaskQueue): GardenTask | null {
-    this.workTimer -= dt;
+  private animateResting(dt: number, elapsed: number): void {
+    // Gnome sits and rests — drowsy, gentle breathing
+    this.bodyY = -0.6;
+    this.bootSpread = 0.2;
+    this.armLAngle = 0.05;
+    this.armRAngle = 0.05;
+    this.headTiltZ = Math.sin(elapsed * 0.3) * 0.15; // head drooping
+    this.squashY = 1.0 + Math.sin(elapsed * 1.0) * 0.03;
+    this.cheekGlow = 0.3;
 
-    const workPhase = (WORK_DURATION - this.workTimer) / WORK_DURATION;
-    const pump = Math.sin(workPhase * Math.PI * 4);
-
-    if (this.toolType >= 0.5 && this.toolType < 1.5) {
-      // Shovel: dig motion
-      this.armRAngle = 0.5 + pump * 0.6;
-      this.armLAngle = 0.2;
-      this.bodyLean = pump * 0.1;
-      this.bounce = pump * 0.1;
-    } else if (this.toolType >= 1.5 && this.toolType < 2.5) {
-      // Watering can: gentle tipping
-      this.armRAngle = 0.8 + Math.sin(workPhase * Math.PI * 2) * 0.3;
-      this.armLAngle = 0.3;
-      this.bodyLean = Math.sin(workPhase * Math.PI * 2) * 0.08;
-    } else {
-      // Seed bag: sprinkling
-      this.armRAngle = 0.6 + Math.sin(workPhase * Math.PI * 6) * 0.2;
-      this.armLAngle = 0.4;
-      this.bodyLean = Math.sin(workPhase * Math.PI * 3) * 0.05;
-      this.bounce = Math.abs(pump) * 0.06;
+    if (Math.random() < dt * 0.4) {
+      this.emitEmotion(EmotionType.Zzz);
     }
-
-    this.cheekGlow = 0.5;
-
-    if (this.tasksCompletedStreak > 8 && Math.random() < dt * 0.5) {
-      this.emitEmotion(EmotionType.Sweat);
-    }
-
-    if (this.workTimer <= 0) {
-      const completed = queue.dequeue();
-      this.currentTask = null;
-      this.tasksCompletedStreak++;
-
-      if (queue.length === 0) {
-        this.startCelebration(
-          this.tasksCompletedStreak > 10 ? CelebType.BigMilestone : CelebType.QueueEmpty
-        );
-        this.tasksCompletedStreak = 0;
-      } else if (this.tasksCompletedStreak % 5 === 0) {
-        this.startCelebration(CelebType.TaskDone);
-      } else {
-        this.currentTask = queue.peek();
-        this.state = GnomeState.Walking;
-        this.toolType = this.getToolType(this.currentTask);
-      }
-
-      if (completed) {
-        if (completed.tool === ToolCode.Seed) {
-          this.emitEmotion(EmotionType.Heart);
-        } else {
-          this.emitEmotion(EmotionType.Sparkle);
-        }
-      }
-
-      return completed;
-    }
-
-    return null;
   }
 
-  private updateCelebrating(dt: number, elapsed: number, queue: TaskQueue): GardenTask | null {
+  private animateCelebrating(dt: number, _elapsed: number): void {
     this.celebTimer -= dt;
     this.celebElapsed += dt;
     const t = this.celebElapsed;
@@ -573,18 +599,10 @@ export class GardenerSprite {
     }
 
     if (this.celebTimer <= 0) {
-      if (queue.length > 0) {
-        this.currentTask = queue.peek();
-        this.state = GnomeState.Walking;
-        this.toolType = this.getToolType(this.currentTask);
-      } else {
-        this.state = GnomeState.Idle;
-        this.idleTimer = randomRange(1.0, 3.0);
-      }
+      this.animState = AnimState.Idle;
+      this.idleTimer = randomRange(1.0, 3.0);
       this.resetAnimation();
     }
-
-    return null;
   }
 
   // ─── Idle Behaviors ──────────────────────────────────────────
@@ -681,7 +699,7 @@ export class GardenerSprite {
   // ─── Celebration ─────────────────────────────────────────────
 
   private startCelebration(type: CelebType): void {
-    this.state = GnomeState.Celebrating;
+    this.animState = AnimState.Celebrating;
     this.celebType = type;
     this.celebTimer = CELEB_DURATION[type];
     this.celebElapsed = 0;
@@ -736,10 +754,7 @@ export class GardenerSprite {
     p.root.rotation.z = this.sLean;
 
     // Face direction of movement (rotate entire gnome)
-    if (this.state === GnomeState.Walking) {
-      // In Three.js: sim X maps to world X, sim Y maps to world Z
-      // facingAngle is atan2(dy, dx) where dy=sim Y, dx=sim X
-      // We want the gnome to face in that direction
+    if (this.animState === AnimState.Walking || this.animState === AnimState.Wandering) {
       const targetAngle = -this.facingAngle + Math.PI / 2;
       p.root.rotation.y = smoothTo(p.root.rotation.y, targetAngle, lerp);
     }
@@ -748,10 +763,10 @@ export class GardenerSprite {
     p.head.rotation.y = this.sHeadY;
     p.head.rotation.z = this.sHeadZ;
 
-    // Hat: sway (rotation around Z relative to head)
+    // Hat: sway
     p.hat.rotation.z = this.sHat;
 
-    // Arms: rotation around X axis (forward/backward swing)
+    // Arms: rotation around X axis
     p.armL.rotation.x = -this.sArmL;
     p.armR.rotation.x = -this.sArmR;
 
@@ -759,12 +774,12 @@ export class GardenerSprite {
     p.bootL.position.x = -0.3 - this.sBootSpread;
     p.bootR.position.x = 0.3 + this.sBootSpread;
 
-    // Eye blink: scale eyes to 0 when closed
+    // Eye blink
     const eyeScale = this.eyesClosed ? 0.2 : 1.0;
     p.eyeL.scale.y = eyeScale;
     p.eyeR.scale.y = eyeScale;
 
-    // Cheek glow: visibility based on intensity
+    // Cheek glow
     p.cheekL.visible = this.cheekGlow > 0.2;
     p.cheekR.visible = this.cheekGlow > 0.2;
 
@@ -779,9 +794,9 @@ export class GardenerSprite {
   private emitEmotion(type: EmotionType): void {
     if (this.emotionParticles.length >= MAX_EMOTIONS) return;
 
-    const baseX = this.x + 0.5;
-    const baseY = this.z + 3.5;
-    const baseZ = this.y + 0.5;
+    const baseX = this.visualX + 0.5;
+    const baseY = this.visualZ + 3.5;
+    const baseZ = this.visualY + 0.5;
 
     this.emotionParticles.push({
       type,
@@ -849,46 +864,40 @@ export class GardenerSprite {
     this.cheekGlow = 0;
   }
 
-  private getToolType(task: GardenTask | null): number {
-    if (!task) return 0;
-    switch (task.tool) {
-      case ToolCode.Shovel: return 1;
-      case ToolCode.Water: return 2;
-      case ToolCode.Seed: return 3;
-      case ToolCode.Soil: return 1;
-      case ToolCode.Stone: return 1;
-      default: return 0;
+  private getToolTypeFromCode(toolCode: number): number {
+    switch (toolCode) {
+      case 0: return 1;  // shovel
+      case 2: return 2;  // water
+      case 1: return 3;  // seed
+      case 3: return 1;  // soil (uses shovel animation)
+      case 4: return 1;  // stone (uses shovel animation)
+      default: return 0; // no tool
     }
   }
 
   private updatePosition(): void {
     // Sim (x,y,z) Z-up → Three.js (x,z,y) Y-up
-    this.parts.root.position.x = this.x + 0.5;
-    this.parts.root.position.z = this.y + 0.5;
-    // Y position set by applyAnimation (includes bounce + bodyY)
-    const baseY = this.z + 1.5;
+    this.parts.root.position.x = this.visualX + 0.5;
+    this.parts.root.position.z = this.visualY + 0.5;
+    const baseY = this.visualZ + 1.5;
     this.parts.root.position.y = baseY + this.sBounce + this.sBodyY;
 
     // Glow disc stays flat on the ground at the gnome's feet
-    this.glowDisc.position.set(this.x + 0.5, this.z + 0.15, this.y + 0.5);
+    this.glowDisc.position.set(this.visualX + 0.5, this.visualZ + 0.15, this.visualY + 0.5);
   }
 
-  /** React to nearby fauna from sim state. Called by main loop when sim reports
-   *  fauna near the gnome. Probabilistic emission to avoid particle spam. */
-  reactToFauna(nearbyFauna: number, squirrelTrust: number, dt: number): void {
+  /** React to nearby fauna from sim state. */
+  private reactToFauna(nearbyFauna: number, squirrelTrust: number, dt: number): void {
     if (nearbyFauna === 0) return;
 
-    // Occasional heart when fauna are nearby (cozy feel)
     if (Math.random() < dt * 0.3 * nearbyFauna) {
       this.emitEmotion(EmotionType.Heart);
     }
 
-    // Exclaim when squirrel trust passes thresholds
     if (squirrelTrust > 0 && squirrelTrust % 50 < 2 && Math.random() < dt * 0.5) {
       this.emitEmotion(EmotionType.Exclaim);
     }
 
-    // Sparkle when a domesticated squirrel is following
     if (squirrelTrust >= 180 && Math.random() < dt * 0.4) {
       this.emitEmotion(EmotionType.Sparkle);
     }

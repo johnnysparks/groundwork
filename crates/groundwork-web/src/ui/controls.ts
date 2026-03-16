@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { ToolCode, type ToolCodeType, TOOLS, placeTool, isInitialized } from '../bridge';
+import { ToolCode, type ToolCodeType, TOOLS } from '../bridge';
 import { Hud } from './hud';
 import { raycastVoxel, type VoxelHit } from './raycaster';
 import type { QuestLog } from './quests';
@@ -109,12 +109,8 @@ export function setupControls(config: ControlsConfig): () => void {
     const hit = raycastVoxel(screenX, screenY, camera, terrainGroup, placing);
     if (!hit) return;
 
-    if (isInitialized()) {
-      placeTool(hud.state.activeTool, hit.x, hit.y, hit.z);
-    } else {
-      // Mock mode: apply to the local grid directly (handled in main.ts callback)
-    }
-
+    // Tool placement goes through the gnome task queue (onToolPlaced → enqueueTask).
+    // The sim gnome walks to each target and applies the tool — no direct placeTool.
     config.onToolPlaced?.(hit);
   }
 
