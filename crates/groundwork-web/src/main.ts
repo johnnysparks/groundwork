@@ -35,7 +35,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { initAmbientAudio, setRaining } from './audio/ambient';
-import { playPlant, playWater, playDig, playFaunaArrival } from './audio/sfx';
+import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -630,6 +630,7 @@ async function main() {
   let tickAccumulator = 0;
   let tickSpeed = 1; // 1x, 2x, 5x
   let prevWeatherState = 0; // 0=Clear, 1=Rain, 2=Drought
+  let ambientSoundTimer = 0; // seconds until next ambient fauna sound
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -933,6 +934,23 @@ async function main() {
 
     // Update fauna positions and animation
     fauna.update(elapsed);
+
+    // Ambient fauna sounds: periodic bird chirps and bee buzzes when present
+    ambientSoundTimer -= dt;
+    if (ambientSoundTimer <= 0 && isInitialized()) {
+      ambientSoundTimer = 8 + Math.random() * 12; // 8-20s between sounds
+      const faunaCount = getFaunaCount();
+      if (faunaCount > 0) {
+        const fView = getFaunaView();
+        if (fView) {
+          // Pick a random fauna and play its sound
+          const idx = Math.floor(Math.random() * faunaCount);
+          const f = readFauna(fView, idx);
+          if (f.type === 2) playBirdCall();       // Bird chirp
+          else if (f.type <= 1) playBuzz();       // Bee/butterfly buzz
+        }
+      }
+    }
 
     // Animate growth particles
     particles.update(dt);
