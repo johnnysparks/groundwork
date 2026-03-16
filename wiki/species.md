@@ -7,6 +7,8 @@
 ### Oak (id: 0)
 **The generalist anchor.**
 
+![Oak growth stages](images/species/oak-seedling-t30.png) ![](images/species/oak-sapling-t100.png) ![](images/species/oak-young-t300.png) ![](images/species/oak-mature-t600.png) ![](images/species/oak-roots.png)
+
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
 | Max height | 2.5m | 50 |
@@ -27,6 +29,8 @@
 
 ### Birch (id: 1)
 **The pioneer colonizer.**
+
+![Birch growth stages](images/species/birch-seedling-t30.png) ![](images/species/birch-sapling-t100.png) ![](images/species/birch-young-t300.png) ![](images/species/birch-mature-t600.png)
 
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
@@ -49,6 +53,8 @@
 ### Willow (id: 2)
 **The water specialist.**
 
+![Willow growth stages](images/species/willow-seedling-t30.png) ![](images/species/willow-sapling-t100.png) ![](images/species/willow-young-t300.png) ![](images/species/willow-mature-t600.png)
+
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
 | Max height | 1.8m | 36 |
@@ -69,6 +75,8 @@
 
 ### Pine (id: 3)
 **The territorial acidifier.**
+
+![Pine growth stages](images/species/pine-seedling-t30.png) ![](images/species/pine-sapling-t100.png) ![](images/species/pine-young-t300.png) ![](images/species/pine-mature-t600.png)
 
 | Parameter | Value | Voxels |
 |-----------|-------|--------|

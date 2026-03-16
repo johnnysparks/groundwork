@@ -37,3 +37,19 @@ This wiki documents the intent, mechanics, and design rationale behind every sim
 **For balance tuning:** Each page lists the specific numbers (thresholds, rates, multipliers). Propose changes as wiki edits before touching `systems.rs`.
 
 **For onboarding:** New contributors read the wiki to understand the simulation's design intent before diving into code.
+
+## Screenshots
+
+Wiki pages reference images in `wiki/images/`. These are **automatically regenerated** whenever the game design or models change:
+
+```bash
+# Regenerate all wiki screenshots (requires WASM build + Playwright chromium)
+cd crates/groundwork-web && npm run wasm
+node ../../wiki/capture-wiki-images.mjs
+```
+
+This captures:
+- **Species thumbnails:** each species at every growth stage + root x-ray (`images/species/`)
+- **Interaction scenes:** nitrogen handshake, canopy layers, pine territory, competition, root wars (`images/interactions/`)
+
+The capture script is deterministic — same sim state produces same screenshots. When models or rendering change, re-run the script and the wiki stays current.

@@ -5,6 +5,8 @@
 ## The Chains
 
 ### 1. Nitrogen Handshake
+![Nitrogen handshake](images/interactions/nitrogen-handshake.png)
+
 `clover/groundcover near tree roots -> 1.5x tree growth`
 
 - **Mechanism:** 3+ Leaf voxels (groundcover) within 5 voxels of tree root_pos at ground level
@@ -22,6 +24,8 @@
 - **Cascade:** Healthier tree -> more seeds -> more trees -> more pollinators
 
 ### 3. Pine Allelopathy
+![Pine territory](images/interactions/pine-territory.png)
+
 `pine roots -> acidic soil -> suppressed neighbors`
 
 - **Mechanism:** Pine roots (species_id=3) lower adjacent soil pH by 5/cycle in soil_evolution
@@ -38,6 +42,8 @@
 - **Discovery:** "A berry bush appeared far from where I planted — a bird must have carried the seed"
 
 ### 5. Canopy Effect
+![Canopy layers](images/interactions/canopy-layers.png)
+
 `tall tree shade -> shade-tolerant species thrive`
 
 - **Mechanism:** Species with shade_tolerance < 60 get 1.5x growth in moderate shade (light 5-30)
@@ -61,6 +67,8 @@
 - **Discovery:** "The dead tree disappeared — the soil underneath is really fertile now"
 
 ### 8. Root Competition
+![Root competition in x-ray](images/interactions/xray-roots.png)
+
 `overlapping root zones -> shared water -> weaker trees stressed`
 
 - **Mechanism:** Root water absorption divided by number of competing root voxels neighboring each soil cell
