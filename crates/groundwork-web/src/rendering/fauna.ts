@@ -89,11 +89,48 @@ interface FaunaSlot {
   active: boolean;
 }
 
+// ─── Pollen Trail System ────────────────────────────────────────
+// Pollinators (bees, butterflies) leave a short golden pollen trail
+// that makes ecological activity visible in motion.
+
+const MAX_TRAIL_PARTICLES = 512;
+const TRAIL_LIFE = 1.2; // seconds
+const TRAIL_EMIT_INTERVAL = 0.08; // seconds between trail drops
+
+const TRAIL_VERT = /* glsl */ `
+  attribute float aLife;
+  varying float vLife;
+  void main() {
+    vLife = aLife;
+    vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = mix(3.5, 0.5, 1.0 - vLife) * (200.0 / -mvPos.z);
+    gl_Position = projectionMatrix * mvPos;
+  }
+`;
+
+const TRAIL_FRAG = /* glsl */ `
+  varying float vLife;
+  void main() {
+    float dist = length(gl_PointCoord - 0.5) * 2.0;
+    if (dist > 1.0) discard;
+    float alpha = (1.0 - dist * dist) * vLife * 0.6;
+    // Warm golden pollen color
+    gl_FragColor = vec4(0.95, 0.85, 0.35, alpha);
+  }
+`;
+
 export class FaunaRenderer {
   readonly group: THREE.Group;
 
   private pool: FaunaSlot[] = [];
   private activeCount = 0;
+
+  // Trail particle state
+  private trailPositions: Float32Array;
+  private trailLifes: Float32Array;
+  private trailMesh: THREE.Points;
+  private trailHead = 0; // ring buffer index
+  private trailTimer = 0;
 
   constructor() {
     this.group = new THREE.Group();
@@ -108,6 +145,27 @@ export class FaunaRenderer {
       this.group.add(model);
       this.pool.push({ model, type: FaunaType.Bee, active: false });
     }
+
+    // Pollen trail particle system (ring buffer of point sprites)
+    this.trailPositions = new Float32Array(MAX_TRAIL_PARTICLES * 3);
+    this.trailLifes = new Float32Array(MAX_TRAIL_PARTICLES);
+    // Park all particles off-screen initially
+    for (let i = 0; i < MAX_TRAIL_PARTICLES; i++) {
+      this.trailPositions[i * 3 + 1] = -1000;
+      this.trailLifes[i] = 0;
+    }
+    const tGeo = new THREE.BufferGeometry();
+    tGeo.setAttribute('position', new THREE.BufferAttribute(this.trailPositions, 3));
+    tGeo.setAttribute('aLife', new THREE.BufferAttribute(this.trailLifes, 1));
+    const tMat = new THREE.ShaderMaterial({
+      vertexShader: TRAIL_VERT,
+      fragmentShader: TRAIL_FRAG,
+      transparent: true,
+      depthWrite: false,
+    });
+    this.trailMesh = new THREE.Points(tGeo, tMat);
+    this.trailMesh.frustumCulled = false;
+    this.group.add(this.trailMesh);
   }
 
   /**
@@ -179,6 +237,41 @@ export class FaunaRenderer {
     }
 
     this.activeCount = actualCount;
+
+    // Emit pollen trail particles for pollinators
+    this.trailTimer += elapsedTime > 0 ? (1 / 60) : 0; // approximate dt
+    if (this.trailTimer >= TRAIL_EMIT_INTERVAL) {
+      this.trailTimer = 0;
+      for (let i = 0; i < actualCount; i++) {
+        const slot = this.pool[i];
+        if (!slot.active) continue;
+        // Only pollinators leave trails
+        if (slot.type !== FaunaType.Bee && slot.type !== FaunaType.Butterfly) continue;
+        // Drop a pollen particle at the creature's position
+        const idx = this.trailHead;
+        this.trailPositions[idx * 3] = slot.model.position.x + (Math.random() - 0.5) * 0.3;
+        this.trailPositions[idx * 3 + 1] = slot.model.position.y - 0.3;
+        this.trailPositions[idx * 3 + 2] = slot.model.position.z + (Math.random() - 0.5) * 0.3;
+        this.trailLifes[idx] = 1.0;
+        this.trailHead = (this.trailHead + 1) % MAX_TRAIL_PARTICLES;
+      }
+    }
+
+    // Age all trail particles
+    const trailDt = 1 / 60;
+    const decay = trailDt / TRAIL_LIFE;
+    for (let i = 0; i < MAX_TRAIL_PARTICLES; i++) {
+      if (this.trailLifes[i] > 0) {
+        this.trailLifes[i] = Math.max(0, this.trailLifes[i] - decay);
+        if (this.trailLifes[i] <= 0) {
+          this.trailPositions[i * 3 + 1] = -1000; // park off-screen
+        }
+      }
+    }
+
+    // Update GPU buffers
+    (this.trailMesh.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    (this.trailMesh.geometry.getAttribute('aLife') as THREE.BufferAttribute).needsUpdate = true;
   }
 
   /** Animate wing meshes for flying creatures. */
