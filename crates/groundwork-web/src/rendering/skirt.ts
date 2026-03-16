@@ -1,13 +1,17 @@
 /**
  * Ground skirt and decorative forest ring.
  *
- * The skirt hides the underground cross-section. The forest ring is pure
- * Three.js scenery — low-poly trees placed around the diorama edge to
- * create a "glen in the forest" feel. Zero sim cost, zero meshing.
+ * The skirt hides the underground cross-section. The forest ring uses
+ * charming soft-voxel tree models placed around the diorama edge to
+ * create a "glen in the forest" feel. Each tree is a unique 3D model
+ * built from rounded primitives (oaks, pines, birches, bushes,
+ * flowering trees, willows) — like an asset pack in a cozy builder.
  */
 
 import * as THREE from 'three';
 import { GRID_X, GRID_Y, GROUND_LEVEL } from '../bridge';
+import { buildRandomTree } from '../models/trees';
+import { hashFloat, hashRange, hash } from '../models/primitives';
 
 /** A skirt wall mesh paired with its outward normal for culling. */
 export interface SkirtWall {
@@ -26,9 +30,6 @@ export interface SkirtResult {
  * Build a skirt mesh that wraps the underground portion of the diorama.
  * Four vertical walls (each a separate mesh for x-ray culling) from
  * y=deep to y=GROUND_LEVEL at the grid edges, plus a bottom cap.
- *
- * Returns direct wall references so main.ts can cull them per-frame
- * using the same dot-product math as tree culling.
  */
 export function buildSkirtMesh(): SkirtResult {
   const group = new THREE.Group();
@@ -37,18 +38,18 @@ export function buildSkirtMesh(): SkirtResult {
   const gx = GRID_X;
   const gz = GRID_Y;
   const top = GROUND_LEVEL;
-  const deep = -60; // extend well below the voxel grid
+  const deep = -60;
   const cx = gx / 2;
   const cz = gz / 2;
 
-  // Soil strata colors (warm earth tones, visible even in shadow)
-  const topsoil = [0.40, 0.30, 0.18];   // rich brown
-  const subsoil = [0.48, 0.36, 0.22];   // lighter brown
-  const clay    = [0.52, 0.38, 0.26];   // warm clay
-  const bedrock = [0.42, 0.36, 0.30];   // warm stone
+  // Soil strata colors (warm earth tones)
+  const topsoil = [0.40, 0.30, 0.18];
+  const subsoil = [0.48, 0.36, 0.22];
+  const clay    = [0.52, 0.38, 0.26];
+  const bedrock = [0.42, 0.36, 0.30];
 
   function strataColor(y: number): [number, number, number] {
-    const t = (y - deep) / (top - deep); // 0 = bottom, 1 = top
+    const t = (y - deep) / (top - deep);
     if (t > 0.7) {
       const lt = (t - 0.7) / 0.3;
       return topsoil.map((v, j) => v + (subsoil[j] - v) * (1 - lt)) as [number, number, number];
@@ -61,7 +62,6 @@ export function buildSkirtMesh(): SkirtResult {
     }
   }
 
-  /** Build a single wall quad as its own mesh with double-sided rendering. */
   function buildWall(
     p0: [number, number, number], p1: [number, number, number],
     p2: [number, number, number], p3: [number, number, number],
@@ -91,7 +91,6 @@ export function buildSkirtMesh(): SkirtResult {
     return mesh;
   }
 
-  // Four walls — each a separate mesh so x-ray can cull camera-facing ones.
   const walls: SkirtWall[] = [
     { mesh: buildWall([0, deep, 0], [gx, deep, 0], [gx, top, 0], [0, top, 0], [0, 0, -1]),       normalXZ: [0, -1] },
     { mesh: buildWall([gx, deep, gz], [0, deep, gz], [0, top, gz], [gx, top, gz], [0, 0, 1]),      normalXZ: [0, 1] },
@@ -101,7 +100,7 @@ export function buildSkirtMesh(): SkirtResult {
 
   for (const w of walls) group.add(w.mesh);
 
-  // Bottom cap (not culled — always visible)
+  // Bottom cap
   const capVerts: number[] = [];
   const capNorms: number[] = [];
   const capColors: number[] = [];
@@ -118,10 +117,10 @@ export function buildSkirtMesh(): SkirtResult {
   capMesh.receiveShadow = true;
   group.add(capMesh);
 
-  // --- Underground floor plane (extends beyond the grid edges) ---
+  // Underground floor plane
   const underRadius = 400;
   const underGeo = new THREE.CircleGeometry(underRadius, 32);
-  const underMat = new THREE.MeshBasicMaterial({ color: 0x4A3A2E }); // warm earth, unlit so always visible
+  const underMat = new THREE.MeshBasicMaterial({ color: 0x4A3A2E });
   const underMesh = new THREE.Mesh(underGeo, underMat);
   underMesh.rotation.x = -Math.PI / 2;
   underMesh.position.set(cx, deep, cz);
@@ -130,56 +129,28 @@ export function buildSkirtMesh(): SkirtResult {
   return { group, walls };
 }
 
-// --- Layered parallax environment ---
-// Concentric layers at increasing radii create depth like Alto's Odyssey:
-//  Layer 0: 3D tree ring (nearest, full parallax from orbit)
-//  Layer 1: Silhouette hill cylinder (mid, faded green)
-//  Layer 2: Distant hill cylinder (far, hazy blue-green)
-//  Ground:  Massive green plane extending under everything
-//  Sky:     Gradient dome (handled by lighting/sky.ts)
-
-const TRUNK_COLOR = 0x5C3A1E;
-const CANOPY_COLORS = [0x4D8C2A, 0x3D7522, 0x5A9E35, 0x438028, 0x3A6B20, 0x558B2F];
-
-/** Simple deterministic hash for variation */
-function simpleHash(i: number): number {
-  let x = (i * 2654435761) >>> 0;
-  x = ((x ^ (x >> 16)) * 0x45d9f3b) >>> 0;
-  return x;
-}
-
-/**
- * Build the full glade landscape: massive green ground plane, dense forest
- * ring near the garden, scattered trees fading into the distance.
- * Sized to always fill the screen at the tightest allowed zoom-out.
- */
 /**
  * Update forest ring visibility: hide trees between the camera and the garden.
- * Call each frame with the camera's azimuth angle (theta from OrbitCamera).
  */
 export function updateForestCulling(group: THREE.Group, cameraTheta: number): void {
-  const cx = GRID_X / 2;
-  const cz = GRID_Y / 2;
-  // Camera look direction projected onto XZ plane (points from center toward camera)
   const camDirX = Math.cos(cameraTheta);
   const camDirZ = Math.sin(cameraTheta);
 
   group.traverse((obj) => {
     const angle = obj.userData.treeAngle as number | undefined;
-    if (angle === undefined) return; // not a tree
+    if (angle === undefined) return;
 
-    // Tree direction from center
     const treeDirX = Math.cos(angle);
     const treeDirZ = Math.sin(angle);
-
-    // Dot product: positive = tree is on camera side (in front)
     const dot = camDirX * treeDirX + camDirZ * treeDirZ;
-
-    // Hide trees in ~120° arc facing the camera (dot > 0.5 ≈ ±60°)
     obj.visible = dot < 0.5;
   });
 }
 
+/**
+ * Build the full glade landscape: meadow ground plane, dense forest ring
+ * with charming varied tree models, and scattered trees fading to distance.
+ */
 export function buildForestRing(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'glade_environment';
@@ -187,18 +158,9 @@ export function buildForestRing(): THREE.Group {
   const cx = GRID_X / 2;
   const cz = GRID_Y / 2;
   const groundY = GROUND_LEVEL + 0.5;
-  // Trees start well outside the grid so they never overlap the sim
   const innerRing = Math.max(cx, cz) + 12;
 
-  // Shared geometry
-  const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 1, 5);
-  const trunkMat = new THREE.MeshLambertMaterial({
-    color: TRUNK_COLOR,
-    emissive: TRUNK_COLOR,
-    emissiveIntensity: 0.3,
-  });
-
-  // --- Meadow ground plane with garden cutout ---
+  // ─── Meadow ground plane with garden cutout ───────
   const groundRadius = 400;
   const gardenHalf = Math.max(cx, cz) + 1;
   const meadowShape = new THREE.Shape();
@@ -212,7 +174,7 @@ export function buildForestRing(): THREE.Group {
   meadowShape.holes.push(holePath);
 
   const groundGeo = new THREE.ShapeGeometry(meadowShape, 48);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4A7A30 }); // muted forest green — less contrast with garden soil
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4A7A30 });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.name = 'meadow_ground';
   ground.rotation.x = -Math.PI / 2;
@@ -220,101 +182,187 @@ export function buildForestRing(): THREE.Group {
   ground.receiveShadow = true;
   group.add(ground);
 
-  // --- Dense forest ring (outside garden footprint) ---
+  // ─── Small ground details (rocks, mushrooms) near garden ───
+  addGroundDetails(group, cx, cz, groundY, innerRing);
+
+  // ─── Dense forest ring (charming 3D tree models) ──────────
   const nearRings = [
-    { radius: innerRing, count: 32, trunkMin: 6, trunkRange: 8, canopyMin: 4, canopyRange: 4 },
-    { radius: innerRing + 8, count: 40, trunkMin: 8, trunkRange: 10, canopyMin: 5, canopyRange: 5 },
+    { radius: innerRing, count: 32 },
+    { radius: innerRing + 8, count: 40 },
   ];
 
   for (const ring of nearRings) {
     for (let i = 0; i < ring.count; i++) {
-      const h = simpleHash(i + ring.count * 100);
-      const angle = (i / ring.count) * Math.PI * 2 + ((h % 100) / 100) * 0.2;
-      const rVar = ((h >> 8) % 6) - 2;
+      const seed = hash(i + ring.count * 100);
+      const angle = (i / ring.count) * Math.PI * 2 + hashFloat(seed) * 0.2;
+      const rVar = hashRange(seed + 1, -2, 4);
       const r = ring.radius + rVar;
-      addTree(group, cx, cz, groundY, r, angle, ring.trunkMin + (h % ring.trunkRange),
-        ring.canopyMin + ((h >> 4) % ring.canopyRange), h, trunkGeo, trunkMat);
+
+      const tree = buildRandomTree(seed, 0);
+      const tx = cx + r * Math.cos(angle);
+      const tz = cz + r * Math.sin(angle);
+      tree.position.set(tx, groundY, tz);
+      tree.userData.treeAngle = angle;
+
+      // Slight random Y rotation for variety
+      tree.rotation.y = hashRange(seed + 50, 0, Math.PI * 2);
+
+      group.add(tree);
     }
   }
 
-  // --- Scattered trees extending to the horizon ---
-  // Multiple bands of increasing radius, decreasing density, hazier colors
+  // ─── Scattered trees extending to horizon ─────────────────
   const bands = [
-    { rMin: innerRing + 18, rMax: innerRing + 50, count: 60, colorIdx: 0 },
-    { rMin: innerRing + 50, rMax: innerRing + 120, count: 80, colorIdx: 1 },
-    { rMin: innerRing + 120, rMax: innerRing + 250, count: 100, colorIdx: 2 },
-  ];
-
-  // Haze-shifted canopy colors for distant trees
-  const distantCanopy = [
-    [0x4D8C2A, 0x3D7522, 0x5A9E35, 0x438028],    // near: vivid
-    [0x5A8A40, 0x4E7E38, 0x629A48, 0x558A3A],     // mid: slightly muted
-    [0x6A9A58, 0x5E8E50, 0x72A260, 0x659A52],     // far: hazy green
+    { rMin: innerRing + 18, rMax: innerRing + 50, count: 60, haze: 0 },
+    { rMin: innerRing + 50, rMax: innerRing + 120, count: 80, haze: 1 },
+    { rMin: innerRing + 120, rMax: innerRing + 250, count: 100, haze: 2 },
   ];
 
   for (const band of bands) {
     for (let i = 0; i < band.count; i++) {
-      const h = simpleHash(i + band.count * 200 + band.rMin);
-      const angle = (h % 10000) / 10000 * Math.PI * 2;
-      const r = band.rMin + ((h >> 6) % (band.rMax - band.rMin));
-      const trunkH = 6 + (h % 14);
-      const canopyR = 4 + ((h >> 4) % 6);
-      const colors = distantCanopy[band.colorIdx];
-      const canopyColor = colors[(h >> 2) % colors.length];
+      const seed = hash(i + band.count * 200 + band.rMin);
+      const angle = hashFloat(seed) * Math.PI * 2;
+      const r = band.rMin + hashRange(seed + 1, 0, band.rMax - band.rMin);
 
-      addTreeWithColor(group, cx, cz, groundY, r, angle, trunkH, canopyR, h, trunkGeo, trunkMat, canopyColor);
+      // Scale increases slightly with distance for visual fill
+      const distScale = 0.9 + hashRange(seed + 2, 0, 0.8);
+      const tree = buildRandomTree(seed, band.haze);
+      tree.scale.setScalar(distScale);
+
+      const tx = cx + r * Math.cos(angle);
+      const tz = cz + r * Math.sin(angle);
+      tree.position.set(tx, groundY, tz);
+      tree.userData.treeAngle = angle;
+      tree.rotation.y = hashRange(seed + 50, 0, Math.PI * 2);
+
+      group.add(tree);
     }
   }
 
   return group;
 }
 
-/** Place a tree at polar coordinates from center */
-function addTree(
+// ─── Ground Details ─────────────────────────────────────────────
+
+/** Add small decorative objects between garden and forest ring. */
+function addGroundDetails(
   group: THREE.Group,
-  cx: number, cz: number, groundY: number,
-  r: number, angle: number, trunkH: number, canopyR: number,
-  h: number, trunkGeo: THREE.CylinderGeometry, trunkMat: THREE.MeshLambertMaterial,
-) {
-  const canopyColor = CANOPY_COLORS[(h >> 2) % CANOPY_COLORS.length];
-  addTreeWithColor(group, cx, cz, groundY, r, angle, trunkH, canopyR, h, trunkGeo, trunkMat, canopyColor);
-}
+  cx: number, cz: number,
+  groundY: number,
+  innerRing: number,
+): void {
+  const detailRing = innerRing - 4;
 
-function addTreeWithColor(
-  group: THREE.Group,
-  cx: number, cz: number, groundY: number,
-  r: number, angle: number, trunkH: number, canopyR: number,
-  h: number, trunkGeo: THREE.CylinderGeometry, trunkMat: THREE.MeshLambertMaterial,
-  canopyColor: number,
-) {
-  const tx = cx + r * Math.cos(angle);
-  const tz = cz + r * Math.sin(angle);
+  // Scatter rocks
+  for (let i = 0; i < 15; i++) {
+    const seed = hash(i + 5000);
+    const angle = hashFloat(seed) * Math.PI * 2;
+    const r = detailRing + hashRange(seed + 1, -3, 8);
+    const x = cx + r * Math.cos(angle);
+    const z = cz + r * Math.sin(angle);
 
-  // Group trunk + canopy so culling can toggle the whole tree
-  const tree = new THREE.Group();
-  tree.userData.treeAngle = angle;
+    const rockGroup = new THREE.Group();
+    rockGroup.position.set(x, groundY, z);
 
-  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-  trunk.scale.set(1, trunkH, 1);
-  trunk.position.set(tx, groundY + trunkH / 2, tz);
-  tree.add(trunk);
+    // Random rock shape: either a flattened sphere or a small boulder cluster
+    const rockSize = 0.5 + hashFloat(seed + 2) * 1.0;
+    const rockColor = hashFloat(seed + 3) > 0.5 ? 0x8A8078 : 0x706860;
 
-  const canopyMat = new THREE.MeshLambertMaterial({
-    color: canopyColor,
-    emissive: canopyColor,
-    emissiveIntensity: 0.35,
-  });
-  if (h % 4 === 0) {
-    const geo = new THREE.ConeGeometry(canopyR, canopyR + 2, 6);
-    const mesh = new THREE.Mesh(geo, canopyMat);
-    mesh.position.set(tx, groundY + trunkH + (canopyR + 2) / 2 - 1, tz);
-    tree.add(mesh);
-  } else {
-    const geo = new THREE.SphereGeometry(canopyR, 5, 4);
-    const mesh = new THREE.Mesh(geo, canopyMat);
-    mesh.position.set(tx, groundY + trunkH + canopyR * 0.4, tz);
-    tree.add(mesh);
+    const _sphereGeo = new THREE.SphereGeometry(1, 5, 4);
+    const rockMat = new THREE.MeshLambertMaterial({
+      color: rockColor,
+      emissive: rockColor,
+      emissiveIntensity: 0.2,
+    });
+    const rock = new THREE.Mesh(_sphereGeo, rockMat);
+    rock.scale.set(rockSize, rockSize * 0.5, rockSize * 0.8);
+    rock.rotation.y = hashRange(seed + 4, 0, Math.PI * 2);
+    rockGroup.add(rock);
+
+    // Sometimes add a smaller rock next to it
+    if (hashFloat(seed + 5) > 0.5) {
+      const r2 = new THREE.Mesh(_sphereGeo, rockMat);
+      const s2 = rockSize * 0.5;
+      r2.scale.set(s2, s2 * 0.5, s2 * 0.7);
+      r2.position.set(rockSize * 0.6, 0, rockSize * 0.3);
+      rockGroup.add(r2);
+    }
+
+    group.add(rockGroup);
   }
 
-  group.add(tree);
+  // Scatter small mushroom clusters
+  for (let i = 0; i < 8; i++) {
+    const seed = hash(i + 6000);
+    const angle = hashFloat(seed) * Math.PI * 2;
+    const r = detailRing + hashRange(seed + 1, -2, 6);
+    const x = cx + r * Math.cos(angle);
+    const z = cz + r * Math.sin(angle);
+
+    const mushGroup = new THREE.Group();
+    mushGroup.position.set(x, groundY, z);
+
+    const count = 1 + Math.floor(hashFloat(seed + 2) * 3);
+    for (let j = 0; j < count; j++) {
+      const mx = hashRange(seed + 10 + j, -0.3, 0.3);
+      const mz = hashRange(seed + 20 + j, -0.3, 0.3);
+      const mh = 0.3 + hashFloat(seed + 30 + j) * 0.4;
+      const capR = 0.15 + hashFloat(seed + 40 + j) * 0.2;
+
+      // Stem
+      const stemGeo = new THREE.CylinderGeometry(0.06, 0.08, mh, 5);
+      const stemMat = new THREE.MeshLambertMaterial({ color: 0xE8D8C0, emissive: 0xE8D8C0, emissiveIntensity: 0.2 });
+      const stem = new THREE.Mesh(stemGeo, stemMat);
+      stem.position.set(mx, mh / 2, mz);
+      mushGroup.add(stem);
+
+      // Cap
+      const capColor = hashFloat(seed + 50 + j) > 0.5 ? 0xC84030 : 0xB07040;
+      const capGeo = new THREE.SphereGeometry(capR, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+      const capMat = new THREE.MeshLambertMaterial({ color: capColor, emissive: capColor, emissiveIntensity: 0.25 });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.position.set(mx, mh, mz);
+      mushGroup.add(cap);
+    }
+
+    group.add(mushGroup);
+  }
+
+  // Scatter small flower patches
+  for (let i = 0; i < 10; i++) {
+    const seed = hash(i + 7000);
+    const angle = hashFloat(seed) * Math.PI * 2;
+    const r = detailRing + hashRange(seed + 1, -5, 10);
+    const x = cx + r * Math.cos(angle);
+    const z = cz + r * Math.sin(angle);
+
+    const patchGroup = new THREE.Group();
+    patchGroup.position.set(x, groundY, z);
+
+    const flowerCount = 2 + Math.floor(hashFloat(seed + 2) * 4);
+    const petalColors = [0xE8A0B0, 0xE0D050, 0xB0B8E0, 0xF0E8D0];
+    const petalColor = petalColors[seed & 3];
+
+    for (let j = 0; j < flowerCount; j++) {
+      const fx = hashRange(seed + 10 + j, -0.5, 0.5);
+      const fz = hashRange(seed + 20 + j, -0.5, 0.5);
+      const fh = 0.4 + hashFloat(seed + 30 + j) * 0.3;
+
+      // Stem
+      const stemGeo = new THREE.CylinderGeometry(0.02, 0.02, fh, 4);
+      const stemMat = new THREE.MeshLambertMaterial({ color: 0x4A8030, emissive: 0x4A8030, emissiveIntensity: 0.2 });
+      const stem = new THREE.Mesh(stemGeo, stemMat);
+      stem.position.set(fx, fh / 2, fz);
+      patchGroup.add(stem);
+
+      // Flower head (tiny sphere)
+      const headGeo = new THREE.SphereGeometry(0.08, 5, 4);
+      const headMat = new THREE.MeshLambertMaterial({ color: petalColor, emissive: petalColor, emissiveIntensity: 0.3 });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.set(fx, fh + 0.05, fz);
+      patchGroup.add(head);
+    }
+
+    group.add(patchGroup);
+  }
 }
