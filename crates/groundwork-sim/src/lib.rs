@@ -14,7 +14,9 @@ pub mod wasm_bridge;
 use bevy_ecs::prelude::*;
 
 use fauna::{fauna_effects, fauna_spawn, fauna_update, FaunaList};
-use gnome::{gnome_export, gnome_fauna_interact, gnome_move, gnome_plan, gnome_work, GnomeData};
+use gnome::{
+    gnome_export, gnome_fauna_interact, gnome_move, gnome_needs, gnome_plan, gnome_work, GnomeData,
+};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
 use systems::{
@@ -336,6 +338,7 @@ pub fn create_schedule() -> Schedule {
             gnome_plan,
             gnome_move,
             gnome_work,
+            gnome_needs,
             gnome_fauna_interact,
             gnome_export,
             fauna_effects,

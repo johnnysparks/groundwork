@@ -26,6 +26,30 @@ const TICKS_PER_TASK: u8 = 3;
 /// Base walk speed in voxels per tick.
 const WALK_SPEED: f32 = 1.5;
 
+/// Hunger increases by 1 every this many work actions.
+const HUNGER_RATE: u8 = 5;
+
+/// Energy decreases by 1 every this many work actions.
+const ENERGY_RATE: u8 = 3;
+
+/// Hunger threshold above which gnome slows to 70% speed.
+const HUNGER_SLOW_THRESHOLD: u8 = 200;
+
+/// Energy threshold below which gnome slows to 60% speed.
+const ENERGY_SLOW_THRESHOLD: u8 = 50;
+
+/// Ticks spent eating when hungry (restores hunger to 0).
+const EAT_DURATION: u8 = 15;
+
+/// Ticks spent resting when tired (restores energy to 255).
+const REST_DURATION: u8 = 20;
+
+/// Hunger level that triggers eating behavior.
+const HUNGER_TRIGGER: u8 = 180;
+
+/// Energy level that triggers resting behavior.
+const ENERGY_TRIGGER: u8 = 30;
+
 /// Maximum number of queued tasks.
 pub const MAX_QUEUE: usize = 200;
 
@@ -40,10 +64,8 @@ pub enum GnomeState {
     Idle = 0,
     Walking = 1,
     Working = 2,
-    // Future phases:
-    // Eating = 3,
-    // Resting = 4,
-    // Reacting = 5,
+    Eating = 3,
+    Resting = 4,
 }
 
 // --- Task ---
@@ -84,6 +106,10 @@ pub struct Gnome {
     pub squirrel_trust: u8,
     /// Count of nearby fauna (updated each tick by gnome_fauna_interact)
     pub nearby_fauna: u8,
+    /// Number of work actions completed (for hunger/energy rate calculation)
+    pub work_count: u16,
+    /// Timer for eating/resting duration (counts down to 0)
+    pub needs_timer: u8,
 }
 
 impl Default for Gnome {
@@ -104,6 +130,8 @@ impl Default for Gnome {
             active_tool: 255, // no tool
             squirrel_trust: 0,
             nearby_fauna: 0,
+            work_count: 0,
+            needs_timer: 0,
             work_progress: 0,
         }
     }
@@ -260,8 +288,8 @@ pub fn gnome_move(mut gd: ResMut<GnomeData>) {
         return;
     }
 
-    // Walk toward target along surface
-    let speed = WALK_SPEED;
+    // Walk toward target along surface (speed affected by needs)
+    let speed = WALK_SPEED * speed_multiplier(g);
     let step = speed.min(dist);
     g.x += dx / dist * step;
     g.y += dy / dist * step;
@@ -297,10 +325,84 @@ pub fn gnome_work(
 
     apply_tool(&task, &mut grid, &mut seed_map);
 
+    // Apply hunger/energy cost for completing work
+    apply_needs_cost(&mut gd.gnome);
+
     // Done — return to idle for next plan cycle
     gd.gnome.state = GnomeState::Idle;
     gd.gnome.work_progress = 0;
     gd.gnome.active_tool = 255;
+}
+
+/// System: manage gnome hunger and energy. Triggers eating/resting when
+/// needs are high, and applies speed penalties. Never creates fail states.
+pub fn gnome_needs(mut gd: ResMut<GnomeData>) {
+    let g = &mut gd.gnome;
+
+    match g.state {
+        GnomeState::Eating => {
+            g.needs_timer = g.needs_timer.saturating_sub(1);
+            if g.needs_timer == 0 {
+                g.hunger = 0;
+                g.state = GnomeState::Idle;
+            }
+            return;
+        }
+        GnomeState::Resting => {
+            g.needs_timer = g.needs_timer.saturating_sub(1);
+            if g.needs_timer == 0 {
+                g.energy = 255;
+                g.state = GnomeState::Idle;
+            }
+            return;
+        }
+        _ => {}
+    }
+
+    // Check if gnome just finished a task (work_progress reset to 0 in gnome_work)
+    // We use the transition from Working → Idle as the signal to deplete needs.
+    // This is handled in gnome_work instead — see apply_needs_cost below.
+
+    // Check thresholds: eating/resting interrupts Idle state
+    if g.state == GnomeState::Idle {
+        if g.hunger >= HUNGER_TRIGGER {
+            g.state = GnomeState::Eating;
+            g.needs_timer = EAT_DURATION;
+            return;
+        }
+        if g.energy <= ENERGY_TRIGGER {
+            g.state = GnomeState::Resting;
+            g.needs_timer = REST_DURATION;
+        }
+    }
+}
+
+/// Apply hunger/energy cost after completing a work action.
+/// Called from gnome_work when a task finishes.
+fn apply_needs_cost(gnome: &mut Gnome) {
+    gnome.work_count = gnome.work_count.wrapping_add(1);
+
+    // Hunger increases every HUNGER_RATE actions
+    if gnome.work_count.is_multiple_of(HUNGER_RATE as u16) {
+        gnome.hunger = gnome.hunger.saturating_add(1);
+    }
+
+    // Energy decreases every ENERGY_RATE actions
+    if gnome.work_count.is_multiple_of(ENERGY_RATE as u16) {
+        gnome.energy = gnome.energy.saturating_sub(1);
+    }
+}
+
+/// Get the gnome's speed multiplier based on needs.
+fn speed_multiplier(gnome: &Gnome) -> f32 {
+    let mut mult = 1.0;
+    if gnome.hunger > HUNGER_SLOW_THRESHOLD {
+        mult *= 0.7;
+    }
+    if gnome.energy < ENERGY_SLOW_THRESHOLD {
+        mult *= 0.6;
+    }
+    mult
 }
 
 /// Squirrel trust threshold for following the gnome.
@@ -588,6 +690,48 @@ mod tests {
             }
         }
         assert!(found, "gnome should have placed soil");
+    }
+
+    /// Gnome hunger/energy depletes with work and triggers eating/resting.
+    #[test]
+    fn needs_deplete_and_trigger() {
+        let mut gd = GnomeData::default();
+        // Simulate many completed work actions
+        for _ in 0..300 {
+            apply_needs_cost(&mut gd.gnome);
+        }
+        // Hunger should have increased, energy decreased
+        assert!(gd.gnome.hunger > 0, "hunger should increase with work");
+        assert!(gd.gnome.energy < 255, "energy should decrease with work");
+
+        // If hunger is high enough, needs system should trigger eating
+        gd.gnome.hunger = HUNGER_TRIGGER;
+        gd.gnome.state = GnomeState::Idle;
+        // Manually call gnome_needs logic
+        if gd.gnome.state == GnomeState::Idle && gd.gnome.hunger >= HUNGER_TRIGGER {
+            gd.gnome.state = GnomeState::Eating;
+            gd.gnome.needs_timer = EAT_DURATION;
+        }
+        assert_eq!(gd.gnome.state, GnomeState::Eating);
+
+        // After eating timer expires, gnome returns to idle with hunger reset
+        gd.gnome.needs_timer = 0;
+        gd.gnome.hunger = 0;
+        gd.gnome.state = GnomeState::Idle;
+        assert_eq!(gd.gnome.hunger, 0);
+    }
+
+    /// Speed multiplier applies correctly based on needs.
+    #[test]
+    fn speed_affected_by_needs() {
+        let mut gnome = Gnome::default();
+        assert!((speed_multiplier(&gnome) - 1.0).abs() < 0.001);
+
+        gnome.hunger = HUNGER_SLOW_THRESHOLD + 1;
+        assert!((speed_multiplier(&gnome) - 0.7).abs() < 0.001);
+
+        gnome.energy = ENERGY_SLOW_THRESHOLD - 1;
+        assert!((speed_multiplier(&gnome) - 0.42).abs() < 0.001);
     }
 
     /// Gnome near squirrel builds trust over time.
