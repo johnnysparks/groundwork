@@ -1188,7 +1188,12 @@ async function main() {
     // Ambient fauna sounds: periodic bird chirps and bee buzzes when present
     ambientSoundTimer -= dt;
     if (ambientSoundTimer <= 0 && isInitialized()) {
-      ambientSoundTimer = 8 + Math.random() * 12; // 8-20s between sounds
+      // Dawn chorus: birds sing much more frequently around dawn (0.2-0.3)
+      const dayTime = dayCycle.getTime();
+      const isDawn = dayTime >= 0.2 && dayTime <= 0.3;
+      ambientSoundTimer = isDawn
+        ? 2 + Math.random() * 4   // 2-6s at dawn — lively chorus
+        : 8 + Math.random() * 12; // 8-20s normally
       const faunaCount = getFaunaCount();
       if (faunaCount > 0) {
         const fView = getFaunaView();
@@ -1197,7 +1202,8 @@ async function main() {
           const idx = Math.floor(Math.random() * faunaCount);
           const f = readFauna(fView, idx);
           if (f.type === 2) playBirdCall();       // Bird chirp
-          else if (f.type <= 1) playBuzz();       // Bee/butterfly buzz
+          else if (f.type <= 1 && !isDawn) playBuzz(); // Bee/butterfly (not at dawn)
+          else if (isDawn) playBirdCall();         // Extra bird calls at dawn
         }
       }
     }
