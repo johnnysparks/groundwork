@@ -32,8 +32,8 @@ Trees (PlantType::Tree only) use space colonization for organic branching. Other
 
 ## Leaf Placement
 - Dense spherical leaf shells around **all branch nodes** (not just tips)
-- **Tips** get large spheres: YoungTree = `(crown_r / 3).clamp(4, 8)`, Mature/OldGrowth = `(crown_r / 3).clamp(5, 10)`, Seedling = 1
-- **Interior nodes** above crown_start get smaller spheres (2/3 of tip radius, min 2) — fills gaps around the trunk so canopy isn't just green caps at branch ends
+- **Tips** get large spheres: YoungTree = `(crown_r / 2).clamp(4, 10)`, Mature/OldGrowth = `(crown_r / 2).clamp(5, 12)`, Seedling = 1
+- **Interior nodes** above crown_start get smaller spheres (2/3 of tip radius, min 3) — fills gaps around the trunk so canopy isn't just green caps at branch ends
 - Crown start for interior leaves: YoungTree at 25% trunk height, Mature at 15%
 - Oak/willow get lush crowns, birch stays slim — each species has a distinct canopy size
 - Leaf voxels store species_id (nutrient_level) and health (water_level)
