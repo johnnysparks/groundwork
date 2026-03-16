@@ -240,6 +240,11 @@ export class FoliageRenderer {
     this.material.uniforms.uTime.value = elapsedTime;
   }
 
+  /** Get current wind strength */
+  getWindStrength(): number {
+    return this.material.uniforms.uWindStrength.value as number;
+  }
+
   /** Set wind strength (0 = still, 1 = gusty) */
   setWindStrength(strength: number): void {
     this.material.uniforms.uWindStrength.value = strength;
