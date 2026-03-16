@@ -212,7 +212,7 @@ export function buildForestRing(): THREE.Group {
   meadowShape.holes.push(holePath);
 
   const groundGeo = new THREE.ShapeGeometry(meadowShape, 48);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x6AAF40 });
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4A7A30 }); // muted forest green — less contrast with garden soil
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.name = 'meadow_ground';
   ground.rotation.x = -Math.PI / 2;
