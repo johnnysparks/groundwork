@@ -3,12 +3,16 @@
 Theme: visual cohesion across scene, HUD, characters, and atmosphere.
 Goal: the game should feel polished and atmospheric — every element shares a warm, cozy, earthy palette.
 
-## P0 — Individual Model Fixes (DONE — session 2026-03-16T15:00)
+## P0 — Individual Model Fixes (DONE — 7 cycles, 2026-03-16)
 
-- [x] **Fix amber foliage bug** — leaf water_level=0 was treated as "dead" → every leaf amber-tinted. Now 0 = healthy.
-- [x] **Species foliage diversity** — Wider color range: birch=lime, oak=dark forest, willow=sage, pine=dark blue-green, fern=emerald
-- [x] **Gnome visibility** — 1.8x base scale + warm glow disc at feet (additive, gold)
-- [x] **Fauna visibility** — 60-70% size boost + per-type warm glow halo sprites
+- [x] **Fix amber foliage bug** — leaf water_level=0 treated as "dead" → every leaf amber. Now 0 = healthy. (cycle 1)
+- [x] **Species foliage diversity** — Wider color range per species. (cycle 1)
+- [x] **Gnome visibility** — 1.8x base scale + warm glow disc at feet. (cycles 1-2)
+- [x] **Fauna visibility** — 60-70% size boost + soft radial glow halo sprites. (cycles 2, 5)
+- [x] **Directional shadows** — Soft PCF shadows, 2048 map, warm-tinted. (cycle 4)
+- [x] **Soften platform edge** — Darker skirt walls (-30%), grass lip transition. (cycle 3)
+- [x] **Soften growth particles** — Normal blending, smaller, slower. (cycle 6)
+- [x] **Pollinator pollen trails** — Golden sparkle trails behind bees/butterflies. (cycle 7)
 
 ## P0 — Cohesion Breaks (DONE)
 
