@@ -634,10 +634,60 @@ pub fn tree_growth(
             1.0
         };
 
+        // --- Birch Pioneer Vigor ---
+        // Birch (species_id=1) grows 1.5× faster in open ground (no nearby trunks
+        // within 8 voxels). First to colonize bare patches and clearings.
+        // Discovery: "The birch shot up fast in the clearing, but slowed once the oak grew tall."
+        let pioneer_boost = if tree.species_id == 1 {
+            let (rx, ry, _rz) = tree.root_pos;
+            let check_r: usize = 8;
+            let mut nearby_trunks = 0u32;
+            // Only check a small sample to stay fast
+            for cy in ry.saturating_sub(check_r)..=(ry + check_r).min(GRID_Y - 1) {
+                for cx in rx.saturating_sub(check_r)..=(rx + check_r).min(GRID_X - 1) {
+                    if cx == rx && cy == ry { continue; }
+                    // Check at trunk height (surface + 2..5)
+                    for cz in (GROUND_LEVEL + 2)..=(GROUND_LEVEL + 5).min(GRID_Z - 1) {
+                        if let Some(v) = grid.get(cx, cy, cz) {
+                            if v.material == Material::Trunk {
+                                nearby_trunks += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            if nearby_trunks == 0 { 1.5_f32 } else { 1.0 }
+        } else {
+            1.0
+        };
+
+        // --- Berry Bush + Bird Symbiosis ---
+        // Berry bush (species_id=5) gets a health and growth boost when birds are nearby.
+        // The birds eat berries and in return spread seeds + fertilize with droppings.
+        // Discovery: "My berry bush is thriving — oh, the birds are helping it!"
+        let bird_symbiosis_boost = if tree.species_id == 5 {
+            let (rx, ry, _rz) = tree.root_pos;
+            let bird_r = 12.0_f32;
+            let mut nearby_birds = 0u32;
+            for f in &fauna_list.fauna {
+                if f.fauna_type == crate::fauna::FaunaType::Bird {
+                    let dx = f.x - rx as f32;
+                    let dy = f.y - ry as f32;
+                    if dx * dx + dy * dy < bird_r * bird_r {
+                        nearby_birds += 1;
+                    }
+                }
+            }
+            if nearby_birds > 0 { 1.5_f32 } else { 1.0 }
+        } else {
+            1.0
+        };
+
         // Use diminishing returns so more roots/light don't trivially blast
         // through all growth stages in a single tick. sqrt gives gentle scaling:
         // 100 water_intake → +10, 10000 → +100, 50000 → +224
-        let total_boost = nitrogen_boost * canopy_boost * water_affinity_boost;
+        let total_boost =
+            nitrogen_boost * canopy_boost * water_affinity_boost * pioneer_boost * bird_symbiosis_boost;
         tree.accumulated_water += water_intake.sqrt() * species.growth_rate * total_boost;
         tree.accumulated_light += light_intake.sqrt() * species.growth_rate * total_boost;
 
@@ -1938,6 +1988,37 @@ pub fn soil_evolution(
                     // Slow decay without roots: -1 every ~10 ticks → -1 per run
                     if (x + y + z) % 10 == 0 {
                         comp.organic = comp.organic.saturating_sub(1);
+                    }
+                }
+
+                // --- Grass Erosion Prevention ---
+                // Grass roots (species_id=10) and clover (11) stabilize soil,
+                // increasing clay content (better water retention). Creates a
+                // "prepare the ground" strategy: plant grass first, then trees.
+                // Discovery: "The soil holds water better where I planted grass first."
+                {
+                    let grass_species_id: u8 = 10;
+                    let clover_species_id: u8 = 11;
+                    let mut has_grass_root = false;
+                    macro_rules! check_grass {
+                        ($nidx:expr) => {
+                            if snapshot[$nidx].0 == root_u8 {
+                                let sid = snapshot[$nidx].2; // nutrient_level = species_id
+                                if sid == grass_species_id || sid == clover_species_id {
+                                    has_grass_root = true;
+                                }
+                            }
+                        };
+                    }
+                    if x > 0 { check_grass!(idx - 1); }
+                    if x + 1 < GRID_X { check_grass!(idx + 1); }
+                    if y > 0 { check_grass!(idx - GRID_X); }
+                    if y + 1 < GRID_Y { check_grass!(idx + GRID_X); }
+                    if z > 0 { check_grass!(idx - z_stride); }
+                    if z + 1 < GRID_Z { check_grass!(idx + z_stride); }
+                    if has_grass_root && comp.clay < 200 {
+                        // Grass/clover roots bind soil particles, increasing clay
+                        comp.clay = comp.clay.saturating_add(1);
                     }
                 }
 
