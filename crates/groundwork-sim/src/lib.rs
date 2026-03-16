@@ -16,9 +16,10 @@ use fauna::{fauna_effects, fauna_spawn, fauna_update, FaunaList};
 use grid::{VoxelGrid, GROUND_LEVEL};
 use soil::SoilGrid;
 use systems::{
-    branch_growth, deadwood_decay, light_propagation, pioneer_succession, root_growth,
-    root_water_absorption, seed_dispersal, seed_growth, self_pruning, soil_absorption,
-    soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring,
+    branch_growth, deadwood_decay, light_propagation, mycorrhizal_network, pioneer_succession,
+    root_growth, root_water_absorption, seed_dispersal, seed_growth, self_pruning,
+    soil_absorption, soil_evolution, tree_growth, tree_rasterize, water_flow, water_spring,
+    wind_seed_drift,
 };
 use tree::{SeedSpeciesMap, SpeciesTable};
 use voxel::Material;
@@ -183,8 +184,10 @@ fn plant_starter_garden(world: &mut World) {
 }
 
 /// Create the simulation schedule with all systems in order.
+/// Split into two groups to stay within bevy_ecs tuple size limits.
 pub fn create_schedule() -> Schedule {
     let mut schedule = Schedule::default();
+    // Group 1: physics, resources, growth
     schedule.add_systems(
         (
             water_spring,
@@ -196,11 +199,19 @@ pub fn create_schedule() -> Schedule {
             seed_growth,
             ApplyDeferred,
             tree_growth,
+            mycorrhizal_network,
             branch_growth,
+        )
+            .chain(),
+    );
+    // Group 2: rasterize, ecology, fauna — runs after group 1
+    schedule.add_systems(
+        (
             self_pruning,
             tree_rasterize,
             root_growth,
             deadwood_decay,
+            wind_seed_drift,
             seed_dispersal,
             pioneer_succession,
             fauna_spawn,
@@ -208,7 +219,8 @@ pub fn create_schedule() -> Schedule {
             fauna_effects,
             tick_counter,
         )
-            .chain(),
+            .chain()
+            .after(mycorrhizal_network),
     );
     schedule
 }

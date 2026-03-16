@@ -2217,6 +2217,202 @@ pub fn soil_evolution(
     }
 }
 
+/// Mycorrhizal network: trees of the same species with overlapping root zones
+/// share water. Healthier trees transfer water to struggling neighbors through
+/// underground fungal connections — the "wood-wide web."
+///
+/// Runs every 10 ticks. Checks all tree pairs of the same species.
+/// Discovery: "My oaks are supporting each other through their roots!"
+pub fn mycorrhizal_network(
+    mut trees: Query<&mut Tree>,
+    grid: Res<VoxelGrid>,
+    tick: Res<Tick>,
+) {
+    if !tick.0.is_multiple_of(10) {
+        return;
+    }
+
+    // Collect tree data for pairwise comparison.
+    // We need: species_id, health, root positions, entity index.
+    struct TreeInfo {
+        species_id: usize,
+        health: f32,
+        root_water: f32,
+        root_positions: Vec<(usize, usize, usize)>,
+    }
+
+    let mut infos: Vec<TreeInfo> = Vec::new();
+    for tree in trees.iter() {
+        if matches!(tree.stage, GrowthStage::Dead | GrowthStage::Seedling) {
+            continue;
+        }
+        let root_positions: Vec<(usize, usize, usize)> = tree
+            .voxel_footprint
+            .iter()
+            .filter(|&&(x, y, z)| {
+                grid.get(x, y, z)
+                    .is_some_and(|v| v.material == Material::Root)
+            })
+            .copied()
+            .collect();
+        if root_positions.is_empty() {
+            continue;
+        }
+        let root_water: f32 = root_positions
+            .iter()
+            .filter_map(|&(x, y, z)| grid.get(x, y, z))
+            .map(|v| v.water_level as f32)
+            .sum();
+
+        infos.push(TreeInfo {
+            species_id: tree.species_id,
+            health: tree.health,
+            root_water,
+            root_positions,
+        });
+    }
+
+    // Find connected pairs (same species, overlapping root zones)
+    // and compute health transfer direction.
+    let mut health_deltas: Vec<f32> = vec![0.0; infos.len()];
+    let connection_dist_sq: usize = 9; // 3 voxels apart = connected
+
+    for i in 0..infos.len() {
+        for j in (i + 1)..infos.len() {
+            if infos[i].species_id != infos[j].species_id {
+                continue;
+            }
+
+            // Check if any roots are close enough to be "connected"
+            let mut connected = false;
+            'check: for &(ax, ay, az) in &infos[i].root_positions {
+                for &(bx, by, bz) in &infos[j].root_positions {
+                    let dx = ax.abs_diff(bx);
+                    let dy = ay.abs_diff(by);
+                    let dz = az.abs_diff(bz);
+                    if dx * dx + dy * dy + dz * dz <= connection_dist_sq {
+                        connected = true;
+                        break 'check;
+                    }
+                }
+            }
+
+            if !connected {
+                continue;
+            }
+
+            // Transfer health from the stronger tree to the weaker one.
+            // Rate: 0.005 per cycle (small but meaningful over time).
+            let diff = infos[i].health - infos[j].health;
+            if diff.abs() > 0.05 {
+                let transfer = diff.signum() * 0.005;
+                health_deltas[i] -= transfer;
+                health_deltas[j] += transfer;
+            }
+        }
+    }
+
+    // Apply health deltas to the actual Tree components
+    let mut idx = 0;
+    for mut tree in trees.iter_mut() {
+        if matches!(tree.stage, GrowthStage::Dead | GrowthStage::Seedling) {
+            continue;
+        }
+        let root_count = tree
+            .voxel_footprint
+            .iter()
+            .filter(|&&(x, y, z)| {
+                grid.get(x, y, z)
+                    .is_some_and(|v| v.material == Material::Root)
+            })
+            .count();
+        if root_count == 0 {
+            continue;
+        }
+        if idx < health_deltas.len() {
+            let delta = health_deltas[idx];
+            if delta != 0.0 {
+                tree.health = (tree.health + delta).clamp(0.0, 1.0);
+            }
+        }
+        idx += 1;
+    }
+}
+
+/// Wind seed drift: seeds in air fall with a lateral offset based on a persistent
+/// wind direction. Creates directional spread patterns visible over time.
+///
+/// The wind direction rotates slowly (every 500 ticks), so the garden doesn't
+/// only expand in one direction forever.
+pub fn wind_seed_drift(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>) {
+    // Wind direction rotates every 500 ticks through 4 cardinal directions
+    let wind_phase = (tick.0 / 500) % 4;
+    let (wind_dx, wind_dy): (isize, isize) = match wind_phase {
+        0 => (1, 0),  // east
+        1 => (0, 1),  // north
+        2 => (-1, 0), // west
+        _ => (0, -1), // south
+    };
+
+    // Only apply drift every 3 ticks (seeds don't fall instantly)
+    if !tick.0.is_multiple_of(3) {
+        return;
+    }
+
+    let z_stride = GRID_X * GRID_Y;
+
+    // Scan for seed voxels high in the air. Only seeds far above the surface
+    // (at least 8 voxels up) drift with wind — closer seeds are settling.
+    // Process top-down so gravity + drift cascade naturally.
+    for z in (GROUND_LEVEL + 8..GRID_Z).rev() {
+        for y in 0..GRID_Y {
+            for x in 0..GRID_X {
+                let idx = x + y * GRID_X + z * z_stride;
+                let cells = grid.cells();
+                if cells[idx].material != Material::Seed {
+                    continue;
+                }
+                // Only drift seeds that are "in flight" (freshly dispersed).
+                // Growing seeds have nutrient_level > 0 (the growth counter).
+                if cells[idx].nutrient_level > 0 {
+                    continue;
+                }
+                // Only drift seeds that are in the air (not resting on soil)
+                let below_idx = idx - z_stride;
+                if cells[below_idx].material != Material::Air {
+                    continue;
+                }
+
+                // Compute drift target: one step down + wind offset
+                let nx = (x as isize + wind_dx) as usize;
+                let ny = (y as isize + wind_dy) as usize;
+                let nz = z - 1;
+
+                if nx >= GRID_X || ny >= GRID_Y {
+                    continue;
+                }
+                let nidx = nx + ny * GRID_X + nz * z_stride;
+                let target_mat = cells[nidx].material;
+                if target_mat != Material::Air {
+                    continue;
+                }
+
+                // Move the seed: clear old position, place at new
+                let seed_water = cells[idx].water_level;
+                let seed_light = cells[idx].light_level;
+                let seed_nutrient = cells[idx].nutrient_level;
+
+                let cells = grid.cells_mut();
+                cells[idx].set_material(Material::Air);
+                cells[nidx].material = Material::Seed;
+                cells[nidx].water_level = seed_water;
+                cells[nidx].light_level = seed_light;
+                cells[nidx].nutrient_level = seed_nutrient;
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4411,6 +4607,91 @@ mod tests {
             nurse_cell.nutrient_level,
             control_cell.material,
             control_cell.nutrient_level
+        );
+    }
+
+    #[test]
+    fn mycorrhizal_network_shares_health() {
+        // Two oaks with overlapping roots: the healthier one should boost
+        // the struggling one's health via mycorrhizal transfer.
+        use crate::tree::{GrowthStage, Tree};
+
+        let mut world = crate::create_world();
+        let mut schedule = crate::create_schedule();
+
+        let cx = GRID_X / 2 + 10;
+        let cy = GRID_Y / 2;
+        let sz = GROUND_LEVEL + 1;
+
+        // Place two oak roots close together (within connection distance of 3)
+        {
+            let mut grid = world.resource_mut::<VoxelGrid>();
+            // Tree A root
+            if let Some(cell) = grid.get_mut(cx, cy, sz - 1) {
+                cell.set_material(Material::Root);
+                cell.water_level = 100;
+                cell.nutrient_level = 0; // oak
+            }
+            if let Some(cell) = grid.get_mut(cx, cy, sz) {
+                cell.set_material(Material::Trunk);
+            }
+            // Tree B root — 2 voxels away (connected)
+            if let Some(cell) = grid.get_mut(cx + 2, cy, sz - 1) {
+                cell.set_material(Material::Root);
+                cell.water_level = 100;
+                cell.nutrient_level = 0; // oak
+            }
+            if let Some(cell) = grid.get_mut(cx + 2, cy, sz) {
+                cell.set_material(Material::Trunk);
+            }
+        }
+
+        // Healthy oak
+        world.spawn(Tree {
+            species_id: 0,
+            root_pos: (cx, cy, sz),
+            age: 100,
+            stage: GrowthStage::Mature,
+            health: 1.0,
+            accumulated_water: 5000.0,
+            accumulated_light: 5000.0,
+            rng_seed: 42,
+            dirty: false,
+            voxel_footprint: vec![(cx, cy, sz), (cx, cy, sz - 1)],
+            branches: Vec::new(),
+            attraction_points: Vec::new(),
+            skeleton_initialized: false,
+        });
+
+        // Struggling oak nearby
+        let weak_id = world
+            .spawn(Tree {
+                species_id: 0,
+                root_pos: (cx + 2, cy, sz),
+                age: 100,
+                stage: GrowthStage::Mature,
+                health: 0.3,
+                accumulated_water: 5000.0,
+                accumulated_light: 5000.0,
+                rng_seed: 43,
+                dirty: false,
+                voxel_footprint: vec![(cx + 2, cy, sz), (cx + 2, cy, sz - 1)],
+                branches: Vec::new(),
+                attraction_points: Vec::new(),
+                skeleton_initialized: false,
+            })
+            .id();
+
+        // Run ticks — mycorrhizal runs every 10 ticks
+        for _ in 0..30 {
+            crate::tick(&mut world, &mut schedule);
+        }
+
+        let weak = world.entity(weak_id).get::<Tree>().unwrap();
+        assert!(
+            weak.health > 0.3,
+            "Struggling oak near healthy oak should gain health via mycorrhizal network (health={})",
+            weak.health
         );
     }
 }
