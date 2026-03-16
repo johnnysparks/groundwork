@@ -81,13 +81,13 @@ const FAUNA_NAMES: Record<number, string> = {
 /** Fauna arrival messages that teach ecology */
 const FAUNA_MESSAGES: Record<number, string[]> = {
   0: [ // Bee
-    'A bee arrived — it will pollinate nearby flowers',
-    'Bee spotted! Flowers nearby will spread seeds faster',
-    'A bee is visiting your garden — plant more flowers to attract more',
+    'A bee arrived — it pollinates flowers AND boosts nearby tree health',
+    'Bee spotted! Trees near bees recover health faster',
+    'A bee is visiting — plant more flowers to attract more pollinators',
   ],
   1: [ // Butterfly
-    'A butterfly appeared — it boosts seed nutrients when visiting flowers',
-    'Butterfly visiting! It helps flowers reproduce',
+    'A butterfly appeared — it helps flowers spread and boosts nearby plants',
+    'Butterfly visiting! It creates a pollinator bridge between species',
   ],
   2: [ // Bird
     'A bird is nesting near your trees — it may carry seeds to new spots',
@@ -104,15 +104,20 @@ const FAUNA_MESSAGES: Record<number, string[]> = {
   ],
 };
 
-/** Periodic ecology tips */
+/** Periodic ecology tips — teach interactions through play */
 const ECO_TIPS = [
-  'Tip: Plant clover near oak trees — nitrogen fixing boosts their growth 50%',
-  'Tip: More flower variety = more pollinators = faster seed spread',
-  'Tip: Press Q for x-ray mode — see root networks competing underground',
+  'Tip: Plant clover near oak — nitrogen fixing boosts growth 50%',
+  'Tip: Flowers attract bees — bees boost health of nearby trees',
+  'Tip: Press Q for x-ray — see roots competing underground',
   'Tip: Press V to see water, light, or nutrient overlays',
-  'Tip: Birds near berry bushes carry seeds to surprising new spots',
-  'Tip: Each new species adds +100 to your score',
-  'Tip: Groundcover near trees enriches the soil for everyone',
+  'Tip: Birds near trees carry seeds to surprising new spots',
+  'Tip: Pine roots acidify soil — fern and moss tolerate it, others struggle',
+  'Tip: Groundcover enriches soil for everyone nearby',
+  'Tip: Shade-loving ferns thrive under oak canopy — wildflowers need sun',
+  'Tip: Crowded plants die — give trees space to claim territory',
+  'Tip: The garden gnome does the work — zone areas and watch',
+  'Tip: Trees share nutrients through underground mycorrhizal networks',
+  'Tip: Each new species adds +100 to your garden score',
 ];
 let _tipIndex = 0;
 let _tipTimer = 0;
