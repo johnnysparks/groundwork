@@ -1409,3 +1409,148 @@ pub fn player_journey_pacing() -> Scenario {
         })
         .build()
 }
+
+// ---------------------------------------------------------------------------
+// 18. Growth Timeline — "When does the first sprout appear?"
+// ---------------------------------------------------------------------------
+
+pub fn growth_timeline() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    let mut builder = Scenario::new("growth_timeline")
+        .description("Diagnostic: plant oak with water, sample every 10 ticks for 100.")
+        .checkpoint("setup")
+        .status()
+        .fill(
+            "water",
+            cx - 3,
+            cy - 3,
+            GROUND_LEVEL + 1,
+            cx + 3,
+            cy + 3,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5)
+        .plant("oak", cx, cy, GROUND_LEVEL + 3);
+
+    for _ in 0..10 {
+        builder = builder.tick(10).status();
+    }
+
+    builder
+        .eval(NoCrash)
+        .eval(Custom {
+            name: "growth_timeline_report".into(),
+            f: Box::new(|trace| {
+                let mut first_trunk: Option<u64> = None;
+                let mut first_root: Option<u64> = None;
+                let mut first_leaf: Option<u64> = None;
+                let mut timeline = Vec::new();
+
+                for step in &trace.steps {
+                    let mc = &step.oracle.material_counts;
+                    let tick = step.oracle.tick;
+                    if first_trunk.is_none() && mc.trunk > 0 {
+                        first_trunk = Some(tick);
+                    }
+                    if first_root.is_none() && mc.root > 0 {
+                        first_root = Some(tick);
+                    }
+                    if first_leaf.is_none() && mc.leaf > 0 {
+                        first_leaf = Some(tick);
+                    }
+                    if mc.total_plant() > 0 || mc.seed > 0 {
+                        timeline.push(format!(
+                            "t{}: s={} t={} r={} l={}",
+                            tick, mc.seed, mc.trunk, mc.root, mc.leaf
+                        ));
+                    }
+                }
+
+                let report = format!(
+                    "First trunk=t{}, root=t{}, leaf=t{}. [{}]",
+                    first_trunk.map_or("never".into(), |t| t.to_string()),
+                    first_root.map_or("never".into(), |t| t.to_string()),
+                    first_leaf.map_or("never".into(), |t| t.to_string()),
+                    timeline.join(" | "),
+                );
+
+                Verdict {
+                    evaluator: "growth_timeline_report".into(),
+                    passed: first_trunk.is_some(),
+                    reason: report,
+                    score: first_trunk.map(|t| 1.0 - (t as f64 / 150.0).min(1.0)),
+                }
+            }),
+        })
+        .build()
+}
+
+// ---------------------------------------------------------------------------
+// 19. Interaction Chain Depth
+// ---------------------------------------------------------------------------
+
+pub fn interaction_chain_depth() -> Scenario {
+    let cx = GRID_X / 2;
+    let cy = GRID_Y / 2;
+
+    Scenario::new("interaction_chain_depth")
+        .description("Plant clover→oak→fern chain, verify cascading ecological effects.")
+        .checkpoint("setup")
+        .status()
+        .fill(
+            "water",
+            cx - 5,
+            cy - 5,
+            GROUND_LEVEL + 1,
+            cx + 5,
+            cy + 5,
+            GROUND_LEVEL + 2,
+        )
+        .tick(5)
+        .plant("clover", cx - 1, cy, GROUND_LEVEL + 3)
+        .plant("clover", cx + 1, cy, GROUND_LEVEL + 3)
+        .tick(30)
+        .plant("oak", cx, cy, GROUND_LEVEL + 3)
+        .tick(200)
+        .plant("fern", cx - 1, cy + 1, GROUND_LEVEL + 3)
+        .tick(300)
+        .checkpoint("chain_complete")
+        .status()
+        .eval(NoCrash)
+        .eval(MaterialMinimum::new("trunk", 1))
+        .eval(MaterialMinimum::new("root", 5))
+        .eval(Custom {
+            name: "chain_cascading_growth".into(),
+            f: Box::new(|trace| {
+                let Some(oracle) = trace.final_oracle() else {
+                    return Verdict {
+                        evaluator: "chain_cascading_growth".into(),
+                        passed: false,
+                        reason: "no oracle".into(),
+                        score: Some(0.0),
+                    };
+                };
+                let trunk = oracle.material_counts.trunk;
+                let root = oracle.material_counts.root;
+                let leaf = oracle.material_counts.leaf;
+                let total = oracle.material_counts.total_plant();
+                let depth = [leaf >= 10, root >= 10, trunk >= 5]
+                    .iter()
+                    .filter(|&&x| x)
+                    .count();
+                let passed = depth >= 2 && total >= 30;
+                Verdict {
+                    evaluator: "chain_cascading_growth".into(),
+                    passed,
+                    reason: format!(
+                        "depth: {}/3 (trunk={}, leaf={}, root={}). biomass: {}",
+                        depth, trunk, leaf, root, total
+                    ),
+                    score: Some(depth as f64 / 3.0),
+                }
+            }),
+        })
+        .build()
+}

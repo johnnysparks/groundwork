@@ -156,6 +156,16 @@ fn scenario_player_journey_pacing() {
     run_and_assert(gameplay::player_journey_pacing);
 }
 
+#[test]
+fn scenario_growth_timeline() {
+    run_and_assert(gameplay::growth_timeline);
+}
+
+#[test]
+fn scenario_interaction_chain_depth() {
+    run_and_assert(gameplay::interaction_chain_depth);
+}
+
 // ---------------------------------------------------------------------------
 
 /// Verify that traces are serializable (important for artifact storage).
