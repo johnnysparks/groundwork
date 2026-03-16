@@ -223,10 +223,11 @@ pub fn root_competition() -> Scenario {
                         score: Some(0.0),
                     };
                 };
-                let center_probe = oracle.probes.iter().find(|p| {
-                    p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL - 2
-                });
-                let has_root = center_probe.map_or(false, |p| p.material == "root");
+                let center_probe = oracle
+                    .probes
+                    .iter()
+                    .find(|p| p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL - 2);
+                let has_root = center_probe.is_some_and(|p| p.material == "root");
                 // Even without root in exact center, verify both trees established
                 let passed = oracle.material_counts.root >= 10;
                 Verdict {
@@ -335,7 +336,7 @@ pub fn canopy_shade_garden() -> Scenario {
         .pan(cx as f64, cy as f64, gl + 3.0)
         .checkpoint("canopy_view")
         // Probe light levels under canopy vs open sky
-        .probe(cx, cy, GROUND_LEVEL + 2)     // under canopy
+        .probe(cx, cy, GROUND_LEVEL + 2) // under canopy
         .probe(cx + 10, cy, GROUND_LEVEL + 2) // open sky
         .eval(NoCrash)
         .eval(MaterialMinimum::new("leaf", 5))
@@ -351,9 +352,10 @@ pub fn canopy_shade_garden() -> Scenario {
                         score: Some(0.0),
                     };
                 };
-                let under_canopy = oracle.probes.iter().find(|p| {
-                    p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 2
-                });
+                let under_canopy = oracle
+                    .probes
+                    .iter()
+                    .find(|p| p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 2);
                 let open_sky = oracle.probes.iter().find(|p| {
                     p.x == GRID_X / 2 + 10 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 2
                 });
@@ -614,9 +616,8 @@ pub fn recovery_after_destruction() -> Scenario {
                                 destroyed_plant, recovered_plant
                             ),
                             score: Some(if passed {
-                                (recovered_plant as f64
-                                    / (destroyed_plant as f64 + 10.0).max(1.0))
-                                .min(1.0)
+                                (recovered_plant as f64 / (destroyed_plant as f64 + 10.0).max(1.0))
+                                    .min(1.0)
                             } else {
                                 0.0
                             }),
@@ -788,10 +789,10 @@ pub fn nitrogen_handshake() -> Scenario {
         .checkpoint("growth_period")
         .status()
         // Probe trunk locations of both oaks to compare growth
-        .probe(cx, cy, GROUND_LEVEL + 1)       // companion oak base
-        .probe(cx, cy, GROUND_LEVEL + 4)       // companion oak higher
-        .probe(cx + 20, cy + 20, GROUND_LEVEL + 1)  // control oak base
-        .probe(cx + 20, cy + 20, GROUND_LEVEL + 4)  // control oak higher
+        .probe(cx, cy, GROUND_LEVEL + 1) // companion oak base
+        .probe(cx, cy, GROUND_LEVEL + 4) // companion oak higher
+        .probe(cx + 20, cy + 20, GROUND_LEVEL + 1) // control oak base
+        .probe(cx + 20, cy + 20, GROUND_LEVEL + 4) // control oak higher
         .eval(NoCrash)
         .eval(MaterialMinimum::new("plant", 5))
         // Custom: companion oak near clover should have more developed growth.
@@ -809,26 +810,17 @@ pub fn nitrogen_handshake() -> Scenario {
                     };
                 };
                 // Check if companion oak has plant material at higher probe
-                let companion_high = oracle.probes.iter().find(|p| {
-                    p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 4
-                });
+                let companion_high = oracle
+                    .probes
+                    .iter()
+                    .find(|p| p.x == GRID_X / 2 && p.y == GRID_Y / 2 && p.z == GROUND_LEVEL + 4);
                 let control_high = oracle.probes.iter().find(|p| {
-                    p.x == GRID_X / 2 + 20
-                        && p.y == GRID_Y / 2 + 20
-                        && p.z == GROUND_LEVEL + 4
+                    p.x == GRID_X / 2 + 20 && p.y == GRID_Y / 2 + 20 && p.z == GROUND_LEVEL + 4
                 });
-                let companion_has_growth = companion_high.map_or(false, |p| {
-                    matches!(
-                        p.material.as_str(),
-                        "trunk" | "branch" | "leaf"
-                    )
-                });
-                let control_has_growth = control_high.map_or(false, |p| {
-                    matches!(
-                        p.material.as_str(),
-                        "trunk" | "branch" | "leaf"
-                    )
-                });
+                let companion_has_growth = companion_high
+                    .is_some_and(|p| matches!(p.material.as_str(), "trunk" | "branch" | "leaf"));
+                let control_has_growth = control_high
+                    .is_some_and(|p| matches!(p.material.as_str(), "trunk" | "branch" | "leaf"));
                 // Ideal: companion grows taller/faster than control.
                 // Minimum: companion oak has visible growth.
                 let passed = companion_has_growth && !control_has_growth;
@@ -970,10 +962,10 @@ pub fn willow_loves_water() -> Scenario {
         .checkpoint("growth_complete")
         .status()
         // Probe both locations — use multiple heights to catch trunk/leaf
-        .probe(cx - 2, cy, GROUND_LEVEL + 3)  // near water, above surface
-        .probe(cx - 2, cy, GROUND_LEVEL + 5)  // near water, higher
+        .probe(cx - 2, cy, GROUND_LEVEL + 3) // near water, above surface
+        .probe(cx - 2, cy, GROUND_LEVEL + 5) // near water, higher
         .probe(cx + 20, cy + 20, GROUND_LEVEL + 3) // far from water
-        .probe(cx - 2, cy, GROUND_LEVEL - 2)  // root zone near water
+        .probe(cx - 2, cy, GROUND_LEVEL - 2) // root zone near water
         .probe(cx + 20, cy + 20, GROUND_LEVEL - 2) // root zone far from water
         .eval(NoCrash)
         // At least the near-water willow should grow
@@ -1010,10 +1002,7 @@ pub fn willow_loves_water() -> Scenario {
                 Verdict {
                     evaluator: "water_proximity_advantage".into(),
                     passed,
-                    reason: format!(
-                        "near-water willow probes: [{}]",
-                        probe_details.join(", ")
-                    ),
+                    reason: format!("near-water willow probes: [{}]", probe_details.join(", ")),
                     score: Some(if passed { 1.0 } else { 0.0 }),
                 }
             }),

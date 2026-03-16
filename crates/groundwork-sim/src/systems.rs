@@ -580,7 +580,10 @@ pub fn tree_growth(
         // This creates natural thinning — only the fittest survive in crowded zones.
         if tree.health < 0.05 && tree.age > 50 {
             tree.health = (tree.health - 0.005).max(0.0);
-            if tree.health == 0.0 && tree.stage != GrowthStage::Dead && tree.stage != GrowthStage::Seedling {
+            if tree.health == 0.0
+                && tree.stage != GrowthStage::Dead
+                && tree.stage != GrowthStage::Seedling
+            {
                 tree.stage = GrowthStage::Dead;
                 tree.dirty = true;
             }
