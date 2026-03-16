@@ -33,6 +33,7 @@ const FAUNA_SIZES: Record<number, number> = {
   [FaunaType.Bird]: 5.0,
   [FaunaType.Worm]: 1.8,
   [FaunaType.Beetle]: 2.0,
+  [FaunaType.Squirrel]: 3.0,
 };
 
 /** Warm glow halo colors per fauna type — draws the eye to creatures. */
@@ -42,6 +43,7 @@ const FAUNA_GLOW_COLORS: Record<number, number> = {
   [FaunaType.Bird]: 0xddcc88,     // soft tan
   [FaunaType.Worm]: 0xcc9966,     // earthy
   [FaunaType.Beetle]: 0x99aa66,   // moss green
+  [FaunaType.Squirrel]: 0xcc8844, // warm chestnut
 };
 
 /** Shared radial gradient texture for fauna glow halos. */
@@ -317,6 +319,19 @@ export class FaunaRenderer {
       if (wingR) wingR.rotation.z = -0.3 - soar;
       // Gentle float
       model.position.y += Math.sin((time + offset) * 1.5) * 0.15;
+    }
+    // Squirrel: quick scurrying bob when seeking, dig animation when acting
+    if (type === FaunaType.Squirrel) {
+      if (state === FaunaState.Seeking) {
+        // Rapid scurry bob
+        model.position.y += Math.abs(Math.sin((time + offset) * 12)) * 0.15;
+        // Slight body tilt side to side
+        model.rotation.z = Math.sin((time + offset) * 10) * 0.1;
+      } else if (state === FaunaState.Acting) {
+        // Digging: dip down
+        model.position.y -= 0.2;
+        model.rotation.x = Math.sin((time + offset) * 8) * 0.15;
+      }
     }
     // Worms and beetles don't have wing animations
   }

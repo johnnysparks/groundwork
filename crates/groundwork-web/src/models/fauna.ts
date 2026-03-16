@@ -37,6 +37,11 @@ const BEETLE_SHELL = 0x3A3020;
 const BEETLE_SHEEN = 0x506030;
 const BEETLE_HEAD  = 0x2A2018;
 
+const SQUIRREL_BODY = 0x8B5E3C;  // warm chestnut
+const SQUIRREL_BELLY = 0xD4B896; // cream
+const SQUIRREL_TAIL = 0x6B4226;  // darker brown
+const SQUIRREL_EYE = 0x181010;
+
 // ─── Wing material (semi-transparent) ───────────────────────────
 
 function wingMat(color: number): THREE.MeshLambertMaterial {
@@ -248,6 +253,50 @@ export function buildBeetle(seed: number = 0): THREE.Group {
   return g;
 }
 
+/**
+ * Build a squirrel model. ~2.5 voxels across.
+ * Rounded body, bushy tail curling upward, tiny paws.
+ */
+export function buildSquirrel(seed: number = 0): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'squirrel';
+
+  // Body (oval, slightly upright)
+  ellipsoid(g, 0, 0, 0, 0.3, 0.35, 0.5, SQUIRREL_BODY);
+
+  // Lighter belly
+  ellipsoid(g, 0, -0.08, -0.05, 0.2, 0.22, 0.35, SQUIRREL_BELLY);
+
+  // Head (round, slightly forward and up)
+  sphere(g, 0, 0.2, -0.45, 0.22, SQUIRREL_BODY);
+
+  // Eyes (bright, alert)
+  sphere(g, -0.12, 0.26, -0.58, 0.05, 0xF0F0F0);
+  sphere(g, 0.12, 0.26, -0.58, 0.05, 0xF0F0F0);
+  sphere(g, -0.12, 0.26, -0.6, 0.03, SQUIRREL_EYE);
+  sphere(g, 0.12, 0.26, -0.6, 0.03, SQUIRREL_EYE);
+
+  // Small round ears
+  sphere(g, -0.14, 0.38, -0.38, 0.07, SQUIRREL_BODY);
+  sphere(g, 0.14, 0.38, -0.38, 0.07, SQUIRREL_BODY);
+
+  // Nose
+  sphere(g, 0, 0.18, -0.65, 0.04, SQUIRREL_EYE);
+
+  // Front paws (tiny)
+  sphere(g, -0.15, -0.15, -0.35, 0.08, SQUIRREL_BODY);
+  sphere(g, 0.15, -0.15, -0.35, 0.08, SQUIRREL_BODY);
+
+  // Bushy tail — series of overlapping spheres curling upward
+  sphere(g, 0, 0.05, 0.45, 0.18, SQUIRREL_TAIL);
+  sphere(g, 0, 0.2, 0.55, 0.2, SQUIRREL_TAIL);
+  sphere(g, 0, 0.4, 0.5, 0.22, SQUIRREL_TAIL);
+  sphere(g, 0, 0.55, 0.4, 0.2, SQUIRREL_TAIL);
+  sphere(g, 0, 0.6, 0.25, 0.15, SQUIRREL_TAIL);
+
+  return g;
+}
+
 /** Build a fauna model by type index (matches FaunaType enum). */
 export function buildFaunaModel(type: number, seed: number = 0): THREE.Group {
   switch (type) {
@@ -256,6 +305,7 @@ export function buildFaunaModel(type: number, seed: number = 0): THREE.Group {
     case 2: return buildBird(seed);
     case 3: return buildWorm(seed);
     case 4: return buildBeetle(seed);
+    case 5: return buildSquirrel(seed);
     default: return buildBee(seed);
   }
 }
