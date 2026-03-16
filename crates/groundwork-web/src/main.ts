@@ -255,6 +255,11 @@ async function main() {
   sunDir.subVectors(lights.sun.target.position, lights.sun.position).negate();
   updateWaterSun(sunDir, lights.sun.intensity);
 
+  // Spring highlight: gentle blue point light at the water spring
+  const springLight = new THREE.PointLight(0x4488cc, 2.0, 15, 1.5);
+  springLight.position.set(GRID_X / 2 + 0.5, GROUND_LEVEL + 3, GRID_Y / 2 + 0.5);
+  scene.add(springLight);
+
   // --- Foliage (billboard sprites with wind sway) ---
 
   const foliage = new FoliageRenderer();
@@ -635,8 +640,9 @@ async function main() {
     // Fade quest notifications
     questLog.tickNotification();
 
-    // Animate water ripples
+    // Animate water ripples + spring pulse
     updateWaterTime(elapsed);
+    springLight.intensity = 1.5 + Math.sin(elapsed * 2.0) * 0.8;
 
     // Update day cycle (sun position, colors, sky gradient)
     dayCycle.update(dt, lights, scene, skyUniforms);
