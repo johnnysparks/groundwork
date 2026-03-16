@@ -12,6 +12,7 @@
 import {
   GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES,
   Material, ToolCode, type ToolCodeType,
+  getFaunaCount,
 } from '../bridge';
 import { SPECIES } from '../bridge';
 
@@ -23,19 +24,13 @@ export type QuestId =
   | 'panAround'
   | 'changeDepth'
   | 'orbitCamera'
-  | 'findTheSpring'
   | 'placeWater'
-  | 'observeWetSoil'
   | 'plantFirstSeed'
   | 'watchItGrow'
   | 'changeSpecies'
   | 'toggleAutoTick'
-  | 'stepManually'
-  | 'viewUnderground'
-  | 'findRoots'
   | 'plantThreeSpecies'
   | 'plantAllTypes'
-  | 'useShovel'
   | 'growATree';
 
 interface QuestDef {
@@ -46,127 +41,85 @@ interface QuestDef {
 }
 
 const QUEST_DEFS: QuestDef[] = [
-  // Chapter 0: Getting Your Bearings
+  // Chapter 0: Welcome
   {
     id: 'panAround',
-    name: 'Move the camera',
+    name: 'Look around',
     chapter: 0,
-    detail: 'Your garden is a 60m \u00d7 60m plot of living earth. Use WASD or arrow keys to slide your view across the landscape. Everything you see is a half-meter voxel you can shape.',
-  },
-  {
-    id: 'changeDepth',
-    name: 'Toggle x-ray view',
-    chapter: 0,
-    detail: 'Your garden has layers. Press Q to toggle x-ray mode — soil and stone become transparent so you can see roots, water channels, and underground structures.',
+    detail: 'Drag to orbit, scroll to zoom, WASD to pan. This is your garden — a small glen waiting to come alive.',
   },
   {
     id: 'orbitCamera',
-    name: 'Orbit the camera',
+    name: 'Find the spring',
     chapter: 0,
-    detail: 'Click and drag on the terrain to orbit around your garden. Scroll to zoom in and out. Press R to reset the view.',
+    detail: 'There\'s a water spring at the center. Orbit the camera until you spot the blue water column.',
   },
-  // Chapter 1: Water is Life
-  {
-    id: 'findTheSpring',
-    name: 'Find the water spring',
-    chapter: 1,
-    detail: 'Every garden has a natural water spring deep underground. Water bubbles up, flows outward, and soaks into soil. Click on water to find it \u2014 it\u2019s the source of life for everything you\u2019ll grow.',
-  },
+  // Chapter 1: Plant a Zone
   {
     id: 'placeWater',
-    name: 'Use the watering can',
+    name: 'Irrigate',
     chapter: 1,
-    detail: 'Press 3 to select the watering can, then click to pour. Water obeys gravity \u2014 it falls through air and pools on solid ground. Plants need water nearby to grow.',
+    detail: 'Press 3 for the watering can, then click near the spring. Water spreads to moisten nearby soil — plants need it.',
   },
-  {
-    id: 'observeWetSoil',
-    name: 'Find wet soil',
-    chapter: 1,
-    detail: 'When water touches soil, it soaks in. Wet soil retains moisture that roots absorb. The wetter the soil, the faster seeds germinate. Click on dark soil near water.',
-  },
-  // Chapter 2: First Planting
   {
     id: 'plantFirstSeed',
-    name: 'Plant a seed',
-    chapter: 2,
-    detail: 'Press 2 to select the seed bag, then click on soil to plant. Seeds fall through air and land on solid ground. They need both water and light to germinate.',
+    name: 'Zone a meadow',
+    chapter: 1,
+    detail: 'Press 2 for seeds, pick a species (Z/C to cycle), then click near water. You\'re planting a zone, not a single seed.',
   },
   {
     id: 'watchItGrow',
-    name: 'Watch a seed sprout',
-    chapter: 2,
-    detail: 'Seeds germinate into seedlings, then saplings, then mature plants. Enable auto-tick with Space and watch your seed become a living plant.',
+    name: 'Watch it grow',
+    chapter: 1,
+    detail: 'The garden is already ticking. Watch your zone sprout — seedlings appear, then trunks, then canopy.',
   },
+  // Chapter 2: Diversify
   {
     id: 'changeSpecies',
-    name: 'Try a different species',
+    name: 'Add another species',
     chapter: 2,
-    detail: 'Press Z and C to cycle through 12 species: trees, shrubs, flowers, and groundcover. Or click the species panel when the seed tool is active. Each has unique height, water needs, and growth rate.',
+    detail: 'Press Z or C to pick a different species and zone it nearby. Different species = higher score. Try flowers near trees.',
   },
-  // Chapter 3: Time Control
-  {
-    id: 'toggleAutoTick',
-    name: 'Toggle auto-tick',
-    chapter: 3,
-    detail: 'Press Space to start the simulation clock. Time advances and your garden evolves. Press Space again to pause. Each tick, water flows, light spreads, and plants grow.',
-  },
-  {
-    id: 'stepManually',
-    name: 'Step time manually',
-    chapter: 3,
-    detail: 'Press T to advance exactly one tick. Watch water seep, soil moisten, and seeds accumulate nutrients tick by tick.',
-  },
-  // Chapter 4: Going Underground
-  {
-    id: 'viewUnderground',
-    name: 'Go below surface',
-    chapter: 4,
-    detail: 'Press Q to toggle x-ray mode. Soil and stone become transparent, revealing underground layers, water channels, and \u2014 once plants grow \u2014 roots spreading through the earth.',
-  },
-  {
-    id: 'findRoots',
-    name: 'Find plant roots',
-    chapter: 4,
-    detail: 'Plant roots spread underground seeking water. They absorb moisture from soil and deliver nutrients upward. Healthy root networks mean healthy plants above. Click on a root to complete this quest.',
-  },
-  // Chapter 5: Biodiversity
   {
     id: 'plantThreeSpecies',
-    name: 'Plant 3 species',
-    chapter: 5,
-    detail: 'Different species thrive in different conditions. Trees grow tall but slowly. Shrubs fill gaps. Flowers bloom fast. A diverse garden is a resilient garden.',
+    name: 'Grow 3 species',
+    chapter: 2,
+    detail: 'Zone three different species near water. Diversity attracts fauna and unlocks ecological interactions.',
   },
+  // Chapter 3: Discover
+  {
+    id: 'changeDepth',
+    name: 'Go underground',
+    chapter: 3,
+    detail: 'Press Q for x-ray mode. See root networks spreading underground — each species has a different color.',
+  },
+  {
+    id: 'toggleAutoTick',
+    name: 'Attract fauna',
+    chapter: 3,
+    detail: 'Plant flowers near trees. When enough leaves grow, pollinators appear — watch for glowing golden dots near the canopy.',
+  },
+  // Chapter 4: Ecology
   {
     id: 'plantAllTypes',
-    name: 'Plant all plant types',
-    chapter: 5,
-    detail: 'Plant a tree, shrub, flower, and groundcover. Each type fills a different ecological niche. Check the species panel \u2014 the four groups are Trees, Shrubs, Flowers, and Groundcover.',
+    name: 'Plant all 4 types',
+    chapter: 4,
+    detail: 'Zone a tree, a shrub, a flower, and a groundcover. Each fills a different ecological niche. Clover near oak boosts growth!',
   },
-  // Chapter 6: Shaping the Land
-  {
-    id: 'useShovel',
-    name: 'Dig with the shovel',
-    chapter: 6,
-    detail: 'Press 1 to select the shovel, then click to dig. The shovel removes anything: soil, stone, seeds, even roots. Carve channels, clear space, or reshape terrain.',
-  },
-  // Chapter 7: Living Ecosystem
   {
     id: 'growATree',
-    name: 'Grow a tree',
-    chapter: 7,
-    detail: 'A mature tree is the crown jewel of your garden. It disperses seeds that become new plants \u2014 the beginning of a self-sustaining ecosystem. Your garden is alive.',
+    name: 'Reach score 1000',
+    chapter: 4,
+    detail: 'Your garden score rewards biodiversity and ecological life. More species + more fauna = higher score. Check the panel top-right.',
   },
 ];
 
 const CHAPTER_NAMES = [
-  'Getting Your Bearings',
-  'Water is Life',
-  'First Planting',
-  'Time Control',
-  'Going Underground',
-  'Biodiversity',
-  'Shaping the Land',
-  'Living Ecosystem',
+  'Welcome',
+  'Plant a Zone',
+  'Diversify',
+  'Discover',
+  'Ecology',
 ];
 
 // ---------------------------------------------------------------------------
@@ -377,6 +330,12 @@ export class QuestLog {
       }
     }
 
+    // Fauna check for "attract fauna" quest
+    let hasFauna = false;
+    if (this.questActive('toggleAutoTick')) {
+      try { hasFauna = getFaunaCount() > 0; } catch {}
+    }
+
     const newlyCompleted: { index: number; name: string }[] = [];
 
     for (let i = 0; i < this.quests.length; i++) {
@@ -394,14 +353,8 @@ export class QuestLog {
         case 'orbitCamera':
           complete = this.actions.orbited;
           break;
-        case 'findTheSpring':
-          complete = focusMat === Material.Water;
-          break;
         case 'placeWater':
           complete = this.actions.placedWater;
-          break;
-        case 'observeWetSoil':
-          complete = focusMat === Material.Soil && focusWater > 50;
           break;
         case 'plantFirstSeed':
           complete = this.actions.plantedSeed;
@@ -413,16 +366,8 @@ export class QuestLog {
           complete = this.actions.cycledSpecies;
           break;
         case 'toggleAutoTick':
-          complete = this.actions.toggledAutoTick;
-          break;
-        case 'stepManually':
-          complete = this.actions.steppedManually;
-          break;
-        case 'viewUnderground':
-          complete = focusZ < GROUND_LEVEL;
-          break;
-        case 'findRoots':
-          complete = focusMat === Material.Root;
+          // "Attract fauna" — check if fauna count > 0
+          complete = hasFauna;
           break;
         case 'plantThreeSpecies':
           complete = this.actions.speciesPlanted.size >= 3;
@@ -430,11 +375,9 @@ export class QuestLog {
         case 'plantAllTypes':
           complete = hasAllPlantTypes(this.actions.speciesPlanted);
           break;
-        case 'useShovel':
-          complete = this.actions.usedShovel;
-          break;
         case 'growATree':
-          complete = treeGrown;
+          // "Reach score 1000" — check plant count as proxy
+          complete = treeGrown && this.actions.speciesPlanted.size >= 4;
           break;
       }
 
