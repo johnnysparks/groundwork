@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Pre-commit hook: fast checks only (< 5s)
+# Install: git config core.hooksPath .githooks
+
+set -e
+
+echo "pre-commit: checking formatting..."
+cargo fmt --check 2>&1 || {
+    echo ""
+    echo "ERROR: Rust formatting check failed."
+    echo "Run 'cargo fmt' to fix, then re-commit."
+    exit 1
+}
+
+# TypeScript type check (only if web source changed)
+if git diff --cached --name-only | grep -q 'crates/groundwork-web/src/'; then
+    echo "pre-commit: checking TypeScript types..."
+    (cd crates/groundwork-web && npx tsc --noEmit 2>&1) || {
+        echo ""
+        echo "ERROR: TypeScript type check failed."
+        exit 1
+    }
+fi
+
+echo "pre-commit: OK"

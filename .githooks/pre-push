@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Pre-push hook: runs clippy (catches lint issues before they hit CI)
+# Install: git config core.hooksPath .githooks
+
+set -e
+
+echo "pre-push: running clippy..."
+cargo clippy --workspace -- -D warnings 2>&1 || {
+    echo ""
+    echo "ERROR: Clippy check failed. Fix warnings before pushing."
+    exit 1
+}
+
+echo "pre-push: OK"
