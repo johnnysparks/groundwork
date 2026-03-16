@@ -37,7 +37,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient } from './audio/ambient';
 import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1192,7 +1192,9 @@ async function main() {
       // Wind strength varies with weather: gusty in rain, still in drought
       const targetWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
       const currentWind = foliage.getWindStrength();
-      foliage.setWindStrength(currentWind + (targetWind - currentWind) * 0.02);
+      const newWind = currentWind + (targetWind - currentWind) * 0.02;
+      foliage.setWindStrength(newWind);
+      setWindAmbient(newWind);
     }
     rain.update(dt);
 

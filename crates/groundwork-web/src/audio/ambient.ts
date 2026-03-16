@@ -12,6 +12,8 @@ let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let rainGain: GainNode | null = null;
 let cricketGain: GainNode | null = null;
+let windGain: GainNode | null = null;
+let windFilter: BiquadFilterNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -179,6 +181,45 @@ function createCricketSound(audioCtx: AudioContext, output: GainNode): void {
   rhythm2.start();
 }
 
+/** Create gentle wind — low-frequency filtered noise, volume varies with weather */
+function createWindSound(audioCtx: AudioContext, output: GainNode): void {
+  const bufferSize = audioCtx.sampleRate * 2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  noise.loop = true;
+
+  // Low-pass filter — wind is low rumble, not hiss
+  windFilter = audioCtx.createBiquadFilter();
+  windFilter.type = 'lowpass';
+  windFilter.frequency.value = 300; // base: gentle breeze
+  windFilter.Q.value = 1.0;
+
+  // Slow modulation for wind gusts
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.frequency.value = 0.15; // very slow — breathe in, breathe out
+  lfoGain.gain.value = 0.02;
+
+  windGain = audioCtx.createGain();
+  windGain.gain.value = 0.03; // very quiet base level
+
+  noise.connect(windFilter);
+  windFilter.connect(windGain);
+  windGain.connect(output);
+
+  lfo.connect(lfoGain);
+  lfoGain.connect(windGain.gain);
+
+  noise.start();
+  lfo.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -195,6 +236,7 @@ export function initAmbientAudio(): void {
     createWaterSound(ctx, masterGain);
     createRainSound(ctx, masterGain);
     createCricketSound(ctx, masterGain);
+    createWindSound(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -227,6 +269,22 @@ export function setRaining(raining: boolean): void {
   if (rainGain && ctx) {
     const target = raining ? 0.12 : 0; // rain is quieter than spring
     rainGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 2);
+  }
+}
+
+/** Set wind intensity (0–1). Maps to volume and filter frequency.
+ *  Call when weather wind strength changes. */
+export function setWindAmbient(strength: number): void {
+  if (!ctx) return;
+  // Volume: 0.02 (calm) to 0.08 (gusty)
+  if (windGain) {
+    const vol = 0.02 + strength * 0.06;
+    windGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
+  }
+  // Filter: higher wind = higher cutoff (more audible rush)
+  if (windFilter) {
+    const freq = 200 + strength * 600; // 200Hz (calm) to 800Hz (gusty)
+    windFilter.frequency.linearRampToValueAtTime(freq, ctx.currentTime + 1);
   }
 }
 
