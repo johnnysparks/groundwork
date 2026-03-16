@@ -1,6 +1,6 @@
 # Sprint Session
 
-Run a full development cycle: sync, prioritize, build, ship, playtest. Repeat until the session ends or I say stop.
+Run a full development cycle: sync, prioritize, build, ship, playtest. Repeat until the session ends or I say stop. If you are given a "theme" focus on that are of development and testing work in your backlog. Remind each of the roles what the core theme for them to focus on is. This allows parallelized workstreams.
 
 ## The Loop
 
@@ -11,9 +11,9 @@ Run a full development cycle: sync, prioritize, build, ship, playtest. Repeat un
 - If there are merge conflicts or git issues, resolve them before continuing
 
 ### 2. MANAGE
-- Read `backlog/current.md` and any new `feedback/` or `handoffs/` files that arrived in SYNC
+- Read `backlog/current-{theme}.md` and any new `feedback/` or `handoffs/` files that arrived in SYNC
 - Triage: verify bug claims against code, archive stale feedback, annotate fixes
-- Update `backlog/current.md` if priorities shifted
+- Update `backlog/current-{theme}.md` if priorities shifted
 - Write or update `handoffs/manager_to_dev/` with the top task
 - Keep it sharp — the dev assignment should be unambiguous
 
