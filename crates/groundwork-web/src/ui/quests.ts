@@ -54,72 +54,72 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 0,
     detail: 'There\'s a water spring at the center. Orbit the camera until you spot the blue water column.',
   },
-  // Chapter 1: Plant a Zone
+  // Chapter 1: Groundcover (the foundation)
   {
     id: 'placeWater',
     name: 'Irrigate',
     chapter: 1,
-    detail: 'Press 3 for the watering can, then click near the spring. Water spreads to moisten nearby soil — plants need it.',
+    detail: 'Press 3 for the watering can, then click near the spring. Water spreads to moisten nearby soil.',
   },
   {
     id: 'plantFirstSeed',
-    name: 'Zone a meadow',
+    name: 'Plant groundcover',
     chapter: 1,
-    detail: 'Press 2 for seeds, pick a species (Z/C to cycle), then click near water. You\'re planting a zone, not a single seed.',
+    detail: 'Press 2 for seeds. You start with moss, grass, and clover — the foundation of every garden. Click near water to zone them.',
   },
   {
     id: 'watchItGrow',
-    name: 'Watch it grow',
+    name: 'Watch it spread',
     chapter: 1,
-    detail: 'The garden is already ticking. Watch your zone sprout — seedlings appear, then trunks, then canopy.',
+    detail: 'Groundcover grows fast and spreads. Clover fixes nitrogen in the soil — it helps everything planted nearby.',
   },
-  // Chapter 2: Diversify
+  // Chapter 2: Flowers & Fauna (score 500 unlocks flowers)
   {
     id: 'changeSpecies',
-    name: 'Add another species',
+    name: 'Plant flowers',
     chapter: 2,
-    detail: 'Press Z or C to pick a different species and zone it nearby. Different species = higher score. Try flowers near trees.',
+    detail: 'Flowers unlock at score 500. Plant wildflowers and daisies near your groundcover — they attract pollinators.',
   },
   {
     id: 'plantThreeSpecies',
-    name: 'Grow 3 species',
+    name: 'Attract pollinators',
     chapter: 2,
-    detail: 'Zone three different species near water. Diversity attracts fauna and unlocks ecological interactions.',
+    detail: 'With enough flowers, bees and butterflies arrive. They boost health of nearby plants and spread seeds.',
   },
-  // Chapter 3: Discover
+  // Chapter 3: Discover the Underground
   {
     id: 'changeDepth',
     name: 'Go underground',
     chapter: 3,
-    detail: 'Press Q for x-ray mode. See root networks spreading underground — each species has a different color.',
+    detail: 'Press Q for x-ray mode. See root networks underground — each species has a different color. Roots compete for water.',
   },
   {
     id: 'toggleAutoTick',
-    name: 'Attract fauna',
+    name: 'Grow shrubs',
     chapter: 3,
-    detail: 'Plant flowers near trees. When enough leaves grow, pollinators appear — watch for glowing golden dots near the canopy.',
+    detail: 'Shrubs unlock at score 1500. Berry bushes attract birds that carry seeds to new spots. Ferns thrive in shade.',
   },
-  // Chapter 4: Ecology
+  // Chapter 4: Trees (score 3000 unlocks trees)
   {
     id: 'plantAllTypes',
-    name: 'Plant all 4 types',
+    name: 'Plant your first tree',
     chapter: 4,
-    detail: 'Zone a tree, a shrub, a flower, and a groundcover. Each fills a different ecological niche. Clover near oak boosts growth!',
+    detail: 'Trees unlock at score 3000 — the reward for a thriving ecosystem. Plant an oak near clover for nitrogen-boosted growth!',
   },
   {
     id: 'growATree',
-    name: 'Reach score 1000',
+    name: 'Grow a canopy',
     chapter: 4,
-    detail: 'Your garden score rewards biodiversity and ecological life. More species + more fauna = higher score. Check the panel top-right.',
+    detail: 'Watch your tree claim territory — its canopy shades the ground, roots compete for water, and birds nest in its branches.',
   },
 ];
 
 const CHAPTER_NAMES = [
   'Welcome',
-  'Plant a Zone',
-  'Diversify',
-  'Discover',
-  'Ecology',
+  'Groundcover',
+  'Flowers & Fauna',
+  'Shrubs & Roots',
+  'Trees',
 ];
 
 // ---------------------------------------------------------------------------
