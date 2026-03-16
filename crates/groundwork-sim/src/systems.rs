@@ -2590,10 +2590,20 @@ pub fn milestone_tracker(
     trees: Query<&Tree>,
     tick: Res<Tick>,
     mut milestones: ResMut<crate::EcoMilestones>,
+    mut discovered: ResMut<crate::DiscoveredSpecies>,
 ) {
     // Only scan every 20 ticks for performance
     if !tick.0.is_multiple_of(20) {
         return;
+    }
+
+    // --- Species Discovery ---
+    // Scan Tree entities for species we haven't seen before.
+    // Discovery happens when any tree of that species exists (even a seedling).
+    for tree in trees.iter() {
+        if !discovered.is_discovered(tree.species_id) {
+            discovered.discover(tree.species_id);
+        }
     }
 
     // Count groundcover leaf voxels at ground level

@@ -406,6 +406,7 @@ export const FaunaType = {
   Bird: 2,
   Worm: 3,
   Beetle: 4,
+  Squirrel: 5,
 } as const;
 
 /** Fauna state enum (matches Rust FaunaState repr(u8)) */
@@ -447,4 +448,68 @@ export function readFauna(view: DataView, index: number): {
     y: view.getFloat32(off + 8, true),
     z: view.getFloat32(off + 12, true),
   };
+}
+
+// --- Ecological Milestones & Species Discovery ---
+
+/** Plant type enum for pick_discovered_species */
+export const PlantTypeCode = {
+  Tree: 0,
+  Shrub: 1,
+  Flower: 2,
+  Groundcover: 3,
+} as const;
+
+/** Whether flowers are unlocked (tier 1: groundcover established) */
+export function milestoneTier1(): boolean {
+  return wasmModule.milestone_tier1_flowers();
+}
+
+/** Whether shrubs are unlocked (tier 2: pollinators attracted) */
+export function milestoneTier2(): boolean {
+  return wasmModule.milestone_tier2_shrubs();
+}
+
+/** Whether trees are unlocked (tier 3: ecosystem active) */
+export function milestoneTier3(): boolean {
+  return wasmModule.milestone_tier3_trees();
+}
+
+/** Bitfield of discovered species (bit N = species N discovered) */
+export function getDiscoveredSpecies(): number {
+  return wasmModule.discovered_species();
+}
+
+/** Whether a specific species has been discovered */
+export function isSpeciesDiscovered(speciesId: number): boolean {
+  return wasmModule.is_species_discovered(speciesId);
+}
+
+/** Number of discovered species */
+export function getDiscoveredCount(): number {
+  return wasmModule.discovered_species_count();
+}
+
+/** Pick a random discovered species of a plant type. Returns species index or 255 if none. */
+export function pickDiscoveredSpecies(plantType: number, rng: number): number {
+  return wasmModule.pick_discovered_species(plantType, rng);
+}
+
+/** Current weather state: 0=Clear, 1=Rain, 2=Drought */
+export function getWeatherState(): number {
+  return wasmModule.get_weather_state();
+}
+
+/** Current day phase (0-99) */
+export function getDayPhase(): number {
+  return wasmModule.get_day_phase();
+}
+
+/** Get available plant types based on milestone progression */
+export function getAvailablePlantTypes(): string[] {
+  const types = ['Groundcover'];
+  if (wasmModule.milestone_tier1_flowers()) types.push('Flower');
+  if (wasmModule.milestone_tier2_shrubs()) types.push('Shrub');
+  if (wasmModule.milestone_tier3_trees()) types.push('Tree');
+  return types;
 }

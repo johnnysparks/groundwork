@@ -82,6 +82,48 @@ pub struct EcoMilestones {
     pub species_diversity: u8,
 }
 
+/// Species discovery tracking. Players don't see a full species list — they
+/// discover species through ecological processes (pioneer succession, bird seeds,
+/// squirrel acorns, seed dispersal). The UI shows "plant groundcover" / "plant tree"
+/// and the sim picks from discovered species of that type.
+///
+/// Discovery is one-way: once a species appears in the garden, it's discovered forever.
+/// Updated by the `milestone_tracker` system alongside EcoMilestones.
+#[derive(Resource, Debug, Clone)]
+pub struct DiscoveredSpecies {
+    /// Bitfield: species_id N is discovered if bit N is set.
+    /// Supports up to 32 species (u32). Currently 12 species (0-11).
+    pub discovered: u32,
+}
+
+impl Default for DiscoveredSpecies {
+    fn default() -> Self {
+        // Moss (9), grass (10), clover (11) are always discovered — the player
+        // starts knowing these basic groundcover species.
+        let mut d = 0u32;
+        d |= 1 << 9;  // moss
+        d |= 1 << 10; // grass
+        d |= 1 << 11; // clover
+        Self { discovered: d }
+    }
+}
+
+impl DiscoveredSpecies {
+    pub fn is_discovered(&self, species_id: usize) -> bool {
+        species_id < 32 && (self.discovered & (1 << species_id)) != 0
+    }
+
+    pub fn discover(&mut self, species_id: usize) {
+        if species_id < 32 {
+            self.discovered |= 1 << species_id;
+        }
+    }
+
+    pub fn count(&self) -> u32 {
+        self.discovered.count_ones()
+    }
+}
+
 /// Weather system: periodic rain bursts and drought periods.
 ///
 /// Creates dramatic garden-wide events that test ecosystem resilience.
@@ -152,6 +194,7 @@ pub fn create_world() -> World {
     world.insert_resource(DayPhase::default());
     world.insert_resource(EcoMilestones::default());
     world.insert_resource(Weather::default());
+    world.insert_resource(DiscoveredSpecies::default());
     world.insert_resource(FocusState::default());
     world.insert_resource(SpeciesTable::default());
     world.insert_resource(SeedSpeciesMap::default());

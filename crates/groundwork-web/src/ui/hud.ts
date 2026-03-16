@@ -5,7 +5,7 @@
  * and standard UI behavior. Communicates tool/species selection via callbacks.
  */
 
-import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized } from '../bridge';
+import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized, milestoneTier1, milestoneTier2, milestoneTier3, isSpeciesDiscovered } from '../bridge';
 import { SCENES, getSceneId, switchScene } from '../mesher/mockGrid';
 import { playMilestone } from '../audio/sfx';
 
@@ -110,13 +110,15 @@ export class Hud {
 
     // Wire up species picker with progressive unlocking:
     // Tier 0 (start): Groundcover (moss, grass, clover)
-    // Tier 1 (score 500): Flowers (wildflower, daisy)
-    // Tier 2 (score 1500): Shrubs (fern, berry bush, holly)
-    // Tier 3 (score 3000): Trees (oak, birch, willow, pine)
+    // Milestone-based unlock tiers (from sim EcoMilestones):
+    // Tier 0: Groundcover (always)
+    // Tier 1: Flowers (after groundcover established)
+    // Tier 2: Shrubs (after pollinators attracted)
+    // Tier 3: Trees (after fauna ecosystem active)
     const UNLOCK_TIERS: Record<string, number> = {
       'Groundcover': 0,
-      'Flower': 500,
-      'Shrub': 1500,
+      'Flower': 1,
+      'Shrub': 2,
       'Tree': 3000,
     };
     this.speciesPanel = this.container.querySelector('#species-panel')! as HTMLElement;
@@ -127,8 +129,9 @@ export class Hud {
         currentType = sp.type;
         const header = document.createElement('div');
         header.className = 'species-group-header';
-        const threshold = UNLOCK_TIERS[sp.type] ?? 0;
-        header.textContent = threshold > 0 ? `${sp.type} (score ${threshold})` : sp.type;
+        const tier = UNLOCK_TIERS[sp.type] ?? 0;
+        const tierLabels = ['', 'Grow groundcover first', 'Attract pollinators first', 'Build a fauna ecosystem'];
+        header.textContent = tier > 0 ? `${sp.type} — ${tierLabels[tier]}` : sp.type;
         header.dataset.unlockType = sp.type;
         speciesList.appendChild(header);
       }
@@ -137,11 +140,11 @@ export class Hud {
       btn.dataset.speciesIndex = String(sp.index);
       btn.dataset.speciesType = sp.type;
       btn.textContent = sp.name;
-      // Lock non-groundcover species initially
-      const threshold = UNLOCK_TIERS[sp.type] ?? 0;
-      if (threshold > 0) {
+      // Lock species behind milestone tiers + discovery
+      const tier = UNLOCK_TIERS[sp.type] ?? 0;
+      if (tier > 0) {
         btn.classList.add('locked');
-        btn.title = `Unlocks at score ${threshold}`;
+        btn.title = `Discover through ecological progression`;
       }
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -283,9 +286,33 @@ export class Hud {
     // Show/hide species panel based on whether seed tool is active
     this.speciesPanel.classList.toggle('visible', this.state.activeTool === ToolCode.Seed);
 
-    // Update species buttons
+    // Update species buttons — check milestone unlocks + discovery
+    const t1 = isInitialized() ? milestoneTier1() : false;
+    const t2 = isInitialized() ? milestoneTier2() : false;
+    const t3 = isInitialized() ? milestoneTier3() : false;
     for (const btn of this.speciesButtons) {
-      btn.classList.toggle('active', btn.dataset.speciesIndex === String(this.state.activeSpeciesIndex));
+      const idx = Number(btn.dataset.speciesIndex);
+      const type = btn.dataset.speciesType ?? '';
+      const tier = type === 'Flower' ? 1 : type === 'Shrub' ? 2 : type === 'Tree' ? 3 : 0;
+      // Check tier unlock
+      const tierUnlocked = tier === 0 || (tier === 1 && t1) || (tier === 2 && t2) || (tier === 3 && t3);
+      // Check species discovery (if WASM available)
+      const discovered = !isInitialized() || isSpeciesDiscovered(idx);
+      const locked = !tierUnlocked || !discovered;
+      btn.classList.toggle('locked', locked);
+      btn.classList.toggle('active', !locked && idx === this.state.activeSpeciesIndex);
+      if (locked) {
+        btn.title = !tierUnlocked ? 'Tier not unlocked yet' : 'Not yet discovered';
+      } else {
+        btn.title = '';
+      }
+    }
+    // Update group headers
+    for (const header of this.speciesPanel.querySelectorAll('.species-group-header')) {
+      const type = (header as HTMLElement).dataset.unlockType ?? '';
+      const tier = type === 'Flower' ? 1 : type === 'Shrub' ? 2 : type === 'Tree' ? 3 : 0;
+      const unlocked = tier === 0 || (tier === 1 && t1) || (tier === 2 && t2) || (tier === 3 && t3);
+      (header as HTMLElement).classList.toggle('locked', !unlocked);
     }
 
     this.renderStatus();

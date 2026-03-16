@@ -468,3 +468,62 @@ pub fn milestone_species_diversity() -> u8 {
             .species_diversity
     })
 }
+
+// --- Species Discovery ---
+
+/// Bitfield of discovered species. Bit N set = species N discovered.
+/// JS can check `(discovered_species() >> speciesIdx) & 1` for each species.
+#[wasm_bindgen]
+pub fn discovered_species() -> u32 {
+    with_sim(|sim| sim.world.resource::<crate::DiscoveredSpecies>().discovered)
+}
+
+/// Whether a specific species has been discovered.
+#[wasm_bindgen]
+pub fn is_species_discovered(species_id: usize) -> bool {
+    with_sim(|sim| {
+        sim.world
+            .resource::<crate::DiscoveredSpecies>()
+            .is_discovered(species_id)
+    })
+}
+
+/// Number of discovered species.
+#[wasm_bindgen]
+pub fn discovered_species_count() -> u32 {
+    with_sim(|sim| sim.world.resource::<crate::DiscoveredSpecies>().count())
+}
+
+/// Pick a random discovered species of a given plant type.
+/// plant_type: 0=Tree, 1=Shrub, 2=Flower, 3=Groundcover
+/// Returns species_id, or 255 if no species of that type discovered.
+#[wasm_bindgen]
+pub fn pick_discovered_species(plant_type: u8, rng_hint: u32) -> u8 {
+    with_sim(|sim| {
+        let disc = sim.world.resource::<crate::DiscoveredSpecies>();
+        let table = sim.world.resource::<SpeciesTable>();
+
+        // Collect discovered species of the requested plant type
+        let target_type = match plant_type {
+            0 => crate::tree::PlantType::Tree,
+            1 => crate::tree::PlantType::Shrub,
+            2 => crate::tree::PlantType::Flower,
+            3 => crate::tree::PlantType::Groundcover,
+            _ => return 255,
+        };
+
+        let candidates: Vec<usize> = table
+            .species
+            .iter()
+            .enumerate()
+            .filter(|(i, s)| s.plant_type == target_type && disc.is_discovered(*i))
+            .map(|(i, _)| i)
+            .collect();
+
+        if candidates.is_empty() {
+            255
+        } else {
+            candidates[(rng_hint as usize) % candidates.len()] as u8
+        }
+    })
+}
