@@ -330,20 +330,25 @@ export class FaunaRenderer {
   ): void {
     const offset = index * 2.37; // per-creature phase offset
 
+    const ws = this.windStrength;
+
     if (type === FaunaType.Bee) {
-      // Rapid wing flutter
-      const flutter = Math.sin((time + offset) * 30) * 0.8;
+      // Rapid wing flutter — faster in wind (fighting to stay airborne)
+      const flutterSpeed = 30 + ws * 15;
+      const flutter = Math.sin((time + offset) * flutterSpeed) * 0.8;
       const wingL = model.getObjectByName('wing_l');
       const wingR = model.getObjectByName('wing_r');
       if (wingL) wingL.rotation.z = 0.5 + flutter;
       if (wingR) wingR.rotation.z = -0.5 - flutter;
-      // Gentle body bob
-      model.position.y += Math.sin((time + offset) * 5) * 0.2;
+      // Body bob — more erratic in wind
+      const bobAmp = 0.2 + ws * 0.15;
+      model.position.y += Math.sin((time + offset) * 5) * bobAmp;
 
     } else if (type === FaunaType.Butterfly) {
-      // Wings: slow gentle pulse when landed (Acting), normal flap otherwise
-      const flapSpeed = state === FaunaState.Acting ? 1.2 : 4;
-      const flapAmp = state === FaunaState.Acting ? 0.2 : 0.7;
+      // Wings: faster, wider flaps in wind (struggling)
+      const windBoost = state === FaunaState.Acting ? 0 : ws * 0.5;
+      const flapSpeed = (state === FaunaState.Acting ? 1.2 : 4) + windBoost * 3;
+      const flapAmp = (state === FaunaState.Acting ? 0.2 : 0.7) + windBoost * 0.3;
       const flap = Math.sin((time + offset) * flapSpeed) * flapAmp;
       const names = ['wing_ul', 'wing_ur', 'wing_ll', 'wing_lr'];
       for (const name of names) {
@@ -353,8 +358,8 @@ export class FaunaRenderer {
         const side = name.endsWith('l') ? 1 : -1;
         w.rotation.z = side * flap * sign;
       }
-      // Float gently (reduced when landed)
-      const floatAmp = state === FaunaState.Acting ? 0.05 : 0.3;
+      // Float — bouncier in wind
+      const floatAmp = (state === FaunaState.Acting ? 0.05 : 0.3) + windBoost * 0.2;
       model.position.y += Math.sin((time + offset) * 2) * floatAmp;
 
     } else if (type === FaunaType.Bird) {
@@ -366,11 +371,12 @@ export class FaunaRenderer {
         if (wingR) wingR.rotation.z = -0.15;
         model.position.y += Math.sin((time + offset) * 1.0) * 0.02;
       } else {
-        // Flying: slow wing soar
-        const soar = Math.sin((time + offset) * 2) * 0.4;
+        // Flying: deeper soar strokes in wind
+        const soarAmp = 0.4 + ws * 0.2;
+        const soar = Math.sin((time + offset) * 2) * soarAmp;
         if (wingL) wingL.rotation.z = 0.3 + soar;
         if (wingR) wingR.rotation.z = -0.3 - soar;
-        // Gentle float
+        // Float — steadier than insects (birds handle wind better)
         model.position.y += Math.sin((time + offset) * 1.5) * 0.15;
       }
     }
