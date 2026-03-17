@@ -1542,7 +1542,7 @@ async function main() {
         if (newWeather !== prevWeatherState) {
           if (newWeather === 1) { hud.addEvent('Rain begins \u2014 the garden drinks deeply'); playRainStart(); }
           else if (newWeather === 2) { hud.addEvent('Drought \u2014 water runs low, roots dig deep'); playDroughtStart(); }
-          else if (prevWeatherState === 1) { hud.addEvent('The rain passes \u2014 skies clear'); leafDripTimer = 30 + Math.random() * 30; }
+          else if (prevWeatherState === 1) { hud.addEvent('The rain passes \u2014 skies clear'); leafDripTimer = 30 + Math.random() * 30; skyUniforms.uRainbow.value = 1.0; }
           else if (prevWeatherState === 2) hud.addEvent('Drought breaks \u2014 the soil can breathe');
           prevWeatherState = newWeather;
         }
@@ -1647,6 +1647,11 @@ async function main() {
     {
       const targetCloud = prevWeatherState === 1 ? 0.75 : prevWeatherState === 2 ? 0.12 : 0.35;
       skyUniforms.uCloudDensity.value += (targetCloud - skyUniforms.uCloudDensity.value) * dt * 0.3;
+    }
+
+    // Rainbow fade: slowly decays after rain stops (~30s)
+    if (skyUniforms.uRainbow.value > 0.001) {
+      skyUniforms.uRainbow.value = Math.max(0, skyUniforms.uRainbow.value - dt / 30);
     }
 
     // Cloud shadow ground plane: matches sky cloud density + fades at night

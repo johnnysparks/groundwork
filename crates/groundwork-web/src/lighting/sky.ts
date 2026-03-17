@@ -23,6 +23,7 @@ uniform vec3 horizonColor;
 uniform float uNightAmount;
 uniform float uTime;
 uniform float uCloudDensity;
+uniform float uRainbow;
 varying vec3 vWorldPosition;
 
 // Simple pseudo-random hash for star placement
@@ -142,6 +143,28 @@ void main() {
     }
   }
 
+  // Rainbow arc: appears after rain, fades over time
+  if (uRainbow > 0.01 && h > 0.0) {
+    // Rainbow appears opposite the sun — fixed position in the sky
+    // Use xz angle relative to a fixed "anti-sun" direction
+    float angle = atan(dir.z, dir.x);
+    // Arc center at elevation ~0.25, radius ~0.35 in angular space
+    float arcDist = length(vec2(dir.x + 0.3, dir.y - 0.25));
+    // Rainbow band: narrow ring at the right angular distance
+    float band = smoothstep(0.30, 0.33, arcDist) * smoothstep(0.42, 0.39, arcDist);
+    // Only show upper half of arc
+    band *= smoothstep(0.0, 0.08, h);
+    // Spectral colors from angular position within the band
+    float bandPos = (arcDist - 0.30) / 0.12; // 0→1 across band width
+    vec3 rainbow;
+    if (bandPos < 0.2) rainbow = mix(vec3(0.55, 0.0, 0.55), vec3(0.0, 0.0, 0.9), bandPos / 0.2);
+    else if (bandPos < 0.4) rainbow = mix(vec3(0.0, 0.0, 0.9), vec3(0.0, 0.7, 0.3), (bandPos - 0.2) / 0.2);
+    else if (bandPos < 0.6) rainbow = mix(vec3(0.0, 0.7, 0.3), vec3(0.9, 0.9, 0.0), (bandPos - 0.4) / 0.2);
+    else if (bandPos < 0.8) rainbow = mix(vec3(0.9, 0.9, 0.0), vec3(0.9, 0.4, 0.0), (bandPos - 0.6) / 0.2);
+    else rainbow = mix(vec3(0.9, 0.4, 0.0), vec3(0.9, 0.0, 0.0), (bandPos - 0.8) / 0.2);
+    color = mix(color, rainbow, band * uRainbow * 0.45);
+  }
+
   gl_FragColor = vec4(color, 1.0);
 }
 `;
@@ -153,6 +176,7 @@ export interface SkyUniforms {
   uNightAmount: THREE.IUniform<number>;
   uTime: THREE.IUniform<number>;
   uCloudDensity: THREE.IUniform<number>;
+  uRainbow: THREE.IUniform<number>;
   [key: string]: THREE.IUniform<unknown>;
 }
 
@@ -168,6 +192,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     uNightAmount: { value: 0.0 },                          // 0=day, 1=full night (drives star visibility)
     uTime: { value: 0.0 },                                 // elapsed time for shooting stars
     uCloudDensity: { value: 0.4 },                          // 0=clear sky, 1=overcast (0.4=scattered cumulus)
+    uRainbow: { value: 0.0 },                                 // 0=invisible, 1=full rainbow (fades after rain)
   };
 
   const skyMat = new THREE.ShaderMaterial({
