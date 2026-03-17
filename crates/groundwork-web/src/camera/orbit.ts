@@ -197,6 +197,18 @@ export class OrbitCamera {
     return this.theta;
   }
 
+  /** Get the camera center position (for proximity checks) */
+  getCenter(): THREE.Vector3 {
+    return this.center;
+  }
+
+  /** Approximate pan speed (units/sec) — for reactive effects */
+  getPanSpeed(): number {
+    const dx = this.targetCenter.x - this.center.x;
+    const dz = this.targetCenter.z - this.center.z;
+    return Math.sqrt(dx * dx + dz * dz) / Math.max(this.damping, 0.01);
+  }
+
   /** Handle window resize */
   resize(aspect: number): void {
     this.camera.left = -this.frustumSize * aspect / 2;

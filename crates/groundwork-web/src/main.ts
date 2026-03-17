@@ -1516,6 +1516,13 @@ async function main() {
       particles.emitSoilSteam(sx, sz);
     }
 
+    // Camera rustle: fast panning scatters leaf fragments from nearby canopy
+    const panSpeed = orbit.getPanSpeed();
+    if (panSpeed > 5 && foliage.count > 50 && Math.random() < dt * panSpeed * 0.1) {
+      const c = orbit.getCenter();
+      particles.emitCameraRustle(c.x, c.y, c.z);
+    }
+
     // Animate growth particles
     particles.update(dt);
 

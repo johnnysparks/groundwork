@@ -297,6 +297,37 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a few leaf fragments near a world position (camera pan rustle).
+   * Makes the canopy feel responsive to the player's movement.
+   */
+  emitCameraRustle(worldX: number, worldY: number, worldZ: number): void {
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.8 + Math.random() * 0.6;
+      p.maxLife = p.life;
+
+      // Scattered near the position, slightly above ground
+      p.x = worldX + (Math.random() - 0.5) * 6;
+      p.y = Math.max(GROUND_LEVEL + 2, worldY) + Math.random() * 3;
+      p.z = worldZ + (Math.random() - 0.5) * 6;
+
+      // Tumble outward and down
+      const angle = Math.random() * Math.PI * 2;
+      p.vx = Math.cos(angle) * (0.3 + Math.random() * 0.3);
+      p.vy = -0.1 + Math.random() * 0.2;
+      p.vz = Math.sin(angle) * (0.3 + Math.random() * 0.3);
+
+      // Leaf greens with autumn tint variation
+      const t = Math.random();
+      p.color.setRGB(0.3 + t * 0.25, 0.5 + t * 0.2, 0.15 + t * 0.1);
+    }
+  }
+
+  /**
    * Emit a tiny rain splash at ground impact point.
    */
   emitRainSplash(worldX: number, worldY: number, worldZ: number): void {
