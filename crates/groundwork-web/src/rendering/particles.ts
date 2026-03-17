@@ -1055,6 +1055,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a tiny twig/fiber particle from a perched bird — suggests nesting
+   * activity. Brown-tan particles tumble slowly downward from canopy.
+   */
+  emitBirdNesting(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 1.0 + Math.random() * 0.8;
+    p.maxLife = p.life;
+
+    // From canopy height, near perch position
+    p.x = worldX + (Math.random() - 0.5) * 0.8;
+    p.y = GROUND_LEVEL + 6 + Math.random() * 4;
+    p.z = worldZ + (Math.random() - 0.5) * 0.8;
+
+    // Tumble downward with wobble
+    p.vx = (Math.random() - 0.5) * 0.2;
+    p.vy = -0.15 - Math.random() * 0.1;
+    p.vz = (Math.random() - 0.5) * 0.2;
+
+    // Brown-tan twig color
+    const t = Math.random();
+    p.color.setRGB(0.55 + t * 0.15, 0.4 + t * 0.1, 0.2 + t * 0.1);
+  }
+
+  /**
    * Emit a ground-level wet shimmer — creates the impression of puddles
    * forming on flat ground during rain. Short-lived reflective sparkle.
    */

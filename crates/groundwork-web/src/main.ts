@@ -1670,6 +1670,11 @@ async function main() {
               && Math.random() < dt * 0.5) {
             particles.emitWormTrail(f.x, f.y); // sim x,y → world x,z
           }
+          // Bird nesting: tiny twig particles tumble from perched birds
+          if (f.type === FaunaType.Bird && f.state === FaunaState.Idle
+              && Math.random() < dt * 0.3) {
+            particles.emitBirdNesting(f.x, f.y);
+          }
           // Squirrel footprint dust: tiny puffs when scurrying
           if (f.type === FaunaType.Squirrel && f.state === FaunaState.Seeking
               && Math.random() < dt * 0.8) {
