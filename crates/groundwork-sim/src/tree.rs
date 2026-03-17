@@ -9,6 +9,8 @@ use crate::voxel::Material;
 #[derive(Resource, Default)]
 pub struct SeedSpeciesMap {
     pub map: HashMap<(usize, usize, usize), usize>,
+    /// Deprivation counter: ticks without water+light. Seed dies at 200.
+    pub deprivation: HashMap<(usize, usize, usize), u16>,
 }
 
 /// Simple deterministic hash for per-tree variation.

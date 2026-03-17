@@ -585,6 +585,8 @@ pub fn seed_growth(
         let has_light = cell_light >= 30;
 
         if has_water && has_light {
+            // Conditions good — reset deprivation counter
+            seed_species.deprivation.remove(&(x, y, z));
             let mut best_nutrient: u8 = 0;
             let mut blocked_by_compaction = false;
             let mut min_ph: u8 = 128; // track lowest pH for allelopathy
@@ -702,6 +704,7 @@ pub fn seed_growth(
                             }
                         }
 
+                        seed_species.deprivation.remove(&(x, y, z));
                         let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or_else(|| {
                             // Count existing plants for maturity gating
                             let mut total_plants: u32 = 0;
@@ -789,6 +792,20 @@ pub fn seed_growth(
                         });
                     }
                 }
+            }
+        } else {
+            // Seed deprivation: no water or no light → count ticks of stress.
+            // After 200 ticks (~40s at 5 ticks/sec) of deprivation, the seed dies.
+            // This makes irrigation meaningful — seeds planted in dry or dark areas fail.
+            // Discovery: "My seeds near the spring grew, but the ones on the hill died!"
+            let counter = seed_species.deprivation.entry((x, y, z)).or_insert(0);
+            *counter += 1;
+            if *counter >= 200 {
+                if let Some(cell) = grid.get_mut(x, y, z) {
+                    cell.set_material(Material::Air);
+                }
+                seed_species.map.remove(&(x, y, z));
+                seed_species.deprivation.remove(&(x, y, z));
             }
         }
     }
