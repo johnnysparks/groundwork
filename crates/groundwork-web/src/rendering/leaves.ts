@@ -43,7 +43,7 @@ const FRAG = /* glsl */ `
   }
 `;
 
-/** Warm autumn/green leaf colors */
+/** Fallback autumn/green leaf colors (used when no species data) */
 const LEAF_COLORS = [
   [0.45, 0.55, 0.20], // olive green
   [0.55, 0.65, 0.25], // spring green
@@ -51,6 +51,15 @@ const LEAF_COLORS = [
   [0.70, 0.40, 0.15], // amber
   [0.50, 0.60, 0.20], // fresh green
   [0.40, 0.50, 0.15], // dark green
+];
+
+/** Species-tinted falling leaf colors — foliage palette shifted toward autumn.
+ *  Index matches species_id: 0=Oak, 1=Birch, 2=Willow, 3=Pine. */
+const SPECIES_LEAF_COLORS: number[][] = [
+  [0.40, 0.45, 0.12], // Oak: deep warm olive → autumn brown-green
+  [0.60, 0.65, 0.20], // Birch: bright → golden yellow
+  [0.35, 0.50, 0.30], // Willow: sage → muted silver-green
+  [0.15, 0.30, 0.15], // Pine: dark blue-green (needles don't turn)
 ];
 
 interface Leaf {
@@ -73,6 +82,7 @@ export class FallingLeaves {
   private timeUniform: { value: number };
   private plantCount = 0;
   private windStrength = 0.35;
+  private treeSpecies: number[] = []; // species IDs of trees in garden
 
   constructor() {
     this.group = new THREE.Group();
@@ -118,6 +128,11 @@ export class FallingLeaves {
     this.windStrength = strength;
   }
 
+  /** Set tree species present in the garden (species IDs 0-3 for trees). */
+  setTreeSpecies(speciesIds: number[]): void {
+    this.treeSpecies = speciesIds.filter(id => id <= 3); // only trees
+  }
+
   private spawnLeaf(): Leaf {
     return {
       x: 15 + Math.random() * (GRID_X - 30),
@@ -136,10 +151,20 @@ export class FallingLeaves {
     this.positions[i * 3 + 1] = leaf.z;
     this.positions[i * 3 + 2] = leaf.y;
     this.phases[i] = leaf.phase;
-    const c = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
-    this.colors[i * 3] = c[0];
-    this.colors[i * 3 + 1] = c[1];
-    this.colors[i * 3 + 2] = c[2];
+
+    // Pick color from species if trees exist, else fallback palette
+    let c: number[];
+    if (this.treeSpecies.length > 0) {
+      const sid = this.treeSpecies[Math.floor(Math.random() * this.treeSpecies.length)];
+      c = SPECIES_LEAF_COLORS[sid] ?? LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
+    } else {
+      c = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)];
+    }
+    // Slight per-leaf brightness variation
+    const v = 0.9 + Math.random() * 0.2;
+    this.colors[i * 3] = c[0] * v;
+    this.colors[i * 3 + 1] = c[1] * v;
+    this.colors[i * 3 + 2] = c[2] * v;
   }
 
   /** Burst: respawn all leaves at the canopy top for a visible gust surge. */

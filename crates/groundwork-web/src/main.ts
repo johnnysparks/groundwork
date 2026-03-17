@@ -1190,6 +1190,7 @@ async function main() {
         const stats = computeGardenStats(freshGrid);
         hud.setGardenStats(stats);
         detectEvents(stats, hud);
+        fallingLeaves.setTreeSpecies(Array.from(stats.speciesIds));
         // Update species unlocks from sim-side ecological milestones
         const milestones = getMilestones();
         if (milestones) hud.updateMilestones(milestones);
