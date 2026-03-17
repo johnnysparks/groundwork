@@ -1567,6 +1567,13 @@ async function main() {
         }
       }
 
+      // Drought dust devils: occasional spiral dust particles
+      if (weatherState === 2 && Math.random() < dt * 0.3) {
+        const dx = 10 + Math.random() * (GRID_X - 20);
+        const dz = 10 + Math.random() * (GRID_Y - 20);
+        particles.emitDustDevil(dx, dz);
+      }
+
       // Wind strength varies with weather: gusty in rain, still in drought
       const baseWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
 

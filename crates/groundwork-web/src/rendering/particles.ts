@@ -297,6 +297,39 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a small spiral of dust during drought — a mini dust devil.
+   */
+  emitDustDevil(worldX: number, worldZ: number): void {
+    const count = 6;
+    const baseAngle = Math.random() * Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 1.0 + Math.random() * 0.8;
+      p.maxLife = p.life;
+
+      // Spiral placement
+      const angle = baseAngle + (i / count) * Math.PI * 2;
+      const r = 0.3 + (i / count) * 0.5;
+      p.x = worldX + Math.cos(angle) * r;
+      p.y = GROUND_LEVEL + 0.2 + (i / count) * 2;
+      p.z = worldZ + Math.sin(angle) * r;
+
+      // Spiral upward motion
+      const tangent = angle + Math.PI / 2;
+      p.vx = Math.cos(tangent) * 0.4 + (Math.random() - 0.5) * 0.1;
+      p.vy = 0.5 + Math.random() * 0.3;
+      p.vz = Math.sin(tangent) * 0.4 + (Math.random() - 0.5) * 0.1;
+
+      // Dry dusty tan/brown
+      const t = Math.random();
+      p.color.setRGB(0.65 + t * 0.15, 0.55 + t * 0.1, 0.35 + t * 0.1);
+    }
+  }
+
+  /**
    * Emit a celebratory sparkle burst when a new fauna arrives.
    * Bright warm particles spiral outward — the garden welcomes new life.
    */
