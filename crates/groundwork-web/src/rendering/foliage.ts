@@ -249,8 +249,8 @@ const SPECIES_FOLIAGE: THREE.Color[] = [
   new THREE.Color(0.16, 0.62, 0.35),  // Fern: vibrant emerald
   new THREE.Color(0.38, 0.52, 0.16),  // Berry Bush: warm olive
   new THREE.Color(0.12, 0.38, 0.12),  // Holly: dark pure green
-  new THREE.Color(0.65, 0.45, 0.55),  // Wildflower: pink-purple
-  new THREE.Color(0.72, 0.68, 0.28),  // Daisy: warm yellow
+  new THREE.Color(0.75, 0.35, 0.55),  // Wildflower: vivid magenta-pink
+  new THREE.Color(0.85, 0.78, 0.22),  // Daisy: bright golden yellow
   new THREE.Color(0.18, 0.40, 0.16),  // Moss: dark muted olive
   new THREE.Color(0.30, 0.65, 0.14),  // Grass: bright fresh green
   new THREE.Color(0.38, 0.60, 0.18),  // Clover: yellow-green
