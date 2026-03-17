@@ -122,7 +122,6 @@ interface ActionTracker {
   speciesPlanted: Set<number>;
   depthChanged: boolean;
   placedWater: boolean;
-  cycledSpecies: boolean;
   toggledAutoTick: boolean;
   steppedManually: boolean;
 }
@@ -141,7 +140,6 @@ function createActionTracker(): ActionTracker {
     speciesPlanted: new Set(),
     depthChanged: false,
     placedWater: false,
-    cycledSpecies: false,
     toggledAutoTick: false,
     steppedManually: false,
   };
@@ -262,10 +260,6 @@ export class QuestLog {
   recordPlantSeed(speciesIndex: number): void {
     this.actions.plantedSeed = true;
     this.actions.speciesPlanted.add(speciesIndex);
-  }
-
-  recordCycleSpecies(): void {
-    this.actions.cycledSpecies = true;
   }
 
   recordToggleAutoTick(): void {

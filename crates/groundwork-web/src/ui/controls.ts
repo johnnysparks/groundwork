@@ -1,7 +1,7 @@
 /**
  * Input controls: binds keyboard shortcuts and mouse click-to-place.
  *
- * Coordinates between the HUD (tool/species selection), the raycaster
+ * Coordinates between the HUD (tool selection), the raycaster
  * (mouse → voxel), and the bridge (place_tool).
  */
 
@@ -129,18 +129,6 @@ export function setupControls(config: ControlsConfig): () => void {
         }
         break;
       }
-
-      // Species cycling: Z/C (Q is x-ray toggle in main.ts)
-      case 'z':
-      case 'Z':
-        hud.cycleSpecies(-1);
-        questLog.recordCycleSpecies();
-        break;
-      case 'c':
-      case 'C':
-        hud.cycleSpecies(1);
-        questLog.recordCycleSpecies();
-        break;
 
       // Auto-tick toggle is handled in main.ts (it owns the autoTick state)
     }

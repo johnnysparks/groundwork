@@ -352,7 +352,13 @@ export function placeTool(tool: ToolCodeType, x: number, y: number, z: number): 
   return wasmModule.place_tool(tool, x, y, z);
 }
 
-/** Set the selected species index for seed placement. */
+/**
+ * Set the selected species index for seed placement.
+ * @deprecated Species selection removed — the sim picks species based on
+ * environmental conditions. Kept for WASM API compatibility but no longer
+ * called from the UI. The sim-side condition-based species emergence is a
+ * known gap (see decisions/2026-03-17T20:00:00_density_not_species.md).
+ */
 export function setSelectedSpecies(idx: number): void {
   wasmModule.set_selected_species(idx);
 }

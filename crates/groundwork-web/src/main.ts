@@ -3,11 +3,11 @@
  *
  * Initializes the WASM simulation (or mock data), builds the voxel mesh,
  * sets up Three.js scene with lighting and camera, HUD overlay with tool
- * palette and species picker, raycaster click-to-place, and render loop.
+ * palette, raycaster click-to-place, and render loop.
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, GrowthStage, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState, packTreeStats, getTreeStatsView, readTreeStat } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, GrowthStage, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, getMilestones, queueGnomeTask, getGnomeState, getWeatherState, packTreeStats, getTreeStatsView, readTreeStat } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -91,8 +91,6 @@ let _pollinatorActNotified = false;
 let _birdDropNotified = false;
 let _gardenAliveNotified = false;
 
-/** Species the player has deliberately planted (via seed tool) */
-const _playerPlantedSpecies = new Set<number>();
 let _xrayTipShown = false;
 let _recentDieOff = false;
 let _dieOffPlantCount = 0;
@@ -108,20 +106,6 @@ const TRUST_MILESTONES: [number, string][] = [
   [150, 'The squirrel trusts your gnome! It lingers nearby'],
   [180, 'The squirrel is following your gnome — a loyal companion!'],
 ];
-
-/** Companion species suggestions — shown once per species per session */
-const _companionSuggested = new Set<number>();
-const COMPANION_TIPS: Record<number, string> = {
-  0: 'Try planting Clover nearby — nitrogen fixing boosts Oak growth 50%!',
-  1: 'Birch grows fast in open ground — add Wildflowers to attract pollinators',
-  2: 'Willow loves water — plant Moss at its base to hold moisture',
-  3: 'Pine acidifies soil — Fern and Moss tolerate it, others struggle nearby',
-  4: 'Ferns love shade — plant near a tall tree for the Canopy Effect',
-  5: 'Berry bushes attract birds — birds will spread seeds across the garden!',
-  7: 'Flowers attract bees and butterflies — cluster them for a pollinator bridge',
-  8: 'Daisies attract pollinators — plant near trees to boost their health',
-  11: 'Clover fixes nitrogen — plant near trees for a 50% growth boost!',
-};
 
 /** Wild plant messages — fauna attribution based on species */
 const WILD_PLANT_MESSAGES: Record<number, string[]> = {
@@ -261,22 +245,20 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
   if (stats.species > _prevStats.species && stats.speciesIds) {
     for (const sid of stats.speciesIds) {
       if (!_prevSpeciesIds.has(sid)) {
+        // Every new species is a discovery — the player never chooses species.
+        // They plant density zones and discover what emerges.
         const msg = SUCCESSION_MESSAGES[sid];
         if (msg) {
           hud.addEvent(msg);
-        } else if (!_playerPlantedSpecies.has(sid) && !PIONEER_SPECIES.has(sid)) {
-          // Wild plant — fauna-dispersed!
+        } else {
           const wildMsgs = WILD_PLANT_MESSAGES[sid];
           if (wildMsgs) {
             hud.addEvent(wildMsgs[Math.floor(Math.random() * wildMsgs.length)]);
           } else {
             const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
-            hud.addEvent(`A wild ${name} appeared — the garden is planting itself!`);
+            hud.addEvent(`New species discovered: ${name}!`);
           }
           playDiscovery();
-        } else {
-          const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
-          hud.addEvent(`${name} is now growing in your garden (+100 score)`);
         }
         _eventCooldown = 20;
         break; // one event per tick
@@ -851,8 +833,6 @@ async function main() {
     _prevSpeciesIds = new Set<number>();
     _prevTreeStages.clear();
     _prevSquirrelTrust = 0;
-    _playerPlantedSpecies.clear();
-    _companionSuggested.clear();
     _squirrelCacheNotified = false;
     _pollinatorActNotified = false;
     _birdDropNotified = false;
@@ -940,25 +920,18 @@ async function main() {
       }
 
       // Queue tasks instead of instant execution — gnome will do the work.
-      // Species-aware spacing: trees need territory, groundcover can pack tight.
+      // Density painting: player controls WHERE and HOW DENSE to sow.
+      // The sim decides WHAT species based on environmental conditions.
+      // Species = 255 means "let the sim pick based on conditions."
       if (tool === ToolCode.Seed) {
-        const speciesIdx = hud.state.activeSpeciesIndex;
-        const speciesType = SPECIES[speciesIdx]?.type ?? 'Ground';
-        // Trees: wide spacing (crown_radius ~24 voxels), place 1-2 per click
-        // Shrubs: medium spacing, Flowers/Ground: tight packing
-        const spacing = speciesType === 'Tree' ? 16
-          : speciesType === 'Shrub' ? 8
-          : speciesType === 'Flower' ? 4
-          : 3;
-        const r = speciesType === 'Tree' ? 16
-          : speciesType === 'Shrub' ? 8
-          : 6;
+        const r = 4;
+        const spacing = 3;
         for (let dy = -r; dy <= r; dy += spacing) {
           for (let dx = -r; dx <= r; dx += spacing) {
             const sx = hit.x + dx;
             const sy = hit.y + dy;
             if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
-            enqueueTask(tool, sx, sy, hit.z, hud.state.activeSpeciesIndex);
+            enqueueTask(tool, sx, sy, hit.z, 255);
           }
         }
       } else {
@@ -971,11 +944,6 @@ async function main() {
             enqueueTask(tool, sx, sy, hit.z);
           }
         }
-      }
-
-      // Track player-planted species for wild plant detection
-      if (tool === ToolCode.Seed) {
-        _playerPlantedSpecies.add(hud.state.activeSpeciesIndex);
       }
 
       // Visual + audio feedback
@@ -991,17 +959,8 @@ async function main() {
       if (qLen > 0) {
         hud.addEvent(`Gnome: ${toolNames[tool] ?? 'working'} zone queued (${qLen} tasks)`);
       }
-      // Companion species suggestion — once per species
-      if (tool === ToolCode.Seed) {
-        const sid = hud.state.activeSpeciesIndex;
-        if (!_companionSuggested.has(sid) && COMPANION_TIPS[sid]) {
-          setTimeout(() => hud.addEvent(COMPANION_TIPS[sid]), 2000);
-          _companionSuggested.add(sid);
-        }
-      }
       // Record tool use for quest tracking
-      const speciesIdx = hud.state.activeSpeciesIndex;
-      questLog.recordToolUse(hud.state.activeTool, speciesIdx);
+      questLog.recordToolUse(hud.state.activeTool, 0);
       questLog.recordClick(hit.x, hit.y, hit.z);
       // Check quests against updated grid
       const freshGrid = isInitialized() ? getGridView() : grid;
@@ -1025,12 +984,9 @@ async function main() {
       for (let y = y1; y <= y2; y += spacing) {
         for (let x = x1; x <= x2; x += spacing) {
           if (x >= 0 && y >= 0 && x < GRID_X && y < GRID_Y) {
-            enqueueTask(tool, x, y, z, tool === ToolCode.Seed ? hud.state.activeSpeciesIndex : undefined);
+            enqueueTask(tool, x, y, z, tool === ToolCode.Seed ? 255 : undefined);
           }
         }
-      }
-      if (tool === ToolCode.Seed) {
-        _playerPlantedSpecies.add(hud.state.activeSpeciesIndex);
       }
       particles.emit((x1 + x2) / 2 + 0.5, z + 0.5, (y1 + y2) / 2 + 0.5);
       if (tool === ToolCode.Seed) playPlant();
@@ -1380,9 +1336,6 @@ async function main() {
         hud.setGardenStats(stats);
         detectEvents(stats, hud);
         fallingLeaves.setTreeSpecies(Array.from(stats.speciesIds));
-        // Update species unlocks from sim-side ecological milestones
-        const milestones = getMilestones();
-        if (milestones) hud.updateMilestones(milestones);
         // Weather transition events
         const newWeather = getWeatherState();
         if (newWeather !== prevWeatherState) {
