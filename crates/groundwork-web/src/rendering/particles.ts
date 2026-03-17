@@ -806,6 +806,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a sunbeam shaft particle — bright golden motes streaming downward
+   * through gaps in the canopy. Creates visible light columns.
+   */
+  emitSunbeam(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 1.5 + Math.random() * 1.0;
+    p.maxLife = p.life;
+
+    // High up in canopy, drifts slowly downward
+    p.x = worldX + (Math.random() - 0.5) * 1.5;
+    p.y = GROUND_LEVEL + 10 + Math.random() * 15;
+    p.z = worldZ + (Math.random() - 0.5) * 1.5;
+
+    // Slow downward drift with slight horizontal wander
+    p.vx = (Math.random() - 0.5) * 0.05;
+    p.vy = -0.3 - Math.random() * 0.2;
+    p.vz = (Math.random() - 0.5) * 0.05;
+
+    // Warm golden-white (bright)
+    const t = Math.random();
+    p.color.setRGB(1.0, 0.92 + t * 0.08, 0.7 + t * 0.2);
+  }
+
+  /**
    * Emit a pale moth particle that flutters near a light source.
    * Creates night-time insect activity around fireflies.
    */

@@ -1676,6 +1676,13 @@ async function main() {
       particles.emitSoilSteam(sx, sz);
     }
 
+    // Sunbeam shafts: golden particles stream through canopy during bright daylight
+    if (dayTime >= 0.3 && dayTime <= 0.65 && foliage.count > 500 && Math.random() < dt * 1.5) {
+      const sx = 15 + Math.random() * (GRID_X - 30);
+      const sz = 15 + Math.random() * (GRID_Y - 30);
+      particles.emitSunbeam(sx, sz);
+    }
+
     // Camera rustle: fast panning scatters leaf fragments from nearby canopy
     const panSpeed = orbit.getPanSpeed();
     if (panSpeed > 5 && foliage.count > 50 && Math.random() < dt * panSpeed * 0.1) {
