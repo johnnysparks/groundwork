@@ -289,6 +289,18 @@ const waterFragmentShader = /* glsl */ `
     float foam = foamFactor * smoothstep(-0.1, 0.3, foamNoise);
     baseColor = mix(baseColor, vec3(0.75, 0.88, 0.90), foam * 0.5);
 
+    // Subtle flow lines — radial from spring center, shows water current
+    {
+      vec2 springCenter = vec2(${GRID_X / 2}.0, ${GRID_Y / 2}.0);
+      vec2 flowDir = normalize(vWorldPos.xz - springCenter);
+      float flowDist = length(vWorldPos.xz - springCenter);
+      float flowPhase = flowDist * 0.3 - uTime * 0.5;
+      float flow = sin(flowPhase) * 0.5 + 0.5;
+      flow *= smoothstep(3.0, 8.0, flowDist); // fade near spring
+      flow *= smoothstep(0.0, 0.3, vDepth);   // only on water with some depth
+      baseColor = mix(baseColor, baseColor * 1.06, flow * 0.15);
+    }
+
     // Animated ripple normal
     vec3 normal = rippleNormal(vWorldPos.xy, uTime);
 
