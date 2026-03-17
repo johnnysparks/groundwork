@@ -1092,13 +1092,19 @@ async function main() {
     try { localStorage.removeItem('groundwork-garden'); } catch {}
   });
 
+  /** Max pending gnome tasks — prevents overwhelming the queue with huge zones.
+   *  The gnome is one little guy; give him a reasonable workload. */
+  const MAX_GNOME_TASKS = 64;
+
   /** Enqueue a task to the WASM sim gnome (single source of truth).
    *  JS taskQueue is kept in sync for ghost overlay rendering. */
-  function enqueueTask(tool: number, x: number, y: number, z: number, species?: number) {
+  function enqueueTask(tool: number, x: number, y: number, z: number, species?: number): boolean {
+    if (taskQueue.length >= MAX_GNOME_TASKS) return false;
     taskQueue.enqueue({ tool, x, y, z, species });
     if (isInitialized()) {
       queueGnomeTask(tool, x, y, z, species ?? 255);
     }
+    return true;
   }
 
   // Track whether the gnome-tap quest has been completed this session
@@ -1221,7 +1227,9 @@ async function main() {
         [ToolCode.Shovel]: 'digging', [ToolCode.Soil]: 'soil', [ToolCode.Stone]: 'stone',
       };
       const qLen = taskQueue.length;
-      if (qLen > 0) {
+      if (qLen >= MAX_GNOME_TASKS) {
+        hud.addEvent('Your gnome has plenty to do — let him catch up!');
+      } else if (qLen > 0) {
         hud.addEvent(`Gnome: ${toolNames[tool] ?? 'working'} zone queued (${qLen} tasks)`);
       }
       // Record tool use for quest tracking
