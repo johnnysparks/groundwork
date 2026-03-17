@@ -112,6 +112,9 @@ let _mycorrhizalNotified = false;
 let _lightCompetitionNotified = false;
 let _pineAllelopathyNotified = false;
 const _habitatNotified = new Set<string>();
+let _firstSunsetNotified = false;
+let _firstNightNotified = false;
+let _firstDawnNotified = false;
 
 /** Previous tree growth stages — keyed by "rootX,rootY" to detect transitions */
 const _prevTreeStages = new Map<string, number>();
@@ -1036,6 +1039,9 @@ async function main() {
     _xrayTipShown = false;
     _recentDieOff = false;
     _tipIndex = 0;
+    _firstSunsetNotified = false;
+    _firstNightNotified = false;
+    _firstDawnNotified = false;
     _tipTimer = 0;
     taskQueue.clear();
     questLog.reset();
@@ -1642,6 +1648,21 @@ async function main() {
 
     // Update day cycle (sun position, colors, sky gradient)
     dayCycle.update(dt, lights, scene, skyUniforms);
+
+    // Day-cycle discovery messages: first sunset, night, and dawn are magical moments
+    {
+      const dayT = dayCycle.getTime();
+      if (!_firstSunsetNotified && dayT >= 0.72 && dayT < 0.78) {
+        _firstSunsetNotified = true;
+        hud.addEvent('Golden hour — the garden glows in warm light');
+      } else if (!_firstNightNotified && dayT >= 0.88) {
+        _firstNightNotified = true;
+        hud.addEvent('Night falls — fireflies dance and crickets sing');
+      } else if (!_firstDawnNotified && _firstNightNotified && dayT >= 0.22 && dayT < 0.28) {
+        _firstDawnNotified = true;
+        hud.addEvent('Dawn breaks — the garden wakes with birdsong');
+      }
+    }
 
     // Cloud density: weather-driven (0=Clear→0.35, 1=Rain→0.75, 2=Drought→0.12)
     {
