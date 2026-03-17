@@ -212,14 +212,15 @@ impl Default for SpeciesTable {
             species: vec![
                 // --- Trees (indices 0-3) ---
                 // Glen scale (4m×4m×5m): trees fill 40-50 of 60 voxels above ground.
-                // At 0.05m/voxel, oak trunk_radius 0.15m = 3 voxels → 7-voxel-wide trunk.
+                // At 0.05m/voxel, oak trunk_radius 0.25m = 5 voxels → 11-voxel-wide trunk.
+                // Canopy-dominant: crown_radius >> trunk_radius for stout silhouette.
                 Species {
                     name: "Oak",
                     plant_type: PlantType::Tree,
                     max_height_m: 2.5,
                     root_depth_m: 1.5,
-                    crown_radius_m: 1.2,
-                    trunk_radius_m: 0.15,
+                    crown_radius_m: 1.5,
+                    trunk_radius_m: 0.25,
                     crown_shape: CrownShape::Round,
                     water_need: ResourceNeed::Medium,
                     light_need: ResourceNeed::Medium,
@@ -235,8 +236,8 @@ impl Default for SpeciesTable {
                     plant_type: PlantType::Tree,
                     max_height_m: 2.0,
                     root_depth_m: 1.0,
-                    crown_radius_m: 0.8,
-                    trunk_radius_m: 0.08,
+                    crown_radius_m: 1.0,
+                    trunk_radius_m: 0.12,
                     crown_shape: CrownShape::Narrow,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::Medium,
@@ -252,8 +253,8 @@ impl Default for SpeciesTable {
                     plant_type: PlantType::Tree,
                     max_height_m: 1.8,
                     root_depth_m: 1.2,
-                    crown_radius_m: 1.5,
-                    trunk_radius_m: 0.1,
+                    crown_radius_m: 1.8,
+                    trunk_radius_m: 0.18,
                     crown_shape: CrownShape::Wide,
                     water_need: ResourceNeed::High,
                     light_need: ResourceNeed::Low,
@@ -267,10 +268,10 @@ impl Default for SpeciesTable {
                 Species {
                     name: "Pine",
                     plant_type: PlantType::Tree,
-                    max_height_m: 2.8,
+                    max_height_m: 2.5,
                     root_depth_m: 1.5,
-                    crown_radius_m: 0.8,
-                    trunk_radius_m: 0.1,
+                    crown_radius_m: 1.0,
+                    trunk_radius_m: 0.15,
                     crown_shape: CrownShape::Conical,
                     water_need: ResourceNeed::Low,
                     light_need: ResourceNeed::High,
