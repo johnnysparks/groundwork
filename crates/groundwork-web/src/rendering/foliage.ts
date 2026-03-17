@@ -430,11 +430,20 @@ export class FoliageRenderer {
           const healthFrac = health === 0 ? 1.0 : Math.min(health / 60, 1);
           const stressTint = Math.pow(Math.max(0, 1 - healthFrac), 2);
 
+          // Light-responsive tinting: sunlit leaves warm/bright, shaded cool/blue
+          // light_level byte 2: 0=dark, 255=full sun
+          const lightLevel = grid[idx + 2];
+          const lightFrac = lightLevel / 255;
+          // Sunlit: warm boost (+0.06r, +0.02g). Shaded: cool shift (+0.04b, -0.06r)
+          const sunWarm = lightFrac * 0.06;
+          const shadeCool = (1 - lightFrac) * 0.04;
+
           // Per-instance brightness variation for visual richness
           const brightness = 0.9 + ((hash >> 4) & 0xf) / 15.0 * 0.2;
-          const r = baseColor.r * brightness + stressTint * 0.2;
-          const g = baseColor.g * brightness * (1 - stressTint * 0.3);
-          const b = baseColor.b * brightness * (1 - stressTint * 0.5);
+          const lightBright = 0.85 + lightFrac * 0.15; // shaded leaves are dimmer
+          const r = baseColor.r * brightness * lightBright + stressTint * 0.2 + sunWarm - shadeCool * 0.5;
+          const g = baseColor.g * brightness * lightBright * (1 - stressTint * 0.3) + sunWarm * 0.3;
+          const b = baseColor.b * brightness * lightBright * (1 - stressTint * 0.5) + shadeCool;
           this.colorAttr.setXYZ(count, r, g, b);
 
           count++;
