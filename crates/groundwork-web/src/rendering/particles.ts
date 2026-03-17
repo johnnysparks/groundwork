@@ -1108,6 +1108,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a thin fog wisp hovering just above water surface at dawn.
+   * Slow horizontal drift, cool blue-white translucent wisps.
+   */
+  emitWaterFog(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 3.0 + Math.random() * 2.0;
+    p.maxLife = p.life;
+
+    // Just above water surface
+    p.x = worldX + (Math.random() - 0.5) * 3;
+    p.y = GROUND_LEVEL + 0.5 + Math.random() * 1.5;
+    p.z = worldZ + (Math.random() - 0.5) * 3;
+
+    // Very slow horizontal drift
+    p.vx = (Math.random() - 0.5) * 0.08;
+    p.vy = 0.01 + Math.random() * 0.02;
+    p.vz = (Math.random() - 0.5) * 0.08;
+
+    // Cool desaturated blue-white
+    const t = Math.random();
+    p.color.setRGB(0.75 + t * 0.1, 0.8 + t * 0.1, 0.9 + t * 0.05);
+  }
+
+  /**
    * Emit a ground-level wet shimmer — creates the impression of puddles
    * forming on flat ground during rain. Short-lived reflective sparkle.
    */

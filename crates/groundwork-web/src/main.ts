@@ -1706,6 +1706,13 @@ async function main() {
       particles.emitSoilSteam(sx, sz);
     }
 
+    // Water fog wisps: cool mist hovering above water at dawn
+    if (dayTime >= 0.10 && dayTime <= 0.30 && prevWaterCount > 20 && Math.random() < dt * 1.5) {
+      const wx = 10 + Math.random() * (GRID_X - 20);
+      const wz = 10 + Math.random() * (GRID_Y - 20);
+      particles.emitWaterFog(wx, wz);
+    }
+
     // Sunbeam shafts: golden particles stream through canopy during bright daylight
     // Pollinators add visible pollen — more golden, denser, slightly driftier
     if (dayTime >= 0.3 && dayTime <= 0.65 && foliage.count > 500) {
