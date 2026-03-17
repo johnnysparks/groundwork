@@ -1153,7 +1153,11 @@ async function main() {
       }
 
       // Visual + audio feedback
-      particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      if (tool === ToolCode.Shovel) {
+        particles.emitDigSpray(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      } else {
+        particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      }
       if (tool === ToolCode.Seed) playPlant();
       else if (tool === ToolCode.Shovel) playDig();
       else playPlant(); // soil/stone use plant sound
@@ -1565,7 +1569,11 @@ async function main() {
           // Dequeue from JS taskQueue to keep ghost overlay in sync
           const task = taskQueue.dequeue();
           if (task) {
-            particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+            if (task.tool === ToolCode.Shovel) {
+              particles.emitDigSpray(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+            } else {
+              particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+            }
           }
           remeshDirty();
         }

@@ -268,6 +268,34 @@ export class GrowthParticles {
     }
   }
 
+  /** Emit a spray of soil particles from a dig action — satisfying shovel feedback. */
+  emitDigSpray(worldX: number, worldY: number, worldZ: number): void {
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.5 + Math.random() * 0.4;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.4;
+      p.y = worldY;
+      p.z = worldZ + (Math.random() - 0.5) * 0.4;
+
+      // Spray upward and outward — feels like dirt flying from a shovel
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 0.8;
+      p.vx = Math.cos(angle) * speed * 0.5;
+      p.vy = 0.6 + Math.random() * 0.6; // upward spray
+      p.vz = Math.sin(angle) * speed * 0.5;
+
+      // Rich earthy brown with variation
+      const t = Math.random();
+      p.color.setRGB(0.40 + t * 0.15, 0.28 + t * 0.10, 0.12 + t * 0.08);
+    }
+  }
+
   /**
    * Emit flower petals scattered by a wind gust.
    * Picks random flower positions and emits colored petals that drift with wind.
