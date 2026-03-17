@@ -734,6 +734,28 @@ async function main() {
       // Shovel becomes available for irrigation
       hud.selectTool(ToolCode.Shovel);
     }
+    // Chapter completion celebration — sparkle burst + chime (skip chapter 0)
+    if (chapter > 0 && _particles) {
+      playDiscovery();
+      const cx = GRID_X / 2;
+      const cz = GRID_Y / 2;
+      for (let i = 0; i < 3; i++) {
+        _particles.emitFaunaArrival(
+          cx + (Math.random() - 0.5) * 15,
+          GROUND_LEVEL + 3 + Math.random() * 2,
+          cz + (Math.random() - 0.5) * 15,
+        );
+      }
+      const chapterNames = [
+        'Meet Your Gnome', 'Start Your Garden', 'See Below the Surface',
+        'Shape the Water', 'The Garden Grows', 'Conditions Matter',
+        'A Tree Appeared', 'The Garden Is Alive',
+      ];
+      const chapterName = chapterNames[chapter - 1];
+      if (chapterName) {
+        hud.addEvent(`Chapter complete: ${chapterName}`);
+      }
+    }
   });
 
   // No auto-advance timer. Phase 0 stays until the player taps the gnome.
