@@ -46,7 +46,9 @@ impl Tool {
         match self {
             Tool::Shovel => "shovel",
             Tool::SeedBag => "seed bag",
-            Tool::WateringCan => "watering can (deprecated — use shovel to dig irrigation channels)",
+            Tool::WateringCan => {
+                "watering can (deprecated — use shovel to dig irrigation channels)"
+            }
             Tool::Soil => "soil",
             Tool::Stone => "stone",
         }

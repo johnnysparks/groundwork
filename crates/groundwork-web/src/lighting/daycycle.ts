@@ -173,7 +173,22 @@ export class DayCycle {
 
     // --- Sun ---
     lights.sun.color.copy(lerpColor(this._c1, a.sunColor, b.sunColor, t));
-    lights.sun.intensity = lerp(a.sunIntensity, b.sunIntensity, t);
+    let sunIntensity = lerp(a.sunIntensity, b.sunIntensity, t);
+
+    // Cloud shadow pulses: overlapping slow sine waves create organic
+    // brightness variation during daytime (as if clouds drift overhead).
+    // Only modulate when sun is strong enough to notice — fades out at night.
+    if (sunIntensity > 0.3) {
+      const e = this.elapsedTime;
+      const cloudWave =
+        Math.sin(e * 0.32) * 0.06 +   // ~20s period
+        Math.sin(e * 0.18) * 0.04 +   // ~35s period
+        Math.sin(e * 0.10) * 0.03;    // ~63s period
+      // Fade modulation by how "daytime" it is (0 at night, full at noon)
+      const dayFade = Math.min(1, (sunIntensity - 0.3) / 1.0);
+      sunIntensity *= 1.0 + cloudWave * dayFade;
+    }
+    lights.sun.intensity = sunIntensity;
 
     const elev = lerp(a.sunElevation, b.sunElevation, t);
     const azim = lerp(a.sunAzimuth, b.sunAzimuth, t);
