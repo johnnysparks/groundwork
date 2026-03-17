@@ -197,6 +197,7 @@ const waterFragmentShader = /* glsl */ `
   uniform vec3 uDeepColor;
   uniform vec3 uSunDirection;
   uniform float uSunIntensity;
+  uniform float uRainStrength;
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -306,6 +307,25 @@ const waterFragmentShader = /* glsl */ `
     skyFresnel = pow(skyFresnel, 3.0) * 0.2;
     lit += vec3(0.53, 0.81, 0.92) * skyFresnel; // sky blue tint
 
+    // Rain ripple rings: concentric circles from random drop points
+    if (uRainStrength > 0.0) {
+      float rippleSum = 0.0;
+      for (int i = 0; i < 6; i++) {
+        // Each "drop" has a unique position and phase
+        float fi = float(i);
+        vec2 dropPos = vec2(
+          hash1(vec2(fi * 7.13, floor(uTime * 0.8 + fi * 1.7))) * 60.0,
+          hash1(vec2(fi * 13.37, floor(uTime * 0.8 + fi * 1.7) + 100.0)) * 60.0
+        );
+        float dropAge = fract(uTime * 0.8 + fi * 1.7 / 6.0);
+        float radius = dropAge * 3.0;
+        float ring = abs(length(vWorldPos.xz - dropPos) - radius);
+        float ripple = smoothstep(0.15, 0.0, ring) * (1.0 - dropAge);
+        rippleSum += ripple;
+      }
+      lit += vec3(0.8, 0.9, 1.0) * rippleSum * uRainStrength * 0.3;
+    }
+
     // Caustic patterns — bright refraction lines that shift and dance
     float c1 = noise(vWorldPos.xy * 2.5 + vec2(uTime * 0.4, uTime * 0.3));
     float c2 = noise(vWorldPos.xy * 3.7 - vec2(uTime * 0.25, uTime * 0.45));
@@ -403,6 +423,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
         uDeepColor: { value: new THREE.Color(0.05, 0.18, 0.30) },      // dark blue-green
         uSunDirection: { value: new THREE.Vector3(0.5, -0.3, 0.8).normalize() },
         uSunIntensity: { value: 1.2 },
+        uRainStrength: { value: 0 },
       },
       transparent: true,
       depthWrite: false,   // transparent surfaces shouldn't write depth
@@ -435,5 +456,14 @@ export function updateWaterSun(direction: THREE.Vector3, intensity: number): voi
   if (waterMaterial) {
     waterMaterial.uniforms.uSunDirection.value.copy(direction).normalize();
     waterMaterial.uniforms.uSunIntensity.value = intensity;
+  }
+}
+
+/**
+ * Set rain strength for water surface ripple rings (0 = no rain, 1 = full rain).
+ */
+export function updateWaterRain(strength: number): void {
+  if (waterMaterial) {
+    waterMaterial.uniforms.uRainStrength.value = strength;
   }
 }

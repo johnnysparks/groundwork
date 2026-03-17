@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -1303,6 +1303,7 @@ async function main() {
       const weatherState = getWeatherState();
       rain.setActive(weatherState === 1); // 1 = Rain
       setRaining(weatherState === 1);    // rain audio
+      updateWaterRain(weatherState === 1 ? 1.0 : 0.0);
       // Wind strength varies with weather: gusty in rain, still in drought
       const targetWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
       const currentWind = foliage.getWindStrength();
