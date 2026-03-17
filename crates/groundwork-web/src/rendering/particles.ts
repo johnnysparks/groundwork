@@ -126,6 +126,9 @@ export class GrowthParticles {
   /** Flower leaf positions for petal scatter on wind gusts */
   private flowerPositions: { x: number; y: number; z: number; species: number }[] = [];
 
+  /** Previous tick seed position keys for detecting seed→plant sprout transitions */
+  private prevSeedKeys = new Set<number>();
+
   constructor() {
     this.particles = new Array(MAX_PARTICLES);
     for (let i = 0; i < MAX_PARTICLES; i++) {
@@ -332,6 +335,7 @@ export class GrowthParticles {
   detectGrowth(grid: Uint8Array): void {
     const newLeafPositions = new Set<number>();
     const newSeedPositions: { x: number; y: number; z: number }[] = [];
+    const newSeedKeys = new Set<number>();
     const newFlowerPositions: { x: number; y: number; z: number; species: number }[] = [];
 
     for (let z = 0; z < GRID_Z; z++) {
@@ -348,9 +352,15 @@ export class GrowthParticles {
             if (!this.prevLeafPositions.has(posKey)) {
               // Sim Y↔Z swap: sim Z=up → Three.js Y=up
               this.emit(x + 0.5, z + 0.5, y + 0.5);
+
+              // Seed→plant sprout pop: if this was a seed last tick, bigger burst
+              if (this.prevSeedKeys.has(posKey)) {
+                this.emitSproutPop(x + 0.5, z + 0.5, y + 0.5);
+              }
             }
           } else if (mat === Material.Seed) {
             newSeedPositions.push({ x, y, z });
+            newSeedKeys.add(x + y * GRID_X + z * GRID_X * GRID_Y);
           }
 
           // Track flower leaf positions for petal scatter
@@ -366,6 +376,7 @@ export class GrowthParticles {
 
     this.prevLeafPositions = newLeafPositions;
     this.seedPositions = newSeedPositions;
+    this.prevSeedKeys = newSeedKeys;
     this.flowerPositions = newFlowerPositions;
   }
 
@@ -463,6 +474,37 @@ export class GrowthParticles {
 
     const c = SEED_COLORS[Math.floor(Math.random() * SEED_COLORS.length)];
     p.color.copy(c);
+  }
+
+  /**
+   * Emit a celebratory sprout pop when a seed becomes a plant.
+   * Bright green outward burst — the moment of birth.
+   */
+  private emitSproutPop(worldX: number, worldY: number, worldZ: number): void {
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 1.0 + Math.random() * 0.5;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.4;
+      p.y = worldY + Math.random() * 0.3;
+      p.z = worldZ + (Math.random() - 0.5) * 0.4;
+
+      // Outward pop in all directions
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.3 + Math.random() * 0.4;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = 0.5 + Math.random() * 0.5;
+      p.vz = Math.sin(angle) * speed;
+
+      // Bright spring green
+      const t = Math.random();
+      p.color.setRGB(0.3 + t * 0.2, 0.7 + t * 0.2, 0.2 + t * 0.15);
+    }
   }
 
   private findDeadParticle(): Particle | null {
