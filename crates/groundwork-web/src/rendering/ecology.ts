@@ -96,6 +96,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.60, 0.50, 0.75),  // muted purple
     new THREE.Color(0.80, 0.70, 0.90),  // pale lavender
   ],
+  allelopathy: [
+    new THREE.Color(0.75, 0.35, 0.15),  // amber-red (acidic)
+    new THREE.Color(0.65, 0.30, 0.10),  // dark amber
+    new THREE.Color(0.55, 0.25, 0.12),  // rust brown
+  ],
 };
 
 interface EcoParticle {
@@ -323,6 +328,29 @@ export class EcologyParticles {
         );
       }
     }
+
+    // Allelopathy: pine roots (species_id=3) acidify surrounding soil.
+    // Amber-red particles seep upward from pine root zones, warning the player.
+    // Discovery: "Why does nothing grow near my pines?"
+    const aStep = 14;
+    const PINE_SPECIES = 3;
+    for (let sy = 0; sy < GRID_Y; sy += aStep) {
+      for (let sx = 0; sx < GRID_X; sx += aStep) {
+        // Scan for pine roots underground
+        let hasPineRoot = false;
+        for (let sz = GROUND_LEVEL - 6; sz < GROUND_LEVEL; sz += 2) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] === Material.Root && grid[idx + 3] === PINE_SPECIES) {
+            hasPineRoot = true;
+            break;
+          }
+        }
+        if (!hasPineRoot) continue;
+
+        // Emit amber acid-seep particles rising from the soil surface
+        this.emitAllelopathy(sx + 0.5, GROUND_LEVEL + 0.5, sy + 0.5);
+      }
+    }
   }
 
   /** Emit a small trail of particles at a position */
@@ -386,6 +414,34 @@ export class EcologyParticles {
       p.color.copy(c);
     }
     this.wagglePhase += 0.4; // advance phase each emission for animation
+  }
+
+  /** Emit allelopathy particles — amber-red seeping up from acidified pine soil.
+   *  Slow upward drift warns the player that this ground is hostile to most species. */
+  private emitAllelopathy(worldX: number, worldY: number, worldZ: number): void {
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDead();
+      if (!p) return;
+
+      p.alive = true;
+      p.maxLife = 1.2 + Math.random() * 0.8;
+      p.life = p.maxLife;
+
+      p.x = worldX + (Math.random() - 0.5) * 1.5;
+      p.y = worldY + Math.random() * 0.3;
+      p.z = worldZ + (Math.random() - 0.5) * 1.5;
+
+      // Slow upward seep — acid rising through soil
+      p.vx = (Math.random() - 0.5) * 0.1;
+      p.vy = 0.08 + Math.random() * 0.06;
+      p.vz = (Math.random() - 0.5) * 0.1;
+
+      const c = INTERACTION_COLORS.allelopathy[
+        Math.floor(Math.random() * INTERACTION_COLORS.allelopathy.length)
+      ];
+      p.color.copy(c);
+    }
   }
 
   /** Emit small soil disturbance particles at the surface above a worm.

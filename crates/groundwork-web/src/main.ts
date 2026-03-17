@@ -182,7 +182,7 @@ const ECO_TIPS = [
   'Tip: Press Q for x-ray — see roots competing underground',
   'Tip: Press V to see water, light, or nutrient overlays',
   'Tip: Birds near trees carry seeds to surprising new spots',
-  'Tip: Pine roots acidify soil — fern and moss tolerate it, others struggle',
+  'Tip: Pine roots acidify soil — amber particles show the acid zone. Fern and moss tolerate it, others struggle',
   'Tip: Groundcover enriches soil for everyone nearby',
   'Tip: Blue particles under trees = dappled shade. Ferns and moss love it!',
   'Tip: Crowded plants die — give trees space to claim territory',
