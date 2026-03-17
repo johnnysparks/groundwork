@@ -19,6 +19,7 @@ let rustleFilter: BiquadFilterNode | null = null;
 let pollinatorGain: GainNode | null = null;
 let frogGain: GainNode | null = null;
 let beetleGain: GainNode | null = null;
+let waterSoundGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -55,8 +56,10 @@ function createWaterSound(audioCtx: AudioContext, output: GainNode): void {
   lfo.frequency.value = 0.3; // slow modulation
   lfoGain.gain.value = 0.15; // subtle volume variation
 
-  const waterGain = audioCtx.createGain();
-  waterGain.gain.value = 0.08; // quiet — background ambiance
+  waterSoundGain = audioCtx.createGain();
+  waterSoundGain.gain.value = 0.04; // starts quiet — scales with water volume
+
+  const waterGain = waterSoundGain;
 
   // Connect: noise → filter → filter2 → waterGain → output
   noise.connect(filter);
@@ -498,6 +501,15 @@ export function setPollinatorHum(pollinatorCount: number): void {
   // 0 pollinators = silent, 5+ = full hum (very quiet — background texture)
   const vol = Math.min(1, pollinatorCount / 5) * 0.015;
   pollinatorGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
+}
+
+/** Set water babble intensity based on total water voxel count.
+ *  More water channels = stronger spring babble. */
+export function setWaterBabble(waterCount: number): void {
+  if (!ctx || !waterSoundGain) return;
+  // 0 water = base 0.04, 200+ = full 0.12
+  const vol = 0.04 + Math.min(1, waterCount / 200) * 0.08;
+  waterSoundGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
 }
 
 /** Set beetle clicking intensity based on active beetle count.
