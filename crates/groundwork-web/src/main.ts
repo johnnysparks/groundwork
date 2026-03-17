@@ -41,7 +41,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playSquirrelChitter, playDewDrop, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -724,6 +724,7 @@ async function main() {
           const name = SPECIES[t.speciesId]?.name ?? 'A tree';
           const msg = STAGE_MESSAGES[t.stage];
           if (msg) hud.addEvent(`${name} ${msg}`);
+          playTreeCreak();
           if (t.stage >= GrowthStage.Mature) playDiscovery();
         }
         _prevTreeStages.set(key, t.stage);

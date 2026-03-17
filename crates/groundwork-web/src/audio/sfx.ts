@@ -368,6 +368,38 @@ export function playSquirrelChitter(): void {
   }
 }
 
+/** Play a quiet wooden creak — the sound of a tree stretching as it grows */
+export function playTreeCreak(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Low filtered noise with resonance — like bending wood
+  const bufSize = c.sampleRate * 0.6;
+  const buf = c.createBuffer(1, bufSize, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const src = c.createBufferSource();
+  src.buffer = buf;
+
+  const bpf = c.createBiquadFilter();
+  bpf.type = 'bandpass';
+  bpf.frequency.setValueAtTime(200 + Math.random() * 100, t);
+  bpf.frequency.exponentialRampToValueAtTime(80, t + 0.5);
+  bpf.Q.value = 4; // resonant — gives the woody character
+
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.03, t + 0.05);
+  gain.gain.setValueAtTime(0.03, t + 0.2);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+
+  src.connect(bpf).connect(gain).connect(c.destination);
+  src.start(t);
+  src.stop(t + 0.6);
+}
+
 /** Play a tiny water drip tinkle — accompanies dawn dew sparkles */
 export function playDewDrop(): void {
   const c = getContext();
