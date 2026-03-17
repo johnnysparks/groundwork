@@ -1601,6 +1601,11 @@ async function main() {
               && Math.random() < dt * 0.5) {
             particles.emitWormTrail(f.x, f.y); // sim x,y → world x,z
           }
+          // Squirrel footprint dust: tiny puffs when scurrying
+          if (f.type === FaunaType.Squirrel && f.state === FaunaState.Seeking
+              && Math.random() < dt * 0.8) {
+            particles.emitSquirrelPrints(f.x, f.y);
+          }
           // Flying fauna over water → ripple (low probability per frame to keep it subtle)
           if ((f.type === FaunaType.Bee || f.type === FaunaType.Butterfly || f.type === FaunaType.Bird)
               && prevWaterCount > 0 && Math.random() < dt * 0.15) {

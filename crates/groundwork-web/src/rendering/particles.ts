@@ -795,6 +795,32 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit tiny dust puffs behind a squirrel — footprints in dirt.
+   * Shows ground-level scurrying activity.
+   */
+  emitSquirrelPrints(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.3 + Math.random() * 0.2;
+    p.maxLife = p.life;
+
+    p.x = worldX + (Math.random() - 0.5) * 0.3;
+    p.y = GROUND_LEVEL + 0.05;
+    p.z = worldZ + (Math.random() - 0.5) * 0.3;
+
+    // Tiny upward puff
+    p.vx = (Math.random() - 0.5) * 0.1;
+    p.vy = 0.15 + Math.random() * 0.1;
+    p.vz = (Math.random() - 0.5) * 0.1;
+
+    // Light dust brown
+    const t = Math.random();
+    p.color.setRGB(0.55 + t * 0.15, 0.45 + t * 0.1, 0.3 + t * 0.1);
+  }
+
+  /**
    * Emit a soft golden glow at water surface below a firefly.
    * Creates the illusion of firefly light reflecting off water.
    */
