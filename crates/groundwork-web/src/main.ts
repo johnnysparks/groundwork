@@ -42,7 +42,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone, setGardenVitality } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playDistantBird, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playRootCrackle, playRaindropPlink, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playDistantBird, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playRootCrackle, playRaindropPlink, playGardenWhisper, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -1008,6 +1008,7 @@ async function main() {
   let dustPuffTimer = 0; // seconds until next gnome footstep dust puff
   let prevGnomeState = -1; // for detecting gnome state transitions
   let owlHootTimer = 30 + Math.random() * 30; // seconds until next owl hoot
+  let gardenWhisperTimer = 20 + Math.random() * 20; // seconds until next garden whisper
   let leafDripTimer = 0; // remaining seconds of post-rain leaf dripping
   let leafDripInterval = 0; // accumulator for drip emit rate
   let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
@@ -1569,6 +1570,15 @@ async function main() {
       if (owlHootTimer <= 0) {
         playOwlHoot();
         owlHootTimer = 30 + Math.random() * 40;
+      }
+    }
+
+    // Garden whisper: soft harmonic murmur when ecosystem is diverse (6+ species)
+    if (foliage.count > 500) {
+      gardenWhisperTimer -= dt;
+      if (gardenWhisperTimer <= 0) {
+        playGardenWhisper();
+        gardenWhisperTimer = 25 + Math.random() * 35;
       }
     }
 

@@ -501,6 +501,36 @@ export function playDiscovery(): void {
   }
 }
 
+/** Play a soft garden whisper — harmonic murmur when many species coexist.
+ *  Two detuned sines with slow amplitude modulation — barely audible. */
+export function playGardenWhisper(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  const base = 180 + Math.random() * 40;
+  const osc1 = c.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = base;
+  const osc2 = c.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = base * 1.5; // perfect fifth
+
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.005, t + 0.5);
+  gain.gain.linearRampToValueAtTime(0.005, t + 1.5);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+
+  osc1.connect(gain);
+  osc2.connect(gain);
+  gain.connect(c.destination);
+  osc1.start(t);
+  osc2.start(t);
+  osc1.stop(t + 2.5);
+  osc2.stop(t + 2.5);
+}
+
 /** Play a tiny raindrop plink — high sine with quick decay.
  *  Very quiet, ~10% chance per splash to keep it ambient. */
 export function playRaindropPlink(): void {
