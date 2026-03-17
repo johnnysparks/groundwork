@@ -23,6 +23,7 @@ let waterSoundGain: GainNode | null = null;
 let cricketRhythm1: OscillatorNode | null = null;
 let cricketRhythm2: OscillatorNode | null = null;
 let gardenDroneGain: GainNode | null = null;
+let cicadaGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -440,6 +441,48 @@ function createGardenDrone(audioCtx: AudioContext, output: GainNode): void {
   lfo.start();
 }
 
+/** Create drought cicada drone — harsh high-pitched buzz during drought daytime. */
+function createCicadaDrone(audioCtx: AudioContext, output: GainNode): void {
+  // Two detuned sawtooth oscillators for harsh buzz
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sawtooth';
+  osc1.frequency.value = 4200;
+
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sawtooth';
+  osc2.frequency.value = 4350; // slight detune for beating
+
+  // Narrow bandpass to make it cicada-like
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 4300;
+  bp.Q.value = 8;
+
+  // Pulsing rhythm — cicadas pulse their drone
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 6; // rapid pulse
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 0.5;
+  lfo.connect(lfoGain);
+
+  cicadaGain = audioCtx.createGain();
+  cicadaGain.gain.value = 0;
+
+  const modGain = audioCtx.createGain();
+  modGain.gain.value = 0.5;
+  lfoGain.connect(modGain.gain);
+
+  osc1.connect(bp);
+  osc2.connect(bp);
+  bp.connect(modGain);
+  modGain.connect(cicadaGain);
+  cicadaGain.connect(output);
+
+  osc1.start();
+  osc2.start();
+  lfo.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -462,6 +505,7 @@ export function initAmbientAudio(): void {
     createFrogChorus(ctx, masterGain);
     createBeetleClick(ctx, masterGain);
     createGardenDrone(ctx, masterGain);
+    createCicadaDrone(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -624,4 +668,14 @@ export function setGardenVitality(foliageCount: number, faunaCount: number): voi
   const vitality = (plantFactor * 0.7 + faunaFactor * 0.3); // weighted blend
   const target = 0.6 + vitality * 0.4; // 0.6 → 1.0
   masterGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
+}
+
+/** Set cicada drone intensity during drought — harsh daytime buzz.
+ *  Active during drought (weatherState=2) in daytime (0.25-0.75). */
+export function setCicadaDrone(weatherState: number, dayTime: number): void {
+  if (!ctx || !cicadaGain) return;
+  const isDrought = weatherState === 2;
+  const isDay = dayTime >= 0.25 && dayTime <= 0.75;
+  const target = (isDrought && isDay) ? 0.012 : 0;
+  cicadaGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 4);
 }

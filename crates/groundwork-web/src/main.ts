@@ -41,7 +41,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone, setGardenVitality } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone, setGardenVitality, setCicadaDrone } from './audio/ambient';
 import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playDistantBird, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playRootCrackle, playRaindropPlink, playGardenWhisper, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1554,6 +1554,7 @@ async function main() {
     setFrogChorus(prevWaterCount, dayTime, prevWeatherState === 1);
     setWaterBabble(prevWaterCount);
     setGardenDrone(foliage.count, dayTime);
+    setCicadaDrone(prevWeatherState, dayTime);
     {
       const fc = getFaunaCount();
       setGardenVitality(foliage.count, fc);
