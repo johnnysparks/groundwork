@@ -892,6 +892,8 @@ async function main() {
     particles.detectGrowth(freshGrid);
 
     // Detect tree growth stage transitions → celebratory burst + HUD message
+    // Only show stage messages for actual trees (species 0-3). Grass/flowers/groundcover
+    // go through growth stages too, but "Grass reached old growth — a towering giant" is absurd.
     const treeCount = packTreeStats();
     const treeView = getTreeStatsView();
     if (treeView) {
@@ -900,15 +902,19 @@ async function main() {
         const key = `${t.rootX},${t.rootY}`;
         const prevStage = _prevTreeStages.get(key);
         if (prevStage !== undefined && t.stage > prevStage && t.stage !== GrowthStage.Dead) {
-          // Sim coords (x,y) → Three.js (x, GROUND_LEVEL, y)
-          particles.emitStageBurst(t.rootX + 0.5, GROUND_LEVEL + 2, t.rootY + 0.5);
-          const name = SPECIES[t.speciesId]?.name ?? 'A tree';
-          const msg = STAGE_MESSAGES[t.stage];
-          if (msg) hud.addEvent(`${name} ${msg}`);
-          playTreeCreak();
-          if (t.stage >= GrowthStage.Mature) playDiscovery();
-          // Gently nudge camera toward growth event
-          orbit.nudgeToward(t.rootX + 0.5, GROUND_LEVEL, t.rootY + 0.5);
+          // Only celebrate actual tree species (0=Oak, 1=Birch, 2=Willow, 3=Pine)
+          const isTree = t.speciesId <= 3;
+          if (isTree) {
+            // Sim coords (x,y) → Three.js (x, GROUND_LEVEL, y)
+            particles.emitStageBurst(t.rootX + 0.5, GROUND_LEVEL + 2, t.rootY + 0.5);
+            const name = SPECIES[t.speciesId]?.name ?? 'A tree';
+            const msg = STAGE_MESSAGES[t.stage];
+            if (msg) hud.addEvent(`${name} ${msg}`);
+            playTreeCreak();
+            if (t.stage >= GrowthStage.Mature) playDiscovery();
+            // Gently nudge camera toward growth event
+            orbit.nudgeToward(t.rootX + 0.5, GROUND_LEVEL, t.rootY + 0.5);
+          }
         }
         _prevTreeStages.set(key, t.stage);
       }
