@@ -235,4 +235,95 @@ test.describe('Deep Playtest', () => {
     await logMetrics('final');
     console.log(`\nDone: 21 screenshots saved to ${SCREENSHOT_DIR}`);
   });
+
+  test('crowding stress test — dense planting with no irrigation', async ({ page }) => {
+    await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#loading.hidden', { timeout: 30000 });
+
+    const hasAPI = await page.evaluate(() => !!(window as any).agentAPI);
+    expect(hasAPI).toBeTruthy();
+
+    const stressDir = path.join(SCREENSHOT_DIR, 'stress');
+    fs.mkdirSync(stressDir, { recursive: true });
+
+    async function screenshot(label: string) {
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: path.join(stressDir, `${label}.png`), type: 'png' });
+      console.log(`  📸 stress/${label}.png`);
+    }
+
+    async function execAction(action: any) {
+      await page.evaluate(async (a: any) => {
+        const api = (window as any).agentAPI;
+        if (api) await api.executeAction(a);
+      }, action);
+      await page.waitForTimeout(100);
+    }
+
+    async function logMetrics(label: string) {
+      const metrics = await page.evaluate(() => {
+        const api = (window as any).agentAPI;
+        if (!api) return null;
+        return {
+          tick: api.getTick(),
+          fauna: api.getFaunaCount(),
+          materials: api.getMaterialCounts(),
+          species: api.getSpeciesCounts(),
+        };
+      });
+      if (!metrics) return;
+      const m = metrics.materials as Record<string, number>;
+      const plants = (m.seed ?? 0) + (m.trunk ?? 0) + (m.branch ?? 0) + (m.leaf ?? 0) + (m.root ?? 0);
+      console.log(`  📊 [${label}] tick=${metrics.tick} plants=${plants} fauna=${metrics.fauna} | seed=${m.seed} trunk=${m.trunk} branch=${m.branch} leaf=${m.leaf} root=${m.root} water=${m.water} deadwood=${m.deadwood}`);
+      const sp = metrics.species as Record<string, number>;
+      const sorted = Object.entries(sp).sort((a, b) => b[1] - a[1]);
+      const speciesLine = sorted.map(([name, count]) => `${name}=${count}`).join(' ');
+      console.log(`  🌿 [${label}] species: ${speciesLine}`);
+    }
+
+    // === STRESS: Plant a dense grid of seeds far from water ===
+    // Fill a large area with seeds — no irrigation channels
+    // This should produce crowding, shade competition, and die-offs
+    await execAction({ type: 'Fill', tool: 'seed', x1: 20, y1: 20, z1: 50, x2: 60, y2: 60, z2: 50 });
+    await execAction({ type: 'Fill', tool: 'seed', x1: 25, y1: 25, z1: 50, x2: 55, y2: 55, z2: 50 });
+    await execAction({ type: 'Tick', n: 100 });
+    await logMetrics('early-growth');
+
+    await execAction({ type: 'Tick', n: 400 });
+    await logMetrics('mid-competition');
+
+    await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 55 });
+    await execAction({ type: 'CameraZoom', level: 0.7 });
+    await screenshot('01-mid-competition-above');
+
+    // X-ray: root overlap should be intense
+    await page.keyboard.press('q');
+    await page.waitForTimeout(200);
+    await screenshot('02-mid-competition-xray');
+
+    // Continue growing — this is where die-offs should happen
+    await execAction({ type: 'Tick', n: 500 });
+    await logMetrics('late-competition');
+
+    await page.keyboard.press('q'); // back to normal
+    await page.waitForTimeout(200);
+    await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 60 });
+    await execAction({ type: 'CameraZoom', level: 0.7 });
+    await screenshot('03-late-garden');
+
+    // X-ray on mature stressed garden
+    await page.keyboard.press('q');
+    await page.waitForTimeout(200);
+    await screenshot('04-late-xray');
+    await page.keyboard.press('q');
+    await page.waitForTimeout(200);
+
+    // Inspect a stressed plant
+    const viewport = page.viewportSize()!;
+    await page.click('canvas', { position: { x: viewport.width * 0.5, y: viewport.height * 0.45 } });
+    await page.waitForTimeout(500);
+    await screenshot('05-stressed-inspect');
+
+    console.log(`\nDone: stress test screenshots saved to ${stressDir}`);
+  });
 });
