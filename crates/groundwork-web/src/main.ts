@@ -1272,6 +1272,7 @@ async function main() {
   let gardenWhisperTimer = 20 + Math.random() * 20; // seconds until next garden whisper
   let activePollinators = 0; // cross-block pollinator count for sunbeam pollen effect
   let leafDripTimer = 0; // remaining seconds of post-rain leaf dripping
+  let postRainGlow = 0; // remaining seconds of petrichor bloom boost
   let leafDripInterval = 0; // accumulator for drip emit rate
   let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
   let nextAgeMilestone = 1000; // next tick count to celebrate
@@ -1587,6 +1588,7 @@ async function main() {
           else if (prevWeatherState === 1) {
             hud.addEvent('The rain passes \u2014 skies clear');
             leafDripTimer = 30 + Math.random() * 30;
+            postRainGlow = 15; // 15 seconds of petrichor bloom boost
             skyUniforms.uRainbow.value = 1.0;
             if (!_firstRainbowNotified) { _firstRainbowNotified = true; hud.addEvent('A rainbow arcs across the sky!'); }
           }
@@ -1802,6 +1804,12 @@ async function main() {
         if (t >= 0.78 && t < 0.85) {
           const f = (t - 0.78) / 0.07;
           bloom += Math.sin(f * Math.PI) * 0.12;
+        }
+        // Post-rain petrichor glow: brief bloom boost after rain stops
+        if (postRainGlow > 0) {
+          postRainGlow -= dt;
+          const glowFade = Math.min(postRainGlow / 5, 1); // fade out over last 5s
+          bloom += 0.12 * glowFade;
         }
         postProcessing.setBloomStrength(bloom);
       }
