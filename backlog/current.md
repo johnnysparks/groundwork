@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-18T01:00:00
-**Status:** Alpha complete. 230 sprints. Full cross-system connectivity + fauna behavior particles: bee waggle dance, butterfly pollen trail, bird nesting twigs, pollen-in-sunbeams, moonbeam shafts, water fog wisps. Rain-boosted frog chorus, drought cicada drone. 16-layer responsive audio, 25 SFX types, complete fauna trails. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-18T02:00:00
+**Status:** Alpha complete. 231 sprints. **Condition-based species emergence implemented** (P0 gap closed). Density-not-species design now functional: seeds without explicit species are scored against local water, light, nutrients, shade tolerance, and garden maturity to determine what emerges. Groundcover pioneers early gardens; trees require established ecosystem. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **Irrigation replaces watering can** (executive mandate).
 
 ---
 

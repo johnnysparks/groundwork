@@ -37,19 +37,21 @@ The game is about *building conditions and discovering what emerges*. The player
 
 ## Known Gap: Condition-Based Species Emergence
 
-**The sim does not yet implement condition-based species selection.** Currently, when a seed is placed with species index 255 (sim picks), the sim falls back to a basic/random selection. The full vision requires:
+**Sprint 231: Core implementation complete.** The sim now implements condition-based species selection via `pick_species_from_conditions()` in `systems.rs`. When a seed is placed with species index 255 (sim picks), the sim scores all 12 species against local conditions and picks probabilistically using deterministic hashing.
 
-1. **Environmental fitness scoring** — each species has preferred ranges for moisture, light, soil pH, nutrient levels. The sim scores all candidate species against local conditions and picks probabilistically.
+**Implemented:**
 
-2. **Density influence** — dense sowing favors fast-growing groundcover. Sparse sowing in rich conditions allows slower, larger species (shrubs, trees) to establish.
+1. **Environmental fitness scoring** — each species scored on water match (Low/Medium/High need vs. local level), light match (shade_tolerance vs. local light), and nutrient match (plant type determines soil richness requirements). Weighted random selection via deterministic `tree_hash`.
 
-3. **Neighbor influence** — existing nearby plants shift probabilities. Nitrogen-fixing clover nearby boosts tree emergence. Shade from canopy favors shade-tolerant species.
+2. **Maturity gating** — groundcover dominates early gardens (40x multiplier). Flowers need 3+ existing plants. Shrubs need 5+ groundcover and 10+ total. Trees need 10+ groundcover and 20+ total plants. Prevents trees from appearing before the ecosystem can support them.
 
-4. **Maturity gating** — trees should only emerge in gardens with established groundcover and active fauna, matching the old milestone tier system but driven by actual conditions rather than global flags.
+3. **Temporal emergence** — early ticks (< 200) add a speed bonus proportional to species `growth_rate`, favoring fast-growing groundcover and flowers over slow trees.
 
-5. **Temporal emergence** — early ticks favor fast growers (groundcover). Only after the garden matures do slow growers (trees) have a chance, even in ideal conditions.
+**Remaining (P2):**
 
-This is a **P0 gap** for making the density-not-species design actually work. Until implemented, the sim uses its existing species selection logic as a placeholder.
+4. **Density influence** — dense sowing should favor fast-growing groundcover; sparse sowing in rich conditions should allow slower species. Currently density zone spacing is uniform.
+
+5. **Neighbor influence** — nearby plants should shift probabilities. Clover nearby could boost tree emergence. Canopy shade should favor shade-tolerant species. Currently only uses maturity counts globally, not local neighbors.
 
 ## Changes Made
 
