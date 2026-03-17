@@ -204,6 +204,11 @@ let xrayState = {
   cutawayY: GROUND_LEVEL,
 };
 
+/** Grass wave uniforms — reuse wind uniforms (same direction, same time) */
+const grassWaveTimeUniform = windTimeUniform;
+const grassWaveWindDirUniform = windDirUniform;
+const grassWaveStrengthUniform = windStrengthUniform;
+
 /** Get or create the shared soil material */
 export function getSoilMaterial(): THREE.MeshLambertMaterial {
   if (!soilMaterial) {
@@ -213,6 +218,33 @@ export function getSoilMaterial(): THREE.MeshLambertMaterial {
       opacity: 1.0,
       depthWrite: true,
     });
+    // Inject grass color wave into vertex shader — rolling light ripple across grass
+    soilMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uGrassTime = grassWaveTimeUniform;
+      shader.uniforms.uGrassWindDir = grassWaveWindDirUniform;
+      shader.uniforms.uGrassWindStr = grassWaveStrengthUniform;
+      shader.vertexShader = shader.vertexShader.replace(
+        'void main() {',
+        `uniform float uGrassTime;
+uniform vec2 uGrassWindDir;
+uniform float uGrassWindStr;
+void main() {`,
+      );
+      // Modulate vertex color for surface-level vertices (grass):
+      // Rolling wave of subtle brightness, direction follows wind
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <color_vertex>',
+        `#include <color_vertex>
+float surfaceY = ${GROUND_LEVEL.toFixed(1)};
+if (position.y >= surfaceY - 0.5 && position.y <= surfaceY + 1.0) {
+  float windPhase = position.x * uGrassWindDir.x + position.z * uGrassWindDir.y;
+  float wave = sin(windPhase * 0.4 + uGrassTime * 0.8) * 0.5 + 0.5;
+  float wave2 = sin(windPhase * 0.15 + uGrassTime * 0.3 + 2.0) * 0.5 + 0.5;
+  float brightness = 1.0 + (wave * 0.06 + wave2 * 0.04) * (0.3 + uGrassWindStr * 0.7);
+  vColor.rgb *= brightness;
+}`,
+      );
+    };
   }
   return soilMaterial;
 }
