@@ -28,11 +28,11 @@ const MAX_FAUNA = 128;
 /** Fauna model sizes in voxels — deliberately oversized for readability.
  *  Sized so creatures are visible at default camera zoom (full 80×80 garden). */
 const FAUNA_SIZES: Record<number, number> = {
-  [FaunaType.Bee]: 2.5,
-  [FaunaType.Butterfly]: 3.5,
-  [FaunaType.Bird]: 5.0,
-  [FaunaType.Worm]: 1.8,
-  [FaunaType.Beetle]: 2.0,
+  [FaunaType.Bee]: 2.0,
+  [FaunaType.Butterfly]: 2.5,
+  [FaunaType.Bird]: 2.5,
+  [FaunaType.Worm]: 1.5,
+  [FaunaType.Beetle]: 1.5,
   [FaunaType.Squirrel]: 3.0,
 };
 
