@@ -133,8 +133,14 @@ export class GrowthParticles {
   private _rootCount = 0;
   private _prevRootCount = 0;
 
+  /** Dead wood positions for fungi spore emission */
+  private deadWoodPositions: { x: number; y: number; z: number }[] = [];
+
   /** How many new root voxels appeared since last detectGrowth() */
   get rootGrowthDelta(): number { return Math.max(0, this._rootCount - this._prevRootCount); }
+
+  /** Whether dead wood exists in the garden */
+  get hasDeadWood(): boolean { return this.deadWoodPositions.length > 0; }
 
   constructor() {
     this.particles = new Array(MAX_PARTICLES);
@@ -465,6 +471,7 @@ export class GrowthParticles {
     const newSeedPositions: { x: number; y: number; z: number }[] = [];
     const newSeedKeys = new Set<number>();
     const newFlowerPositions: { x: number; y: number; z: number; species: number }[] = [];
+    const newDeadWoodPositions: { x: number; y: number; z: number }[] = [];
     let rootCount = 0;
 
     for (let z = 0; z < GRID_Z; z++) {
@@ -473,6 +480,9 @@ export class GrowthParticles {
           const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
           const mat = grid[idx];
           if (mat === Material.Root) rootCount++;
+          if (mat === Material.DeadWood && newDeadWoodPositions.length < 20) {
+            newDeadWoodPositions.push({ x, y, z });
+          }
 
           if (isFoliage(mat) || mat === Material.Trunk || mat === Material.Branch) {
             const posKey = x + y * GRID_X + z * GRID_X * GRID_Y;
@@ -531,6 +541,7 @@ export class GrowthParticles {
     this.flowerPositions = newFlowerPositions;
     this._prevRootCount = this._rootCount;
     this._rootCount = rootCount;
+    this.deadWoodPositions = newDeadWoodPositions;
   }
 
   /**
@@ -792,6 +803,36 @@ export class GrowthParticles {
     // Pale blue-white water drop
     const t = Math.random();
     p.color.setRGB(0.55 + t * 0.25, 0.7 + t * 0.2, 0.85 + t * 0.15);
+  }
+
+  /**
+   * Emit fungi/decomposition spore particles near dead wood.
+   * Warm brown-orange particles drift upward slowly.
+   */
+  emitFungiSpore(): void {
+    if (this.deadWoodPositions.length === 0) return;
+    const dw = this.deadWoodPositions[Math.floor(Math.random() * this.deadWoodPositions.length)];
+
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 1.0 + Math.random() * 1.0;
+    p.maxLife = p.life;
+
+    // Near the dead wood, sim Z→Three.js Y
+    p.x = dw.x + (Math.random() - 0.5) * 1.5;
+    p.y = dw.z + 0.5 + Math.random() * 0.5;
+    p.z = dw.y + (Math.random() - 0.5) * 1.5;
+
+    // Slow upward drift
+    p.vx = (Math.random() - 0.5) * 0.08;
+    p.vy = 0.1 + Math.random() * 0.1;
+    p.vz = (Math.random() - 0.5) * 0.08;
+
+    // Mushroom brown-orange tones
+    const t = Math.random();
+    p.color.setRGB(0.6 + t * 0.15, 0.4 + t * 0.15, 0.2 + t * 0.1);
   }
 
   /**

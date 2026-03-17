@@ -778,6 +778,11 @@ async function main() {
     if (particles.rootGrowthDelta > 5 && Math.random() < 0.3) {
       playRootCrackle();
     }
+
+    // Decomposition fungi spores: slow particles near dead wood
+    if (particles.hasDeadWood && Math.random() < 0.15) {
+      particles.emitFungiSpore();
+    }
   }
 
   // New Garden button — resets sim, HUD, and re-meshes
