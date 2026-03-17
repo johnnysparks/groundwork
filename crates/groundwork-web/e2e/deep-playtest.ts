@@ -179,10 +179,24 @@ test.describe('Deep Playtest', () => {
     await execAction({ type: 'CameraZoom', level: 1.8 });
     await screenshot('19-mature-xray-closeup');
 
+    // === 13. IRRIGATION LENS — moisture heatmap shows water distribution ===
+    // Cycle to irrigation lens (Shift+Q cycles lenses: off→roots→irrigation)
+    // Currently on roots lens, press Shift+Q to go to irrigation
+    await page.keyboard.press('Shift+q');
+    await page.waitForTimeout(300);
+    await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 55 });
+    await execAction({ type: 'CameraZoom', level: 0.8 });
+    await screenshot('20-irrigation-heatmap');
+
+    // Irrigation close-up on the dug channel area
+    await execAction({ type: 'CameraOrbit', theta_deg: 30, phi_deg: 45 });
+    await execAction({ type: 'CameraZoom', level: 1.5 });
+    await screenshot('21-irrigation-closeup');
+
     // Turn off x-ray
     await page.keyboard.press('q');
     await page.waitForTimeout(200);
 
-    console.log(`\nDone: 19 screenshots saved to ${SCREENSHOT_DIR}`);
+    console.log(`\nDone: 21 screenshots saved to ${SCREENSHOT_DIR}`);
   });
 });
