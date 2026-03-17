@@ -128,6 +128,13 @@ export class SeedRenderer {
     }
   }
 
+  /** Pulse emissive glow — seeds "breathe" with anticipation of germination */
+  update(elapsed: number): void {
+    if (this.instanceCount === 0) return;
+    const pulse = 0.3 + Math.sin(elapsed * 1.8) * 0.2 + Math.sin(elapsed * 0.7) * 0.1;
+    this.material.emissiveIntensity = pulse;
+  }
+
   /** Current number of active seed sprites */
   get count(): number {
     return this.instanceCount;

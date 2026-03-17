@@ -1724,6 +1724,9 @@ async function main() {
     foliage.update(elapsed);
     foliage.setDayTint(dayCycle.getTime());
 
+    // Seed glow pulse — anticipation of germination
+    seeds.update(elapsed);
+
     // Terrain day-night tint (reuse foliage tint values — same color temperature)
     {
       const t = dayCycle.getTime();
