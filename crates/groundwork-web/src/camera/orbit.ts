@@ -114,6 +114,10 @@ export class OrbitCamera {
       const breathe = Math.sin(this.idleElapsed * OrbitCamera.IDLE_BREATHE_SPEED);
       const baseZoom = this.targetZoom;
       this.camera.zoom = baseZoom * (1 + breathe * OrbitCamera.IDLE_BREATHE_AMP);
+      // Gentle phi oscillation — camera slowly nods up and down
+      const phiCenter = (MIN_PHI + MAX_PHI) * 0.45; // slightly above middle
+      const phiWave = Math.sin(this.idleElapsed * 0.08) * 0.12; // ±0.12 rad, very slow
+      this.targetPhi = phiCenter + phiWave;
     }
 
     // --- Damped interpolation ---
