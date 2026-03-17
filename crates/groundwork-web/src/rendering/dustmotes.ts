@@ -63,6 +63,9 @@ export class DustMoteRenderer {
   private motes: Mote[] = [];
   private timeUniform: { value: number };
   private active = false;
+  private windDirX = 0;
+  private windDirZ = 0;
+  private windStrength = 0;
 
   constructor() {
     this.group = new THREE.Group();
@@ -117,6 +120,13 @@ export class DustMoteRenderer {
     this.active = dayTime >= 0.3 && dayTime <= 0.80;
   }
 
+  /** Set wind parameters so dust drifts with the wind */
+  setWind(windAngle: number, strength: number): void {
+    this.windDirX = Math.cos(windAngle);
+    this.windDirZ = Math.sin(windAngle);
+    this.windStrength = strength;
+  }
+
   /** Update mote positions. Call each frame. */
   update(dt: number, elapsedTime: number): void {
     this.timeUniform.value = elapsedTime;
@@ -130,9 +140,9 @@ export class DustMoteRenderer {
 
       if (this.actives[i] < 0.01) continue;
 
-      // Very slow lazy drift
-      m.x += m.vx * dt;
-      m.y += m.vy * dt;
+      // Very slow lazy drift + wind influence
+      m.x += (m.vx + this.windDirX * this.windStrength * 0.3) * dt;
+      m.y += (m.vy + this.windDirZ * this.windStrength * 0.3) * dt;
       m.z += m.vz * dt;
 
       // Gentle random direction change

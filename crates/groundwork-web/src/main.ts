@@ -1836,9 +1836,11 @@ async function main() {
     mist.setWind(windAngle, foliage.getWindStrength());
     mist.update(dt);
     dustMotes.setActive(dayTime);
+    dustMotes.setWind(windAngle, foliage.getWindStrength());
     dustMotes.update(dt, elapsed);
     gnats.setActive(dayTime);
     gnats.setFoliageCount(foliage.count);
+    gnats.setWind(windAngle, foliage.getWindStrength());
     gnats.update(dt, elapsed);
     setNightAmbient(dayTime);
     setFrogChorus(prevWaterCount, dayTime, prevWeatherState === 1);

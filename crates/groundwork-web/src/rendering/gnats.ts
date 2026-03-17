@@ -71,6 +71,9 @@ export class GnatRenderer {
   private active = false;
   private foliageThreshold = false;
   private relocateTimer = 0;
+  private windDirX = 0;
+  private windDirZ = 0;
+  private windStrength = 0;
 
   constructor() {
     this.group = new THREE.Group();
@@ -128,6 +131,13 @@ export class GnatRenderer {
     this.foliageThreshold = count >= 200;
   }
 
+  /** Set wind parameters — swarm centers drift with wind, orbits expand in gusts */
+  setWind(windAngle: number, strength: number): void {
+    this.windDirX = Math.cos(windAngle);
+    this.windDirZ = Math.sin(windAngle);
+    this.windStrength = strength;
+  }
+
   /** Update gnat positions. Call each frame. */
   update(dt: number, elapsedTime: number): void {
     const shouldShow = this.active && this.foliageThreshold;
@@ -141,6 +151,18 @@ export class GnatRenderer {
       this.swarmCenters[s].x = 20 + Math.random() * (GRID_X - 40);
       this.swarmCenters[s].y = 20 + Math.random() * (GRID_Y - 40);
       this.swarmCenters[s].z = GROUND_LEVEL + 4 + Math.random() * 6;
+    }
+
+    // Wind drifts swarm centers (subtle — gnats don't fly far in wind)
+    for (let s = 0; s < NUM_SWARMS; s++) {
+      const center = this.swarmCenters[s];
+      center.x += this.windDirX * this.windStrength * 0.15 * dt;
+      center.y += this.windDirZ * this.windStrength * 0.15 * dt;
+      // Keep in bounds
+      if (center.x < 15) center.x = 15;
+      if (center.x > GRID_X - 15) center.x = GRID_X - 15;
+      if (center.y < 15) center.y = 15;
+      if (center.y > GRID_Y - 15) center.y = GRID_Y - 15;
     }
 
     for (let i = 0; i < MAX_GNATS; i++) {
