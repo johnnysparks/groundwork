@@ -81,6 +81,19 @@ const SUCCESSION_MESSAGES: Record<number, string> = {
   7: 'Wildflowers appeared in the grassy areas — succession is working!',
 };
 
+/** Condition-based emergence messages — explain WHY a species appeared */
+const EMERGENCE_MESSAGES: Record<number, string> = {
+  0: 'An oak emerged — rich soil and established groundcover made this possible',
+  1: 'A birch appeared — it thrives in bright, open ground',
+  2: 'A willow grew near water — it loves the moisture',
+  3: 'A pine is growing — it favors bright, dry conditions',
+  4: 'Fern appeared in the shade — it thrives under the canopy',
+  5: 'A berry bush grew — moderate soil and light suit it well',
+  6: 'Holly appeared — tough and shade-tolerant',
+  8: 'Daisies popped up — they love the sunlight',
+  11: 'Clover is fixing nitrogen — nearby trees will grow faster!',
+};
+
 /** Track previous stats for event detection */
 let _prevStats = { plants: 0, fauna: 0, species: 0 } as any;
 let _prevSpeciesIds = new Set<number>();
@@ -247,16 +260,22 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
       if (!_prevSpeciesIds.has(sid)) {
         // Every new species is a discovery — the player never chooses species.
         // They plant density zones and discover what emerges.
-        const msg = SUCCESSION_MESSAGES[sid];
-        if (msg) {
-          hud.addEvent(msg);
+        const succMsg = SUCCESSION_MESSAGES[sid];
+        if (succMsg) {
+          hud.addEvent(succMsg);
         } else {
           const wildMsgs = WILD_PLANT_MESSAGES[sid];
           if (wildMsgs) {
             hud.addEvent(wildMsgs[Math.floor(Math.random() * wildMsgs.length)]);
           } else {
-            const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
-            hud.addEvent(`New species discovered: ${name}!`);
+            // Condition-based emergence: explain why this species appeared
+            const emergMsg = EMERGENCE_MESSAGES[sid];
+            if (emergMsg) {
+              hud.addEvent(emergMsg);
+            } else {
+              const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
+              hud.addEvent(`New species discovered: ${name}!`);
+            }
           }
           playDiscovery();
         }
@@ -926,6 +945,9 @@ async function main() {
       if (tool === ToolCode.Seed) {
         const r = 4;
         const spacing = 3;
+        // Track water proximity for quest chapter 5
+        const currentGrid = isInitialized() ? getGridView() : grid;
+        questLog.recordSeedPlacement(hit.x, hit.y, hit.z, currentGrid);
         for (let dy = -r; dy <= r; dy += spacing) {
           for (let dx = -r; dx <= r; dx += spacing) {
             const sx = hit.x + dx;

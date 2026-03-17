@@ -35,7 +35,9 @@ export type QuestId =
   | 'digChannel'
   | 'firstBloom'
   | 'idleWatch'
-  | 'wildSpecies';
+  | 'wildSpecies'
+  | 'sowNearWater'
+  | 'sowDryGround';
 
 interface QuestDef {
   id: QuestId;
@@ -110,6 +112,19 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 4,
     detail: 'A new species appeared somewhere you didn\'t plant. How did it get there?',
   },
+  // Chapter 5: Conditions Matter — where you sow changes what grows
+  {
+    id: 'sowNearWater',
+    name: 'Sow near water',
+    chapter: 5,
+    detail: 'Plant seeds right next to the pond or a channel. Water-loving species will emerge.',
+  },
+  {
+    id: 'sowDryGround',
+    name: 'Sow on dry ground',
+    chapter: 5,
+    detail: 'Plant seeds far from water on dry soil. Compare what grows — different conditions, different species.',
+  },
 ];
 
 const CHAPTER_NAMES = [
@@ -118,6 +133,7 @@ const CHAPTER_NAMES = [
   'See Below the Surface',
   'Shape the Water',
   'The Garden Grows',
+  'Conditions Matter',
 ];
 
 // ---------------------------------------------------------------------------
@@ -146,6 +162,10 @@ interface ActionTracker {
   speciesAtLastPlant: number;
   /** True when a species appeared that the player didn't sow */
   wildSpeciesAppeared: boolean;
+  /** True when the player sowed seeds near water (within 6 voxels of Water material) */
+  sowedNearWater: boolean;
+  /** True when the player sowed seeds on dry ground (no Water within 10 voxels) */
+  sowedOnDryGround: boolean;
 }
 
 function createActionTracker(): ActionTracker {
@@ -167,6 +187,8 @@ function createActionTracker(): ActionTracker {
     idleTicks: 0,
     speciesAtLastPlant: 0,
     wildSpeciesAppeared: false,
+    sowedNearWater: false,
+    sowedOnDryGround: false,
   };
 }
 
@@ -286,6 +308,32 @@ export class QuestLog {
     this.actions.plantedSeed = true;
     this.actions.speciesPlanted.add(speciesIndex);
     this.actions.idleTicks = 0;
+  }
+
+  /** Check if a seed placement is near or far from water */
+  recordSeedPlacement(x: number, y: number, z: number, grid: Uint8Array): void {
+    // Scan radius around the seed for water voxels
+    const scanRadius = 8;
+    let nearestWater = Infinity;
+    for (let dz = -3; dz <= 3; dz++) {
+      for (let dy = -scanRadius; dy <= scanRadius; dy++) {
+        for (let dx = -scanRadius; dx <= scanRadius; dx++) {
+          const sx = x + dx, sy = y + dy, sz = z + dz;
+          if (sx < 0 || sy < 0 || sz < 0 || sx >= GRID_X || sy >= GRID_Y || sz >= GRID_Z) continue;
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] === Material.Water) {
+            const dist = Math.abs(dx) + Math.abs(dy) + Math.abs(dz);
+            if (dist < nearestWater) nearestWater = dist;
+          }
+        }
+      }
+    }
+    if (nearestWater <= 6) {
+      this.actions.sowedNearWater = true;
+    }
+    if (nearestWater > 10) {
+      this.actions.sowedOnDryGround = true;
+    }
   }
 
   /** Update the species count from the garden (call when species count changes) */
@@ -408,6 +456,12 @@ export class QuestLog {
         case 'wildSpecies':
           // A new species appeared while the player wasn't planting
           complete = this.actions.wildSpeciesAppeared;
+          break;
+        case 'sowNearWater':
+          complete = this.actions.sowedNearWater;
+          break;
+        case 'sowDryGround':
+          complete = this.actions.sowedOnDryGround;
           break;
       }
 
