@@ -107,6 +107,9 @@ let _gardenAliveNotified = false;
 let _xrayTipShown = false;
 let _recentDieOff = false;
 let _dieOffPlantCount = 0;
+let _mycorrhizalNotified = false;
+let _lightCompetitionNotified = false;
+let _pineAllelopathyNotified = false;
 
 /** Previous tree growth stages — keyed by "rootX,rootY" to detect transitions */
 const _prevTreeStages = new Map<string, number>();
@@ -785,6 +788,85 @@ async function main() {
           if (t.stage >= GrowthStage.Mature) playDiscovery();
         }
         _prevTreeStages.set(key, t.stage);
+      }
+
+      // --- Ecological discovery messages from tree data ---
+
+      // Mycorrhizal network: 2+ same-species trees near each other, one healing
+      if (!_mycorrhizalNotified && treeCount >= 2) {
+        for (let i = 0; i < treeCount; i++) {
+          const a = readTreeStat(treeView, i);
+          if (a.stage <= GrowthStage.Sapling) continue;
+          for (let j = i + 1; j < treeCount; j++) {
+            const b = readTreeStat(treeView, j);
+            if (b.speciesId !== a.speciesId || b.stage <= GrowthStage.Sapling) continue;
+            const dx = Math.abs(a.rootX - b.rootX);
+            const dy = Math.abs(a.rootY - b.rootY);
+            if (dx <= 12 && dy <= 12 && Math.abs(a.health - b.health) > 0.1) {
+              const name = SPECIES[a.speciesId]?.name ?? 'Trees';
+              hud.addEvent(`Your ${name}s are sharing health through their roots — the mycorrhizal network!`);
+              playDiscovery();
+              _mycorrhizalNotified = true;
+              break;
+            }
+          }
+          if (_mycorrhizalNotified) break;
+        }
+      }
+
+      // Light competition: birch or pine losing health near a larger tree
+      if (!_lightCompetitionNotified && treeCount >= 2) {
+        for (let i = 0; i < treeCount; i++) {
+          const t = readTreeStat(treeView, i);
+          if (t.health > 0.6 || t.stage <= GrowthStage.Sapling) continue;
+          // This tree is struggling — check for a larger tree nearby
+          for (let j = 0; j < treeCount; j++) {
+            if (j === i) continue;
+            const other = readTreeStat(treeView, j);
+            if (other.stage <= t.stage) continue;
+            const dx = Math.abs(t.rootX - other.rootX);
+            const dy = Math.abs(t.rootY - other.rootY);
+            if (dx <= 10 && dy <= 10) {
+              const name = SPECIES[t.speciesId]?.name ?? 'A tree';
+              const otherName = SPECIES[other.speciesId]?.name ?? 'its neighbor';
+              hud.addEvent(`${name} is struggling — ${otherName}'s canopy is stealing its light`);
+              _lightCompetitionNotified = true;
+              break;
+            }
+          }
+          if (_lightCompetitionNotified) break;
+        }
+      }
+
+      // Pine allelopathy: pine exists and another non-tolerant species nearby is low health
+      if (!_pineAllelopathyNotified && treeCount >= 2) {
+        let pineExists = false;
+        let pineX = 0, pineY = 0;
+        for (let i = 0; i < treeCount; i++) {
+          const t = readTreeStat(treeView, i);
+          if (t.speciesId === 3 && t.stage > GrowthStage.Sapling) { // Pine
+            pineExists = true;
+            pineX = t.rootX;
+            pineY = t.rootY;
+            break;
+          }
+        }
+        if (pineExists) {
+          for (let i = 0; i < treeCount; i++) {
+            const t = readTreeStat(treeView, i);
+            // Non-acid-tolerant species (not pine=3, fern=4, moss=9)
+            if (t.speciesId === 3 || t.speciesId === 4 || t.speciesId === 9) continue;
+            if (t.health > 0.5) continue;
+            const dx = Math.abs(t.rootX - pineX);
+            const dy = Math.abs(t.rootY - pineY);
+            if (dx <= 15 && dy <= 15) {
+              const name = SPECIES[t.speciesId]?.name ?? 'A plant';
+              hud.addEvent(`${name} is struggling near the pine — acidic soil from pine needles!`);
+              _pineAllelopathyNotified = true;
+              break;
+            }
+          }
+        }
       }
     }
 
