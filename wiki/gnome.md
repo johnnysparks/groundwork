@@ -27,11 +27,11 @@ The gnome is a **sim-side entity** (following the fauna pattern): a lightweight 
 
 | Code | Tool | Action |
 |------|------|--------|
-| 0 | Shovel | Removes any non-air voxel |
+| 0 | Shovel | Removes any non-air voxel — primary irrigation tool (dig channels from pond) |
 | 1 | Seed | Places a seed (with species id); falls via gravity |
-| 2 | Water | Places water; falls via gravity |
-| 3 | Soil | Places soil; falls via gravity |
-| 4 | Stone | Places stone directly (no gravity) |
+| 2 | Water | Debug only — irrigation via digging replaces the watering can |
+| 3 | Soil | Places soil; falls via gravity — build berms, dams, raised beds |
+| 4 | Stone | Places stone directly (no gravity) — permanent water barriers/aqueducts |
 
 ## Movement
 

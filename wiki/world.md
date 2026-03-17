@@ -16,15 +16,13 @@ The world is a **miniature terrarium** — a 4m x 4m garden bed viewed as a dior
 
 ## Terrain
 
-The surface is not flat — it has **rolling hills** generated from overlapping sine waves (amplitude +-0.3m / +-6 voxels around GROUND_LEVEL). This creates:
-- Natural water pooling in valleys
-- Elevated dry spots on hilltops
-- Visual depth even before planting
+The surface has a **gentle slope** — high at the north (y=0) edge, dropping ~4 voxels over 80 voxels to the south, with slight x-axis waviness for visual interest. This creates:
+- Natural downhill water flow from the pond
+- Varied microclimates at different elevations
+- A clear "dig from pond, water flows downhill" irrigation affordance
 
 **Fixed features:**
-- **Central spring:** 4x4 water pool at grid center, refilled to 255 every tick
-- **Stream bed:** channel from center toward SE edge, 2-3 voxels wide
-- **Stone outcrops:** 3-4 rocky boulders near edges (decorative, block roots)
+- **Pond:** Circular spring-fed pool (radius ~6 voxels) at the top of the slope (`POND_X`, `POND_Y`), refilled to 255 every tick. The primary water source — players dig irrigation channels from here.
 
 ## Voxel Materials
 

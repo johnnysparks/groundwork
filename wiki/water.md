@@ -1,9 +1,9 @@
 # Water System
 
-Water is the fundamental resource. Without it, nothing grows. With too much, areas flood.
+Water is the fundamental resource. Without it, nothing grows. With too much, areas flood. Players don't place water directly — they **dig irrigation channels** from natural water sources using the shovel. See the [Irrigation Decision](../decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md).
 
 ## Sources
-- **Central spring:** 4x4 pool at grid center, refilled to 255 every tick (permanent)
+- **Pond:** Spring-fed pool at the top of the slope (`POND_X`, `POND_Y`), refilled to 255 every tick (permanent). Water flows downhill from here.
 - **Rain events:** adds +30 water to ~20% of surface every 3 ticks during rain (30-50 tick duration)
 
 ## Flow Mechanics
@@ -25,11 +25,19 @@ See [Weather](weather.md) for rain/drought cycles.
 - Seed germination requires water >= 30 (own or adjacent)
 - Pioneer succession requires soil water >= 20 (or >= 5 near DeadWood)
 - Root water decay rate (-4/tick) means isolated roots dry out in ~50 ticks (5 seconds)
-- The spring provides infinite water at the center — plants near the spring always thrive
+- The pond provides infinite water at the top of the slope — plants near it always thrive
 
-## Design: "Gentle Timberborn" Approach
-From the competitive analysis: Timberborn makes drought its central gameplay tension (progressive droughts force water infrastructure). Stardew Valley is gentler (crops pause, don't die). Our approach:
+## Irrigation Design
 
-- **Tier 1 (Stardew-style):** Plants stop growing when soil moisture drops. No death, just pausing. This happens naturally via root water absorption (no water -> no water_intake -> no growth).
-- **Tier 2 (our implementation):** After sustained drought, roots lose water (-4/tick), health declines, deadwood appears. Pioneer succession fills gaps = recovery feature.
-- **Not implemented:** Timberborn-level infrastructure (dams, reservoirs, pumps). Our game is cozy — the spring is permanent, and recovery is always possible.
+Inspired by Timberborn's terrain-shaping water management. Players dig channels from the pond to their plants using the shovel — the terrain *is* the irrigation system. No watering can tool.
+
+**Player flow:**
+1. Start near the pond — seeds planted close get water naturally
+2. Want to expand? Dig a channel from the pond toward new planting zones
+3. Use soil tool to build berms and dams to direct flow
+4. Discover: willows along channels stabilize banks, moss colonizes damp banks
+
+**Drought tiers:**
+- **Tier 1 (Stardew-style):** Plants stop growing when soil moisture drops. No death, just pausing.
+- **Tier 2:** After sustained drought, roots lose water (-4/tick), health declines, deadwood appears. Pioneer succession fills gaps = recovery feature.
+- The pond is permanent and recovery is always possible — cozy, not punishing.

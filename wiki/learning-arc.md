@@ -8,7 +8,7 @@ The game teaches ecology through play, not tutorials. Each hour of play shifts t
 The player places seeds, adds water, and watches growth. They learn:
 - Seeds need adjacent water (level >= 30) and light (level >= 30)
 - Growth is visible within ~3 seconds (seed -> trunk at tick 17, first leaf at tick 27-35)
-- The spring provides water that spreads through soil
+- The pond provides water that flows downhill through soil — dig channels to direct it
 - Different species exist (groundcover available immediately)
 
 **Systems active:** seed_growth, water_flow, light_propagation, water_spring

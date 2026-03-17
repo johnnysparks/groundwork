@@ -56,4 +56,4 @@ Trees planted close together
 ## Balance Notes
 - **Partial recovery (+0.002/tick)** must be lower than shade penalty (~0.006) for thinning to work
 - Previously recovery was +0.005 which nearly cancelled shade -> trees never died -> no drama
-- The spring ensures at least *some* trees near water always survive -> player feels safe to experiment
+- The pond ensures at least *some* trees near water always survive -> player feels safe to experiment

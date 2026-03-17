@@ -55,16 +55,16 @@ Brown voxels replacing living wood. DeadWood is not waste — it's the start of 
 
 **What you see:** Burst of green. Plants that were stressed brighten up. Seedlings accelerate. Surface pools form.
 
-**Strategic takeaway:** Rain benefits shallow-rooted plants most (groundcover, flowers, seedlings). Deep-rooted trees near the spring barely notice — they already had water.
+**Strategic takeaway:** Rain benefits shallow-rooted plants most (groundcover, flowers, seedlings). Deep-rooted trees near the pond barely notice — they already had water.
 
 ### Drought
 
 **What happens:** Surface water evaporates (-8 every 5 ticks). Shallow soil dries (-3 every 5 ticks). Lasts 40-70 ticks.
 
-**What you see:** Surface water shrinks. Foliage on exposed plants shifts toward amber. Seedlings and saplings die first (3-4x vulnerability). Mature trees near the spring stay green.
+**What you see:** Surface water shrinks. Foliage on exposed plants shifts toward amber. Seedlings and saplings die first (3-4x vulnerability). Mature trees near the pond stay green.
 
 **Strategic takeaway:**
-- **Plants near the spring survive.** The spring refills every tick — roots that reach it never run dry.
+- **Plants near the pond survive.** The pond refills every tick — roots that reach it never run dry.
 - **Deep roots protect against drought.** Oak (30 voxel root depth) and pine (30 voxels) access water below the drought-affected surface layers.
 - **Willow is drought-vulnerable.** Despite being a "water specialist," willow needs high water intake (threshold 80). Without it, the 2x growth bonus disappears and willow struggles.
 - **Holly is drought-proof.** Low water need (threshold 40) + slow growth rate = survives conditions that kill everything else.
@@ -117,9 +117,9 @@ Birch grows 1.5x faster in open ground (pioneer vigor). It's your fastest tree �
 
 Plant clover around your oak's base. When 3+ clover leaf voxels sit within 5 voxels of the oak's root position, the oak gets a 1.5x growth boost (nitrogen handshake). This is the game's signature synergy — the foundation of every productive garden.
 
-### The Water Engine: Willow + Stream
+### The Water Engine: Willow + Irrigation
 
-Place willows near the central spring or stream bed. With water_intake > 50, willows grow at 2x rate. Their wide crowns (1.5m radius, widest in the game) create excellent shade canopy for fern and moss underneath.
+Place willows near the pond or along irrigation channels you've dug. With water_intake > 50, willows grow at 2x rate. Their wide crowns (1.5m radius, widest in the game) create excellent shade canopy for fern and moss underneath.
 
 ### The Pollinator Loop: Flowers + Trees
 
@@ -151,7 +151,7 @@ Water flows downhill and spreads laterally. Excess pools in low areas. Seeds can
 
 ### Drought Damage
 
-Surface plants amber and die. But roots underground still hold water for ~50 ticks (root water decays at -4/tick from max ~200). If rain returns, dead trees with wet roots revive: +0.006 health/tick, then snap back to Sapling at health 0.3. This means **drought damage is reversible** if you act quickly with the watering can.
+Surface plants amber and die. But roots underground still hold water for ~50 ticks (root water decays at -4/tick from max ~200). If rain returns, dead trees with wet roots revive: +0.006 health/tick, then snap back to Sapling at health 0.3. This means **drought damage is reversible** — dig an irrigation channel from the pond to the affected area.
 
 ### Bare Patch
 
@@ -210,7 +210,7 @@ Plant clover near oak roots
 
 | Threat | Severity | Who Dies First | Who Survives |
 |--------|----------|---------------|-------------|
-| No water | High | Seedlings (4x damage), shallow-rooted species | Deep-rooted trees near spring |
+| No water | High | Seedlings (4x damage), shallow-rooted species | Deep-rooted trees near pond |
 | No light (shade) | Medium | Sun-lovers: pine, daisy, grass | Shade-lovers: fern, moss, holly |
 | Drought event | High | Surface plants, seedlings | Deep roots, well-watered trees, holly |
 | Root competition | Medium | Smaller/newer trees | Established trees with more root mass |
