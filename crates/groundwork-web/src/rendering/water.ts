@@ -198,6 +198,7 @@ const waterFragmentShader = /* glsl */ `
   uniform vec3 uSunDirection;
   uniform float uSunIntensity;
   uniform float uRainStrength;
+  uniform vec3 uDayTint;
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -340,6 +341,9 @@ const waterFragmentShader = /* glsl */ `
     float alpha = mix(0.45, 0.88, depthFactor);
     alpha = mix(alpha, max(alpha, 0.6), foam);
 
+    // Day cycle color tint: warm gold at golden hour, cool blue at night
+    lit *= uDayTint;
+
     gl_FragColor = vec4(lit, alpha);
   }
 `;
@@ -424,6 +428,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
         uSunDirection: { value: new THREE.Vector3(0.5, -0.3, 0.8).normalize() },
         uSunIntensity: { value: 1.2 },
         uRainStrength: { value: 0 },
+        uDayTint: { value: new THREE.Color(1, 1, 1) },
       },
       transparent: true,
       depthWrite: false,   // transparent surfaces shouldn't write depth
@@ -456,6 +461,16 @@ export function updateWaterSun(direction: THREE.Vector3, intensity: number): voi
   if (waterMaterial) {
     waterMaterial.uniforms.uSunDirection.value.copy(direction).normalize();
     waterMaterial.uniforms.uSunIntensity.value = intensity;
+  }
+}
+
+/**
+ * Set the day-cycle color tint for water reflections.
+ * Warm gold at golden hour, cool blue at night, neutral at midday.
+ */
+export function updateWaterDayTint(r: number, g: number, b: number): void {
+  if (waterMaterial) {
+    waterMaterial.uniforms.uDayTint.value.setRGB(r, g, b);
   }
 }
 
