@@ -612,3 +612,15 @@ export function setGardenDrone(foliageCount: number, dayTime: number): void {
   const target = isNightTime ? vitality * 0.006 : 0;
   gardenDroneGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 5);
 }
+
+/** Scale master ambient volume with garden vitality.
+ *  Empty garden: 0.6x volume. Thriving garden (1000+ foliage, 5+ fauna): 1.0x.
+ *  Makes a dense garden sound richer and more alive overall. */
+export function setGardenVitality(foliageCount: number, faunaCount: number): void {
+  if (!masterGain || !ctx) return;
+  const plantFactor = Math.min(1, Math.max(0, foliageCount / 1000));
+  const faunaFactor = Math.min(1, Math.max(0, faunaCount / 5));
+  const vitality = (plantFactor * 0.7 + faunaFactor * 0.3); // weighted blend
+  const target = 0.6 + vitality * 0.4; // 0.6 → 1.0
+  masterGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
+}

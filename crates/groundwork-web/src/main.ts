@@ -41,7 +41,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone, setGardenVitality } from './audio/ambient';
 import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playDistantBird, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playRootCrackle, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1536,6 +1536,7 @@ async function main() {
     setFrogChorus(prevWaterCount, dayTime);
     setWaterBabble(prevWaterCount);
     setGardenDrone(foliage.count, dayTime);
+    setGardenVitality(foliage.count, getFaunaCount());
 
     // Owl hoot during deep night
     const isDeepNight = dayTime >= 0.80 || dayTime < 0.10;
