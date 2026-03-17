@@ -160,6 +160,57 @@ export function playBirdCall(): void {
   osc2.stop(t + 0.22);
 }
 
+/** Play a soft owl hoot — two low descending tones, classic "hoo-hoo" */
+export function playOwlHoot(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // First hoo: descending sine with vibrato
+  const osc1 = c.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(380, t);
+  osc1.frequency.exponentialRampToValueAtTime(320, t + 0.3);
+  const vib1 = c.createOscillator();
+  vib1.frequency.value = 4;
+  const vibGain1 = c.createGain();
+  vibGain1.gain.value = 5;
+  vib1.connect(vibGain1);
+  vibGain1.connect(osc1.frequency);
+  const g1 = c.createGain();
+  g1.gain.setValueAtTime(0, t);
+  g1.gain.linearRampToValueAtTime(0.04, t + 0.05);
+  g1.gain.setValueAtTime(0.04, t + 0.2);
+  g1.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  osc1.connect(g1).connect(c.destination);
+  osc1.start(t);
+  vib1.start(t);
+  osc1.stop(t + 0.35);
+  vib1.stop(t + 0.35);
+
+  // Second hoo: slightly lower, 0.4s later
+  const osc2 = c.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(340, t + 0.4);
+  osc2.frequency.exponentialRampToValueAtTime(280, t + 0.75);
+  const vib2 = c.createOscillator();
+  vib2.frequency.value = 4;
+  const vibGain2 = c.createGain();
+  vibGain2.gain.value = 5;
+  vib2.connect(vibGain2);
+  vibGain2.connect(osc2.frequency);
+  const g2 = c.createGain();
+  g2.gain.setValueAtTime(0, t + 0.4);
+  g2.gain.linearRampToValueAtTime(0.035, t + 0.45);
+  g2.gain.setValueAtTime(0.035, t + 0.6);
+  g2.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+  osc2.connect(g2).connect(c.destination);
+  osc2.start(t + 0.4);
+  vib2.start(t + 0.4);
+  osc2.stop(t + 0.8);
+  vib2.stop(t + 0.8);
+}
+
 /** Play a soft buzz for bee/butterfly arrival */
 export function playBuzz(): void {
   const c = getContext();

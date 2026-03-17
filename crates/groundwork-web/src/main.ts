@@ -41,7 +41,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound, playOwlHoot } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -916,6 +916,7 @@ async function main() {
   let prevWaterCount = 0; // for detecting water expansion (channel filling)
   let dustPuffTimer = 0; // seconds until next gnome footstep dust puff
   let prevGnomeState = -1; // for detecting gnome state transitions
+  let owlHootTimer = 30 + Math.random() * 30; // seconds until next owl hoot
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -1360,6 +1361,16 @@ async function main() {
     setNightAmbient(dayTime);
     setFrogChorus(prevWaterCount, dayTime);
     setWaterBabble(prevWaterCount);
+
+    // Owl hoot during deep night
+    const isDeepNight = dayTime >= 0.80 || dayTime < 0.10;
+    if (isDeepNight) {
+      owlHootTimer -= dt;
+      if (owlHootTimer <= 0) {
+        playOwlHoot();
+        owlHootTimer = 30 + Math.random() * 40;
+      }
+    }
 
     // Falling leaves: ambient canopy motion
     fallingLeaves.setPlantCount(foliage.count);
