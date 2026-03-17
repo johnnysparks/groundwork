@@ -40,7 +40,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient } from './audio/ambient';
-import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart } from './audio/sfx';
+import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -894,6 +894,8 @@ async function main() {
   let tickSpeed = 1; // 1x, 2x, 5x
   let prevWeatherState = 0; // 0=Clear, 1=Rain, 2=Drought
   let droughtStress = 0; // 0-1 smooth drought foliage yellowing
+  let gustTimer = 8 + Math.random() * 12; // seconds until next wind gust
+  let gustStrength = 0; // 0-1 current gust intensity (decays after gust)
   let ambientSoundTimer = 0; // seconds until next ambient fauna sound
   let growthSoundCooldown = 0; // ticks until next growth sound can play
   let prevPlantCount = 0; // for detecting growth bursts
@@ -1355,9 +1357,26 @@ async function main() {
       setRaining(weatherState === 1);    // rain audio
       updateWaterRain(rain.getIntensity());
       // Wind strength varies with weather: gusty in rain, still in drought
-      const targetWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
+      const baseWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
+
+      // Dynamic wind gusts — periodic pulses that spike wind strength
+      gustTimer -= dt;
+      if (gustTimer <= 0) {
+        gustStrength = 0.3 + Math.random() * 0.3; // 0.3-0.6 gust peak
+        // Next gust sooner in rain (windy), later in drought (still)
+        gustTimer = weatherState === 1 ? 6 + Math.random() * 8
+          : weatherState === 2 ? 20 + Math.random() * 15
+          : 10 + Math.random() * 15;
+        playWindGust();
+        fallingLeaves.emitGustBurst();
+      }
+      // Gust decays smoothly over ~3s
+      gustStrength *= Math.max(0, 1 - dt * 0.5);
+      if (gustStrength < 0.01) gustStrength = 0;
+
+      const targetWind = Math.min(1, baseWind + gustStrength);
       const currentWind = foliage.getWindStrength();
-      const newWind = currentWind + (targetWind - currentWind) * 0.02;
+      const newWind = currentWind + (targetWind - currentWind) * 0.05;
       foliage.setWindStrength(newWind);
       setWindAmbient(newWind);
     }

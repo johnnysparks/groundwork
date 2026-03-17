@@ -299,6 +299,39 @@ export function playDroughtStart(): void {
   osc.stop(t + 1.0);
 }
 
+/** Play a soft wind gust whoosh — filtered noise sweep */
+export function playWindGust(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Short burst of filtered noise that sweeps up then fades
+  const bufSize = c.sampleRate;
+  const buf = c.createBuffer(1, bufSize, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const noise = c.createBufferSource();
+  noise.buffer = buf;
+
+  const filter = c.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(200, t);
+  filter.frequency.linearRampToValueAtTime(600, t + 0.4);
+  filter.frequency.linearRampToValueAtTime(250, t + 1.2);
+  filter.Q.value = 0.8;
+
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.06, t + 0.3);
+  gain.gain.linearRampToValueAtTime(0.04, t + 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+
+  noise.connect(filter).connect(gain).connect(c.destination);
+  noise.start(t);
+  noise.stop(t + 1.2);
+}
+
 /** Play a fauna arrival sound based on type */
 export function playFaunaArrival(faunaType: number): void {
   // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle

@@ -142,6 +142,18 @@ export class FallingLeaves {
     this.colors[i * 3 + 2] = c[2];
   }
 
+  /** Burst: respawn all leaves at the canopy top for a visible gust surge. */
+  emitGustBurst(): void {
+    for (let i = 0; i < MAX_LEAVES; i++) {
+      const leaf = this.spawnLeaf();
+      // Cluster near top of canopy for a visible cascade
+      leaf.z = GROUND_LEVEL + 25 + Math.random() * 15;
+      leaf.fallSpeed *= 1.3; // fall a bit faster during gust
+      this.leaves[i] = leaf;
+      this.writeLeaf(i, leaf);
+    }
+  }
+
   update(dt: number, elapsedTime: number): void {
     this.timeUniform.value = elapsedTime;
 
