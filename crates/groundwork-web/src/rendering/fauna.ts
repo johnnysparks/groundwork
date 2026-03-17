@@ -223,7 +223,16 @@ export class FaunaRenderer {
         slot.model.scale.multiplyScalar(0.6);
       }
 
-      // Acting state: slight bob
+      // Flight bob for airborne fauna — gentle vertical oscillation
+      if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly || f.type === FaunaType.Bird) {
+        const bobSpeed = f.type === FaunaType.Butterfly ? 3 : f.type === FaunaType.Bird ? 2 : 5;
+        const bobAmp = f.type === FaunaType.Bird ? 0.25 : 0.15;
+        slot.model.position.y += Math.sin(elapsedTime * bobSpeed + i * 2.1) * bobAmp;
+        // Gentle banking tilt (roll toward movement direction feel)
+        slot.model.rotation.z = Math.sin(elapsedTime * bobSpeed * 0.7 + i) * 0.08;
+      }
+
+      // Acting state: extra bob on top of flight bob
       if (f.state === FaunaState.Acting) {
         slot.model.position.y += Math.sin(elapsedTime * 8 + i) * 0.15;
       }
