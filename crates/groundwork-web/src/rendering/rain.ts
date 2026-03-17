@@ -12,8 +12,8 @@
 import * as THREE from 'three';
 import { GRID_X, GRID_Y, GROUND_LEVEL } from '../bridge';
 
-/** Max rain droplets */
-const MAX_DROPS = 800;
+/** Max rain droplets — gentle shower, not a downpour */
+const MAX_DROPS = 400;
 
 /** Rain area: covers the garden bed with some margin */
 const RAIN_MIN_X = -10;
@@ -35,7 +35,7 @@ const RAIN_VERT = /* glsl */ `
     vLife = aLife;
     vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
     // Elongated drop: size scales with life (full when alive)
-    gl_PointSize = mix(1.0, 3.0, aLife);
+    gl_PointSize = mix(0.8, 2.0, aLife);
     gl_Position = projectionMatrix * mvPos;
   }
 `;
@@ -50,7 +50,7 @@ const RAIN_FRAG = /* glsl */ `
     vec2 uv = gl_PointCoord - 0.5;
     float dist = length(uv) * 2.0;
     if (dist > 1.0) discard;
-    float alpha = (1.0 - dist) * vLife * 0.4;
+    float alpha = (1.0 - dist) * vLife * 0.25;
 
     gl_FragColor = vec4(uColor, alpha);
   }
