@@ -961,6 +961,7 @@ async function main() {
   let leafDripTimer = 0; // remaining seconds of post-rain leaf dripping
   let leafDripInterval = 0; // accumulator for drip emit rate
   let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
+  let nextAgeMilestone = 1000; // next tick count to celebrate
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -1231,7 +1232,27 @@ async function main() {
         ticked = true;
       }
       if (ticked) {
-        hud.setTickCount(Number(getTick()));
+        const currentTick = Number(getTick());
+        hud.setTickCount(currentTick);
+        // Garden age milestones
+        if (currentTick >= nextAgeMilestone) {
+          const messages: Record<number, string> = {
+            1000: 'Your garden has lived 1,000 moments \u2014 roots are taking hold',
+            5000: '5,000 moments \u2014 this is a living ecosystem now',
+            10000: '10,000 moments \u2014 your garden tells its own story',
+            25000: '25,000 moments \u2014 ancient trees, deep roots, a world complete',
+          };
+          const msg = messages[nextAgeMilestone];
+          if (msg) {
+            hud.addEvent(msg);
+            playDiscovery();
+          }
+          // Schedule next milestone
+          if (nextAgeMilestone < 5000) nextAgeMilestone = 5000;
+          else if (nextAgeMilestone < 10000) nextAgeMilestone = 10000;
+          else if (nextAgeMilestone < 25000) nextAgeMilestone = 25000;
+          else nextAgeMilestone = nextAgeMilestone + 25000;
+        }
         // Gnome processes tasks — walks to each one and executes
         // (gnome update happens in the frame loop below)
         const freshGrid = getGridView();
