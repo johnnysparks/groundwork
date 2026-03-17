@@ -385,8 +385,14 @@ export class GrowthParticles {
               }
             }
           } else if (mat === Material.Seed) {
+            const seedKey = x + y * GRID_X + z * GRID_X * GRID_Y;
             newSeedPositions.push({ x, y, z });
-            newSeedKeys.add(x + y * GRID_X + z * GRID_X * GRID_Y);
+            newSeedKeys.add(seedKey);
+
+            // New seed appeared (wind/bird dispersal) — emit a falling trail
+            if (!this.prevSeedKeys.has(seedKey)) {
+              this.emitSeedLanding(x + 0.5, z + 0.5, y + 0.5);
+            }
           }
 
           // Track flower leaf positions for petal scatter
@@ -500,6 +506,35 @@ export class GrowthParticles {
 
     const c = SEED_COLORS[Math.floor(Math.random() * SEED_COLORS.length)];
     p.color.copy(c);
+  }
+
+  /**
+   * Emit a descending golden trail at a newly-dispersed seed landing site.
+   * Shows where wind or bird carried a seed.
+   */
+  private emitSeedLanding(worldX: number, worldY: number, worldZ: number): void {
+    const count = 4;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.8 + Math.random() * 0.4;
+      p.maxLife = p.life;
+
+      // Trail descends from above the landing point
+      p.x = worldX + (Math.random() - 0.5) * 0.3;
+      p.y = worldY + 2 + Math.random() * 3; // starts above
+      p.z = worldZ + (Math.random() - 0.5) * 0.3;
+
+      // Falling + slight drift
+      p.vx = (Math.random() - 0.5) * 0.15;
+      p.vy = -1.5 - Math.random() * 0.5; // falls down
+      p.vz = (Math.random() - 0.5) * 0.15;
+
+      const c = SEED_COLORS[Math.floor(Math.random() * SEED_COLORS.length)];
+      p.color.copy(c);
+    }
   }
 
   /**
