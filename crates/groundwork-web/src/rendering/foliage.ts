@@ -94,9 +94,17 @@ const FOLIAGE_VERT = /* glsl */ `
       bloomScale = 0.55 + 0.45 * uDayAmount;
     }
 
+    // Groundcover breathing: moss(9), grass(10), clover(11) pulse gently
+    // independent of wind — the forest floor respires even in still air
+    float breatheScale = 1.0;
+    if (sp == 9 || sp == 10 || sp == 11) {
+      float phase = worldPos.x * 0.15 + worldPos.z * 0.12 + uTime * 0.3;
+      breatheScale = 1.0 + sin(phase) * 0.04 + sin(phase * 2.3 + 1.0) * 0.02;
+    }
+
     vec3 vertexWorld = worldPos.xyz
-      + cameraRight * position.x * scale * bloomScale
-      + cameraUp * position.y * scale * bloomScale
+      + cameraRight * position.x * scale * bloomScale * breatheScale
+      + cameraUp * position.y * scale * bloomScale * breatheScale
       + vec3(swayX, swayY, swayZ);
 
     gl_Position = projectionMatrix * viewMatrix * vec4(vertexWorld, 1.0);
