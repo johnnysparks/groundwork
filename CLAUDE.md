@@ -102,7 +102,7 @@ crates/
       lib.rs              Public API: create_world(), create_schedule(), tick()
       voxel.rs            Voxel cell struct (Material + water/light/nutrient levels, 4 bytes)
       grid.rs             VoxelGrid Resource — flat Vec<Voxel>, 80×80×100
-      scale.rs            Scale normalization: VOXEL_SIZE_M (0.5m), meters_to_voxels()
+      scale.rs            Scale normalization: VOXEL_SIZE_M (0.05m), meters_to_voxels()
       soil.rs             SoilComposition (6 bytes) + SoilGrid Resource
       tree.rs             12 species, PlantType enum, growth stages, space colonization
       systems.rs          ECS systems: water, soil, light, seeds, trees, dispersal
@@ -172,7 +172,7 @@ crates/
 - **Three.js + WASM hybrid**: Sim compiles to WASM via wasm-bindgen. Three.js reads the voxel grid via zero-copy typed array views into WASM memory. JS hot-reloads for visual iteration. See `decisions/2026-03-13T18:00:00_3d_web_renderer_plan.md`.
 - **Zero-copy data path**: VoxelGrid is a flat array (640K × 4 bytes = 2.56MB). JS reads it directly from WASM linear memory as a `Uint8Array`.
 - **Greedy meshing with chunking**: 80×80×100 grid divides into 16×16×16 chunks. Per-vertex AO. Only dirty chunks re-mesh after tick.
-- **Scale normalization**: All dimensions in meters, converted via `scale.rs`. `VOXEL_SIZE_M = 0.5`.
+- **Scale normalization**: All dimensions in meters, converted via `scale.rs`. `VOXEL_SIZE_M = 0.05` (5cm voxels). Grid is 80×80×100 = 4m×4m×5m glen.
 - **Flat voxel array**: 640K voxels in contiguous Vec. Z=0 is deepest, Z=GROUND_LEVEL (~50) is surface, Z=99 is sky.
 - **12 species, 4 plant types**: Tree/Shrub/Groundcover/Flower. Trees use space colonization branching, others use templates.
 - **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
@@ -314,7 +314,7 @@ The LLM player agent loop (Phases 1-3 in `groundwork-player`) exists to make the
 
 ## Key Constraints
 
-- **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~80×80×100 voxel garden bed (40m×40m×50m at 0.5m/voxel), continuous above/below-ground camera
+- **MVP scope is locked**: one temperate biome, 12-20 species, four systems (light/water/roots/ecology), one ~80×80×100 voxel garden bed (4m×4m×5m at 0.05m/voxel), continuous above/below-ground camera
 - **Biome-ready architecture**: MVP ships temperate only, but sim architecture (species rosters, interaction rules, fauna triggers, visual palettes) must be data-driven and biome-parameterized — so adding a new biome is a content task, not a rewrite. Biomes are a core replayability pillar, not a P3 afterthought. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
 - **Fauna and interaction webs are MVP**, not post-MVP. A garden without visible life and species interactions cannot answer the canonical question. Even simple representations (particle-like bees, earthworm soil trails, bird silhouettes) count — fidelity can be low if the ecological *role* is clear.
 - **Web is the primary player interface.** TUI/CLI continue as dev/debug tools.
