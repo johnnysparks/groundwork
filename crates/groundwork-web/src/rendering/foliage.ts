@@ -31,6 +31,7 @@ const FOLIAGE_VERT = /* glsl */ `
   uniform float uWindStrength;
   uniform vec2 uWindDir;
   uniform vec3 uDayTint;
+  uniform float uDayAmount;
 
   varying vec3 vColor;
   varying vec2 vUv;
@@ -41,19 +42,38 @@ const FOLIAGE_VERT = /* glsl */ `
     vUv = uv;
     vSpecies = instanceSpecies;
 
+    int sp = int(instanceSpecies + 0.5);
+
     // Billboard: extract instance position from instance matrix
     vec4 worldPos = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
 
     // Wind sway: sine wave offset by world position for natural variation
     // Height above ground increases sway amplitude (Three.js Y = up)
     float heightFactor = max(0.0, (worldPos.y - ${GROUND_LEVEL.toFixed(1)}) * 0.04);
-    float swayX = sin(uTime * 1.2 + worldPos.x * 0.7 + worldPos.z * 0.3) * uWindStrength * heightFactor;
-    float swayY = cos(uTime * 0.9 + worldPos.z * 0.5 + worldPos.x * 0.4) * uWindStrength * heightFactor * 0.6;
-    float swayZ = sin(uTime * 0.7 + worldPos.x * 0.3 + worldPos.z * 0.6) * uWindStrength * heightFactor * 0.2;
+
+    // Species-specific wind personality:
+    //   Oak(0):    slow heavy sway, deep amplitude
+    //   Birch(1):  quick fluttery, high frequency
+    //   Willow(2): slow deep swoops, dramatic amplitude
+    //   Pine(3):   stiff, minimal sway
+    //   Fern(4):   medium, bouncy
+    //   Flowers/groundcover: light and responsive
+    float timeScale = 1.0;
+    float ampScale = 1.0;
+    if (sp == 0) { timeScale = 0.7; ampScale = 1.3; }       // Oak: slow, heavy
+    else if (sp == 1) { timeScale = 1.5; ampScale = 0.9; }   // Birch: fluttery
+    else if (sp == 2) { timeScale = 0.5; ampScale = 1.6; }   // Willow: deep swoops
+    else if (sp == 3) { timeScale = 0.9; ampScale = 0.4; }   // Pine: stiff
+    else if (sp == 4) { timeScale = 1.1; ampScale = 1.1; }   // Fern: bouncy
+
+    float t = uTime * timeScale;
+    float swayX = sin(t * 1.2 + worldPos.x * 0.7 + worldPos.z * 0.3) * uWindStrength * heightFactor * ampScale;
+    float swayY = cos(t * 0.9 + worldPos.z * 0.5 + worldPos.x * 0.4) * uWindStrength * heightFactor * 0.6 * ampScale;
+    float swayZ = sin(t * 0.7 + worldPos.x * 0.3 + worldPos.z * 0.6) * uWindStrength * heightFactor * 0.2 * ampScale;
 
     // Directional lean: foliage leans in wind direction during gusts
     // Stronger wind = more directional lean, weaker = random sway dominates
-    float leanAmount = uWindStrength * uWindStrength * heightFactor * 0.6;
+    float leanAmount = uWindStrength * uWindStrength * heightFactor * 0.6 * ampScale;
     swayX += uWindDir.x * leanAmount;
     swayZ += uWindDir.y * leanAmount;
 
@@ -65,9 +85,18 @@ const FOLIAGE_VERT = /* glsl */ `
     // Scale from instance matrix (uniform scale assumed)
     float scale = length(instanceMatrix[0].xyz);
 
+    // Flower bloom cycle: flowers open during day, close at night
+    // Species 7=Wildflower, 8=Daisy
+    float bloomScale = 1.0;
+    if (sp == 7 || sp == 8) {
+      // uDayAmount: 1.0 = full day, 0.0 = full night
+      // Flowers shrink to 55% at night (closed), full size during day
+      bloomScale = 0.55 + 0.45 * uDayAmount;
+    }
+
     vec3 vertexWorld = worldPos.xyz
-      + cameraRight * position.x * scale
-      + cameraUp * position.y * scale
+      + cameraRight * position.x * scale * bloomScale
+      + cameraUp * position.y * scale * bloomScale
       + vec3(swayX, swayY, swayZ);
 
     gl_Position = projectionMatrix * viewMatrix * vec4(vertexWorld, 1.0);
@@ -282,6 +311,7 @@ export class FoliageRenderer {
         uWindStrength: { value: 0.35 },
         uWindDir: { value: new THREE.Vector2(1, 0) },
         uDayTint: { value: new THREE.Color(1, 1, 1) },
+        uDayAmount: { value: 1.0 },
       },
       transparent: true,
       depthWrite: false,
@@ -450,6 +480,11 @@ export class FoliageRenderer {
       tint.g * (1 - stress * 0.3) + dg * stress * 0.3,
       tint.b * (1 - stress * 0.3) + db * stress * 0.3,
     );
+  }
+
+  /** Set day amount for flower bloom cycle (0=night/closed, 1=day/open) */
+  setDayAmount(amount: number): void {
+    this.material.uniforms.uDayAmount.value = amount;
   }
 
   /** Current number of active foliage sprites */

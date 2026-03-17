@@ -1755,9 +1755,20 @@ async function main() {
       foliage.setDroughtStress(droughtStress);
     }
 
-    // Animate foliage wind sway + day-night color tinting
+    // Animate foliage wind sway + day-night color tinting + flower bloom cycle
     foliage.update(elapsed);
     foliage.setDayTint(dayCycle.getTime());
+    // Flower bloom: open during daytime (0.25-0.75), closed at night
+    {
+      const t = dayCycle.getTime();
+      let dayAmt: number;
+      if (t < 0.20) dayAmt = 0;                              // night: closed
+      else if (t < 0.30) dayAmt = (t - 0.20) / 0.10;        // dawn: opening
+      else if (t < 0.70) dayAmt = 1;                          // day: open
+      else if (t < 0.80) dayAmt = 1 - (t - 0.70) / 0.10;    // dusk: closing
+      else dayAmt = 0;                                         // night: closed
+      foliage.setDayAmount(dayAmt);
+    }
 
     // Seed glow pulse — anticipation of germination
     seeds.update(elapsed);
