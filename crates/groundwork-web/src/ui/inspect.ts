@@ -66,6 +66,23 @@ function findNearbyCompetitor(grid: Uint8Array, x: number, y: number, z: number,
   return sp ? sp.name : null;
 }
 
+/** Check if groundcover species (moss/grass/clover) exist within a small radius. */
+function hasNearbyGroundcover(grid: Uint8Array, x: number, y: number, z: number): boolean {
+  const radius = 6;
+  const groundcoverIds = new Set([9, 10, 11]); // moss, grass, clover
+  const plantMats = new Set([Material.Seed, Material.Leaf, Material.Root]);
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      // Check at ground level only (groundcover is near surface)
+      const nx = x + dx, ny = y + dy, nz = z;
+      if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y || nz < 0 || nz >= GRID_Z) continue;
+      const nIdx = (nx + ny * GRID_X + nz * GRID_X * GRID_Y) * VOXEL_BYTES;
+      if (plantMats.has(grid[nIdx]) && groundcoverIds.has(grid[nIdx + 3])) return true;
+    }
+  }
+  return false;
+}
+
 /** Human-readable label for a 0-255 value */
 function levelLabel(value: number): string {
   if (value === 0) return 'none';
@@ -149,6 +166,16 @@ export function readVoxelAt(grid: Uint8Array, x: number, y: number, z: number): 
         : 'In the shadow of a taller tree';
     } else if (condition === 'dry') {
       stressHint = 'Roots need moisture — dig irrigation channels nearby';
+    } else if (condition === 'thriving') {
+      // Positive hints — teach why the plant succeeds
+      const hasGroundcover = hasNearbyGroundcover(grid, x, y, z);
+      if (hasGroundcover) {
+        stressHint = 'Enriched soil — groundcover fixes nitrogen nearby';
+      } else if (light > 180) {
+        stressHint = 'Strong sunlight and good water access';
+      } else {
+        stressHint = 'Good balance of water, light, and soil';
+      }
     }
   }
 
