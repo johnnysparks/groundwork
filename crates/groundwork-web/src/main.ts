@@ -1398,6 +1398,7 @@ async function main() {
     dew.setActive(dayTime);
     dew.update(dt, elapsed);
     mist.setActive(dayTime);
+    mist.setWaterInfluence(prevWaterCount);
     mist.update(dt);
     dustMotes.setActive(dayTime);
     dustMotes.update(dt, elapsed);

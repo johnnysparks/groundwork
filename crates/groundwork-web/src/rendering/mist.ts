@@ -50,6 +50,7 @@ export class MistRenderer {
   private actives: Float32Array;
   private wisps: MistWisp[] = [];
   private active = false;
+  private density = 1.0; // 0.3 (dry garden) – 1.5 (lots of water)
 
   constructor() {
     this.group = new THREE.Group();
@@ -94,9 +95,15 @@ export class MistRenderer {
     this.active = dayTime >= 0.10 && dayTime <= 0.30;
   }
 
+  /** Scale mist density with water volume — wetter gardens get thicker morning mist. */
+  setWaterInfluence(waterCount: number): void {
+    // 0 water → density 0.3 (thin), 100+ water → density 1.5 (thick)
+    this.density = 0.3 + Math.min(1.2, waterCount / 80);
+  }
+
   /** Update mist drift. Call each frame. */
   update(dt: number): void {
-    const targetActive = this.active ? 1 : 0;
+    const targetActive = this.active ? this.density : 0;
 
     for (let i = 0; i < MAX_WISPS; i++) {
       const w = this.wisps[i];
