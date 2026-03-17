@@ -9,7 +9,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, Material, materialIsFoliage as isFoliage } from '../bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, materialIsFoliage as isFoliage } from '../bridge';
 
 /** Maximum particles alive at once */
 const MAX_PARTICLES = 2000;
@@ -611,6 +611,32 @@ export class GrowthParticles {
       const t = Math.random();
       p.color.setRGB(0.3 + t * 0.2, 0.7 + t * 0.2, 0.2 + t * 0.15);
     }
+  }
+
+  /**
+   * Emit a warm soil steam wisp at a random ground-level position.
+   * Call during dawn to make bare earth feel alive as morning sun heats it.
+   */
+  emitSoilSteam(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 1.5 + Math.random() * 1.0;
+    p.maxLife = p.life;
+
+    p.x = worldX + (Math.random() - 0.5) * 0.8;
+    p.y = GROUND_LEVEL + 0.5;
+    p.z = worldZ + (Math.random() - 0.5) * 0.8;
+
+    // Slow rise with gentle drift
+    p.vx = (Math.random() - 0.5) * 0.1;
+    p.vy = 0.2 + Math.random() * 0.15;
+    p.vz = (Math.random() - 0.5) * 0.1;
+
+    // Warm translucent — pale amber/beige
+    const t = Math.random();
+    p.color.setRGB(0.75 + t * 0.15, 0.65 + t * 0.15, 0.50 + t * 0.1);
   }
 
   /**

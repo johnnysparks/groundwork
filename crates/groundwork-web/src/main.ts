@@ -1478,6 +1478,15 @@ async function main() {
       setBeetleClick(beetles, dayTime);
     }
 
+    // Dawn soil steam: warm wisps rise from bare ground as morning sun heats it
+    const dawnSteam = dayTime >= 0.22 && dayTime <= 0.32;
+    if (dawnSteam && Math.random() < dt * 3) {
+      // Random ground position in the garden
+      const sx = 10 + Math.random() * (GRID_X - 20);
+      const sz = 10 + Math.random() * (GRID_Y - 20);
+      particles.emitSoilSteam(sx, sz);
+    }
+
     // Animate growth particles
     particles.update(dt);
 
