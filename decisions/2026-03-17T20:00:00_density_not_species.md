@@ -47,11 +47,13 @@ The game is about *building conditions and discovering what emerges*. The player
 
 3. **Temporal emergence** — early ticks (< 200) add a speed bonus proportional to species `growth_rate`, favoring fast-growing groundcover and flowers over slow trees.
 
+**Sprint 233: Neighbor influence implemented.**
+
+4. **Neighbor influence** — scans 8-voxel radius around germinating seeds for existing plants. Clover nearby boosts tree scores +40 (nitrogen handshake). Groundcover boosts flower scores +25 (succession). Tree canopy boosts shade-tolerant species +25 (canopy effect). Same species nearby reduces score -15 (diversity pressure).
+
 **Remaining (P2):**
 
-4. **Density influence** — dense sowing should favor fast-growing groundcover; sparse sowing in rich conditions should allow slower species. Currently density zone spacing is uniform.
-
-5. **Neighbor influence** — nearby plants should shift probabilities. Clover nearby could boost tree emergence. Canopy shade should favor shade-tolerant species. Currently only uses maturity counts globally, not local neighbors.
+5. **Density influence** — dense sowing should favor fast-growing groundcover; sparse sowing in rich conditions should allow slower species. Currently density zone spacing is uniform.
 
 ## Changes Made
 
