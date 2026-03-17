@@ -890,16 +890,29 @@ export class GardenerSprite {
   private reactToFauna(nearbyFauna: number, squirrelTrust: number, dt: number): void {
     if (nearbyFauna === 0) return;
 
+    // Base fauna reaction: occasional hearts
     if (Math.random() < dt * 0.3 * nearbyFauna) {
       this.emitEmotion(EmotionType.Heart);
     }
 
+    // Trust milestone excitement
     if (squirrelTrust > 0 && squirrelTrust % 50 < 2 && Math.random() < dt * 0.5) {
       this.emitEmotion(EmotionType.Exclaim);
     }
 
-    if (squirrelTrust >= 180 && Math.random() < dt * 0.4) {
-      this.emitEmotion(EmotionType.Sparkle);
+    // High-trust companion mode: frequent hearts + sparkles (the squirrel is a friend)
+    if (squirrelTrust >= 180) {
+      if (Math.random() < dt * 0.6) {
+        this.emitEmotion(EmotionType.Heart);
+      }
+      if (Math.random() < dt * 0.3) {
+        this.emitEmotion(EmotionType.Sparkle);
+      }
+    } else if (squirrelTrust >= 100) {
+      // Building trust: occasional sparkles to signal progress
+      if (Math.random() < dt * 0.15) {
+        this.emitEmotion(EmotionType.Sparkle);
+      }
     }
   }
 

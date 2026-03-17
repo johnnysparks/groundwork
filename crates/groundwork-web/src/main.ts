@@ -92,6 +92,15 @@ let _dieOffPlantCount = 0;
 /** Previous tree growth stages — keyed by "rootX,rootY" to detect transitions */
 const _prevTreeStages = new Map<string, number>();
 
+/** Squirrel trust milestone tracking */
+let _prevSquirrelTrust = 0;
+const TRUST_MILESTONES: [number, string][] = [
+  [50, 'The squirrel is getting curious about your gnome...'],
+  [100, 'The squirrel is warming up — it stays closer now'],
+  [150, 'The squirrel trusts your gnome! It lingers nearby'],
+  [180, 'The squirrel is following your gnome — a loyal companion!'],
+];
+
 /** Companion species suggestions — shown once per species per session */
 const _companionSuggested = new Set<number>();
 const COMPANION_TIPS: Record<number, string> = {
@@ -688,6 +697,7 @@ async function main() {
     hud.setTickCount(Number(getTick()));
     _prevStats = { plants: 0, fauna: 0, species: 0 };
     _prevTreeStages.clear();
+    _prevSquirrelTrust = 0;
     _tipIndex = 0;
     _tipTimer = 0;
     remeshDirty();
@@ -1160,6 +1170,17 @@ async function main() {
             particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
           }
           remeshDirty();
+        }
+
+        // Squirrel trust milestone messages
+        if (gnomeSim.squirrelTrust > _prevSquirrelTrust) {
+          for (const [threshold, msg] of TRUST_MILESTONES) {
+            if (_prevSquirrelTrust < threshold && gnomeSim.squirrelTrust >= threshold) {
+              hud.addEvent(msg);
+              if (threshold >= 180) playDiscovery();
+            }
+          }
+          _prevSquirrelTrust = gnomeSim.squirrelTrust;
         }
       }
     }
