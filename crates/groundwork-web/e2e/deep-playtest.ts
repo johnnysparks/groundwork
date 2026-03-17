@@ -142,6 +142,31 @@ test.describe('Deep Playtest', () => {
     await execAction({ type: 'CameraZoom', level: 0.35 });
     await screenshot('16-forest-ring-surroundings');
 
-    console.log(`\nDone: 16 screenshots saved to ${SCREENSHOT_DIR}`);
+    // === 12. MATURE GARDEN — tick forward to grow competition ===
+    // Fast-forward 500 ticks for trees to mature and roots to overlap
+    await execAction({ type: 'Tick', n: 500 });
+
+    // Above-ground: mature garden overview
+    await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 60 });
+    await execAction({ type: 'CameraZoom', level: 0.7 });
+    await screenshot('17-mature-garden');
+
+    // X-ray: root competition should show red borders where species overlap
+    await page.keyboard.press('q');
+    await page.waitForTimeout(200);
+    await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 55 });
+    await execAction({ type: 'CameraZoom', level: 1.0 });
+    await screenshot('18-mature-xray-roots');
+
+    // Close-up on root competition zone
+    await execAction({ type: 'CameraOrbit', theta_deg: 60, phi_deg: 40 });
+    await execAction({ type: 'CameraZoom', level: 1.8 });
+    await screenshot('19-mature-xray-closeup');
+
+    // Turn off x-ray
+    await page.keyboard.press('q');
+    await page.waitForTimeout(200);
+
+    console.log(`\nDone: 19 screenshots saved to ${SCREENSHOT_DIR}`);
   });
 });
