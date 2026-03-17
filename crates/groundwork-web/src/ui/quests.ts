@@ -74,44 +74,47 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 2,
     detail: 'Use the shovel to dig a channel from the spring toward your plants. Water flows downhill and soaks into soil — watch growth speed up!',
   },
-  // Chapter 3: Flowers & Fauna
-  {
-    id: 'changeSpecies',
-    name: 'Plant flowers',
-    chapter: 3,
-    detail: 'Plant wildflowers and daisies near your groundcover — they attract pollinators.',
-  },
-  {
-    id: 'plantThreeSpecies',
-    name: 'Attract pollinators',
-    chapter: 3,
-    detail: 'With enough flowers, bees and butterflies arrive. They boost health of nearby plants and spread seeds.',
-  },
-  // Chapter 4: Discover the Underground
+  // Chapter 3: Discover the Underground — slow down, observe what's happening
   {
     id: 'changeDepth',
     name: 'Go underground',
-    chapter: 4,
+    chapter: 3,
     detail: 'Tap X-Ray to see underground. Pick a lens — roots, moisture, light, or nutrients. Each has its own color theme.',
   },
+  // Chapter 4: Bloom — wait for your first flower to appear naturally
+  {
+    id: 'changeSpecies',
+    name: 'First bloom',
+    chapter: 4,
+    detail: 'Your groundcover is maturing. Wait and watch — when conditions are right, a wildflower will appear on its own.',
+  },
+  // Chapter 5: Pollinators — patience pays off
+  {
+    id: 'plantThreeSpecies',
+    name: 'Attract a pollinator',
+    chapter: 5,
+    detail: 'Flowers attract bees and butterflies. Plant more flowers near each other to build a pollinator bridge. This takes time.',
+  },
+  // Chapter 6: Shrubs — the garden deepens
   {
     id: 'toggleAutoTick',
     name: 'Grow shrubs',
-    chapter: 4,
-    detail: 'Berry bushes attract birds that carry seeds to new spots. Ferns thrive in shade under the canopy.',
+    chapter: 6,
+    detail: 'Berry bushes attract birds that carry seeds to surprising new spots. Ferns thrive in shade. Let the garden develop its own layers.',
   },
-  // Chapter 5: Trees
+  // Chapter 7: The underground economy
   {
     id: 'plantAllTypes',
-    name: 'Plant your first tree',
-    chapter: 5,
-    detail: 'Trees are the reward for a thriving ecosystem. Plant an oak near clover for nitrogen-boosted growth!',
+    name: 'Root competition',
+    chapter: 7,
+    detail: 'Use X-Ray moisture lens. See how roots compete for water underground. Clover fixes nitrogen — plant it near a tree and watch the difference.',
   },
+  // Chapter 8: Trees — late game, the ultimate reward
   {
     id: 'growATree',
     name: 'Grow a canopy',
-    chapter: 5,
-    detail: 'Watch your tree claim territory — its canopy shades the ground, roots compete for water, and birds nest in its branches.',
+    chapter: 8,
+    detail: 'Plant an oak and let it grow. A canopy takes patience — the tree must claim territory, spread roots, and outcompete its neighbors. This is the long game.',
   },
 ];
 
