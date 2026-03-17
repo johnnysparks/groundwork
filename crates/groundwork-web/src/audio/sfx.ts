@@ -332,6 +332,79 @@ export function playWindGust(): void {
   noise.stop(t + 1.2);
 }
 
+/** Play a gnome state-change sound. Call on state transitions only. */
+export function playGnomeSound(state: number): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  switch (state) {
+    case 2: { // Working: small effort grunt — low tone + noise
+      const osc = c.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(100, t);
+      osc.frequency.exponentialRampToValueAtTime(80, t + 0.1);
+      const gain = c.createGain();
+      gain.gain.setValueAtTime(0.04, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(gain).connect(c.destination);
+      osc.start(t);
+      osc.stop(t + 0.12);
+      break;
+    }
+    case 6: { // Inspecting: curious "hmm" — ascending tone
+      const osc = c.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, t);
+      osc.frequency.linearRampToValueAtTime(240, t + 0.2);
+      osc.frequency.linearRampToValueAtTime(220, t + 0.3);
+      const gain = c.createGain();
+      gain.gain.setValueAtTime(0.03, t);
+      gain.gain.setValueAtTime(0.03, t + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(gain).connect(c.destination);
+      osc.start(t);
+      osc.stop(t + 0.35);
+      break;
+    }
+    case 4: { // Resting: soft sigh — descending filtered noise
+      const bufSize = Math.floor(c.sampleRate * 0.3);
+      const buf = c.createBuffer(1, bufSize, c.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1);
+      const noise = c.createBufferSource();
+      noise.buffer = buf;
+      const filter = c.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(400, t);
+      filter.frequency.exponentialRampToValueAtTime(150, t + 0.3);
+      const gain = c.createGain();
+      gain.gain.setValueAtTime(0.025, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      noise.connect(filter).connect(gain).connect(c.destination);
+      noise.start(t);
+      noise.stop(t + 0.3);
+      break;
+    }
+    case 3: { // Eating: soft munch — two quick low clicks
+      for (let i = 0; i < 2; i++) {
+        const start = t + i * 0.08;
+        const osc = c.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(250, start);
+        osc.frequency.exponentialRampToValueAtTime(100, start + 0.03);
+        const gain = c.createGain();
+        gain.gain.setValueAtTime(0.03, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.05);
+        osc.connect(gain).connect(c.destination);
+        osc.start(start);
+        osc.stop(start + 0.05);
+      }
+      break;
+    }
+  }
+}
+
 /** Play a fauna arrival sound based on type */
 export function playFaunaArrival(faunaType: number): void {
   // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle

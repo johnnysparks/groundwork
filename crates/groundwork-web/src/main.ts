@@ -40,7 +40,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -907,6 +907,7 @@ async function main() {
   let prevPlantCount = 0; // for detecting growth bursts
   let prevWaterCount = 0; // for detecting water expansion (channel filling)
   let dustPuffTimer = 0; // seconds until next gnome footstep dust puff
+  let prevGnomeState = -1; // for detecting gnome state transitions
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -1219,6 +1220,12 @@ async function main() {
             particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
           }
           remeshDirty();
+        }
+
+        // Gnome state transition sounds
+        if (gnomeSim.state !== prevGnomeState) {
+          playGnomeSound(gnomeSim.state);
+          prevGnomeState = gnomeSim.state;
         }
 
         // Gnome footstep dust puffs when walking/wandering/working
