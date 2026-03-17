@@ -244,6 +244,19 @@ if (position.y >= surfaceY - 0.5 && position.y <= surfaceY + 1.0) {
   vColor.rgb *= brightness;
 }`,
       );
+      // Subtle Y displacement — earth breathing. Surface soil heaves gently.
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+{
+  float sY = ${GROUND_LEVEL.toFixed(1)};
+  if (position.y >= sY - 0.5 && position.y <= sY + 1.0) {
+    float breathPhase = position.x * 0.12 + position.z * 0.1 + uGrassTime * 0.25;
+    float breathe = sin(breathPhase) * 0.02 + sin(breathPhase * 2.3 + 1.0) * 0.01;
+    transformed.y += breathe * (0.4 + uGrassWindStr * 0.6);
+  }
+}`,
+      );
     };
   }
   return soilMaterial;
