@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-18T05:00:00
-**Status:** Alpha complete. 236 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + condition-attribution messages. Complete onboarding: Meet Gnome → Start Garden → See Underground → Shape Water → Garden Grows → Conditions Matter → A Tree Appeared → The Garden Is Alive. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-18T06:00:00
+**Status:** Alpha complete. 242 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + density influence + condition-attribution messages. Complete onboarding. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **4 new ecology particle types** (mycorrhizal network violet, pine allelopathy amber-red, nurse log golden, root competition red-orange). Density-not-species decision: all 5 items complete. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
