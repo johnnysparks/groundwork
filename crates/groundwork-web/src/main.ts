@@ -590,13 +590,27 @@ async function main() {
 
   // Progressive UI reveal: show HUD elements as player advances through chapters
   questLog.onChapterChange((chapter) => {
-    hud.setPhase(chapter);
+    // Phase 0 is controlled by auto-advance below, not quest chapters
+    if (chapter >= 1) {
+      hud.setPhase(Math.max(chapter, 1));
+    }
     if (chapter === 1) {
       // Seed tool auto-selected with groundcover — ready to plant
       hud.selectTool(ToolCode.Seed);
-      hud.addEvent('Click near the spring to plant your first groundcover');
     }
   });
+
+  // Phase 0 → 1 auto-advance: after 3 seconds OR first mouse interaction,
+  // show just the "sow" tool. The player meets the gnome and pond first.
+  let phase0Advanced = false;
+  const advanceFromPhase0 = () => {
+    if (phase0Advanced) return;
+    phase0Advanced = true;
+    hud.setPhase(1);
+    hud.selectTool(ToolCode.Seed);
+  };
+  setTimeout(advanceFromPhase0, 3000);
+  renderer.domElement.addEventListener('pointerdown', advanceFromPhase0, { once: true });
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
   function applyToolToMockGrid(toolCode: number, x: number, y: number, z: number): void {

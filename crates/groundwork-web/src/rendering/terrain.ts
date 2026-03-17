@@ -47,14 +47,16 @@ const SPECIES_TRUNK: THREE.Color[] = [
   new THREE.Color(0.30, 0.28, 0.16),  // Clover: brown-green
 ];
 
-/** Grass-tinted soil for top and near-surface side faces */
+/** Grass-tinted soil for faces near/above ground level.
+ *  Saturated green — the garden must read as a green meadow at first glance,
+ *  even under warm golden-hour lighting that shifts everything amber. */
 const SOIL_GRASS = new THREE.Color(0.18, 0.52, 0.14); // lush green
 
 /** Wet soil colors — darker and bluer as moisture increases */
 const SOIL_DAMP = new THREE.Color(0.28, 0.19, 0.12);  // dark moist earth
 const SOIL_WET = new THREE.Color(0.20, 0.14, 0.10);   // saturated dark mud
-const SOIL_GRASS_DAMP = new THREE.Color(0.18, 0.32, 0.14); // darker wet grass
-const SOIL_GRASS_WET = new THREE.Color(0.12, 0.25, 0.10);  // very dark wet grass
+const SOIL_GRASS_DAMP = new THREE.Color(0.22, 0.42, 0.16); // rich damp grass
+const SOIL_GRASS_WET = new THREE.Color(0.18, 0.38, 0.14);  // deep wet grass
 
 /** Species-specific root colors for x-ray differentiation.
  *  Saturated, distinct hues so root wars are immediately readable.
@@ -287,8 +289,10 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
     // Soil color depends on wetness and whether it's a top face (grass)
     let baseColor: THREE.Color;
     if (quad.material === Material.Soil) {
-      // Top faces and upper side faces near surface get grass tint
-      const isGrass = quad.z >= GROUND_LEVEL - 6 && (quad.face === 4 || quad.z >= GROUND_LEVEL - 1);
+      // Grass on ALL faces near the surface — the garden reads as a green
+      // meadow, not brown dirt. Extends 6 voxels below ground level to cover
+      // the rolling terrain contour steps that otherwise show brown soil sides.
+      const isGrass = quad.z >= GROUND_LEVEL - 6;
       if (quad.wetness >= 2) {
         baseColor = isGrass ? SOIL_GRASS_WET : SOIL_WET;
       } else if (quad.wetness >= 1) {

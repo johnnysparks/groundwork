@@ -1,0 +1,2 @@
+- [feedback_gameplay_priority.md](feedback_gameplay_priority.md) — Gameplay feel (growth pacing) is top priority over audio/sound polish
+- [feedback_first_minute_design.md](feedback_first_minute_design.md) — First 10 seconds: calm green space, pond, gnome greeting, one action ("sow small"). No popups.

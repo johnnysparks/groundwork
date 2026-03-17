@@ -329,13 +329,16 @@ export class Hud {
 
     // Score-based unlocking as fallback (sim milestones take priority via updateMilestones)
 
-    // Check milestones
-    const milestones = [500, 1000, 2000, 5000, 10000];
+    // Check milestones — suppress during early phases (let the player discover first)
+    const phase = parseInt(this.container.dataset.phase ?? '0');
     const prevScore = this._lastScore;
-    for (const m of milestones) {
-      if (prevScore < m && score >= m) {
-        this.showMilestone(m);
-        playMilestone();
+    if (phase >= 2) {
+      const milestones = [500, 1000, 2000, 5000, 10000];
+      for (const m of milestones) {
+        if (prevScore < m && score >= m) {
+          this.showMilestone(m);
+          playMilestone();
+        }
       }
     }
     this._lastScore = score;
@@ -999,28 +1002,38 @@ const HUD_CSS = `
 }
 
 /* --- Progressive reveal: hide UI until quest progression unlocks it --- */
-/* Phase 0 (Welcome): hide everything except quest panel */
+/* Phase 0 (Welcome): hide EVERYTHING — just the garden, pond, and gnome.
+   The player discovers the world before any UI appears. */
 #hud[data-phase="0"] #tool-bar,
 #hud[data-phase="0"] #species-panel,
 #hud[data-phase="0"] #garden-score,
 #hud[data-phase="0"] #event-feed,
 #hud[data-phase="0"] #hud-top-bar,
 #hud[data-phase="0"] #hud-help,
-#hud[data-phase="0"] #new-garden-btn {
+#hud[data-phase="0"] #new-garden-btn,
+#hud[data-phase="0"] #quest-panel {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(20px);
 }
 
-/* Phase 1 (First Plants): tool bar + event feed + status bar slide in */
+/* Phase 1 (Sow): only seed tool visible. Player discovers "sow small."
+   Quest panel, score, help, non-seed tools all hidden. */
 #hud[data-phase="1"] #garden-score,
 #hud[data-phase="1"] #hud-help,
-#hud[data-phase="1"] #new-garden-btn {
+#hud[data-phase="1"] #new-garden-btn,
+#hud[data-phase="1"] #quest-panel,
+#hud[data-phase="1"] #hud-top-bar,
+#hud[data-phase="1"] #event-feed {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(20px);
+}
+/* In phase 1, hide all tools except Seed (code=1). Only action is "sow." */
+#hud[data-phase="1"] .tool-btn:not([data-tool="1"]) {
+  display: none !important;
 }
 
 /* Smooth transitions for reveal */
