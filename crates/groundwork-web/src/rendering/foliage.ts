@@ -77,6 +77,13 @@ const FOLIAGE_VERT = /* glsl */ `
     swayX += uWindDir.x * leanAmount;
     swayZ += uWindDir.y * leanAmount;
 
+    // Willow droop: branches hang downward with pendulum swing
+    if (sp == 2) {
+      float pendulum = sin(t * 0.4 + worldPos.x * 0.5 + worldPos.z * 0.3);
+      float droop = heightFactor * 0.5; // more droop at height
+      swayY -= droop + pendulum * droop * 0.3 * (0.3 + uWindStrength);
+    }
+
     // Billboard: orient quad to face camera
     // Keep local vertex position (quad corners), but orient in camera space
     vec3 cameraRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
