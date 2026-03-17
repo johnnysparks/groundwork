@@ -21,6 +21,7 @@ import { FaunaRenderer } from './rendering/fauna';
 import { FireflyRenderer } from './rendering/fireflies';
 import { FallingLeaves } from './rendering/leaves';
 import { EcologyParticles } from './rendering/ecology';
+import { DewRenderer } from './rendering/dew';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
@@ -539,6 +540,11 @@ async function main() {
 
   const fireflies = new FireflyRenderer();
   scene.add(fireflies.group);
+
+  // --- Morning dew (dawn ambient) ---
+
+  const dew = new DewRenderer();
+  scene.add(dew.group);
 
   // --- Falling leaves ---
 
@@ -1263,6 +1269,8 @@ async function main() {
     const dayTime = dayCycle.getTime();
     fireflies.setActive(dayTime);
     fireflies.update(dt, elapsed);
+    dew.setActive(dayTime);
+    dew.update(dt, elapsed);
     setNightAmbient(dayTime);
 
     // Falling leaves: ambient canopy motion
