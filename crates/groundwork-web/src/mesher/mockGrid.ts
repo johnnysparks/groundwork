@@ -1076,15 +1076,10 @@ export { VIEWER_SPECIES };
 function createModelViewerGrid(): Uint8Array {
   const species = getViewerSpecies();
 
-  // Size grid based on species type
-  let gw: number, gd: number, gh: number, gl: number;
-  if (TREE_IDS.includes(species.id)) {
-    gw = 160; gd = 50; gh = 80; gl = 30;
-  } else if (SHRUB_IDS.includes(species.id)) {
-    gw = 60; gd = 30; gh = 40; gl = 15;
-  } else {
-    gw = 50; gd = 20; gh = 30; gl = 10;
-  }
+  // Use consistent grid size for all species — the camera/renderer init captures
+  // grid dimensions before setGridDimensions is called, so non-standard sizes
+  // cause out-of-bounds errors. Smaller species just have more breathing room.
+  const gw = 160, gd = 50, gh = 80, gl = 30;
 
   setGridDimensions(gw, gd, gh, gl);
   const size = GRID_X * GRID_Y * GRID_Z * VOXEL_BYTES;
