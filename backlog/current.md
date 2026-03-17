@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T19:00:00
-**Status:** Alpha complete. 140 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars/moonlight/shooting stars, discovery feedback loop, dawn chorus, welcome flow.
+**Last updated:** 2026-03-16T21:00:00
+**Status:** Alpha complete. 145 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars/moonlight/shooting stars, discovery feedback loop, dawn chorus, welcome flow, growth stage celebrations, stout tree proportions, water caustics, squirrel trust arc.
 
 ---
 
@@ -89,6 +89,28 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Garden recovery messages: encouraging feedback after plant die-off and recolonization
 - Pollination particle boost: 10 particles when actively pollinating (vs 5 drifting)
 
+### Audio Polish (Sprint 141)
+- Fauna-scaled ambient sound frequency: more fauna → more frequent chirps/buzzes
+
+### Growth Stage Celebrations (Sprint 142)
+- Tree stage transitions (sapling→young→mature→old growth) emit 20-particle burst
+- HUD messages name the tree and stage; mature+ transitions play discovery chime
+- Tree stats read from WASM via packTreeStats bridge
+
+### Stout Tree Proportions (Sprint 143)
+- Wider trunks and canopies: Oak 0.15→0.25m trunk, 1.2→1.5m crown
+- Birch, Willow, Pine all proportionally adjusted
+- Pine height reduced 2.8→2.5m for better silhouette
+
+### Water Surface Polish (Sprint 144)
+- Caustic refraction patterns (bright dancing lines, strongest in shallow water)
+- Gentle vertex wave displacement (surface undulates)
+
+### Squirrel Trust Arc (Sprint 145)
+- Trust milestone HUD messages at 50, 100, 150, 180
+- Discovery chime at trust 180 (companion threshold)
+- Enhanced emotion particles scale with trust level
+
 ### Quality of Life (Sprints 111-112)
 - Auto-save "Saved" indicator (bottom-right, fades after 1.5s)
 - Contextual ecology tips (suggests next discovery based on garden state)
@@ -102,9 +124,5 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 ## P2
 
 - Mobile drag-to-zone (desktop only currently — needs long-press or mode toggle)
-- Squirrel domestication tuning (gnome-squirrel trust visual: follow behavior, seed delivery)
 - Multiple gnomes, biome variety, undo/redo, share garden
 - SSAO (disabled, needs tuning — shadows now enabled with warm PCF)
-- Trunk-to-canopy ratio (trees look like tall sticks with green tops — sim-level fix)
-- Water surface shimmer improvements
-- Growth stage visual transitions (particle burst when tree matures)
