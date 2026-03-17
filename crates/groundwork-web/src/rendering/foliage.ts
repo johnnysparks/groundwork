@@ -79,6 +79,16 @@ const FOLIAGE_VERT = /* glsl */ `
     swayX += uWindDir.x * leanAmount;
     swayZ += uWindDir.y * leanAmount;
 
+    // Fern spring bounce: quick secondary oscillation on top of base sway
+    // Ferns bob back and forth rapidly like they're spring-loaded
+    if (sp == 4) {
+      float bounce = sin(uTime * 4.5 + worldPos.x * 2.0 + worldPos.z * 1.5);
+      float bounceAmt = uWindStrength * heightFactor * 0.4;
+      swayY += bounce * bounceAmt;
+      // Side-to-side waggle at a different frequency
+      swayX += cos(uTime * 3.8 + worldPos.z * 1.8) * bounceAmt * 0.3;
+    }
+
     // Willow droop: branches hang downward with pendulum swing
     if (sp == 2) {
       float pendulum = sin(t * 0.4 + worldPos.x * 0.5 + worldPos.z * 0.3);
