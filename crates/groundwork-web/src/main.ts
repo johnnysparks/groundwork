@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, scanWaterFrontier } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, scanWaterFrontier } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -1656,6 +1656,7 @@ async function main() {
 
     // Cloud shadow ground plane: matches sky cloud density + fades at night
     cloudShadow.update(elapsed, skyUniforms.uCloudDensity.value, 1.0 - (skyUniforms.uNightAmount?.value ?? 0));
+    updateWaterClouds(skyUniforms.uCloudDensity.value);
 
     // Drought visual: warmer, hazier atmosphere + foliage stress
     if (isInitialized()) {

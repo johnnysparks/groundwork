@@ -200,6 +200,7 @@ const waterFragmentShader = /* glsl */ `
   uniform float uRainStrength;
   uniform vec3 uDayTint;
   uniform float uNightAmount;
+  uniform float uCloudDensity;
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -346,6 +347,25 @@ const waterFragmentShader = /* glsl */ `
     // Day cycle color tint: warm gold at golden hour, cool blue at night
     lit *= uDayTint;
 
+    // Cloud reflections: FBM noise darkens water surface to match sky clouds
+    if (uCloudDensity > 0.01 && uNightAmount < 0.9) {
+      vec2 cUV = vWorldPos.xz * 0.02; // scale to match sky projection
+      cUV += vec2(uTime * 0.008, uTime * 0.002); // same drift as sky clouds
+      // Simple 3-octave FBM using existing hash function
+      float cn = 0.0;
+      vec2 cp = cUV;
+      cn += 0.50 * (0.5 + 0.5 * sin(dot(cp, vec2(127.1, 311.7)) + hash1(floor(cp)) * 6.28));
+      cp *= 2.03;
+      cn += 0.25 * (0.5 + 0.5 * sin(dot(cp, vec2(127.1, 311.7)) + hash1(floor(cp)) * 6.28));
+      cp *= 2.01;
+      cn += 0.125 * (0.5 + 0.5 * sin(dot(cp, vec2(127.1, 311.7)) + hash1(floor(cp)) * 6.28));
+      cn /= 0.875;
+      float cloudRef = smoothstep(0.48 - uCloudDensity * 0.1, 0.65, cn);
+      float dayAmt = 1.0 - uNightAmount;
+      // Reflect clouds as bright white patches on water (opposite of shadows)
+      lit += vec3(0.15, 0.15, 0.18) * cloudRef * uCloudDensity * dayAmt * 0.4;
+    }
+
     // Star reflections on water at night — scattered bright points
     if (uNightAmount > 0.0) {
       vec2 starUV = vWorldPos.xz * 1.5; // scale for star density
@@ -459,6 +479,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
         uRainStrength: { value: 0 },
         uDayTint: { value: new THREE.Color(1, 1, 1) },
         uNightAmount: { value: 0 },
+        uCloudDensity: { value: 0.35 },
       },
       transparent: true,
       depthWrite: false,   // transparent surfaces shouldn't write depth
@@ -519,6 +540,15 @@ export function updateWaterRain(strength: number): void {
 export function updateWaterNight(amount: number): void {
   if (waterMaterial) {
     waterMaterial.uniforms.uNightAmount.value = amount;
+  }
+}
+
+/**
+ * Set cloud density for water cloud reflections (0 = clear, 1 = overcast).
+ */
+export function updateWaterClouds(density: number): void {
+  if (waterMaterial) {
+    waterMaterial.uniforms.uCloudDensity.value = density;
   }
 }
 
