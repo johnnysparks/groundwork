@@ -613,6 +613,55 @@ export class GrowthParticles {
     }
   }
 
+  /**
+   * Emit a single water drip from a random foliage position.
+   * Call periodically after rain stops to make the garden feel "wet."
+   */
+  emitLeafDrip(): void {
+    if (this.flowerPositions.length === 0 && this.prevLeafPositions.size === 0) return;
+
+    // Pick a random leaf position from the prevLeafPositions set
+    // We sample up to 3 keys to find one, then emit a drip
+    const keys = this.prevLeafPositions;
+    if (keys.size === 0) return;
+
+    // Pick a random element from the set
+    const idx = Math.floor(Math.random() * keys.size);
+    let posKey = 0;
+    let i = 0;
+    for (const k of keys) {
+      if (i === idx) { posKey = k; break; }
+      i++;
+    }
+
+    // Decode position key (same encoding as detectGrowth: x * GRID_Z * GRID_Y + z * GRID_Y + y)
+    const y = posKey % GRID_Y;
+    const zSlice = Math.floor(posKey / GRID_Y);
+    const z = zSlice % GRID_Z;
+    const x = Math.floor(zSlice / GRID_Z);
+
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.6 + Math.random() * 0.4;
+    p.maxLife = p.life;
+
+    // Three.js Y-up: sim (x, y, z) → Three.js (x, z, y)
+    p.x = x + 0.5 + (Math.random() - 0.5) * 0.3;
+    p.y = z + 0.3; // just below leaf
+    p.z = y + 0.5 + (Math.random() - 0.5) * 0.3;
+
+    // Falls straight down with tiny horizontal drift
+    p.vx = (Math.random() - 0.5) * 0.05;
+    p.vy = -1.0 - Math.random() * 0.5;
+    p.vz = (Math.random() - 0.5) * 0.05;
+
+    // Pale blue-white water drop
+    const t = Math.random();
+    p.color.setRGB(0.55 + t * 0.25, 0.7 + t * 0.2, 0.85 + t * 0.15);
+  }
+
   private findDeadParticle(): Particle | null {
     for (let i = 0; i < MAX_PARTICLES; i++) {
       if (!this.particles[i].alive) return this.particles[i];

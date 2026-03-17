@@ -957,6 +957,8 @@ async function main() {
   let dustPuffTimer = 0; // seconds until next gnome footstep dust puff
   let prevGnomeState = -1; // for detecting gnome state transitions
   let owlHootTimer = 30 + Math.random() * 30; // seconds until next owl hoot
+  let leafDripTimer = 0; // remaining seconds of post-rain leaf dripping
+  let leafDripInterval = 0; // accumulator for drip emit rate
   let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
@@ -1258,7 +1260,7 @@ async function main() {
         if (newWeather !== prevWeatherState) {
           if (newWeather === 1) { hud.addEvent('Rain begins \u2014 the garden drinks deeply'); playRainStart(); }
           else if (newWeather === 2) { hud.addEvent('Drought \u2014 water runs low, roots dig deep'); playDroughtStart(); }
-          else if (prevWeatherState === 1) hud.addEvent('The rain passes \u2014 skies clear');
+          else if (prevWeatherState === 1) { hud.addEvent('The rain passes \u2014 skies clear'); leafDripTimer = 30 + Math.random() * 30; }
           else if (prevWeatherState === 2) hud.addEvent('Drought breaks \u2014 the soil can breathe');
           prevWeatherState = newWeather;
         }
@@ -1493,6 +1495,19 @@ async function main() {
       rain.setActive(weatherState === 1); // 1 = Rain
       setRaining(weatherState === 1);    // rain audio
       updateWaterRain(rain.getIntensity());
+
+      // Post-rain leaf drip: water drops fall from foliage for 30-60s after rain stops
+      if (leafDripTimer > 0) {
+        leafDripTimer -= dt;
+        leafDripInterval += dt;
+        // Drip rate tapers off: starts at ~6/sec, ends at ~1/sec
+        const dripRate = 0.15 + 0.35 * (1 - leafDripTimer / 60);
+        while (leafDripInterval >= dripRate) {
+          leafDripInterval -= dripRate;
+          particles.emitLeafDrip();
+        }
+      }
+
       // Wind strength varies with weather: gusty in rain, still in drought
       const baseWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
 
