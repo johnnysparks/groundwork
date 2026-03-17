@@ -451,6 +451,18 @@ async function main() {
   // X-ray mode state
   let xrayActive = false;
 
+  /** Toggle x-ray on/off — single source of truth for all side effects */
+  function setXray(active: boolean): void {
+    xrayActive = active;
+    setXrayMode(active);
+    postProcessing.setDesaturation(active ? 1.0 : 0.0);
+    hud.setXrayUI(active);
+    // Hide foliage + fauna in x-ray — just terrain, roots, and data
+    foliage.group.visible = !active;
+    fauna.group.visible = !active;
+    if (!active) overlay.setMode(OverlayMode.Off);
+  }
+
   for (const chunk of updatedChunks) {
     const { solidMesh, soilMesh, rootMesh } = buildChunkMesh(chunk, grid);
     if (solidMesh) {
@@ -731,15 +743,7 @@ async function main() {
   // New Garden button — resets sim, HUD, and re-meshes
   // X-ray toggle from the HUD button (works on mobile + desktop)
   hud.onXrayToggle((active: boolean) => {
-    xrayActive = active;
-    setXrayMode(xrayActive);
-    postProcessing.setDesaturation(active ? 1.0 : 0.0);
-    hud.setXrayUI(active);
-    if (active) {
-      overlay.setMode(OverlayMode.Off);
-    } else {
-      overlay.setMode(OverlayMode.Off);
-    }
+    setXray(active);
     questLog.recordDepthChange();
   });
 
@@ -930,10 +934,7 @@ async function main() {
     remeshDirty: remeshDirty,
     dayCycle: dayCycle,
     setXrayMode: (active: boolean) => {
-      xrayActive = active;
-      setXrayMode(xrayActive);
-      postProcessing.setDesaturation(active ? 1.0 : 0.0);
-      hud.setXrayUI(active);
+      setXray(active);
     },
     setTickCount: (count: number) => hud.setTickCount(count),
     overlay: overlay,
@@ -1144,17 +1145,8 @@ async function main() {
         }
         break;
       case 'q':
-        // Toggle x-ray: greyscale scene + lens picker replaces tool bar
-        xrayActive = !xrayActive;
-        setXrayMode(xrayActive);
-        postProcessing.setDesaturation(xrayActive ? 1.0 : 0.0);
-        hud.setXrayUI(xrayActive);
-        if (xrayActive) {
-          // Default lens is "roots" — show root overlay
-          overlay.setMode(OverlayMode.Off); // roots use the transparent soil, not overlay
-        } else {
-          overlay.setMode(OverlayMode.Off);
-        }
+        // Toggle x-ray: greyscale, hide leaves/fauna, show lens picker
+        setXray(!xrayActive);
         questLog.recordDepthChange();
         if (xrayActive && !_xrayTipShown) {
           hud.addEvent('X-ray mode — pick a lens to inspect your garden');

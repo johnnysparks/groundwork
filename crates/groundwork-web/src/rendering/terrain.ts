@@ -216,20 +216,11 @@ export function getRootGlowMaterial(): THREE.MeshLambertMaterial {
   return rootGlowMaterial;
 }
 
-/** Toggle root glow when x-ray mode changes */
-function updateRootGlowClip(xrayActive: boolean): void {
-  const mat = getRootGlowMaterial();
-  if (xrayActive) {
-    // Neutral white emissive so species-specific vertex colors show through
-    // clearly against the greyscale scene. No warm tint — let the root
-    // colors (per-species) be the only color in x-ray mode.
-    mat.emissive = new THREE.Color(1.0, 1.0, 1.0);
-    mat.emissiveIntensity = 0.4;
-  } else {
-    mat.emissive = new THREE.Color(0.0, 0.0, 0.0);
-    mat.emissiveIntensity = 0.0;
-  }
-  mat.needsUpdate = true;
+/** Update root material when x-ray mode changes — no glow, just natural colors */
+function updateRootGlowClip(_xrayActive: boolean): void {
+  // Roots use their natural brown vertex colors in all modes.
+  // No emissive glow — the greyscale scene + transparent soil is enough
+  // to make roots readable without artificial highlighting.
 }
 
 export interface ChunkMeshResult {
