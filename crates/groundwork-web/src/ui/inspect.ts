@@ -33,6 +33,39 @@ export interface InspectData {
   stressHint: string | null;
 }
 
+/** Find the nearest competing species within a search radius.
+ *  Scans for trunk/root/leaf voxels of a different species. */
+function findNearbyCompetitor(grid: Uint8Array, x: number, y: number, z: number, mySpeciesId: number): string | null {
+  const radius = 8;
+  const plantMats = new Set([Material.Trunk, Material.Root, Material.Leaf, Material.Branch]);
+  let bestDist = Infinity;
+  let bestSpeciesId = -1;
+
+  for (let dz = -radius; dz <= radius; dz++) {
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx === 0 && dy === 0 && dz === 0) continue;
+        const nx = x + dx, ny = y + dy, nz = z + dz;
+        if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y || nz < 0 || nz >= GRID_Z) continue;
+        const nIdx = (nx + ny * GRID_X + nz * GRID_X * GRID_Y) * VOXEL_BYTES;
+        const nMat = grid[nIdx];
+        if (!plantMats.has(nMat)) continue;
+        const nSpecies = grid[nIdx + 3];
+        if (nSpecies === mySpeciesId) continue;
+        const dist = dx * dx + dy * dy + dz * dz;
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestSpeciesId = nSpecies;
+        }
+      }
+    }
+  }
+
+  if (bestSpeciesId < 0) return null;
+  const sp = SPECIES.find(s => s.index === bestSpeciesId);
+  return sp ? sp.name : null;
+}
+
 /** Human-readable label for a 0-255 value */
 function levelLabel(value: number): string {
   if (value === 0) return 'none';
@@ -96,12 +129,24 @@ export function readVoxelAt(grid: Uint8Array, x: number, y: number, z: number): 
       condition = lowWater ? 'dry' : 'healthy';
     }
 
-    // Stress diagnosis hints
+    // Stress diagnosis hints — identify competitor when possible
+    const competitor = (condition === 'stressed' || condition === 'dying' || condition === 'shaded')
+      ? findNearbyCompetitor(grid, x, y, z, speciesId) : null;
+
     if (condition === 'stressed' || condition === 'dying') {
-      if (lowLight) stressHint = 'Not enough light — shaded by a taller tree?';
-      else stressHint = 'Struggling for water — dig channels from the spring';
+      if (lowLight && competitor) {
+        stressHint = `Shaded by ${competitor} — not enough light reaching the canopy`;
+      } else if (lowLight) {
+        stressHint = 'Not enough light — shaded by a taller tree?';
+      } else if (competitor) {
+        stressHint = `Competing with ${competitor} for water — roots are overlapping`;
+      } else {
+        stressHint = 'Struggling for water — dig channels from the spring';
+      }
     } else if (condition === 'shaded') {
-      stressHint = 'In the shadow of a taller tree';
+      stressHint = competitor
+        ? `In the shadow of a nearby ${competitor}`
+        : 'In the shadow of a taller tree';
     } else if (condition === 'dry') {
       stressHint = 'Roots need moisture — dig irrigation channels nearby';
     }
