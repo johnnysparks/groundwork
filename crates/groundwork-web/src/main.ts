@@ -1804,6 +1804,7 @@ async function main() {
     }
 
     // Update fauna positions and animation
+    fauna.setWind(windAngle, foliage.getWindStrength());
     fauna.update(elapsed);
 
     // Fireflies + cricket sounds: active during dusk/night

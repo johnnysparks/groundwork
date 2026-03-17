@@ -127,6 +127,11 @@ export class FaunaRenderer {
   private pool: FaunaSlot[] = [];
   private activeCount = 0;
 
+  // Wind state for fauna drift
+  private windDirX = 1;
+  private windDirZ = 0;
+  private windStrength = 0;
+
   // Trail particle state
   private trailPositions: Float32Array;
   private trailLifes: Float32Array;
@@ -221,6 +226,22 @@ export class FaunaRenderer {
       // Leaving state: fade via scale shrink
       if (f.state === FaunaState.Leaving) {
         slot.model.scale.multiplyScalar(0.6);
+      }
+
+      // Wind drift for airborne fauna — creatures drift with the wind
+      if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly || f.type === FaunaType.Bird) {
+        const ws = this.windStrength;
+        // Butterflies drift most (light), birds resist, bees moderate
+        const driftScale = f.type === FaunaType.Butterfly ? 1.2
+          : f.type === FaunaType.Bird ? 0.3 : 0.6;
+        const drift = ws * ws * driftScale;
+        slot.model.position.x += this.windDirX * drift;
+        slot.model.position.z += this.windDirZ * drift;
+        // Tilt into wind during gusts (banking)
+        if (ws > 0.3) {
+          const bankAngle = Math.atan2(this.windDirZ, this.windDirX);
+          slot.model.rotation.z += Math.sin(bankAngle) * (ws - 0.3) * 0.15;
+        }
       }
 
       // Flight bob for airborne fauna — gentle vertical oscillation
@@ -367,6 +388,13 @@ export class FaunaRenderer {
       }
     }
     // Worms and beetles don't have wing animations
+  }
+
+  /** Set wind for fauna drift. */
+  setWind(windAngle: number, strength: number): void {
+    this.windDirX = Math.cos(windAngle);
+    this.windDirZ = Math.sin(windAngle);
+    this.windStrength = strength;
   }
 
   /** Current active fauna count */
