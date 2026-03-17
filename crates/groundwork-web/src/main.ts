@@ -1368,6 +1368,16 @@ async function main() {
           }
         }
 
+        // Squirrel trust sparkles: warm particles when trust builds
+        if (gnomeSim.squirrelTrust > 0 && gnomeSim.nearbyFauna > 0
+            && Math.random() < dt * 0.8) {
+          // Emit between gnome and squirrel position (midpoint approximation)
+          particles.emitTrustSparkle(
+            gnomeSim.x + 0.5, gnomeSim.z + 0.5, gnomeSim.y + 0.5,
+            gnomeSim.squirrelTrust,
+          );
+        }
+
         // Squirrel trust milestone messages
         if (gnomeSim.squirrelTrust > _prevSquirrelTrust) {
           for (const [threshold, msg] of TRUST_MILESTONES) {

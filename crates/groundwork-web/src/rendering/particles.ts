@@ -973,6 +973,34 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a warm trust sparkle between squirrel and gnome.
+   * Warm amber-gold particles float upward — higher trust = more particles.
+   */
+  emitTrustSparkle(worldX: number, worldY: number, worldZ: number, trust: number): void {
+    const count = trust >= 150 ? 3 : trust >= 80 ? 2 : 1;
+    for (let k = 0; k < count; k++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.6 + Math.random() * 0.4;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.8;
+      p.y = worldY + 0.5 + Math.random() * 0.5;
+      p.z = worldZ + (Math.random() - 0.5) * 0.8;
+
+      p.vx = (Math.random() - 0.5) * 0.15;
+      p.vy = 0.3 + Math.random() * 0.2;
+      p.vz = (Math.random() - 0.5) * 0.15;
+
+      // Warm amber-gold (warmer with higher trust)
+      const warmth = Math.min(1, trust / 180);
+      p.color.setRGB(1.0, 0.75 + warmth * 0.15, 0.3 + warmth * 0.2);
+    }
+  }
+
+  /**
    * Emit a soft golden glow at water surface below a firefly.
    * Creates the illusion of firefly light reflecting off water.
    */
