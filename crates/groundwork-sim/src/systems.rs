@@ -339,9 +339,11 @@ fn pick_species_from_conditions(
     species_table: &SpeciesTable,
     total_plants: u32,
     groundcover_count: u32,
+    neighbor_species: &[bool; 12],
 ) -> usize {
     use crate::tree::{PlantType, ResourceNeed};
 
+    let has_neighbors = neighbor_species.iter().any(|&b| b);
     let mut scores: [u32; 12] = [0; 12];
 
     for (i, sp) in species_table.species.iter().enumerate() {
@@ -392,6 +394,35 @@ fn pick_species_from_conditions(
             }
         };
         score += nut_match;
+
+        // --- Neighbor influence ---
+        // Nearby plants shift probabilities for ecological diversity.
+        // - Clover (11) near → boost tree scores (nitrogen fixing)
+        // - Existing groundcover → boost flower scores (succession)
+        // - Existing trees → boost shade-tolerant species (fern, moss)
+        // - Same species nearby → reduce score (diversity pressure)
+        if has_neighbors {
+            // Nitrogen-fixing clover boosts trees (the Nitrogen Handshake)
+            if neighbor_species[11] && sp.plant_type == PlantType::Tree {
+                score += 40;
+            }
+            // Groundcover presence boosts flowers (succession)
+            if (neighbor_species[9] || neighbor_species[10] || neighbor_species[11])
+                && sp.plant_type == PlantType::Flower
+            {
+                score += 25;
+            }
+            // Tree canopy nearby boosts shade-tolerant species (canopy effect)
+            if (neighbor_species[0] || neighbor_species[1] || neighbor_species[2] || neighbor_species[3])
+                && sp.shade_tolerance < 80
+            {
+                score += 25;
+            }
+            // Diversity pressure: same species nearby reduces score
+            if neighbor_species[i] {
+                score = score.saturating_sub(15);
+            }
+        }
 
         // --- Maturity gating ---
         // Groundcover: always available (pioneer species)
@@ -663,6 +694,28 @@ pub fn seed_growth(
                                     groundcover_count += 1;
                                 }
                             }
+
+                            // Scan local area for neighboring species (radius 8)
+                            let mut neighbor_species = [false; 12];
+                            let scan_r: usize = 8;
+                            let cells = grid.cells();
+                            let trunk_u8 = Material::Trunk.as_u8();
+                            let leaf_u8 = Material::Leaf.as_u8();
+                            for sz in z.saturating_sub(4)..=(z + 8).min(GRID_Z - 1) {
+                                for sy in y.saturating_sub(scan_r)..=(y + scan_r).min(GRID_Y - 1) {
+                                    for sx in x.saturating_sub(scan_r)..=(x + scan_r).min(GRID_X - 1) {
+                                        let sidx = sx + sy * GRID_X + sz * z_stride;
+                                        let mat = cells[sidx].material.as_u8();
+                                        if mat == trunk_u8 || mat == leaf_u8 {
+                                            let sp_id = cells[sidx].nutrient_level as usize;
+                                            if sp_id < 12 {
+                                                neighbor_species[sp_id] = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             pick_species_from_conditions(
                                 cell_water,
                                 cell_light,
@@ -675,6 +728,7 @@ pub fn seed_growth(
                                 &species_table,
                                 total_plants,
                                 groundcover_count,
+                                &neighbor_species,
                             )
                         });
                         let rng_seed = tick.0.wrapping_mul(x as u64 + 1).wrapping_mul(y as u64 + 1);
@@ -3922,6 +3976,11 @@ mod tests {
         let tz = VoxelGrid::surface_height(tx, ty) + 1;
 
         {
+            // Register as oak (species 0) so condition-based emergence doesn't pick groundcover
+            world
+                .resource_mut::<SeedSpeciesMap>()
+                .map
+                .insert((tx, ty, tz), 0);
             let mut grid = world.resource_mut::<VoxelGrid>();
             if let Some(cell) = grid.get_mut(tx, ty, tz) {
                 cell.material = Material::Seed;
@@ -5626,6 +5685,7 @@ mod tests {
                     &species_table,
                     0, // no existing plants (early garden)
                     0,
+                    &[false; 12], // no neighbors
                 );
                 assert!(id < 12, "species_id should be valid (got {id})");
                 species_seen.insert(id);
@@ -5663,6 +5723,7 @@ mod tests {
                 &species_table,
                 30, // 30 existing plants
                 15, // 15 groundcover
+                &[false; 12], // no neighbors
             );
             if species_table.species[id].plant_type == crate::tree::PlantType::Tree {
                 tree_emerged = true;
@@ -5670,5 +5731,48 @@ mod tests {
             }
         }
         assert!(tree_emerged, "Trees should emerge in mature gardens with rich conditions");
+    }
+
+    #[test]
+    fn neighbor_influence_shifts_scores() {
+        // Verify that neighbor species influence the scoring function.
+        // Clover (11) nearby should increase tree species scores.
+        // Tree (0) nearby should increase shade-tolerant species scores.
+        use crate::tree::PlantType;
+
+        let species_table = crate::tree::SpeciesTable::default();
+
+        // Test: clover neighbor boosts tree scores
+        let mut neighbors_clover = [false; 12];
+        neighbors_clover[11] = true;
+
+        // Run once — deterministic, just check score behavior through species selection.
+        // Use many diverse positions so hash randomness averages out.
+        let mut trees_with: u32 = 0;
+        let mut trees_without: u32 = 0;
+        for x in 10..60usize {
+            for y in 10..60usize {
+                let id_with = pick_species_from_conditions(
+                    150, 150, 150, 128, 500,
+                    x, y, GROUND_LEVEL + 1,
+                    &species_table, 30, 15, &neighbors_clover,
+                );
+                if species_table.species[id_with].plant_type == PlantType::Tree {
+                    trees_with += 1;
+                }
+                let id_without = pick_species_from_conditions(
+                    150, 150, 150, 128, 500,
+                    x, y, GROUND_LEVEL + 1,
+                    &species_table, 30, 15, &[false; 12],
+                );
+                if species_table.species[id_without].plant_type == PlantType::Tree {
+                    trees_without += 1;
+                }
+            }
+        }
+        assert!(
+            trees_with > trees_without,
+            "Clover neighbor should boost tree emergence over 2500 samples: with={trees_with}, without={trees_without}"
+        );
     }
 }
