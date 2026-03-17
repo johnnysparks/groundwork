@@ -2101,6 +2101,7 @@ async function main() {
       updateTerrainWind(dt, newWind, windAngle);
       setWindAmbient(newWind);
       setLeafRustle(foliage.count, newWind);
+      rain.setWind(windAngle, newWind);
     }
     rain.update(dt);
 

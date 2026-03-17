@@ -73,6 +73,9 @@ export class RainRenderer {
   private material: THREE.ShaderMaterial;
   private active = false;
   private intensity = 0;  // 0-1 smooth ramp
+  private windDirX = 0;
+  private windDirZ = 0;
+  private windStrength = 0;
   private splashCallback: ((x: number, y: number, z: number) => void) | null = null;
 
   constructor() {
@@ -121,6 +124,13 @@ export class RainRenderer {
     this.active = raining;
   }
 
+  /** Set wind parameters for angled rain during gusts */
+  setWind(windAngle: number, strength: number): void {
+    this.windDirX = Math.cos(windAngle);
+    this.windDirZ = Math.sin(windAngle);
+    this.windStrength = strength;
+  }
+
   /** Current rain intensity (0-1), smooth-ramped */
   getIntensity(): number {
     return this.intensity;
@@ -145,8 +155,11 @@ export class RainRenderer {
       const drop = this.drops[i];
 
       if (i < activeCount) {
-        // Fall
+        // Fall + wind-driven horizontal drift
         drop.y -= drop.speed * dt;
+        const drift = this.windStrength * 15 * dt; // stronger wind = more angled rain
+        drop.x += this.windDirX * drift;
+        drop.z += this.windDirZ * drift;
 
         // Hit the ground? Emit splash and respawn
         if (drop.y < RAIN_MIN_Y) {
