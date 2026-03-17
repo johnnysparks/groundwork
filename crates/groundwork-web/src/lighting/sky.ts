@@ -144,6 +144,17 @@ void main() {
 
     float dayAmount = 1.0 - uNightAmount;
     color = mix(color, cloudCol, cloudShape * dayAmount * 0.55);
+
+    // Cirrus wisps: thin high-altitude streaky clouds, always faintly present
+    float cirrusH = smoothstep(0.25, 0.55, h) * smoothstep(0.85, 0.6, h);
+    if (cirrusH > 0.0) {
+      // Stretched UVs for streaky elongated shapes
+      vec2 cirrusUV = cloudUV * vec2(0.8, 2.5) + vec2(uTime * 0.012, 0.0);
+      float cn = fbm(cirrusUV * 1.5);
+      float cirrus = smoothstep(0.52, 0.72, cn) * cirrusH * 0.25;
+      vec3 cirrusCol = mix(vec3(1.0, 0.98, 0.95), vec3(0.9, 0.85, 0.8), 0.3);
+      color = mix(color, cirrusCol, cirrus * dayAmount);
+    }
   }
 
   // Stars: faint points above horizon, visible only at night
