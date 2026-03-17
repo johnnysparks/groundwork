@@ -161,7 +161,7 @@ export class DayCycle {
     deltaS: number,
     lights: Lights,
     scene: THREE.Scene,
-    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color>; uNightAmount?: THREE.IUniform<number>; uTime?: THREE.IUniform<number> },
+    skyUniforms?: { topColor: THREE.IUniform<THREE.Color>; bottomColor: THREE.IUniform<THREE.Color>; horizonColor?: THREE.IUniform<THREE.Color>; uNightAmount?: THREE.IUniform<number>; uTime?: THREE.IUniform<number>; uSunDir?: THREE.IUniform<THREE.Vector3> },
   ): void {
     this.elapsedTime += deltaS;
     if (this.autoCycle) {
@@ -229,6 +229,15 @@ export class DayCycle {
       // Elapsed time for sky animations (shooting stars)
       if (skyUniforms.uTime) {
         skyUniforms.uTime.value = this.elapsedTime;
+      }
+      // Sun direction for sun disc rendering in sky shader
+      if (skyUniforms.uSunDir) {
+        // Normalize to unit direction — Y-up for sky shader (Y = height = sin(elev))
+        skyUniforms.uSunDir.value.set(
+          Math.cos(elev) * Math.cos(azim),
+          Math.sin(elev),
+          Math.cos(elev) * Math.sin(azim),
+        );
       }
       // Night amount for star visibility: peaks at midnight (0.0), zero at noon (0.5)
       if (skyUniforms.uNightAmount) {

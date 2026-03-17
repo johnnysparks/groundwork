@@ -24,6 +24,7 @@ uniform float uNightAmount;
 uniform float uTime;
 uniform float uCloudDensity;
 uniform float uRainbow;
+uniform vec3 uSunDir;
 varying vec3 vWorldPosition;
 
 // Simple pseudo-random hash for star placement
@@ -68,6 +69,21 @@ void main() {
   } else {
     float t = smoothstep(-0.5, 0.0, h);
     color = mix(bottomColor, horizonColor, t);
+  }
+
+  // Sun disc: warm glowing circle at sun position, most visible at dawn/dusk
+  {
+    float sunDot = dot(dir, uSunDir);
+    // Tight bright core + soft halo
+    float core = smoothstep(0.9985, 0.9995, sunDot);
+    float halo = smoothstep(0.96, 0.999, sunDot);
+    // Sun color: white-hot core, warm amber halo
+    vec3 sunCore = vec3(1.0, 0.98, 0.92);
+    vec3 sunHalo = mix(vec3(1.0, 0.7, 0.3), vec3(1.0, 0.95, 0.8), smoothstep(0.96, 0.999, sunDot));
+    // Fade at night (sun below horizon)
+    float sunVis = smoothstep(-0.02, 0.08, uSunDir.y) * (1.0 - uNightAmount);
+    color += sunCore * core * 1.2 * sunVis;
+    color += sunHalo * halo * 0.4 * sunVis;
   }
 
   // Clouds: soft drifting shapes above horizon, fade at night
@@ -177,6 +193,7 @@ export interface SkyUniforms {
   uTime: THREE.IUniform<number>;
   uCloudDensity: THREE.IUniform<number>;
   uRainbow: THREE.IUniform<number>;
+  uSunDir: THREE.IUniform<THREE.Vector3>;
   [key: string]: THREE.IUniform<unknown>;
 }
 
@@ -193,6 +210,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     uTime: { value: 0.0 },                                 // elapsed time for shooting stars
     uCloudDensity: { value: 0.4 },                          // 0=clear sky, 1=overcast (0.4=scattered cumulus)
     uRainbow: { value: 0.0 },                                 // 0=invisible, 1=full rainbow (fades after rain)
+    uSunDir: { value: new THREE.Vector3(0.5, 0.5, 0.0) },     // normalized sun direction in world space
   };
 
   const skyMat = new THREE.ShaderMaterial({
