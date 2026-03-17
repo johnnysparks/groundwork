@@ -1,12 +1,17 @@
 /**
- * Tutorial quest system — ported from groundwork-tui/src/quest.rs.
+ * Tutorial quest system — gentle onboarding progression.
  *
- * 20 quests across 9 chapters guide the player through the core mechanics.
- * Quests complete based on player actions (panning, tool use) and world state
- * (materials in the grid). Chapter advances when all quests in it are done.
+ * Quest lines introduce one concept at a time with breathing room between each.
+ * The player starts in an empty meadow with a pond and gnome — no UI visible.
+ * Each quest line unlocks exactly one new tool or system.
  *
- * Adapted for the web renderer: 3D orbit replaces "Switch to 3D", inspect
- * quests are simplified (no inspect panel yet), range tool quest removed.
+ * Quest Line 0: Meet Your Gnome — tap gnome, camera follows, orbit around
+ * Quest Line 1: Start Your Garden — sow small (zone seeds), inspect a cell
+ * Quest Line 2: See Below the Surface — x-ray mode, irrigation lens
+ * Quest Line 3: Shape the Water — dig channels, watch first bloom + bee
+ * Quest Line 4+: WIP (future quest lines)
+ *
+ * See decisions/2026-03-17T18:00:00_reduce_progression_intensity.md
  */
 
 import {
@@ -21,17 +26,14 @@ import { SPECIES } from '../bridge';
 // ---------------------------------------------------------------------------
 
 export type QuestId =
-  | 'panAround'
-  | 'changeDepth'
+  | 'tapGnome'
   | 'orbitCamera'
-  | 'placeWater'
-  | 'plantFirstSeed'
-  | 'watchItGrow'
-  | 'changeSpecies'
-  | 'toggleAutoTick'
-  | 'plantThreeSpecies'
-  | 'plantAllTypes'
-  | 'growATree';
+  | 'sowSmall'
+  | 'inspectCell'
+  | 'openXray'
+  | 'irrigationLens'
+  | 'digChannel'
+  | 'firstBloom';
 
 interface QuestDef {
   id: QuestId;
@@ -41,89 +43,65 @@ interface QuestDef {
 }
 
 const QUEST_DEFS: QuestDef[] = [
-  // Chapter 0: Welcome — just you, your gnome, and the garden
+  // Chapter 0: Meet Your Gnome — just you, the meadow, and a little friend
   {
-    id: 'panAround',
-    name: 'Look around',
+    id: 'tapGnome',
+    name: 'Say hello',
     chapter: 0,
-    detail: 'Drag to orbit, scroll to zoom. This is your garden — a small glen waiting to come alive.',
+    detail: 'Tap your garden gnome — he\'s waiting by the pond.',
   },
   {
     id: 'orbitCamera',
-    name: 'Find the spring',
+    name: 'Look around',
     chapter: 0,
-    detail: 'There\'s a water spring at the center. Orbit the camera until you spot the blue water column. Your gnome is waiting nearby.',
+    detail: 'Drag to orbit the camera. Take in the meadow — this is your garden.',
   },
-  // Chapter 1: Sow — only the seed tool is available
+  // Chapter 1: Start Your Garden — the seed tool appears, one action at a time
   {
-    id: 'plantFirstSeed',
-    name: 'Sow groundcover',
+    id: 'sowSmall',
+    name: 'Sow a patch',
     chapter: 1,
-    detail: 'Click near the spring to zone small plants. Your gnome will walk over and do the planting.',
+    detail: 'Click near the pond to zone a small area. Your gnome will plant seeds — you don\'t know what will grow yet.',
   },
   {
-    id: 'watchItGrow',
-    name: 'Watch it spread',
+    id: 'inspectCell',
+    name: 'Inspect your seedling',
     chapter: 1,
-    detail: 'Groundcover grows and spreads on its own. Watch the little stems emerge.',
+    detail: 'Tap a planted cell to see what species grew. The inspect panel shows moisture and soil conditions.',
   },
-  // Chapter 2: Irrigate — shovel unlocks, dig channels from the spring
+  // Chapter 2: See Below the Surface — x-ray with lens picker
   {
-    id: 'placeWater',
-    name: 'Irrigate your garden',
-    chapter: 2,
-    detail: 'Use the shovel to dig a channel from the spring toward your plants. Water flows downhill and soaks into soil — watch growth speed up!',
-  },
-  // Chapter 3: Discover the Underground — slow down, observe what's happening
-  {
-    id: 'changeDepth',
+    id: 'openXray',
     name: 'Go underground',
+    chapter: 2,
+    detail: 'Press Q to enter x-ray mode. See the roots growing beneath your garden.',
+  },
+  {
+    id: 'irrigationLens',
+    name: 'Check moisture',
+    chapter: 2,
+    detail: 'Open the lens picker and select "Irrigation." Blue is wet, red is dry — see where water flows.',
+  },
+  // Chapter 3: Shape the Water — irrigation and first ecological surprise
+  {
+    id: 'digChannel',
+    name: 'Dig a channel',
     chapter: 3,
-    detail: 'Tap X-Ray to see underground. Pick a lens — roots, moisture, light, or nutrients. Each has its own color theme.',
+    detail: 'Use the shovel to dig toward the pond. Water flows through channels into dry soil.',
   },
-  // Chapter 4: Bloom — wait for your first flower to appear naturally
   {
-    id: 'changeSpecies',
+    id: 'firstBloom',
     name: 'First bloom',
-    chapter: 4,
-    detail: 'Your groundcover is maturing. Wait and watch — when conditions are right, a wildflower will appear on its own.',
-  },
-  // Chapter 5: Pollinators — patience pays off
-  {
-    id: 'plantThreeSpecies',
-    name: 'Attract a pollinator',
-    chapter: 5,
-    detail: 'Flowers attract bees and butterflies. Plant more flowers near each other to build a pollinator bridge. This takes time.',
-  },
-  // Chapter 6: Shrubs — the garden deepens
-  {
-    id: 'toggleAutoTick',
-    name: 'Grow shrubs',
-    chapter: 6,
-    detail: 'Berry bushes attract birds that carry seeds to surprising new spots. Ferns thrive in shade. Let the garden develop its own layers.',
-  },
-  // Chapter 7: The underground economy
-  {
-    id: 'plantAllTypes',
-    name: 'Root competition',
-    chapter: 7,
-    detail: 'Use X-Ray moisture lens. See how roots compete for water underground. Clover fixes nitrogen — plant it near a tree and watch the difference.',
-  },
-  // Chapter 8: Trees — late game, the ultimate reward
-  {
-    id: 'growATree',
-    name: 'Grow a canopy',
-    chapter: 8,
-    detail: 'Plant an oak and let it grow. A canopy takes patience — the tree must claim territory, spread roots, and outcompete its neighbors. This is the long game.',
+    chapter: 3,
+    detail: 'Let time pass. When your first flower blooms, something special arrives...',
   },
 ];
 
 const CHAPTER_NAMES = [
-  'Welcome',
-  'First Plants',
-  'Flowers & Fauna',
-  'Shrubs & Roots',
-  'Trees',
+  'Meet Your Gnome',
+  'Start Your Garden',
+  'See Below the Surface',
+  'Shape the Water',
 ];
 
 // ---------------------------------------------------------------------------
@@ -131,33 +109,39 @@ const CHAPTER_NAMES = [
 // ---------------------------------------------------------------------------
 
 interface ActionTracker {
-  panCount: number;
-  depthChanged: boolean;
+  tappedGnome: boolean;
   orbited: boolean;
-  placedWater: boolean;
+  panCount: number;
   plantedSeed: boolean;
-  cycledSpecies: boolean;
-  toggledAutoTick: boolean;
-  steppedManually: boolean;
+  inspectedCell: boolean;
+  openedXray: boolean;
+  selectedIrrigationLens: boolean;
   usedShovel: boolean;
-  speciesPlanted: Set<number>;
   /** Last voxel the player clicked on: [x, y, z] */
   lastClickedVoxel: [number, number, number] | null;
+  speciesPlanted: Set<number>;
+  depthChanged: boolean;
+  placedWater: boolean;
+  toggledAutoTick: boolean;
+  steppedManually: boolean;
 }
 
 function createActionTracker(): ActionTracker {
   return {
-    panCount: 0,
-    depthChanged: false,
+    tappedGnome: false,
     orbited: false,
-    placedWater: false,
+    panCount: 0,
     plantedSeed: false,
-    cycledSpecies: false,
+    inspectedCell: false,
+    openedXray: false,
+    selectedIrrigationLens: false,
+    usedShovel: false,
+    lastClickedVoxel: null,
+    speciesPlanted: new Set(),
+    depthChanged: false,
+    placedWater: false,
     toggledAutoTick: false,
     steppedManually: false,
-    usedShovel: false,
-    speciesPlanted: new Set(),
-    lastClickedVoxel: null,
   };
 }
 
@@ -252,12 +236,17 @@ export class QuestLog {
   // Action recording
   // -------------------------------------------------------------------------
 
+  recordTapGnome(): void {
+    this.actions.tappedGnome = true;
+  }
+
   recordPan(): void {
     this.actions.panCount++;
   }
 
   recordDepthChange(): void {
     this.actions.depthChanged = true;
+    this.actions.openedXray = true;
   }
 
   recordOrbit(): void {
@@ -273,10 +262,6 @@ export class QuestLog {
     this.actions.speciesPlanted.add(speciesIndex);
   }
 
-  recordCycleSpecies(): void {
-    this.actions.cycledSpecies = true;
-  }
-
   recordToggleAutoTick(): void {
     this.actions.toggledAutoTick = true;
   }
@@ -289,11 +274,19 @@ export class QuestLog {
     this.actions.usedShovel = true;
   }
 
+  recordInspectCell(): void {
+    this.actions.inspectedCell = true;
+  }
+
+  recordSelectIrrigationLens(): void {
+    this.actions.selectedIrrigationLens = true;
+  }
+
   recordToolUse(tool: ToolCodeType, speciesIndex: number): void {
     switch (tool) {
       case ToolCode.Shovel:
         this.recordUseShovel();
-        // Digging IS irrigation now — shovel completes the irrigation quest
+        // Digging IS irrigation — shovel completes the dig quest
         this.recordPlaceWater();
         break;
       case ToolCode.Seed:
@@ -317,44 +310,18 @@ export class QuestLog {
   check(grid: Uint8Array): void {
     if (this.allComplete) return;
 
-    // Get focus voxel properties (from last click)
-    let focusMat: number | null = null;
-    let focusWater = 0;
-    let focusZ = GROUND_LEVEL; // default to surface
-    if (this.actions.lastClickedVoxel) {
-      const [fx, fy, fz] = this.actions.lastClickedVoxel;
-      focusZ = fz;
-      if (fx >= 0 && fx < GRID_X && fy >= 0 && fy < GRID_Y && fz >= 0 && fz < GRID_Z) {
-        const idx = (fx + fy * GRID_X + fz * GRID_X * GRID_Y) * VOXEL_BYTES;
-        focusMat = grid[idx];
-        focusWater = grid[idx + 1];
-      }
-    }
-
-    // Lazily scan grid only for quests that need it
-    const needsTrunk = this.questActive('watchItGrow');
-    let hasTrunk = false;
-    if (needsTrunk) {
+    // Check for bloom (any Leaf material = flower bloomed or tree leafed)
+    const needsBloom = this.questActive('firstBloom');
+    let hasBloom = false;
+    if (needsBloom) {
       for (let i = 0; i < grid.length; i += VOXEL_BYTES) {
-        if (grid[i] === Material.Trunk) { hasTrunk = true; break; }
+        if (grid[i] === Material.Leaf) { hasBloom = true; break; }
       }
     }
 
-    const needsTree = this.questActive('growATree');
-    let treeGrown = false;
-    if (needsTree) {
-      let leaves = 0;
-      let branches = 0;
-      for (let i = 0; i < grid.length; i += VOXEL_BYTES) {
-        if (grid[i] === Material.Leaf) leaves++;
-        if (grid[i] === Material.Branch) branches++;
-        if (leaves >= 50 && branches >= 10) { treeGrown = true; break; }
-      }
-    }
-
-    // Fauna check for "attract fauna" quest
+    // Fauna check for first bloom quest (bee arrives)
     let hasFauna = false;
-    if (this.questActive('toggleAutoTick')) {
+    if (needsBloom) {
       try { hasFauna = getFaunaCount() > 0; } catch {}
     }
 
@@ -366,41 +333,30 @@ export class QuestLog {
 
       let complete = false;
       switch (quest.id) {
-        case 'panAround':
-          // Accept either WASD pan OR touch orbit — mobile players orbit instead of pan
-          complete = this.actions.panCount >= 4 || this.actions.orbited;
-          break;
-        case 'changeDepth':
-          complete = this.actions.depthChanged;
+        case 'tapGnome':
+          complete = this.actions.tappedGnome;
           break;
         case 'orbitCamera':
-          complete = this.actions.orbited;
+          complete = this.actions.orbited || this.actions.panCount >= 4;
           break;
-        case 'placeWater':
-          complete = this.actions.placedWater;
-          break;
-        case 'plantFirstSeed':
+        case 'sowSmall':
           complete = this.actions.plantedSeed;
           break;
-        case 'watchItGrow':
-          complete = hasTrunk;
+        case 'inspectCell':
+          complete = this.actions.inspectedCell;
           break;
-        case 'changeSpecies':
-          complete = this.actions.cycledSpecies;
+        case 'openXray':
+          complete = this.actions.openedXray;
           break;
-        case 'toggleAutoTick':
-          // "Attract fauna" — check if fauna count > 0
-          complete = hasFauna;
+        case 'irrigationLens':
+          complete = this.actions.selectedIrrigationLens;
           break;
-        case 'plantThreeSpecies':
-          complete = this.actions.speciesPlanted.size >= 3;
+        case 'digChannel':
+          complete = this.actions.usedShovel;
           break;
-        case 'plantAllTypes':
-          complete = hasAllPlantTypes(this.actions.speciesPlanted);
-          break;
-        case 'growATree':
-          // "Reach score 1000" — check plant count as proxy
-          complete = treeGrown && this.actions.speciesPlanted.size >= 4;
+        case 'firstBloom':
+          // Complete when a flower blooms AND fauna arrives (the magical moment)
+          complete = hasBloom && hasFauna;
           break;
       }
 
@@ -437,7 +393,7 @@ export class QuestLog {
         this._onChapterChange?.(this.currentChapter);
       } else {
         this.allComplete = true;
-        this.showNotification('All missions complete!');
+        this.showNotification('Your garden is coming alive!');
         this._onChapterChange?.(CHAPTER_NAMES.length);
       }
     }
@@ -473,7 +429,7 @@ export class QuestLog {
 
     if (this.allComplete) {
       toggle.textContent = '\u2714';
-      body.innerHTML = '<div class="quest-complete-msg">All missions complete!<br>Your garden is alive.</div>';
+      body.innerHTML = '<div class="quest-complete-msg">Your garden is alive.<br>Keep exploring — there\'s more to discover.</div>';
       body.style.display = 'block';
       return;
     }
@@ -485,7 +441,7 @@ export class QuestLog {
 
     // Header
     const headerLabel = this.panel.querySelector('#quest-chapter-label')!;
-    headerLabel.textContent = `Ch.${this.currentChapter + 1}: ${CHAPTER_NAMES[this.currentChapter]}`;
+    headerLabel.textContent = `${CHAPTER_NAMES[this.currentChapter]}`;
     const headerProgress = this.panel.querySelector('#quest-progress')!;
     headerProgress.textContent = `${done}/${total}`;
     toggle.textContent = this.expanded ? '\u25BC' : '\u25B6';
@@ -512,24 +468,6 @@ export class QuestLog {
     }
     body.innerHTML = html;
   }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Check if the player has planted at least one of each plant type.
- * Species indices 0-3 = Tree, 4-6 = Shrub, 7-8 = Flower, 9-11 = Groundcover
- */
-function hasAllPlantTypes(planted: Set<number>): boolean {
-  const types = new Set<string>();
-  for (const idx of planted) {
-    if (idx < SPECIES.length) {
-      types.add(SPECIES[idx].type);
-    }
-  }
-  return types.has('Tree') && types.has('Shrub') && types.has('Flower') && types.has('Ground');
 }
 
 // ---------------------------------------------------------------------------

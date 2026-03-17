@@ -1,11 +1,15 @@
 /**
- * HUD overlay: tool palette, species picker, and status display.
+ * HUD overlay: tool palette and status display.
  *
  * Built as HTML/CSS overlay on top of the Three.js canvas for crisp text
- * and standard UI behavior. Communicates tool/species selection via callbacks.
+ * and standard UI behavior. Communicates tool selection via callbacks.
+ *
+ * Species are NOT player-selected. The player paints density zones; the sim
+ * decides what grows based on environmental conditions (moisture, light, soil,
+ * neighbors). Species are *discovered* through the inspect panel.
  */
 
-import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, setSelectedSpecies, isInitialized, milestoneTier1, milestoneTier2, milestoneTier3, isSpeciesDiscovered } from '../bridge';
+import { ToolCode, type ToolCodeType, TOOLS as BRIDGE_TOOLS, SPECIES as BRIDGE_SPECIES, type SpeciesDef, isInitialized } from '../bridge';
 import { SCENES, getSceneId, switchScene } from '../mesher/mockGrid';
 import { playMilestone } from '../audio/sfx';
 
@@ -47,7 +51,6 @@ export { type SpeciesDef } from '../bridge';
 
 export interface HudState {
   activeTool: ToolCodeType;
-  activeSpeciesIndex: number;
   autoTick: boolean;
   tickCount: number;
   gardenStats?: { plants: number; fauna: number; species: number };
@@ -64,7 +67,6 @@ type HudChangeCallback = (state: HudState) => void;
 export class Hud {
   readonly state: HudState = {
     activeTool: ToolCode.Seed,
-    activeSpeciesIndex: 0,
     autoTick: false,
     tickCount: 0,
     water: 150,
@@ -75,17 +77,13 @@ export class Hud {
   private _bestScore = 0;
   private _onNewGarden: (() => void) | null = null;
   private tools: ToolUIDef[];
-  private species: SpeciesDef[];
   private container: HTMLElement;
   private toolButtons: HTMLElement[] = [];
-  private speciesButtons: HTMLElement[] = [];
-  private speciesPanel: HTMLElement;
   private statusEl: HTMLElement;
   private onChange: HudChangeCallback | null = null;
 
   constructor() {
     this.tools = buildTools();
-    this.species = BRIDGE_SPECIES;
     try { this._bestScore = Number(localStorage.getItem('groundwork-best') ?? '0'); } catch {}
 
     this.container = document.createElement('div');
@@ -134,56 +132,6 @@ export class Hud {
         this._onLensChange?.(lens);
       });
     }
-
-    // Wire up species picker with progressive unlocking:
-    // Tier 0 (start): Groundcover (moss, grass, clover)
-    // Milestone-based unlock tiers (from sim EcoMilestones):
-    // Tier 0: Groundcover (always)
-    // Tier 1: Flowers (after groundcover established)
-    // Tier 2: Shrubs (after pollinators attracted)
-    // Tier 3: Trees (after fauna ecosystem active)
-    const UNLOCK_TIERS: Record<string, number> = {
-      'Groundcover': 0,
-      'Flower': 1,
-      'Shrub': 2,
-      'Tree': 3000,
-    };
-    this.speciesPanel = this.container.querySelector('#species-panel')! as HTMLElement;
-    const speciesList = this.speciesPanel.querySelector('#species-list')!;
-    let currentType = '';
-    for (const sp of this.species) {
-      if (sp.type !== currentType) {
-        currentType = sp.type;
-        const header = document.createElement('div');
-        header.className = 'species-group-header';
-        const tier = UNLOCK_TIERS[sp.type] ?? 0;
-        const tierLabels = ['', 'Grow groundcover first', 'Attract pollinators first', 'Build a fauna ecosystem'];
-        header.textContent = tier > 0 ? `${sp.type} — ${tierLabels[tier]}` : sp.type;
-        header.dataset.unlockType = sp.type;
-        speciesList.appendChild(header);
-      }
-      const btn = document.createElement('button');
-      btn.className = 'species-btn';
-      btn.dataset.speciesIndex = String(sp.index);
-      btn.dataset.speciesType = sp.type;
-      btn.textContent = sp.name;
-      // Lock species behind milestone tiers + discovery
-      const tier = UNLOCK_TIERS[sp.type] ?? 0;
-      if (tier > 0) {
-        btn.classList.add('locked');
-        btn.title = `Discover through ecological progression`;
-      }
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (btn.classList.contains('locked')) return;
-        this.selectSpecies(sp.index);
-      });
-      speciesList.appendChild(btn);
-      this.speciesButtons.push(btn);
-    }
-    // Select first groundcover species by default
-    const firstGround = this.species.find(s => s.type === 'Groundcover');
-    if (firstGround) this.selectSpecies(firstGround.index);
 
     // Status element
     this.statusEl = this.container.querySelector('#hud-status')! as HTMLElement;
@@ -257,9 +205,13 @@ export class Hud {
 
   /**
    * Progressive UI reveal tied to quest chapters.
-   * Phase 0 (Welcome): Only quest panel visible — clean, cozy intro.
-   * Phase 1 (First Plants): Tool bar, event feed, status bar appear.
-   * Phase 2+ (Full UI): Score panel, new garden, help text appear.
+   * Phase 0 (Meet Your Gnome): Nothing visible — just garden, pond, gnome.
+   * Phase 1 (Start Your Garden): Seed tool + quest panel appear.
+   * Phase 2 (See Below the Surface): X-ray button + lens picker appear.
+   * Phase 3 (Shape the Water): Shovel tool + full tool bar appear.
+   * Phase 4+ (Full UI): Score panel, new garden, help text appear.
+   *
+   * See decisions/2026-03-17T18:00:00_reduce_progression_intensity.md
    */
   setPhase(phase: number): void {
     this.container.dataset.phase = String(phase);
@@ -275,23 +227,6 @@ export class Hud {
     this.state.activeTool = code;
     this.render();
     this.notify();
-  }
-
-  /** Select a species by index */
-  selectSpecies(index: number): void {
-    this.state.activeSpeciesIndex = index;
-    if (isInitialized()) {
-      setSelectedSpecies(index);
-    }
-    this.render();
-    this.notify();
-  }
-
-  /** Cycle to next species */
-  cycleSpecies(direction: 1 | -1): void {
-    const idx = this.species.findIndex(s => s.index === this.state.activeSpeciesIndex);
-    const next = (idx + direction + this.species.length) % this.species.length;
-    this.selectSpecies(this.species[next].index);
   }
 
   /** Update tick count display */
@@ -326,38 +261,6 @@ export class Hud {
     for (const btn of this.toolButtons) {
       const code = Number(btn.dataset.tool);
       btn.classList.toggle('active', code === this.state.activeTool);
-    }
-
-    // Show/hide species panel based on whether seed tool is active
-    this.speciesPanel.classList.toggle('visible', this.state.activeTool === ToolCode.Seed);
-
-    // Update species buttons — check milestone unlocks + discovery
-    const t1 = isInitialized() ? milestoneTier1() : false;
-    const t2 = isInitialized() ? milestoneTier2() : false;
-    const t3 = isInitialized() ? milestoneTier3() : false;
-    for (const btn of this.speciesButtons) {
-      const idx = Number(btn.dataset.speciesIndex);
-      const type = btn.dataset.speciesType ?? '';
-      const tier = type === 'Flower' ? 1 : type === 'Shrub' ? 2 : type === 'Tree' ? 3 : 0;
-      // Check tier unlock
-      const tierUnlocked = tier === 0 || (tier === 1 && t1) || (tier === 2 && t2) || (tier === 3 && t3);
-      // Check species discovery (if WASM available)
-      const discovered = !isInitialized() || isSpeciesDiscovered(idx);
-      const locked = !tierUnlocked || !discovered;
-      btn.classList.toggle('locked', locked);
-      btn.classList.toggle('active', !locked && idx === this.state.activeSpeciesIndex);
-      if (locked) {
-        btn.title = !tierUnlocked ? 'Tier not unlocked yet' : 'Not yet discovered';
-      } else {
-        btn.title = '';
-      }
-    }
-    // Update group headers
-    for (const header of this.speciesPanel.querySelectorAll('.species-group-header')) {
-      const type = (header as HTMLElement).dataset.unlockType ?? '';
-      const tier = type === 'Flower' ? 1 : type === 'Shrub' ? 2 : type === 'Tree' ? 3 : 0;
-      const unlocked = tier === 0 || (tier === 1 && t1) || (tier === 2 && t2) || (tier === 3 && t3);
-      (header as HTMLElement).classList.toggle('locked', !unlocked);
     }
 
     this.renderStatus();
@@ -466,18 +369,15 @@ export class Hud {
     this._xrayActive = active;
     const toolBar = this.container.querySelector('#tool-bar') as HTMLElement;
     const lensBar = this.container.querySelector('#xray-lens-bar') as HTMLElement;
-    const speciesPanel = this.container.querySelector('#species-panel') as HTMLElement;
     const xrayBtn = this.container.querySelector('#xray-toggle') as HTMLElement;
     if (active) {
       toolBar.style.display = 'none';
-      speciesPanel.style.display = 'none';
       lensBar.style.display = 'flex';
       xrayBtn.classList.add('active');
     } else {
       toolBar.style.display = 'flex';
       lensBar.style.display = 'none';
       xrayBtn.classList.remove('active');
-      // species panel visibility managed by render()
     }
   }
 
@@ -572,28 +472,6 @@ export class Hud {
     setTimeout(() => { el.style.opacity = '0'; }, 1500);
   }
 
-  /** Update species unlocks from sim-side ecological milestones */
-  updateMilestones(milestones: { tier1Flowers: boolean; tier2Shrubs: boolean; tier3Trees: boolean }): void {
-    const tiers: [string, boolean][] = [
-      ['Flower', milestones.tier1Flowers],
-      ['Shrub', milestones.tier2Shrubs],
-      ['Tree', milestones.tier3Trees],
-    ];
-    for (const [type, unlocked] of tiers) {
-      if (unlocked) {
-        for (const btn of this.speciesButtons) {
-          if (btn.dataset.speciesType === type && btn.classList.contains('locked')) {
-            btn.classList.remove('locked');
-            btn.title = '';
-            this.addEvent(`${type}s unlocked! Your ecosystem earned it.`);
-          }
-        }
-        const header = this.container.querySelector(`[data-unlock-type="${type}"]`);
-        if (header && header.textContent?.includes('score')) header.textContent = type;
-      }
-    }
-  }
-
   /** Update gnome status display */
   setGnomeStatus(queueLength: number): void {
     const el = this.container.querySelector('#gnome-status');
@@ -631,9 +509,6 @@ const HUD_HTML = `
     <button class="lens-btn" data-lens="light" title="Light penetration">Light</button>
     <button class="lens-btn" data-lens="nutrients" title="Nutrient density">Nutrients</button>
   </div>
-  <div id="species-panel">
-    <div id="species-list"></div>
-  </div>
   <div id="garden-score">
     <div id="score-title">Garden</div>
     <div id="score-number">0</div>
@@ -658,7 +533,7 @@ const HUD_HTML = `
       <select id="scene-select" title="Choose a scene"></select>
     </div>
   </div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay | <a href="wiki/" id="wiki-link">Wiki</a></div>
+  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Q: x-ray | V: overlay | <a href="wiki/" id="wiki-link">Wiki</a></div>
   <button id="new-garden-btn" title="Start a fresh garden">New Garden</button>
 `;
 
@@ -793,79 +668,6 @@ const HUD_CSS = `
 .tool-label {
   font-size: 10px;
   opacity: 0.7;
-}
-
-/* --- Species Panel (above tool bar, slides up when seed tool active) --- */
-#species-panel {
-  position: absolute;
-  bottom: 90px;
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-  background: rgba(20, 18, 15, 0.85);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  pointer-events: auto;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  max-width: 320px;
-}
-#species-panel.visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
-
-#species-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.species-group-header {
-  width: 100%;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(180, 160, 130, 0.5);
-  padding: 4px 4px 0;
-  margin-top: 2px;
-}
-.species-group-header:first-child {
-  margin-top: 0;
-}
-
-.species-btn {
-  padding: 4px 10px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #b8a88a;
-  cursor: pointer;
-  font-size: 12px;
-  font-family: inherit;
-  transition: all 0.12s ease;
-}
-.species-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #e8d8b8;
-}
-.species-btn.active {
-  background: rgba(80, 120, 50, 0.5);
-  border-color: rgba(140, 190, 80, 0.6);
-  color: #c4e890;
-}
-.species-btn.locked {
-  opacity: 0.35;
-  cursor: not-allowed;
-  border-color: transparent;
-}
-.species-btn.locked:hover {
-  background: rgba(255, 255, 255, 0.03);
 }
 
 /* --- Top bar (status + controls) --- */
@@ -1160,24 +962,25 @@ const HUD_CSS = `
 }
 
 /* --- Progressive reveal: hide UI until quest progression unlocks it --- */
-/* Phase 0 (Welcome): hide EVERYTHING — just the garden, pond, and gnome.
-   The player discovers the world before any UI appears. */
+/* Phase 0 (Meet Your Gnome): hide EVERYTHING — just the garden, pond, and gnome.
+   No auto-advance timer. Player explores freely. */
 #hud[data-phase="0"] #tool-bar,
-#hud[data-phase="0"] #species-panel,
 #hud[data-phase="0"] #garden-score,
 #hud[data-phase="0"] #event-feed,
 #hud[data-phase="0"] #hud-top-bar,
-#hud[data-phase="0"] #quest-panel {
+#hud[data-phase="0"] #hud-help,
+#hud[data-phase="0"] #new-garden-btn {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(20px);
 }
 
-/* Phase 1 (Sow): only seed tool visible. Player discovers "sow small."
-   Quest panel, score, help, non-seed tools all hidden. */
+/* Phase 1 (Start Your Garden): quest panel + seed tool only.
+   Player discovers "sow small" — one tool, one action. */
 #hud[data-phase="1"] #garden-score,
-#hud[data-phase="1"] #quest-panel,
+#hud[data-phase="1"] #hud-help,
+#hud[data-phase="1"] #new-garden-btn,
 #hud[data-phase="1"] #hud-top-bar,
 #hud[data-phase="1"] #event-feed {
   opacity: 0 !important;
@@ -1190,18 +993,33 @@ const HUD_CSS = `
   display: none !important;
 }
 
-/* Phase 2 (Irrigate): seed + shovel visible. Player learns to dig channels. */
-#hud[data-phase="2"] #garden-score {
+/* Phase 2 (See Below the Surface): x-ray + lens picker appear.
+   Still no shovel or score — just observation tools. */
+#hud[data-phase="2"] #garden-score,
+#hud[data-phase="2"] #hud-help,
+#hud[data-phase="2"] #new-garden-btn,
+#hud[data-phase="2"] #hud-top-bar {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(20px);
 }
-/* In phase 2, show Seed (1) and Shovel (0) — hide Soil (3) and Stone (4) */
-#hud[data-phase="2"] .tool-btn[data-tool="3"],
-#hud[data-phase="2"] .tool-btn[data-tool="4"] {
+/* In phase 2, still only seed tool (shovel comes in phase 3) */
+#hud[data-phase="2"] .tool-btn:not([data-tool="1"]) {
   display: none !important;
 }
+
+/* Phase 3 (Shape the Water): shovel + full tool bar + events appear. */
+#hud[data-phase="3"] #garden-score,
+#hud[data-phase="3"] #hud-help,
+#hud[data-phase="3"] #new-garden-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(20px);
+}
+
+/* Phase 4+ (Full UI): everything visible — score, help, new garden */
 
 /* Smooth transitions for reveal */
 #tool-bar,
@@ -1237,17 +1055,6 @@ const HUD_CSS = `
   }
   .tool-icon { font-size: 14px; }
   .tool-key { display: none; }
-
-  #species-panel {
-    bottom: 75px;
-    max-width: 90vw;
-    padding: 6px;
-  }
-  .species-btn {
-    padding: 6px 12px;
-    font-size: 13px;
-    min-height: 36px;
-  }
 
   #garden-score {
     top: 6px;

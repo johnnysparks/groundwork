@@ -129,7 +129,10 @@ crates/
       gardener/ghosts.ts  Ghost overlay: InstancedMesh for planned-but-not-executed zones
       ui/raycaster.ts     Mouse click → voxel coordinate raycasting
       ui/controls.ts      Input controls, keyboard shortcuts, drag-to-zone painting
-      ui/hud.ts           HUD overlay: tool palette, species picker, task queue counter
+      ui/hud.ts           HUD overlay: tool palette, task queue counter
+      ui/quests.ts        Gentle quest progression: 4 quest lines, 8 quests
+      ui/inspect.ts       Inspect panel: tap a cell to see species + conditions
+      ui/lenspicker.ts    X-ray lens picker: roots, irrigation, future lenses
     vite.config.ts        WASM plugin, COOP/COEP headers, GitHub Pages base
     package.json          three, vite, vite-plugin-wasm, typescript
 
@@ -212,23 +215,44 @@ JS reads:
 All tools are used by **painting zones** (drag-to-select area). The garden gnome then walks to each zoned voxel and executes the action. Ghost overlays show planned work before execution.
 
 - `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone). Also the primary **irrigation tool**: dig channels from water sources to gardens. Ghost: red-brown wireframe.
-- `seed` = **seed bag** — plants a seed; falls through air; dies on stone. Ghost: soft green pulse.
+- `seed` = **seed bag** — plants a density zone; the sim picks species based on environmental conditions (moisture, light, soil, neighbors). The player never selects species — they *discover* what emerges via the inspect panel. Ghost: soft green pulse.
 - `soil` = **soil** — places soil; falls through air. Use for berms, dams, and raised beds to direct water flow. Ghost: translucent warm brown.
 - `stone` = **stone** — places stone directly (no gravity). Use for permanent water barriers and aqueducts. Ghost: translucent gray.
 
 **No watering can.** Water comes from natural sources (springs, rain). Players shape terrain to create irrigation channels. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`.
 
+**No species picker.** The player plants *density*, not species. The sim picks what grows based on conditions. Species are discovered through the inspect panel. See `decisions/2026-03-17T20:00:00_density_not_species.md`. **Executive mandate.**
+
+**GAP: Condition-based species emergence is underdeveloped.** The sim needs environmental fitness scoring per species — moisture/light/soil preferences, density influence, neighbor effects, maturity gating. Until implemented, the sim uses basic/random selection as a placeholder. This is **P0** for the density-not-species design to actually work.
+
 ## Species
-- **Trees:** `oak`, `birch`, `willow`, `pine` — tall, space colonization branching
-- **Shrubs:** `fern`, `berry-bush`, `holly` — bushy, 1-2m, template-only
-- **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing
-- **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly
+Species are *discovered*, never chosen. What emerges depends on environmental conditions.
+- **Trees:** `oak`, `birch`, `willow`, `pine` — tall, space colonization branching. Emerge in mature, well-watered gardens with established ecosystems.
+- **Shrubs:** `fern`, `berry-bush`, `holly` — bushy, 1-2m, template-only. Emerge in moderate conditions with some fauna activity.
+- **Flowers:** `wildflower`, `daisy` — thin stem + bloom, fast growing. Emerge when groundcover is established and moisture is adequate.
+- **Groundcover:** `moss`, `grass`, `clover` — flat disc, spreads quickly. First to emerge in any sown zone — the pioneer layer.
 
 ## Fauna
 - **Pollinators:** `bee`, `butterfly` — spawn near flower clusters, boost seed nutrients
 - **Dispersers:** `bird` — spawn near mature trees, carry seeds 10-50 voxels
 - **Decomposers:** `worm`, `beetle` — enrich soil, break down dead wood
 - **Companions:** `squirrel` — spawn near oak/berry, domesticable by the gnome, cache acorns that sprout
+
+## Onboarding Progression
+
+The game starts gently. Each quest line introduces one concept with breathing room. No auto-advance timers — the player moves at their own pace. See `decisions/2026-03-17T18:00:00_reduce_progression_intensity.md`. **Executive mandate.**
+
+| Quest Line | Phase | What Unlocks | Key Moment |
+|-----------|-------|-------------|------------|
+| 0: Meet Your Gnome | 0 | Nothing — just garden + gnome + quest panel | Tap gnome → camera follows |
+| 1: Start Your Garden | 1 | Seed tool (sow density zones) + inspect panel | Plant seeds → discover what species emerged via inspect |
+| 2: See Below the Surface | 2 | X-ray mode + lens picker (roots, irrigation) | See root networks + moisture heatmap |
+| 3: Shape the Water | 3 | Shovel + full tool bar + events | Dig channels → first bloom → first bee |
+| 4+: (WIP) | 4+ | Score panel, full UI | Density → species emergence → self-sustaining loops |
+
+**X-ray lens system:** X-ray is no longer on/off. It's a lens picker with multiple visualization modes. Each lens has a unique color theme. Current lenses: Roots (green, transparent ground), Irrigation (blue=wet, red=dry moisture heatmap). Future: Nutrients, Light, Soil composition.
+
+**Inspect panel:** Tapping any cell shows species name, moisture level, light level in a warm overlay panel. Teaches observation before optimization.
 
 ## Gameplay Depth Principles
 

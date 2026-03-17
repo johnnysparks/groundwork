@@ -3,11 +3,11 @@
  *
  * Initializes the WASM simulation (or mock data), builds the voxel mesh,
  * sets up Three.js scene with lighting and camera, HUD overlay with tool
- * palette and species picker, raycaster click-to-place, and render loop.
+ * palette, raycaster click-to-place, and render loop.
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, GrowthStage, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState, packTreeStats, getTreeStatsView, readTreeStat } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, GrowthStage, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, getMilestones, queueGnomeTask, getGnomeState, getWeatherState, packTreeStats, getTreeStatsView, readTreeStat } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -41,6 +41,8 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
+import { InspectPanel, readVoxelAt } from './ui/inspect';
+import { LensPicker, type XrayLens } from './ui/lenspicker';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone, setGardenVitality, setCicadaDrone } from './audio/ambient';
 import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playDistantBird, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playRootCrackle, playRaindropPlink, playGardenWhisper, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
@@ -89,8 +91,6 @@ let _pollinatorActNotified = false;
 let _birdDropNotified = false;
 let _gardenAliveNotified = false;
 
-/** Species the player has deliberately planted (via seed tool) */
-const _playerPlantedSpecies = new Set<number>();
 let _xrayTipShown = false;
 let _recentDieOff = false;
 let _dieOffPlantCount = 0;
@@ -106,20 +106,6 @@ const TRUST_MILESTONES: [number, string][] = [
   [150, 'The squirrel trusts your gnome! It lingers nearby'],
   [180, 'The squirrel is following your gnome — a loyal companion!'],
 ];
-
-/** Companion species suggestions — shown once per species per session */
-const _companionSuggested = new Set<number>();
-const COMPANION_TIPS: Record<number, string> = {
-  0: 'Try planting Clover nearby — nitrogen fixing boosts Oak growth 50%!',
-  1: 'Birch grows fast in open ground — add Wildflowers to attract pollinators',
-  2: 'Willow loves water — plant Moss at its base to hold moisture',
-  3: 'Pine acidifies soil — Fern and Moss tolerate it, others struggle nearby',
-  4: 'Ferns love shade — plant near a tall tree for the Canopy Effect',
-  5: 'Berry bushes attract birds — birds will spread seeds across the garden!',
-  7: 'Flowers attract bees and butterflies — cluster them for a pollinator bridge',
-  8: 'Daisies attract pollinators — plant near trees to boost their health',
-  11: 'Clover fixes nitrogen — plant near trees for a 50% growth boost!',
-};
 
 /** Wild plant messages — fauna attribution based on species */
 const WILD_PLANT_MESSAGES: Record<number, string[]> = {
@@ -259,22 +245,20 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
   if (stats.species > _prevStats.species && stats.speciesIds) {
     for (const sid of stats.speciesIds) {
       if (!_prevSpeciesIds.has(sid)) {
+        // Every new species is a discovery — the player never chooses species.
+        // They plant density zones and discover what emerges.
         const msg = SUCCESSION_MESSAGES[sid];
         if (msg) {
           hud.addEvent(msg);
-        } else if (!_playerPlantedSpecies.has(sid) && !PIONEER_SPECIES.has(sid)) {
-          // Wild plant — fauna-dispersed!
+        } else {
           const wildMsgs = WILD_PLANT_MESSAGES[sid];
           if (wildMsgs) {
             hud.addEvent(wildMsgs[Math.floor(Math.random() * wildMsgs.length)]);
           } else {
             const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
-            hud.addEvent(`A wild ${name} appeared — the garden is planting itself!`);
+            hud.addEvent(`New species discovered: ${name}!`);
           }
           playDiscovery();
-        } else {
-          const name = SPECIES_NAMES[sid] ?? `Species ${sid}`;
-          hud.addEvent(`${name} is now growing in your garden (+100 score)`);
         }
         _eventCooldown = 20;
         break; // one event per tick
@@ -640,34 +624,53 @@ async function main() {
 
   // New Garden button registered after remeshDirty is defined (see below)
   const questLog = new QuestLog();
+  const inspectPanel = new InspectPanel();
+  const lensPicker = new LensPicker();
 
-  // Progressive UI reveal: show HUD elements as player advances through chapters
-  questLog.onChapterChange((chapter) => {
-    // Phase 0 is controlled by auto-advance below, not quest chapters
-    if (chapter >= 1) {
-      hud.setPhase(Math.max(chapter, 1));
-    }
-    if (chapter === 1) {
-      hud.selectTool(ToolCode.Seed);
-    }
-    if (chapter === 2) {
-      // Shovel unlocks for irrigation — select it so the player sees it
-      hud.selectTool(ToolCode.Shovel);
-      hud.addEvent('Shovel unlocked — dig channels from the spring to irrigate!');
+  // Wire inspect panel to quest tracking
+  inspectPanel.onInspect(() => questLog.recordInspectCell());
+
+  // Wire lens picker to quest tracking + overlay/xray modes
+  lensPicker.onSelectIrrigation(() => questLog.recordSelectIrrigationLens());
+  lensPicker.onChange((lens: XrayLens) => {
+    if (lens === 'off') {
+      xrayActive = false;
+      setXrayMode(false);
+      overlay.setMode(OverlayMode.Off);
+    } else if (lens === 'roots') {
+      xrayActive = true;
+      setXrayMode(true);
+      overlay.setMode(OverlayMode.Off);
+    } else if (lens === 'irrigation') {
+      xrayActive = true;
+      setXrayMode(true);
+      overlay.setMode(OverlayMode.Irrigation);
+      const freshGrid = isInitialized() ? getGridView() : grid;
+      overlay.rebuild(freshGrid);
     }
   });
 
-  // Phase 0 → 1 auto-advance: after 3 seconds OR first mouse interaction,
-  // show just the "sow" tool. The player meets the gnome and pond first.
-  let phase0Advanced = false;
-  const advanceFromPhase0 = () => {
-    if (phase0Advanced) return;
-    phase0Advanced = true;
-    hud.setPhase(1);
-    hud.selectTool(ToolCode.Seed);
-  };
-  setTimeout(advanceFromPhase0, 3000);
-  renderer.domElement.addEventListener('pointerdown', advanceFromPhase0, { once: true });
+  // Progressive UI reveal: each quest chapter maps to a HUD phase.
+  // Phase 0: nothing (just garden + gnome + quest panel)
+  // Phase 1: seed tool (sow)
+  // Phase 2: x-ray + lens picker
+  // Phase 3: shovel + full tool bar + events
+  // Phase 4+: full UI (score, help, new garden)
+  // See decisions/2026-03-17T18:00:00_reduce_progression_intensity.md
+  questLog.onChapterChange((chapter) => {
+    hud.setPhase(chapter);
+    if (chapter === 1) {
+      // Seed tool auto-selected — ready to sow
+      hud.selectTool(ToolCode.Seed);
+    }
+    if (chapter === 3) {
+      // Shovel becomes available for irrigation
+      hud.selectTool(ToolCode.Shovel);
+    }
+  });
+
+  // No auto-advance timer. Phase 0 stays until the player taps the gnome.
+  // The quest panel is visible in phase 0 so the player sees "Say hello."
 
   /** Apply a tool to the mock grid and re-mesh affected chunks */
   function applyToolToMockGrid(toolCode: number, x: number, y: number, z: number): void {
@@ -830,8 +833,6 @@ async function main() {
     _prevSpeciesIds = new Set<number>();
     _prevTreeStages.clear();
     _prevSquirrelTrust = 0;
-    _playerPlantedSpecies.clear();
-    _companionSuggested.clear();
     _squirrelCacheNotified = false;
     _pollinatorActNotified = false;
     _birdDropNotified = false;
@@ -841,11 +842,11 @@ async function main() {
     _tipTimer = 0;
     taskQueue.clear();
     questLog.reset();
+    inspectPanel.hide();
+    lensPicker.setLens('off');
+    gnomeTapped = false;
     remeshDirty();
     try { localStorage.removeItem('groundwork-garden'); } catch {}
-    // Re-arm phase 0→1 auto-advance
-    phase0Advanced = false;
-    setTimeout(advanceFromPhase0, 3000);
   });
 
   /** Enqueue a task to the WASM sim gnome (single source of truth).
@@ -856,6 +857,48 @@ async function main() {
       queueGnomeTask(tool, x, y, z, species ?? 255);
     }
   }
+
+  // --- Gnome click detection ---
+  // When the player clicks near the gnome, treat it as a gnome tap (for quest + camera follow).
+  // Uses distance-based check in sim coordinates (not raycasting against gnome mesh).
+  function isClickNearGnome(hitX: number, hitY: number): boolean {
+    const dx = hitX - gardener.visualX;
+    const dy = hitY - gardener.visualY;
+    return (dx * dx + dy * dy) < 9; // within 3 voxels
+  }
+
+  // Track whether the gnome-tap quest has been completed this session
+  let gnomeTapped = false;
+
+  // Canvas click handler for gnome tapping + inspect panel
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    // Don't handle if it was a drag (camera orbit)
+    if (hud.containsElement(e.target)) return;
+
+    const hit = raycastVoxel(e.clientX, e.clientY, orbit.camera, terrainGroup, false);
+    if (!hit) return;
+
+    // Check gnome tap — before phase 1 tools are available
+    if (!gnomeTapped && isClickNearGnome(hit.hitX, hit.hitY)) {
+      gnomeTapped = true;
+      questLog.recordTapGnome();
+      // Smooth camera focus on gnome
+      orbit.setFocus(gardener.visualX, gardener.visualY);
+      hud.addEvent('Your garden gnome waves hello!');
+      const freshGrid = isInitialized() ? getGridView() : grid;
+      questLog.check(freshGrid);
+      return;
+    }
+
+    // Inspect panel — tap any non-air voxel to see info
+    const freshGrid = isInitialized() ? getGridView() : grid;
+    const data = readVoxelAt(freshGrid, hit.hitX, hit.hitY, hit.hitZ);
+    if (data && data.material !== Material.Air) {
+      inspectPanel.show(data);
+      questLog.recordClick(hit.hitX, hit.hitY, hit.hitZ);
+      questLog.check(freshGrid);
+    }
+  }, { capture: false });
 
   setupControls({
     hud,
@@ -877,25 +920,18 @@ async function main() {
       }
 
       // Queue tasks instead of instant execution — gnome will do the work.
-      // Species-aware spacing: trees need territory, groundcover can pack tight.
+      // Density painting: player controls WHERE and HOW DENSE to sow.
+      // The sim decides WHAT species based on environmental conditions.
+      // Species = 255 means "let the sim pick based on conditions."
       if (tool === ToolCode.Seed) {
-        const speciesIdx = hud.state.activeSpeciesIndex;
-        const speciesType = SPECIES[speciesIdx]?.type ?? 'Ground';
-        // Trees: wide spacing (crown_radius ~24 voxels), place 1-2 per click
-        // Shrubs: medium spacing, Flowers/Ground: tight packing
-        const spacing = speciesType === 'Tree' ? 16
-          : speciesType === 'Shrub' ? 8
-          : speciesType === 'Flower' ? 4
-          : 3;
-        const r = speciesType === 'Tree' ? 16
-          : speciesType === 'Shrub' ? 8
-          : 6;
+        const r = 4;
+        const spacing = 3;
         for (let dy = -r; dy <= r; dy += spacing) {
           for (let dx = -r; dx <= r; dx += spacing) {
             const sx = hit.x + dx;
             const sy = hit.y + dy;
             if (sx < 0 || sy < 0 || sx >= GRID_X || sy >= GRID_Y) continue;
-            enqueueTask(tool, sx, sy, hit.z, hud.state.activeSpeciesIndex);
+            enqueueTask(tool, sx, sy, hit.z, 255);
           }
         }
       } else {
@@ -908,11 +944,6 @@ async function main() {
             enqueueTask(tool, sx, sy, hit.z);
           }
         }
-      }
-
-      // Track player-planted species for wild plant detection
-      if (tool === ToolCode.Seed) {
-        _playerPlantedSpecies.add(hud.state.activeSpeciesIndex);
       }
 
       // Visual + audio feedback
@@ -928,17 +959,8 @@ async function main() {
       if (qLen > 0) {
         hud.addEvent(`Gnome: ${toolNames[tool] ?? 'working'} zone queued (${qLen} tasks)`);
       }
-      // Companion species suggestion — once per species
-      if (tool === ToolCode.Seed) {
-        const sid = hud.state.activeSpeciesIndex;
-        if (!_companionSuggested.has(sid) && COMPANION_TIPS[sid]) {
-          setTimeout(() => hud.addEvent(COMPANION_TIPS[sid]), 2000);
-          _companionSuggested.add(sid);
-        }
-      }
       // Record tool use for quest tracking
-      const speciesIdx = hud.state.activeSpeciesIndex;
-      questLog.recordToolUse(hud.state.activeTool, speciesIdx);
+      questLog.recordToolUse(hud.state.activeTool, 0);
       questLog.recordClick(hit.x, hit.y, hit.z);
       // Check quests against updated grid
       const freshGrid = isInitialized() ? getGridView() : grid;
@@ -962,12 +984,9 @@ async function main() {
       for (let y = y1; y <= y2; y += spacing) {
         for (let x = x1; x <= x2; x += spacing) {
           if (x >= 0 && y >= 0 && x < GRID_X && y < GRID_Y) {
-            enqueueTask(tool, x, y, z, tool === ToolCode.Seed ? hud.state.activeSpeciesIndex : undefined);
+            enqueueTask(tool, x, y, z, tool === ToolCode.Seed ? 255 : undefined);
           }
         }
-      }
-      if (tool === ToolCode.Seed) {
-        _playerPlantedSpecies.add(hud.state.activeSpeciesIndex);
       }
       particles.emit((x1 + x2) / 2 + 0.5, z + 0.5, (y1 + y2) / 2 + 0.5);
       if (tool === ToolCode.Seed) playPlant();
@@ -1198,14 +1217,18 @@ async function main() {
         }
         break;
       case 'q':
-        // Toggle x-ray: greyscale, hide leaves/fauna, show lens picker
-        setXray(!xrayActive);
+        // Toggle x-ray via lens picker (Q=toggle, Shift+Q=cycle lens)
+        if (e.shiftKey && lensPicker.visible) {
+          lensPicker.cycle();
+        } else {
+          lensPicker.toggle();
+        }
         questLog.recordDepthChange();
         if (xrayActive && !_xrayTipShown) {
           hud.addEvent('X-ray mode — pick a lens to inspect your garden');
           _xrayTipShown = true;
         }
-        console.log(`X-ray: ${xrayActive ? 'ON' : 'OFF'}`);
+        console.log(`X-ray: ${xrayActive ? 'ON' : 'OFF'}, lens: ${lensPicker.lens}`);
         break;
       case 'v': {
         // Data overlay: V=toggle, Shift+V=cycle mode
@@ -1255,13 +1278,9 @@ async function main() {
   if (loadingEl) loadingEl.classList.add('hidden');
 
   // --- Welcome message ---
-  // Delayed so the garden is visible before text appears
-  setTimeout(() => {
-    hud.addEvent('Welcome to your garden — the spring is flowing');
-  }, 1500);
-  setTimeout(() => {
-    hud.addEvent('Click anywhere to zone an area for planting');
-  }, 4000);
+  // Delayed so the garden is visible before text appears.
+  // In the new gentle progression, the first action is tapping the gnome.
+  // No tool hints — the quest panel guides the player.
 
   // --- Render loop ---
 
@@ -1317,9 +1336,6 @@ async function main() {
         hud.setGardenStats(stats);
         detectEvents(stats, hud);
         fallingLeaves.setTreeSpecies(Array.from(stats.speciesIds));
-        // Update species unlocks from sim-side ecological milestones
-        const milestones = getMilestones();
-        if (milestones) hud.updateMilestones(milestones);
         // Weather transition events
         const newWeather = getWeatherState();
         if (newWeather !== prevWeatherState) {

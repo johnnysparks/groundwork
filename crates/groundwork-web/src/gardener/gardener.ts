@@ -184,10 +184,11 @@ export class GardenerSprite {
   private glowDisc: THREE.Mesh;
   private animState = AnimState.Idle;
 
-  /** Current visual position (smoothly interpolated toward sim position) */
-  private visualX: number;
-  private visualY: number;
-  private visualZ: number;
+  /** Current visual position (smoothly interpolated toward sim position).
+   *  Public for click-near-gnome detection. */
+  visualX: number;
+  visualY: number;
+  visualZ: number;
 
   /** Last known sim position (updated each syncFromSim call) */
   private simX: number;

@@ -156,10 +156,16 @@ export class OrbitCamera {
     return this.idleOrbitActive;
   }
 
-  /** Set the look-at target directly */
+  /** Set the look-at target directly (Three.js Y-up coords) */
   setCenter(x: number, y: number, z: number): void {
     this.resetIdle();
     this.targetCenter.set(x, y, z);
+  }
+
+  /** Set focus using sim coordinates (x, y) — converts to Three.js Y-up.
+   *  Smooth camera pan to the target. */
+  setFocus(simX: number, simY: number): void {
+    this.setCenter(simX, GROUND_LEVEL, simY);
   }
 
   /** Reset camera to default diorama view */

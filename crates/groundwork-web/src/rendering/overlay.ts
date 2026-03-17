@@ -17,9 +17,13 @@ export enum OverlayMode {
   Water = 1,
   Light = 2,
   Nutrient = 3,
+  /** Irrigation lens: 3D moisture heatmap for x-ray mode.
+   *  Ocean blue (wet) → transparent (mid) → brick red (dry).
+   *  See decisions/2026-03-17T18:00:00_reduce_progression_intensity.md */
+  Irrigation = 4,
 }
 
-const MODE_NAMES = ['Off', 'Water', 'Light', 'Nutrient'];
+const MODE_NAMES = ['Off', 'Water', 'Light', 'Nutrient', 'Irrigation'];
 
 /** Color ramps for each data channel */
 function waterColor(value: number): [number, number, number] {
@@ -38,6 +42,27 @@ function nutrientColor(value: number): [number, number, number] {
   const t = value / 255;
   // Low = pale → high = rich warm orange
   return [0.3 + 0.7 * t, 0.3 + 0.3 * t, 0.2 * (1 - t)];
+}
+
+/**
+ * Irrigation lens color ramp — designed for the x-ray lens picker.
+ * Returns [r, g, b, alpha] where alpha controls per-cell opacity.
+ *
+ * - Zero moisture: 50% opaque brick red (0.75, 0.28, 0.18)
+ * - Full water/pond: 50% opaque ocean blue (0.15, 0.35, 0.65)
+ * - Mid-range: increasingly transparent, neutral gray tone
+ */
+function irrigationColor(value: number): [number, number, number, number] {
+  const t = value / 255;
+  // Color: brick red → neutral → ocean blue
+  const r = 0.75 * (1 - t) + 0.15 * t;
+  const g = 0.28 * (1 - t) + 0.35 * t;
+  const b = 0.18 * (1 - t) + 0.65 * t;
+  // Alpha: high at extremes (0.5), low in mid-range (0.08)
+  // Creates a U-shaped opacity curve: max at 0 and 255, min at 128
+  const dist = Math.abs(t - 0.5) * 2; // 0 at midpoint, 1 at extremes
+  const alpha = 0.08 + 0.42 * dist * dist;
+  return [r, g, b, alpha];
 }
 
 export class DataOverlay {
@@ -66,7 +91,7 @@ export class DataOverlay {
 
   /** Cycle to next overlay mode */
   cycle(): OverlayMode {
-    this._mode = ((this._mode + 1) % 4) as OverlayMode;
+    this._mode = ((this._mode + 1) % 5) as OverlayMode;
     if (this._mode === OverlayMode.Off) this.clear();
     return this._mode;
   }
@@ -90,6 +115,7 @@ export class DataOverlay {
   /**
    * Rebuild the overlay from the current grid data.
    * Scans the surface layer and colors each cell by the selected data channel.
+   * For Irrigation mode, scans all non-air voxels in the ground range (3D heatmap).
    */
   rebuild(grid: Uint8Array): void {
     if (this._mode === OverlayMode.Off) {
@@ -99,7 +125,13 @@ export class DataOverlay {
 
     this.clear();
 
-    // Scan surface: for each (x,y), find the top non-air voxel
+    // Irrigation mode: 3D volumetric heatmap (shows all ground-level cells)
+    if (this._mode === OverlayMode.Irrigation) {
+      this.rebuildIrrigation(grid);
+      return;
+    }
+
+    // Standard surface overlay for Water/Light/Nutrient modes
     const positions: number[] = [];
     const colors: number[] = [];
     const indices: number[] = [];
@@ -116,7 +148,6 @@ export class DataOverlay {
           const mat = grid[idx];
           if (mat !== Material.Air) {
             surfZ = z;
-            // Read the appropriate data channel
             switch (this._mode) {
               case OverlayMode.Water:   dataValue = grid[idx + 1]; break;
               case OverlayMode.Light:   dataValue = grid[idx + 2]; break;
@@ -127,9 +158,8 @@ export class DataOverlay {
         }
 
         if (surfZ < 0) continue;
-        if (dataValue === 0) continue; // Skip empty cells for cleaner visual
+        if (dataValue === 0) continue;
 
-        // Color from ramp
         let r: number, g: number, b: number;
         switch (this._mode) {
           case OverlayMode.Water:   [r, g, b] = waterColor(dataValue); break;
@@ -138,16 +168,12 @@ export class DataOverlay {
           default: r = g = b = 0.5;
         }
 
-        // Quad slightly above surface (Three.js Y-up: sim Z → Three Y)
-        const qy = surfZ + 0.6; // float above surface
+        const qy = surfZ + 0.6;
         const baseIdx = vi;
-
-        // 4 corners of the cell
         positions.push(x, qy, y);       colors.push(r, g, b);
         positions.push(x + 1, qy, y);   colors.push(r, g, b);
         positions.push(x + 1, qy, y + 1); colors.push(r, g, b);
         positions.push(x, qy, y + 1);   colors.push(r, g, b);
-
         indices.push(baseIdx, baseIdx + 1, baseIdx + 2);
         indices.push(baseIdx, baseIdx + 2, baseIdx + 3);
         vi += 4;
@@ -169,6 +195,101 @@ export class DataOverlay {
       depthWrite: false,
       side: THREE.DoubleSide,
     });
+
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.name = 'data-overlay-mesh';
+    this.group.add(this.mesh);
+  }
+
+  /**
+   * Irrigation lens: 3D moisture heatmap visible through x-ray.
+   * Scans all non-air voxels in the ground range.
+   * Blue (wet) → transparent (mid) → red (dry).
+   * Water/pond cells are ocean blue at 50% opacity.
+   */
+  private rebuildIrrigation(grid: Uint8Array): void {
+    const positions: number[] = [];
+    const colors: number[] = [];
+    const alphas: number[] = [];
+    const indices: number[] = [];
+    let vi = 0;
+
+    // Scan ground range: from a few below ground to surface
+    const zMin = Math.max(0, GROUND_LEVEL - 15);
+    const zMax = Math.min(GRID_Z, GROUND_LEVEL + 5);
+
+    for (let z = zMin; z < zMax; z++) {
+      for (let y = 0; y < GRID_Y; y++) {
+        for (let x = 0; x < GRID_X; x++) {
+          const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+          const mat = grid[idx];
+          if (mat === Material.Air) continue;
+
+          const waterVal = grid[idx + 1];
+
+          // Water/pond cells get special treatment: solid ocean blue
+          const isWaterCell = mat === Material.Water;
+          let r: number, g: number, b: number, a: number;
+
+          if (isWaterCell) {
+            r = 0.12; g = 0.30; b = 0.60;
+            a = 0.50;
+          } else {
+            [r, g, b, a] = irrigationColor(waterVal);
+          }
+
+          // Skip very transparent cells for performance
+          if (a < 0.05) continue;
+
+          const qy = z + 0.5; // center of voxel
+          const baseIdx = vi;
+
+          // Top face quad
+          positions.push(x, qy, y);       colors.push(r, g, b); alphas.push(a);
+          positions.push(x + 1, qy, y);   colors.push(r, g, b); alphas.push(a);
+          positions.push(x + 1, qy, y + 1); colors.push(r, g, b); alphas.push(a);
+          positions.push(x, qy, y + 1);   colors.push(r, g, b); alphas.push(a);
+          indices.push(baseIdx, baseIdx + 1, baseIdx + 2);
+          indices.push(baseIdx, baseIdx + 2, baseIdx + 3);
+          vi += 4;
+        }
+      }
+    }
+
+    if (positions.length === 0) return;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+
+    // Use custom shader material for per-vertex alpha
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `
+        attribute float alpha;
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          vColor = color;
+          vAlpha = alpha;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+          gl_FragColor = vec4(vColor, vAlpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      vertexColors: true,
+    });
+
+    geometry.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'data-overlay-mesh';
