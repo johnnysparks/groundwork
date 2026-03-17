@@ -358,6 +358,19 @@ const waterFragmentShader = /* glsl */ `
         float star = smoothstep(0.2 + wobble, 0.0, dist) * starVal;
         lit += vec3(0.8, 0.85, 0.95) * star * uNightAmount * 0.35;
       }
+
+      // Moon reflection: bright wobbling shimmer on water
+      // Moon roughly at center of garden; reflection is an elongated bright patch
+      vec2 moonCenter = vec2(60.0, 60.0); // garden center
+      vec2 moonDist = vWorldPos.xz - moonCenter;
+      // Elongate along Z for "path of light" effect
+      float moonRef = exp(-(moonDist.x * moonDist.x * 0.01 + moonDist.y * moonDist.y * 0.002));
+      // Ripple distortion makes it shimmer
+      float moonRipple = sin(vWorldPos.x * 3.0 + uTime * 2.0) * 0.3
+                       + sin(vWorldPos.z * 2.5 + uTime * 1.7) * 0.2;
+      moonRef *= (0.5 + moonRipple);
+      moonRef = max(moonRef, 0.0);
+      lit += vec3(0.7, 0.75, 0.85) * moonRef * uNightAmount * 0.3;
     }
 
     gl_FragColor = vec4(lit, alpha);
