@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-17T12:00:00
-**Status:** Alpha complete. 156 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle, atmospheric particles (dew/dust/fireflies/stars), dynamic wind gusts, cloud shadow pulses, garden-responsive leaf rustle audio, weather transitions, drought stress visuals. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-17T17:00:00
+**Status:** Alpha complete. 175 sprints. Living ecosystem with visible ecological interactions, 10-layer responsive audio landscape, full day-night atmosphere (dawn mist/dew, midday dust motes, golden hour warmth, dusk fireflies/frogs, night crickets/owls), dynamic wind with petal scatter, species-colored falling leaves, gnome emotion sounds, rain splash particles, seed dispersal trails. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -136,6 +136,21 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Wind gusts: periodic pulses spike foliage sway + scatter leaves + whoosh sound
 - Cloud shadow pulses: 3 overlapping sine waves modulate sun intensity during day
 - Leaf rustle ambient: bandpass noise scales with foliage count + wind strength
+
+### Alive Garden Polish (Sprints 157-175)
+- Flower petal scatter on wind gusts (pink-purple + warm yellow per species)
+- Seed sprout pop particles (bright green burst on seed→plant transition)
+- Seed dispersal trail (golden particles descending at new seed landing sites)
+- Species-colored falling leaves (oak/birch/willow/pine tinted autumn colors)
+- Dawn mist wisps (30 diffuse particles hovering at ground level)
+- Golden hour dust motes (extended from midday through 0.80)
+- Rain splash particles (~8% of drops emit tiny splash on ground impact)
+- Squirrel digging particles when caching (reuses worm soil disturbance)
+- Gnome emotion sounds (grunt/hmm/sigh/munch on state transitions)
+- Frog chorus at dusk near water (two 120Hz/145Hz oscillators)
+- Beetle clicking sound (scales with beetle count, daytime only)
+- Owl hoot every 30-70s during deep night
+- Water babble scales with water volume (0.04→0.12 gain)
 
 ---
 
