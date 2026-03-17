@@ -86,6 +86,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.80, 0.65, 0.25),  // amber seed
     new THREE.Color(0.70, 0.55, 0.20),  // earthy gold
   ],
+  soilDisturbance: [
+    new THREE.Color(0.42, 0.30, 0.18),  // dark earth
+    new THREE.Color(0.50, 0.38, 0.22),  // medium soil
+    new THREE.Color(0.36, 0.26, 0.14),  // deep brown
+  ],
 };
 
 interface EcoParticle {
@@ -165,6 +170,8 @@ export class EcologyParticles {
         } else if (f.type === FaunaType.Worm) {
           // Nutrient particles rising from worm activity (underground)
           this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.nutrient, 3);
+          // Surface soil disturbance: earthy puffs at ground level above the worm
+          this.emitSoilDisturbance(f.x, f.y);
         } else if (f.type === FaunaType.Beetle) {
           // Decomposition particles near beetles
           this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.decomposition, 3);
@@ -292,6 +299,35 @@ export class EcologyParticles {
       p.vz = (Math.random() - 0.5) * 0.3;
 
       const c = palette[Math.floor(Math.random() * palette.length)];
+      p.color.copy(c);
+    }
+  }
+
+  /** Emit small soil disturbance particles at the surface above a worm.
+   *  Makes underground worm activity visible from the default camera view. */
+  private emitSoilDisturbance(simX: number, simY: number): void {
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDead();
+      if (!p) return;
+
+      p.alive = true;
+      p.maxLife = 0.6 + Math.random() * 0.4;
+      p.life = p.maxLife;
+
+      // Emit at ground level (Three.js Y = sim Z) above the worm's XY position
+      p.x = simX + 0.5 + (Math.random() - 0.5) * 0.8;
+      p.y = GROUND_LEVEL + 0.2 + Math.random() * 0.3; // just above surface
+      p.z = simY + 0.5 + (Math.random() - 0.5) * 0.8;
+
+      // Small upward puff that settles
+      p.vx = (Math.random() - 0.5) * 0.2;
+      p.vy = 0.15 + Math.random() * 0.15;
+      p.vz = (Math.random() - 0.5) * 0.2;
+
+      const c = INTERACTION_COLORS.soilDisturbance[
+        Math.floor(Math.random() * INTERACTION_COLORS.soilDisturbance.length)
+      ];
       p.color.copy(c);
     }
   }
