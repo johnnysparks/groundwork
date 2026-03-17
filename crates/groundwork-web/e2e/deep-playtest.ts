@@ -48,6 +48,22 @@ test.describe('Deep Playtest', () => {
       await page.waitForTimeout(100);
     }
 
+    // === 0. BUILD PHASE — plant a diverse garden for ecological drama ===
+    // The default garden has a dense starter garden (21 seeds). Add more seeds
+    // in diverse conditions to create competition, succession, and synergy.
+
+    // Plant near water (good conditions)
+    await execAction({ type: 'Fill', tool: 'seed', x1: 32, y1: 38, z1: 50, x2: 36, y2: 42, z2: 50 });
+    // Plant far from water (will stress for water)
+    await execAction({ type: 'Fill', tool: 'seed', x1: 55, y1: 55, z1: 50, x2: 60, y2: 60, z2: 50 });
+    // Dense cluster for competition
+    await execAction({ type: 'Fill', tool: 'seed', x1: 42, y1: 30, z1: 50, x2: 48, y2: 36, z2: 50 });
+    // Dig an irrigation channel from the spring toward the dry area
+    await execAction({ type: 'Fill', tool: 'dig', x1: 45, y1: 45, z1: 49, x2: 55, y2: 55, z2: 49 });
+
+    // Grow for 300 ticks — enough for seeds to germinate and trees to start competing
+    await execAction({ type: 'Tick', n: 300 });
+
     // === 1. INITIAL STATE — default view ===
     await screenshot('01-initial-default');
 
