@@ -1220,12 +1220,19 @@ async function main() {
           remeshDirty();
         }
 
-        // Gnome footstep dust puffs when walking/wandering
+        // Gnome footstep dust puffs when walking/wandering/working
         dustPuffTimer -= dt;
-        if (dustPuffTimer <= 0 && (gnomeSim.state === 1 || gnomeSim.state === 5)) {
-          // Sim coords → Three.js: (x, z+0.5, y)
-          particles.emitDustPuff(gnomeSim.x + 0.5, gnomeSim.z + 0.5, gnomeSim.y + 0.5);
-          dustPuffTimer = 0.25 + Math.random() * 0.15; // every ~0.3s
+        if (dustPuffTimer <= 0) {
+          if (gnomeSim.state === 1 || gnomeSim.state === 5) {
+            // Walking/wandering: light footstep dust
+            particles.emitDustPuff(gnomeSim.x + 0.5, gnomeSim.z + 0.5, gnomeSim.y + 0.5);
+            dustPuffTimer = 0.25 + Math.random() * 0.15;
+          } else if (gnomeSim.state === 2) {
+            // Working: heavier soil burst at feet
+            particles.emitDustPuff(gnomeSim.x + 0.5, gnomeSim.z + 0.5, gnomeSim.y + 0.5);
+            particles.emitDustPuff(gnomeSim.x + 0.5, gnomeSim.z + 0.5, gnomeSim.y + 0.5);
+            dustPuffTimer = 0.15 + Math.random() * 0.1; // more frequent when digging
+          }
         }
 
         // Squirrel trust milestone messages
