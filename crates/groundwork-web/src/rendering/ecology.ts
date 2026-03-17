@@ -101,6 +101,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.65, 0.30, 0.10),  // dark amber
     new THREE.Color(0.55, 0.25, 0.12),  // rust brown
   ],
+  nurseLog: [
+    new THREE.Color(0.80, 0.60, 0.25),  // warm golden
+    new THREE.Color(0.70, 0.50, 0.20),  // amber
+    new THREE.Color(0.65, 0.55, 0.30),  // muted gold-green
+  ],
 };
 
 interface EcoParticle {
@@ -349,6 +354,49 @@ export class EcologyParticles {
 
         // Emit amber acid-seep particles rising from the soil surface
         this.emitAllelopathy(sx + 0.5, GROUND_LEVEL + 0.5, sy + 0.5);
+      }
+    }
+
+    // Nurse Log: dead wood that has seeds or roots nearby emits warm golden glow.
+    // The sim gives seeds near dead wood a 1.5x growth boost (nurse log effect).
+    // Discovery: "Seedlings keep sprouting near that dead tree!"
+    const nlStep = 12;
+    for (let sy = 0; sy < GRID_Y; sy += nlStep) {
+      for (let sx = 0; sx < GRID_X; sx += nlStep) {
+        // Check for dead wood at or just above ground
+        let dwZ = -1;
+        for (let sz = GROUND_LEVEL; sz <= GROUND_LEVEL + 3; sz++) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] === Material.DeadWood) { dwZ = sz; break; }
+        }
+        if (dwZ < 0) continue;
+
+        // Check for seeds or roots nearby (the nurse log is actively nurturing)
+        let hasNearbyLife = false;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = sx + dx;
+            const ny = sy + dy;
+            if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y) continue;
+            const nIdx = (nx + ny * GRID_X + dwZ * GRID_X * GRID_Y) * VOXEL_BYTES;
+            const nMat = grid[nIdx];
+            if (nMat === Material.Seed || nMat === Material.Root || nMat === Material.Leaf) {
+              hasNearbyLife = true;
+              break;
+            }
+          }
+          if (hasNearbyLife) break;
+        }
+        if (!hasNearbyLife) continue;
+
+        // Warm golden glow rising from the nurse log
+        this.emitTrail(
+          sx + 0.5,
+          dwZ + 1.0,
+          sy + 0.5,
+          INTERACTION_COLORS.nurseLog,
+          2,
+        );
       }
     }
   }
