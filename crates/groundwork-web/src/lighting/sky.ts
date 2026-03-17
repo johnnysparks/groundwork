@@ -71,6 +71,20 @@ void main() {
     color = mix(bottomColor, horizonColor, t);
   }
 
+  // Horizon glow: warm bloom band near the sun at dawn/dusk
+  {
+    // Sun near horizon → strong glow; high sun → no glow
+    float horizGlow = smoothstep(0.20, 0.0, uSunDir.y) * (1.0 - uNightAmount);
+    if (horizGlow > 0.01) {
+      // Glow strongest in sun's horizontal direction, near horizon
+      float sunHorizDot = dot(normalize(vec2(dir.x, dir.z)), normalize(vec2(uSunDir.x, uSunDir.z)));
+      float spread = smoothstep(-0.2, 1.0, sunHorizDot); // wide spread toward sun
+      float vertBand = exp(-h * h * 8.0); // tightest at horizon (h=0)
+      vec3 glowColor = mix(vec3(1.0, 0.55, 0.20), vec3(1.0, 0.80, 0.45), smoothstep(0.0, 0.1, h));
+      color += glowColor * spread * vertBand * horizGlow * 0.5;
+    }
+  }
+
   // Sun disc: warm glowing circle at sun position, most visible at dawn/dusk
   {
     float sunDot = dot(dir, uSunDir);
