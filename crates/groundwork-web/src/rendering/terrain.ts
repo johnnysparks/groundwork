@@ -12,7 +12,7 @@
  */
 
 import * as THREE from 'three';
-import { Material, GROUND_LEVEL, GRID_X, GRID_Y, VOXEL_BYTES, type MaterialType } from '../bridge';
+import { Material, GROUND_LEVEL, GRID_X, GRID_Y, GRID_Z, VOXEL_BYTES, type MaterialType } from '../bridge';
 import type { MeshQuad } from '../mesher/greedy';
 import type { ChunkMesh } from '../mesher/chunk';
 
@@ -79,6 +79,28 @@ const SPECIES_ROOT: THREE.Color[] = [
   new THREE.Color(0.45, 0.70, 0.30),  // Grass: bright green
   new THREE.Color(0.50, 0.70, 0.45),  // Clover: lime green
 ];
+
+/** Root competition border color — warm red-orange for contested territory */
+const ROOT_COMPETITION_COLOR = new THREE.Color(0.90, 0.25, 0.15);
+
+/** Count adjacent root voxels belonging to a different species.
+ *  Returns 0 if no foreign roots, 1-6 for number of foreign root neighbors. */
+function countForeignRootNeighbors(grid: Uint8Array, x: number, y: number, z: number, mySpecies: number): number {
+  const rootMat = Material.Root as number;
+  let count = 0;
+  const offsets: [number, number, number][] = [
+    [-1, 0, 0], [1, 0, 0], [0, -1, 0], [0, 1, 0], [0, 0, -1], [0, 0, 1],
+  ];
+  for (const [dx, dy, dz] of offsets) {
+    const nx = x + dx, ny = y + dy, nz = z + dz;
+    if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y || nz < 0 || nz >= GRID_Z) continue;
+    const nIdx = (nx + ny * GRID_X + nz * GRID_X * GRID_Y) * VOXEL_BYTES;
+    if (grid[nIdx] === rootMat && grid[nIdx + 3] !== mySpecies) {
+      count++;
+    }
+  }
+  return count;
+}
 
 /** Species-specific leaf voxel colors — slightly muted vs billboard foliage
  *  so the voxel mesh reads as solid structure, not competing with soft sprites */
@@ -419,7 +441,15 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
       const vIdx = (quad.x + quad.y * GRID_X + quad.z * GRID_X * GRID_Y) * VOXEL_BYTES;
       const speciesId = grid[vIdx + 3] ?? 0;
       if (quad.material === Material.Root) {
-        baseColor = SPECIES_ROOT[speciesId] ?? MATERIAL_COLORS[Material.Root];
+        const rootBase = SPECIES_ROOT[speciesId] ?? MATERIAL_COLORS[Material.Root];
+        // Root competition border: blend toward red where foreign species roots neighbor
+        const foreignCount = countForeignRootNeighbors(grid, quad.x, quad.y, quad.z, speciesId);
+        if (foreignCount > 0) {
+          const blend = Math.min(foreignCount / 4, 1.0) * 0.6; // up to 60% red at 4+ foreign neighbors
+          baseColor = _scratchColor.copy(rootBase).lerp(ROOT_COMPETITION_COLOR, blend);
+        } else {
+          baseColor = rootBase;
+        }
       } else if (quad.material === Material.Leaf) {
         baseColor = SPECIES_LEAF[speciesId] ?? MATERIAL_COLORS[Material.Leaf];
       } else {
