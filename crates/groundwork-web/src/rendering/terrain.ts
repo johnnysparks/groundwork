@@ -134,8 +134,43 @@ export function getSolidMaterial(): THREE.MeshLambertMaterial {
     solidMaterial = new THREE.MeshLambertMaterial({
       vertexColors: true,
     });
+    // Inject wind sway into vertex shader for above-ground plant voxels
+    solidMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uWindStrength = windStrengthUniform;
+      shader.uniforms.uWindTime = windTimeUniform;
+      // Add uniforms before main
+      shader.vertexShader = shader.vertexShader.replace(
+        'void main() {',
+        `uniform float uWindStrength;
+uniform float uWindTime;
+void main() {`,
+      );
+      // Displace above-ground vertices (Y > GROUND_LEVEL in Three.js Y-up)
+      // Only sway above ground; amplitude scales with height for natural top-heavy motion
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+float heightAboveGround = position.y - ${GROUND_LEVEL.toFixed(1)};
+if (heightAboveGround > 1.0 && uWindStrength > 0.01) {
+  float swayAmount = heightAboveGround * 0.008 * uWindStrength;
+  float phase = position.x * 0.3 + position.z * 0.2 + uWindTime * 1.5;
+  transformed.x += sin(phase) * swayAmount;
+  transformed.z += cos(phase * 0.7 + 1.3) * swayAmount * 0.5;
+}`,
+      );
+    };
   }
   return solidMaterial;
+}
+
+/** Wind sway uniforms — shared across all solid terrain meshes */
+const windStrengthUniform = { value: 0.0 };
+const windTimeUniform = { value: 0.0 };
+
+/** Update terrain wind sway. Call each frame with dt in seconds. */
+export function updateTerrainWind(dt: number, windStrength: number): void {
+  windTimeUniform.value += dt;
+  windStrengthUniform.value = windStrength;
 }
 
 /** Set terrain day-night tint (multiplied against vertex colors) */

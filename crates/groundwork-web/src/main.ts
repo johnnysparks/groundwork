@@ -11,7 +11,7 @@ import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, 
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
-import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint } from './rendering/terrain';
+import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint, updateTerrainWind } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, scanWaterFrontier } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
@@ -2087,6 +2087,7 @@ async function main() {
       const currentWind = foliage.getWindStrength();
       const newWind = currentWind + (targetWind - currentWind) * 0.05;
       foliage.setWindStrength(newWind);
+      updateTerrainWind(dt, newWind);
       setWindAmbient(newWind);
       setLeafRustle(foliage.count, newWind);
     }
