@@ -199,6 +199,7 @@ const waterFragmentShader = /* glsl */ `
   uniform float uSunIntensity;
   uniform float uRainStrength;
   uniform vec3 uDayTint;
+  uniform float uNightAmount;
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -344,6 +345,20 @@ const waterFragmentShader = /* glsl */ `
     // Day cycle color tint: warm gold at golden hour, cool blue at night
     lit *= uDayTint;
 
+    // Star reflections on water at night — scattered bright points
+    if (uNightAmount > 0.0) {
+      vec2 starUV = vWorldPos.xz * 1.5; // scale for star density
+      vec2 cell = floor(starUV);
+      float starVal = hash1(cell);
+      if (starVal > 0.92) {
+        float dist = length(fract(starUV) - 0.5);
+        // Ripple distortion on reflection
+        float wobble = sin(uTime * 1.5 + cell.x * 3.0 + cell.y * 5.0) * 0.05;
+        float star = smoothstep(0.2 + wobble, 0.0, dist) * starVal;
+        lit += vec3(0.8, 0.85, 0.95) * star * uNightAmount * 0.35;
+      }
+    }
+
     gl_FragColor = vec4(lit, alpha);
   }
 `;
@@ -429,6 +444,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
         uSunIntensity: { value: 1.2 },
         uRainStrength: { value: 0 },
         uDayTint: { value: new THREE.Color(1, 1, 1) },
+        uNightAmount: { value: 0 },
       },
       transparent: true,
       depthWrite: false,   // transparent surfaces shouldn't write depth
@@ -480,6 +496,15 @@ export function updateWaterDayTint(r: number, g: number, b: number): void {
 export function updateWaterRain(strength: number): void {
   if (waterMaterial) {
     waterMaterial.uniforms.uRainStrength.value = strength;
+  }
+}
+
+/**
+ * Set night amount for water star reflections (0 = day, 1 = full night).
+ */
+export function updateWaterNight(amount: number): void {
+  if (waterMaterial) {
+    waterMaterial.uniforms.uNightAmount.value = amount;
   }
 }
 

@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, scanWaterFrontier } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, scanWaterFrontier } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -1448,6 +1448,12 @@ async function main() {
       }
       setTerrainDayTint(r, g, b);
       updateWaterDayTint(r, g, b);
+      // Star reflections on water: match sky night amount
+      const nightAmount = t >= 0.8 ? (t - 0.8) / 0.15
+        : t <= 0.15 ? 1.0
+        : t <= 0.3 ? 1.0 - (t - 0.15) / 0.15
+        : 0;
+      updateWaterNight(Math.max(0, Math.min(1, nightAmount)));
 
       // Golden hour bloom boost: warm soft glow during 0.65-0.80
       if (t >= 0.65 && t < 0.80) {
