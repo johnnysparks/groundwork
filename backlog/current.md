@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-17T19:00:00
-**Status:** Alpha complete. 182 sprints. Living ecosystem with visible ecological interactions, 11-layer responsive audio landscape, full day-night atmosphere (dawn mist/dew/bird chorus, midday dust motes, golden hour warmth, dusk synchronized fireflies/frogs, night crickets/owls), dynamic wind with petal scatter and wind chimes, species-colored falling leaves, gnome emotion sounds, rain splash + post-rain leaf drip, seed dispersal trails, plant wilting particles. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-17T21:00:00
+**Status:** Alpha complete. 190 sprints. Living ecosystem with visible ecological interactions, 12-layer responsive audio landscape (cricket tempo varies by warmth!), full day-night atmosphere (dawn mist scaled by water + dew tinkle + soil steam + bird chorus, midday dust motes, golden hour warmth, dusk synchronized fireflies/frogs/crickets, night owls), dynamic wind with petal scatter and wind chimes, species-colored falling leaves, gnome emotion sounds, squirrel chitters, bee waggle dance particles, rain splash + post-rain leaf drip, seed dispersal trails, plant wilting particles, water day-cycle tinting, garden age milestones. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -158,6 +158,14 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Post-rain leaf drip (30-60s of water drops from foliage)
 - Firefly blink synchronization (gradual phase lock after 15s)
 - Wind chime on gusts in dense gardens (pentatonic sine, 40% chance)
+- Dawn soil steam wisps (warm amber particles at sunrise)
+- Cricket tempo varies with night warmth (Dolbear's Law: 2.5→1.5Hz)
+- Water surface day-cycle tinting (golden hour, moonlight blue)
+- Squirrel chitter sound (rapid sine clicks, fauna sound complete)
+- Bee waggle dance (figure-8 golden particles when pollinating)
+- Mist density scales with water volume (wetter = thicker dawn fog)
+- Dew drop tinkle (delicate high sine during dew time)
+- Garden age milestones (1k/5k/10k/25k celebration messages)
 
 ---
 
