@@ -61,18 +61,25 @@
 - Dawn mist wisps bias drift toward wind direction (0.4× strength)
 - Random wobble still present for organic feel
 
-## Coherent Wind System (Sprints 268-272)
-All visual elements now respond to the same drifting `windAngle`:
+## Coherent Wind System (Sprints 268-277)
+All 13 visual elements now respond to the same drifting `windAngle`:
+- Sky clouds (shader drift direction)
+- Cloud shadows (shader drift direction)
+- Water cloud reflections (shader drift direction)
 - Foliage billboards lean (quadratic strength, height-scaled)
 - Trunk/branch voxels lean (quadratic strength, height-scaled)
 - Falling leaves drift (linear, 0.5× strength)
 - Rain droplets drift (linear, 15× strength for visible angle)
 - Mist wisps drift (linear, 0.4× strength)
+- Dust motes drift (linear, 0.3× strength)
+- Gnats swarm centers drift (0.15× strength)
+- Fireflies drift (0.2× strength)
 - Wind streak particles (already directional from sprint 188)
+- Petal/camera rustle (via foliage wind system)
 
-During gusts, the entire garden bends and flows together.
+During gusts, the entire garden — sky to ground, plants to particles — bends and flows together.
 
 ## Test Results
-- TypeScript type-check clean (all 8 sprints)
+- TypeScript type-check clean (all 13 sprints)
 - Workspace `cargo check` passes
 - No sim test regressions (JS-only changes)
