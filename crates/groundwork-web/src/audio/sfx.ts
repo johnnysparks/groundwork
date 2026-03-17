@@ -343,6 +343,31 @@ export function playBuzz(): void {
   osc.stop(t + 0.15);
 }
 
+/** Play a rapid squirrel chitter — 5-6 quick high-pitched clicks */
+export function playSquirrelChitter(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  const count = 5 + Math.floor(Math.random() * 2);
+  const base = 1200 + Math.random() * 400;
+
+  for (let i = 0; i < count; i++) {
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    const start = t + i * 0.04;
+    const freq = base + (Math.random() - 0.5) * 200;
+    osc.frequency.setValueAtTime(freq, start);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, start + 0.025);
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.03, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.03);
+    osc.connect(gain).connect(c.destination);
+    osc.start(start);
+    osc.stop(start + 0.04);
+  }
+}
+
 /** Play a soft ascending "growth" shimmer — gentle reward for plant growth */
 export function playGrowth(): void {
   const c = getContext();

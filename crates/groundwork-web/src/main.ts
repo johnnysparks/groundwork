@@ -41,7 +41,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playSquirrelChitter, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -1457,6 +1457,8 @@ async function main() {
             }
           } else if (f.type <= 1) {
             playBuzz(); // Bee/butterfly (not at dawn)
+          } else if (f.type === FaunaType.Squirrel) {
+            playSquirrelChitter();
           }
         }
       }
