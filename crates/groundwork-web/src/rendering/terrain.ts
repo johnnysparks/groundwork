@@ -103,6 +103,9 @@ const _scratchColor = new THREE.Color();
 /** AO darkening factors: 0=no occlusion (bright), 3=full occlusion (dark) */
 const AO_CURVE = [1.0, 0.82, 0.65, 0.50];
 
+/** Warm AO tint — shadows shift toward warm brown instead of going black */
+const AO_WARM = new THREE.Color(0.25, 0.18, 0.10);
+
 /** Simple integer hash for per-voxel color noise (returns 0.0–1.0) */
 function voxelNoise(x: number, y: number, z: number): number {
   let h = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791);
@@ -464,9 +467,14 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
       normals[vi * 3 + 1] = ny;
       normals[vi * 3 + 2] = nz;
 
-      colors[vi * 3] = Math.max(0, baseColor.r * colorScale);
-      colors[vi * 3 + 1] = Math.max(0, baseColor.g * colorScale);
-      colors[vi * 3 + 2] = Math.max(0, baseColor.b * colorScale);
+      // Warm AO: as occlusion increases, shift toward warm brown instead of black
+      const aoBlend = 1.0 - aoFactor; // 0=no occlusion, 0.5=full occlusion
+      const warmR = baseColor.r * colorScale + AO_WARM.r * aoBlend * 0.3;
+      const warmG = baseColor.g * colorScale + AO_WARM.g * aoBlend * 0.3;
+      const warmB = baseColor.b * colorScale + AO_WARM.b * aoBlend * 0.3;
+      colors[vi * 3] = Math.max(0, warmR);
+      colors[vi * 3 + 1] = Math.max(0, warmG);
+      colors[vi * 3 + 2] = Math.max(0, warmB);
 
       vi++;
     }
