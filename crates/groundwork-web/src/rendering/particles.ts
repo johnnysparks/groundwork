@@ -81,6 +81,20 @@ const SEED_COLORS = [
   new THREE.Color(1.00, 0.92, 0.55),  // pale gold
 ];
 
+/** Flower petal colors by species_id. 7=Wildflower (pink-purple), 8=Daisy (warm yellow). */
+const PETAL_COLORS: Record<number, THREE.Color[]> = {
+  7: [ // Wildflower: pink-purple petals
+    new THREE.Color(0.75, 0.40, 0.60),
+    new THREE.Color(0.85, 0.50, 0.65),
+    new THREE.Color(0.65, 0.35, 0.55),
+  ],
+  8: [ // Daisy: white-yellow petals
+    new THREE.Color(0.90, 0.85, 0.55),
+    new THREE.Color(0.95, 0.90, 0.70),
+    new THREE.Color(0.85, 0.80, 0.45),
+  ],
+};
+
 interface Particle {
   alive: boolean;
   life: number;
@@ -108,6 +122,9 @@ export class GrowthParticles {
   /** Seed positions for persistent sparkle effect */
   private seedPositions: { x: number; y: number; z: number }[] = [];
   private seedSparkleTimer = 0;
+
+  /** Flower leaf positions for petal scatter on wind gusts */
+  private flowerPositions: { x: number; y: number; z: number; species: number }[] = [];
 
   constructor() {
     this.particles = new Array(MAX_PARTICLES);
@@ -236,6 +253,47 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit flower petals scattered by a wind gust.
+   * Picks random flower positions and emits colored petals that drift with wind.
+   */
+  emitPetalBurst(): void {
+    if (this.flowerPositions.length === 0) return;
+    // Pick up to 6 random flower sources
+    const sources = Math.min(6, this.flowerPositions.length);
+    for (let s = 0; s < sources; s++) {
+      const idx = Math.floor(Math.random() * this.flowerPositions.length);
+      const flower = this.flowerPositions[idx];
+      const palette = PETAL_COLORS[flower.species];
+      if (!palette) continue;
+
+      // 2-3 petals per source
+      const count = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < count; i++) {
+        const p = this.findDeadParticle();
+        if (!p) return;
+
+        p.alive = true;
+        p.life = 2.0 + Math.random() * 1.5;  // long-lived drift
+        p.maxLife = p.life;
+
+        // Spawn at flower position (sim Z=up → Three.js Y=up)
+        p.x = flower.x + 0.5 + (Math.random() - 0.5) * 0.8;
+        p.y = flower.z + 0.5 + (Math.random() - 0.5) * 0.5;
+        p.z = flower.y + 0.5 + (Math.random() - 0.5) * 0.8;
+
+        // Wind-carried drift: strong horizontal + gentle tumble
+        const windAngle = Math.random() * Math.PI * 0.5 - Math.PI * 0.25; // roughly downwind
+        p.vx = Math.cos(windAngle) * (0.6 + Math.random() * 0.5);
+        p.vy = 0.1 + Math.random() * 0.3;  // slight rise then gravity takes over
+        p.vz = Math.sin(windAngle) * (0.3 + Math.random() * 0.3);
+
+        const c = palette[Math.floor(Math.random() * palette.length)];
+        p.color.copy(c);
+      }
+    }
+  }
+
+  /**
    * Emit blue sparkle particles at water flow frontier positions.
    * Call when water surface area increases (channel filling).
    */
@@ -274,6 +332,7 @@ export class GrowthParticles {
   detectGrowth(grid: Uint8Array): void {
     const newLeafPositions = new Set<number>();
     const newSeedPositions: { x: number; y: number; z: number }[] = [];
+    const newFlowerPositions: { x: number; y: number; z: number; species: number }[] = [];
 
     for (let z = 0; z < GRID_Z; z++) {
       for (let y = 0; y < GRID_Y; y++) {
@@ -293,12 +352,21 @@ export class GrowthParticles {
           } else if (mat === Material.Seed) {
             newSeedPositions.push({ x, y, z });
           }
+
+          // Track flower leaf positions for petal scatter
+          if (isFoliage(mat)) {
+            const speciesId = grid[idx + 3];
+            if (speciesId === 7 || speciesId === 8) {
+              newFlowerPositions.push({ x, y, z, species: speciesId });
+            }
+          }
         }
       }
     }
 
     this.prevLeafPositions = newLeafPositions;
     this.seedPositions = newSeedPositions;
+    this.flowerPositions = newFlowerPositions;
   }
 
   /**

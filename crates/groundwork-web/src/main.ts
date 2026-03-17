@@ -1406,6 +1406,7 @@ async function main() {
           : 10 + Math.random() * 15;
         playWindGust();
         fallingLeaves.emitGustBurst();
+        particles.emitPetalBurst();
       }
       // Gust decays smoothly over ~3s
       gustStrength *= Math.max(0, 1 - dt * 0.5);
