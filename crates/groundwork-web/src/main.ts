@@ -1577,6 +1577,11 @@ async function main() {
           const f = readFauna(fv, i);
           if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) pollinators++;
           else if (f.type === FaunaType.Beetle) beetles++;
+          // Worm soil disturbance: tiny earthy puffs when active underground
+          if (f.type === FaunaType.Worm && (f.state === FaunaState.Seeking || f.state === FaunaState.Acting)
+              && Math.random() < dt * 0.5) {
+            particles.emitWormTrail(f.x, f.y); // sim x,y → world x,z
+          }
           // Flying fauna over water → ripple (low probability per frame to keep it subtle)
           if ((f.type === FaunaType.Bee || f.type === FaunaType.Butterfly || f.type === FaunaType.Bird)
               && prevWaterCount > 0 && Math.random() < dt * 0.15) {

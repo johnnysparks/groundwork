@@ -795,6 +795,36 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit small soil disturbance particles around a worm's position.
+   * Shows underground activity — tiny earthy crumbs puffing up.
+   */
+  emitWormTrail(worldX: number, worldZ: number): void {
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.5 + Math.random() * 0.4;
+      p.maxLife = p.life;
+
+      // Near-surface, scattered around worm position
+      p.x = worldX + (Math.random() - 0.5) * 0.8;
+      p.y = GROUND_LEVEL + 0.3 + Math.random() * 0.3;
+      p.z = worldZ + (Math.random() - 0.5) * 0.8;
+
+      // Tiny upward puff
+      p.vx = (Math.random() - 0.5) * 0.15;
+      p.vy = 0.2 + Math.random() * 0.15;
+      p.vz = (Math.random() - 0.5) * 0.15;
+
+      // Earthy brown tones
+      const t = Math.random();
+      p.color.setRGB(0.45 + t * 0.15, 0.35 + t * 0.1, 0.2 + t * 0.1);
+    }
+  }
+
+  /**
    * Emit an expanding ring of particles on the water surface.
    * Called when flying fauna passes over water — creates a gentle ripple.
    */
