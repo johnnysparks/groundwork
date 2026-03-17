@@ -501,6 +501,29 @@ export function playDiscovery(): void {
   }
 }
 
+/** Play a tiny raindrop plink — high sine with quick decay.
+ *  Very quiet, ~10% chance per splash to keep it ambient. */
+export function playRaindropPlink(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // High-pitched water plink: sine rapidly descending
+  const freq = 2000 + Math.random() * 1500;
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.3, t + 0.05);
+
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0.008 + Math.random() * 0.006, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.07);
+}
+
 /** Play a gentle rain onset — descending filtered noise, like first drops */
 export function playRainStart(): void {
   const c = getContext();
