@@ -161,7 +161,12 @@ void main() {
       float twinklePhase = hash(cell + 100.0) * 6.283;
       float twinkleSpeed = 0.5 + hash(cell + 200.0) * 1.5;
       float twinkle = 0.6 + 0.4 * sin(uTime * twinkleSpeed + twinklePhase);
-      color += vec3(star * uNightAmount * heightFade * 0.7 * twinkle);
+      // Star color temperature: warm golden to cool blue-white
+      float starTemp = hash(cell + 300.0);
+      vec3 starColor = starTemp < 0.3 ? vec3(1.0, 0.85, 0.6)  // warm golden
+                     : starTemp < 0.6 ? vec3(1.0, 0.95, 0.9)   // soft white
+                     : vec3(0.8, 0.9, 1.0);                     // cool blue-white
+      color += starColor * star * uNightAmount * heightFade * 0.7 * twinkle;
     }
 
     // Shooting star: one every ~45 seconds, lasts 0.6 seconds
