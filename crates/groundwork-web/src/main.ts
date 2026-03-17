@@ -193,6 +193,10 @@ const ECO_TIPS = [
   'Tip: Berry bushes attract birds — birds spread seeds to new areas',
   'Tip: Birch grows fast in open ground — perfect pioneer for bare patches',
   'Tip: Each new species adds +100 to your garden score',
+  'Tip: You don\'t choose what grows — conditions do. Water, light, soil decide',
+  'Tip: Sow near water for willow and moss. Sow on dry ground for grass and daisy',
+  'Tip: Clover nearby boosts tree emergence — nitrogen handshake in action',
+  'Tip: A mature garden with groundcover earns trees. Build the ecosystem first',
 ];
 let _tipIndex = 0;
 
@@ -207,15 +211,15 @@ function getContextualTip(stats: { plants: number; fauna: number; species: numbe
 
   // Prioritized contextual advice
   if (stats.plants < 50)
-    return 'Tip: Plant groundcover near the spring — it needs water to germinate';
+    return 'Tip: Sow seeds near water — the sim picks what species to grow based on conditions';
   if (hasGroundcover && !hasFlower && stats.plants > 200)
-    return 'Tip: Plant flowers next — they attract pollinators that boost everyone';
+    return 'Tip: Sow more patches — flowers emerge when groundcover is established';
   if (hasFlower && stats.fauna === 0)
-    return 'Tip: More flowers = more pollinators. Cluster them together for bees';
+    return 'Tip: More flowers = more pollinators. Cluster dense patches together';
   if (stats.fauna > 0 && !hasTree && stats.plants > 500)
-    return 'Tip: Your ecosystem earned trees! Plant an oak — it will dominate the garden';
+    return 'Tip: Keep building groundcover — trees emerge when the ecosystem is mature enough';
   if (hasTree && !hasClover)
-    return 'Tip: Plant clover near your tree — nitrogen fixing boosts growth 50%';
+    return 'Tip: Sow near your tree — clover might appear and boost growth via nitrogen';
   if (hasTree && hasClover)
     return 'Tip: See green shimmer near your tree? Clover is fixing nitrogen — 50% growth boost!';
   if (hasTree && !hasBerryBush)
