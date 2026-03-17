@@ -201,6 +201,7 @@ const waterFragmentShader = /* glsl */ `
   uniform vec3 uDayTint;
   uniform float uNightAmount;
   uniform float uCloudDensity;
+  uniform vec2 uWindDir;
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -350,7 +351,7 @@ const waterFragmentShader = /* glsl */ `
     // Cloud reflections: FBM noise darkens water surface to match sky clouds
     if (uCloudDensity > 0.01 && uNightAmount < 0.9) {
       vec2 cUV = vWorldPos.xz * 0.02; // scale to match sky projection
-      cUV += vec2(uTime * 0.008, uTime * 0.002); // same drift as sky clouds
+      cUV += uWindDir * uTime * 0.008 + vec2(-uWindDir.y, uWindDir.x) * uTime * 0.002;
       // Simple 3-octave FBM using existing hash function
       float cn = 0.0;
       vec2 cp = cUV;
@@ -480,6 +481,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
         uDayTint: { value: new THREE.Color(1, 1, 1) },
         uNightAmount: { value: 0 },
         uCloudDensity: { value: 0.35 },
+        uWindDir: { value: new THREE.Vector2(1.0, 0.0) },
       },
       transparent: true,
       depthWrite: false,   // transparent surfaces shouldn't write depth
@@ -549,6 +551,17 @@ export function updateWaterNight(amount: number): void {
 export function updateWaterClouds(density: number): void {
   if (waterMaterial) {
     waterMaterial.uniforms.uCloudDensity.value = density;
+  }
+}
+
+/**
+ * Set wind direction for water cloud reflection drift.
+ */
+export function updateWaterWindDir(windAngle: number): void {
+  if (waterMaterial) {
+    (waterMaterial.uniforms.uWindDir.value as THREE.Vector2).set(
+      Math.cos(windAngle), Math.sin(windAngle),
+    );
   }
 }
 

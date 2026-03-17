@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint, updateTerrainWind } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, scanWaterFrontier } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, updateWaterWindDir, scanWaterFrontier } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -1703,6 +1703,7 @@ async function main() {
     // Sky cloud drift direction matches wind
     skyUniforms.uWindDir.value.set(Math.cos(windAngle), Math.sin(windAngle));
     updateWaterClouds(skyUniforms.uCloudDensity.value);
+    updateWaterWindDir(windAngle);
 
     // Drought visual: warmer, hazier atmosphere + foliage stress
     if (isInitialized()) {
