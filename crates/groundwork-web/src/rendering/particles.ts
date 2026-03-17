@@ -795,6 +795,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a ground-level wet shimmer — creates the impression of puddles
+   * forming on flat ground during rain. Short-lived reflective sparkle.
+   */
+  emitPuddleShimmer(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 1.5 + Math.random() * 1.5;
+    p.maxLife = p.life;
+
+    // Right at ground level, on the surface
+    p.x = worldX + (Math.random() - 0.5) * 2;
+    p.y = GROUND_LEVEL + 0.05;
+    p.z = worldZ + (Math.random() - 0.5) * 2;
+
+    // No movement — puddles are stationary
+    p.vx = 0;
+    p.vy = 0;
+    p.vz = 0;
+
+    // Cool blue-white reflective tint
+    const t = Math.random();
+    p.color.setRGB(0.55 + t * 0.2, 0.7 + t * 0.15, 0.85 + t * 0.15);
+  }
+
+  /**
    * Emit small soil disturbance particles around a worm's position.
    * Shows underground activity — tiny earthy crumbs puffing up.
    */

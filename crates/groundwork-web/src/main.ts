@@ -1635,6 +1635,13 @@ async function main() {
         }
       }
 
+      // Rain puddle shimmer: reflective ground sparkles form during rain
+      if (weatherState === 1 && Math.random() < dt * 2) {
+        const px = 10 + Math.random() * (GRID_X - 20);
+        const pz = 10 + Math.random() * (GRID_Y - 20);
+        particles.emitPuddleShimmer(px, pz);
+      }
+
       // Drought dust devils: occasional spiral dust particles
       if (weatherState === 2 && Math.random() < dt * 0.3) {
         const dx = 10 + Math.random() * (GRID_X - 20);
