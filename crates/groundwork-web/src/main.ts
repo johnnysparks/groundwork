@@ -82,6 +82,7 @@ const SUCCESSION_MESSAGES: Record<number, string> = {
 let _prevStats = { plants: 0, fauna: 0, species: 0 } as any;
 let _prevSpeciesIds = new Set<number>();
 let _eventCooldown = 0;
+let _particles: GrowthParticles | null = null;
 let _squirrelCacheNotified = false;
 let _pollinatorActNotified = false;
 let _birdDropNotified = false;
@@ -242,6 +243,11 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
       if (msgs) {
         playFaunaArrival(f.type);
         hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+        // Celebration sparkle burst at the new fauna's position
+        if (_particles) {
+          // Sim coords → Three.js Y-up (x, z, y)
+          _particles.emitFaunaArrival(f.x, f.z, f.y);
+        }
       }
     }
     _eventCooldown = 25;
@@ -536,6 +542,7 @@ async function main() {
   // --- Growth particles ---
 
   const particles = new GrowthParticles();
+  _particles = particles;
   scene.add(particles.points);
   // Initial detection pass (no bursts on first load)
   particles.detectGrowth(grid);

@@ -297,6 +297,37 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a celebratory sparkle burst when a new fauna arrives.
+   * Bright warm particles spiral outward — the garden welcomes new life.
+   */
+  emitFaunaArrival(worldX: number, worldY: number, worldZ: number): void {
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 1.2 + Math.random() * 0.8;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.3;
+      p.y = worldY + (Math.random() - 0.5) * 0.3;
+      p.z = worldZ + (Math.random() - 0.5) * 0.3;
+
+      // Spiral outward
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 0.4 + Math.random() * 0.4;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = 0.3 + Math.random() * 0.5;
+      p.vz = Math.sin(angle) * speed;
+
+      // Warm gold/white sparkle
+      const t = Math.random();
+      p.color.setRGB(0.95 + t * 0.05, 0.85 + t * 0.1, 0.5 + t * 0.3);
+    }
+  }
+
+  /**
    * Emit a few leaf fragments near a world position (camera pan rustle).
    * Makes the canopy feel responsive to the player's movement.
    */
