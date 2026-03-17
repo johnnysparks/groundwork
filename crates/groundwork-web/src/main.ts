@@ -22,6 +22,7 @@ import { FireflyRenderer } from './rendering/fireflies';
 import { FallingLeaves } from './rendering/leaves';
 import { EcologyParticles } from './rendering/ecology';
 import { DewRenderer } from './rendering/dew';
+import { DustMoteRenderer } from './rendering/dustmotes';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
@@ -545,6 +546,11 @@ async function main() {
 
   const dew = new DewRenderer();
   scene.add(dew.group);
+
+  // --- Dust motes (midday ambient) ---
+
+  const dustMotes = new DustMoteRenderer();
+  scene.add(dustMotes.group);
 
   // --- Falling leaves ---
 
@@ -1271,6 +1277,8 @@ async function main() {
     fireflies.update(dt, elapsed);
     dew.setActive(dayTime);
     dew.update(dt, elapsed);
+    dustMotes.setActive(dayTime);
+    dustMotes.update(dt, elapsed);
     setNightAmbient(dayTime);
 
     // Falling leaves: ambient canopy motion
