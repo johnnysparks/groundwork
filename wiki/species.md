@@ -12,8 +12,8 @@
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
 | Max height | 2.5m | 50 |
-| Crown radius | 1.2m | 24 |
-| Trunk radius | 0.15m | 3 |
+| Crown radius | 1.5m | 30 |
+| Trunk radius | 0.25m | 5 |
 | Root depth | 1.5m | 30 |
 | Growth rate | 1.0x | baseline |
 | Crown shape | Round | |
@@ -35,8 +35,8 @@
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
 | Max height | 2.0m | 40 |
-| Crown radius | 0.8m | 16 |
-| Trunk radius | 0.08m | 1-2 |
+| Crown radius | 1.0m | 20 |
+| Trunk radius | 0.12m | 2-3 |
 | Root depth | 1.0m | 20 |
 | Growth rate | 1.5x | fast |
 | Crown shape | Narrow | slim column |
@@ -58,8 +58,8 @@
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
 | Max height | 1.8m | 36 |
-| Crown radius | 1.5m | 30 |
-| Trunk radius | 0.1m | 2 |
+| Crown radius | 1.8m | 36 |
+| Trunk radius | 0.18m | 3-4 |
 | Root depth | 1.2m | 24 |
 | Growth rate | 0.8x | slow |
 | Crown shape | Wide | drooping |
@@ -80,9 +80,9 @@
 
 | Parameter | Value | Voxels |
 |-----------|-------|--------|
-| Max height | 2.8m | 56 |
-| Crown radius | 0.8m | 16 |
-| Trunk radius | 0.1m | 2 |
+| Max height | 2.5m | 50 |
+| Crown radius | 1.0m | 20 |
+| Trunk radius | 0.15m | 3 |
 | Root depth | 1.5m | 30 |
 | Growth rate | 0.7x | slow |
 | Crown shape | Conical | narrow, tall |
