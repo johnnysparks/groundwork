@@ -11,7 +11,7 @@ import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, 
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
-import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint, updateTerrainWind } from './rendering/terrain';
+import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint, updateTerrainWind, updateRootPulse } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, updateWaterWindDir, scanWaterFrontier } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
@@ -2118,6 +2118,9 @@ async function main() {
 
     orbit.update(dt);
     updateForestCulling(forestRing, orbit.getTheta());
+
+    // Root pulse — warm emissive heartbeat in x-ray mode
+    updateRootPulse(elapsed);
 
     // X-ray culling — same dot-product math as tree culling.
     // Skirt walls: hide camera-facing walls.

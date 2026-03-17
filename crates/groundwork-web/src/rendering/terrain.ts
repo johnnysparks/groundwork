@@ -266,11 +266,25 @@ export function getRootGlowMaterial(): THREE.MeshLambertMaterial {
   return rootGlowMaterial;
 }
 
-/** Update root material when x-ray mode changes — no glow, just natural colors */
-function updateRootGlowClip(_xrayActive: boolean): void {
-  // Roots use their natural brown vertex colors in all modes.
-  // No emissive glow — the greyscale scene + transparent soil is enough
-  // to make roots readable without artificial highlighting.
+/** Update root emissive when x-ray mode changes — pulse glow underground */
+function updateRootGlowClip(xrayActive: boolean): void {
+  if (!rootGlowMaterial) return;
+  if (xrayActive) {
+    // Warm emissive — roots glow subtly in x-ray to show they're alive
+    rootGlowMaterial.emissive.setRGB(0.15, 0.08, 0.02);
+    rootGlowMaterial.emissiveIntensity = 0.4;
+  } else {
+    rootGlowMaterial.emissive.setRGB(0.0, 0.0, 0.0);
+    rootGlowMaterial.emissiveIntensity = 0.0;
+  }
+}
+
+/** Pulse root emissive — call each frame. Roots "breathe" in x-ray mode. */
+export function updateRootPulse(elapsed: number): void {
+  if (!rootGlowMaterial || !xrayState.active) return;
+  // Slow heartbeat-like pulse: two sine waves for organic feel
+  const pulse = 0.25 + Math.sin(elapsed * 1.0) * 0.15 + Math.sin(elapsed * 0.4) * 0.1;
+  rootGlowMaterial.emissiveIntensity = pulse;
 }
 
 export interface ChunkMeshResult {
