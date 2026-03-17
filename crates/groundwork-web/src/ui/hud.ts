@@ -191,13 +191,6 @@ export class Hud {
       switchScene(sceneSelect.value);
     });
 
-    // New Garden button
-    const newGardenBtn = this.container.querySelector('#new-garden-btn')!;
-    newGardenBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this._onNewGarden?.();
-    });
-
     // Set initial state — start in phase 0 (minimal UI)
     this.setPhase(0);
     this.render();
@@ -531,10 +524,10 @@ const HUD_HTML = `
       <button id="tick-toggle" title="Toggle auto-tick [Space]">Tick</button>
       <button id="screenshot-btn" title="Capture screenshot [F2]">Snap</button>
       <select id="scene-select" title="Choose a scene"></select>
+      <a id="wiki-btn" href="wiki/" title="Open the wiki">Wiki</a>
+      <button id="help-btn" title="Drag: orbit | Scroll: zoom | 1-5: tools | Q: x-ray | V: overlay | Space: tick">?</button>
     </div>
   </div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Q: x-ray | V: overlay | <a href="wiki/" id="wiki-link">Wiki</a></div>
-  <button id="new-garden-btn" title="Start a fresh garden">New Garden</button>
 `;
 
 // --- CSS ---
@@ -701,25 +694,38 @@ const HUD_CSS = `
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* --- Help (bottom-right, above New Garden) --- */
-#hud-help {
-  position: absolute;
-  bottom: 96px;
-  right: 16px;
-  font-size: 10px;
-  color: rgba(200, 180, 140, 0.3);
-  pointer-events: auto;
-  text-align: right;
-  max-width: 200px;
-  line-height: 1.5;
-}
-#wiki-link {
-  color: rgba(140, 196, 255, 0.5);
+/* --- Wiki + Help buttons in top bar --- */
+#wiki-btn {
+  padding: 3px 8px;
+  border: 1px solid rgba(140, 196, 255, 0.15);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(140, 196, 255, 0.7);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
   text-decoration: none;
+  transition: all 0.12s ease;
 }
-#wiki-link:hover {
-  color: rgba(140, 196, 255, 0.8);
-  text-decoration: underline;
+#wiki-btn:hover {
+  background: rgba(140, 196, 255, 0.12);
+  color: rgba(140, 196, 255, 1);
+}
+#help-btn {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(200, 180, 140, 0.5);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.12s ease;
+}
+#help-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e8d8b8;
 }
 
 /* --- Shared button style for top controls --- */
@@ -739,27 +745,6 @@ const HUD_CSS = `
 #screenshot-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e8d8b8;
-}
-#new-garden-btn {
-  position: absolute;
-  bottom: 64px;
-  right: 16px;
-  padding: 6px 14px;
-  border: 1px solid rgba(120, 180, 80, 0.3);
-  border-radius: 6px;
-  background: rgba(40, 60, 30, 0.7);
-  color: #a8d888;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: inherit;
-  pointer-events: auto;
-  transition: all 0.15s ease;
-}
-#new-garden-btn:hover {
-  background: rgba(60, 100, 40, 0.8);
-  border-color: rgba(140, 200, 100, 0.5);
-  color: #c8f0a8;
 }
 
 /* --- Milestone Toast --- */
@@ -961,27 +946,21 @@ const HUD_CSS = `
   color: #665e50;
 }
 
-/* --- Progressive reveal: hide UI until quest progression unlocks it --- */
-/* Phase 0 (Meet Your Gnome): hide EVERYTHING — just the garden, pond, and gnome.
-   No auto-advance timer. Player explores freely. */
+/* --- Progressive reveal: hide gameplay UI until quest progression unlocks it --- */
+/* Debug controls (#hud-top-bar) are ALWAYS visible regardless of phase. */
+
+/* Phase 0 (Meet Your Gnome): hide gameplay UI — just garden, pond, gnome + debug bar. */
 #hud[data-phase="0"] #tool-bar,
 #hud[data-phase="0"] #garden-score,
-#hud[data-phase="0"] #event-feed,
-#hud[data-phase="0"] #hud-top-bar,
-#hud[data-phase="0"] #hud-help,
-#hud[data-phase="0"] #new-garden-btn {
+#hud[data-phase="0"] #event-feed {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(20px);
 }
 
-/* Phase 1 (Start Your Garden): quest panel + seed tool only.
-   Player discovers "sow small" — one tool, one action. */
+/* Phase 1 (Start Your Garden): seed tool only. */
 #hud[data-phase="1"] #garden-score,
-#hud[data-phase="1"] #hud-help,
-#hud[data-phase="1"] #new-garden-btn,
-#hud[data-phase="1"] #hud-top-bar,
 #hud[data-phase="1"] #event-feed {
   opacity: 0 !important;
   visibility: hidden !important;
@@ -993,12 +972,8 @@ const HUD_CSS = `
   display: none !important;
 }
 
-/* Phase 2 (See Below the Surface): x-ray + lens picker appear.
-   Still no shovel or score — just observation tools. */
-#hud[data-phase="2"] #garden-score,
-#hud[data-phase="2"] #hud-help,
-#hud[data-phase="2"] #new-garden-btn,
-#hud[data-phase="2"] #hud-top-bar {
+/* Phase 2 (See Below the Surface): x-ray + lens picker appear. */
+#hud[data-phase="2"] #garden-score {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -1010,24 +985,19 @@ const HUD_CSS = `
 }
 
 /* Phase 3 (Shape the Water): shovel + full tool bar + events appear. */
-#hud[data-phase="3"] #garden-score,
-#hud[data-phase="3"] #hud-help,
-#hud[data-phase="3"] #new-garden-btn {
+#hud[data-phase="3"] #garden-score {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
   transform: translateY(20px);
 }
 
-/* Phase 4+ (Full UI): everything visible — score, help, new garden */
+/* Phase 4+ (Full UI): everything visible */
 
 /* Smooth transitions for reveal */
 #tool-bar,
 #garden-score,
-#event-feed,
-#hud-top-bar,
-#hud-help,
-#new-garden-btn {
+#event-feed {
   transition: opacity 0.6s ease, visibility 0.6s ease, transform 0.6s ease;
 }
 
@@ -1066,22 +1036,12 @@ const HUD_CSS = `
   #score-title { font-size: 10px; }
   .score-row { font-size: 11px; }
 
-  #hud-help { display: none; }
-
   #event-feed {
     bottom: 70px;
     left: 6px;
     max-width: 60vw;
   }
   .event-item { font-size: 11px; }
-
-  #new-garden-btn {
-    bottom: 10px;
-    right: 6px;
-    padding: 10px 14px;
-    font-size: 13px;
-    min-height: 44px;
-  }
 
   #tick-toggle,
   #screenshot-btn {
