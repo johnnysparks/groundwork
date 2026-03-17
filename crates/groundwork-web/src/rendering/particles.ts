@@ -133,11 +133,16 @@ export class GrowthParticles {
   private _rootCount = 0;
   private _prevRootCount = 0;
 
+  /** Seeds that died from deprivation this tick */
+  private _seedDeathCount = 0;
+
   /** Dead wood positions for fungi spore emission */
   private deadWoodPositions: { x: number; y: number; z: number }[] = [];
 
   /** How many new root voxels appeared since last detectGrowth() */
   get rootGrowthDelta(): number { return Math.max(0, this._rootCount - this._prevRootCount); }
+  /** How many seeds died from deprivation this tick */
+  get seedDeathCount(): number { return this._seedDeathCount; }
 
   /** Whether dead wood exists in the garden */
   get hasDeadWood(): boolean { return this.deadWoodPositions.length > 0; }
@@ -620,6 +625,21 @@ export class GrowthParticles {
         wiltCount++;
       }
     }
+
+    // Detect seed death: seeds that disappeared without germinating (not in new leaves)
+    // Seed deprivation from sim: no water/light for 200 ticks → seed dies
+    let seedDeathCount = 0;
+    for (const prevKey of this.prevSeedKeys) {
+      if (seedDeathCount >= 3) break;
+      if (!newSeedKeys.has(prevKey) && !newLeafPositions.has(prevKey)) {
+        const x = prevKey % GRID_X;
+        const y = Math.floor(prevKey / GRID_X) % GRID_Y;
+        const z = Math.floor(prevKey / (GRID_X * GRID_Y));
+        this.emitWilt(x + 0.5, z + 0.5, y + 0.5);
+        seedDeathCount++;
+      }
+    }
+    this._seedDeathCount = seedDeathCount;
 
     this.prevLeafPositions = newLeafPositions;
     this.seedPositions = newSeedPositions;

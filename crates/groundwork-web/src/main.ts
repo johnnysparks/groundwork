@@ -1024,6 +1024,17 @@ async function main() {
     if (particles.hasDeadWood && Math.random() < 0.15) {
       particles.emitFungiSpore();
     }
+
+    // Seed death from deprivation — teach the player about water/light requirements
+    if (particles.seedDeathCount > 0 && _eventCooldown <= 0) {
+      const msgs = [
+        'A seed withered — it needed water nearby to germinate',
+        'Seeds need moisture and light. Try planting closer to the water',
+        'That seed couldn\'t find enough water — dig channels to irrigate dry areas',
+      ];
+      hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
+      _eventCooldown = 60;
+    }
   }
 
   // New Garden button — resets sim, HUD, and re-meshes
