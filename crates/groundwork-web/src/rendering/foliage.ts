@@ -29,6 +29,7 @@ const FOLIAGE_VERT = /* glsl */ `
 
   uniform float uTime;
   uniform float uWindStrength;
+  uniform vec2 uWindDir;
   uniform vec3 uDayTint;
 
   varying vec3 vColor;
@@ -49,6 +50,12 @@ const FOLIAGE_VERT = /* glsl */ `
     float swayX = sin(uTime * 1.2 + worldPos.x * 0.7 + worldPos.z * 0.3) * uWindStrength * heightFactor;
     float swayY = cos(uTime * 0.9 + worldPos.z * 0.5 + worldPos.x * 0.4) * uWindStrength * heightFactor * 0.6;
     float swayZ = sin(uTime * 0.7 + worldPos.x * 0.3 + worldPos.z * 0.6) * uWindStrength * heightFactor * 0.2;
+
+    // Directional lean: foliage leans in wind direction during gusts
+    // Stronger wind = more directional lean, weaker = random sway dominates
+    float leanAmount = uWindStrength * uWindStrength * heightFactor * 0.6;
+    swayX += uWindDir.x * leanAmount;
+    swayZ += uWindDir.y * leanAmount;
 
     // Billboard: orient quad to face camera
     // Keep local vertex position (quad corners), but orient in camera space
@@ -273,6 +280,7 @@ export class FoliageRenderer {
       uniforms: {
         uTime: { value: 0 },
         uWindStrength: { value: 0.35 },
+        uWindDir: { value: new THREE.Vector2(1, 0) },
         uDayTint: { value: new THREE.Color(1, 1, 1) },
       },
       transparent: true,
@@ -393,6 +401,12 @@ export class FoliageRenderer {
   /** Set wind strength (0 = still, 1 = gusty) */
   setWindStrength(strength: number): void {
     this.material.uniforms.uWindStrength.value = strength;
+  }
+
+  /** Set wind direction (angle in radians, slowly drifting) */
+  setWindDirection(angle: number): void {
+    const dir = this.material.uniforms.uWindDir.value as THREE.Vector2;
+    dir.set(Math.cos(angle), Math.sin(angle));
   }
 
   /** Set foliage tint based on time of day (0-1 cycle).
