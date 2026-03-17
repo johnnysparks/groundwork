@@ -174,11 +174,18 @@ const waterVertexShader = /* glsl */ `
   varying float vDepth;
 
   attribute float depth;
+  uniform float uTime;
 
   void main() {
     vUv = uv;
     vDepth = depth;
     vec4 worldPos = modelMatrix * vec4(position, 1.0);
+
+    // Gentle wave displacement — makes the surface undulate
+    float wave1 = sin(worldPos.x * 1.2 + uTime * 0.8) * 0.04;
+    float wave2 = sin(worldPos.z * 0.9 + uTime * 0.6) * 0.03;
+    worldPos.y += wave1 + wave2;
+
     vWorldPos = worldPos.xyz;
     gl_Position = projectionMatrix * viewMatrix * worldPos;
   }
@@ -298,6 +305,15 @@ const waterFragmentShader = /* glsl */ `
     float skyFresnel = 1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0);
     skyFresnel = pow(skyFresnel, 3.0) * 0.2;
     lit += vec3(0.53, 0.81, 0.92) * skyFresnel; // sky blue tint
+
+    // Caustic patterns — bright refraction lines that shift and dance
+    float c1 = noise(vWorldPos.xy * 2.5 + vec2(uTime * 0.4, uTime * 0.3));
+    float c2 = noise(vWorldPos.xy * 3.7 - vec2(uTime * 0.25, uTime * 0.45));
+    float caustic = abs(c1 + c2); // interference pattern creates sharp bright lines
+    caustic = pow(caustic, 1.5) * 0.35; // brighten the peaks
+    // Caustics strongest in shallow water (like a real pool)
+    float causticStrength = (1.0 - depthFactor) * uSunIntensity;
+    lit += vec3(0.85, 0.95, 0.90) * caustic * causticStrength;
 
     // Depth-based opacity: shallow water is see-through, deep is opaque
     // Shore edges slightly more opaque so foam reads clearly
