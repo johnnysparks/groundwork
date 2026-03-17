@@ -115,6 +115,7 @@ const _habitatNotified = new Set<string>();
 let _firstSunsetNotified = false;
 let _firstNightNotified = false;
 let _firstDawnNotified = false;
+let _firstRainbowNotified = false;
 
 /** Previous tree growth stages — keyed by "rootX,rootY" to detect transitions */
 const _prevTreeStages = new Map<string, number>();
@@ -1042,6 +1043,7 @@ async function main() {
     _firstSunsetNotified = false;
     _firstNightNotified = false;
     _firstDawnNotified = false;
+    _firstRainbowNotified = false;
     _tipTimer = 0;
     taskQueue.clear();
     questLog.reset();
@@ -1556,7 +1558,12 @@ async function main() {
         if (newWeather !== prevWeatherState) {
           if (newWeather === 1) { hud.addEvent('Rain begins \u2014 the garden drinks deeply'); playRainStart(); }
           else if (newWeather === 2) { hud.addEvent('Drought \u2014 water runs low, roots dig deep'); playDroughtStart(); }
-          else if (prevWeatherState === 1) { hud.addEvent('The rain passes \u2014 skies clear'); leafDripTimer = 30 + Math.random() * 30; skyUniforms.uRainbow.value = 1.0; }
+          else if (prevWeatherState === 1) {
+            hud.addEvent('The rain passes \u2014 skies clear');
+            leafDripTimer = 30 + Math.random() * 30;
+            skyUniforms.uRainbow.value = 1.0;
+            if (!_firstRainbowNotified) { _firstRainbowNotified = true; hud.addEvent('A rainbow arcs across the sky!'); }
+          }
           else if (prevWeatherState === 2) hud.addEvent('Drought breaks \u2014 the soil can breathe');
           prevWeatherState = newWeather;
         }
