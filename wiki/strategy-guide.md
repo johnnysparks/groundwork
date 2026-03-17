@@ -119,9 +119,9 @@ Birch emerges in bright, dry areas with moderate nutrients. It grows 1.5x faster
 
 ### Encouraging Oak + Clover (The Anchor)
 
-When 3+ clover leaf voxels sit within 5 voxels of an oak's root position, the oak gets a 1.5x growth boost (nitrogen handshake). This is the game's signature synergy — the foundation of every productive garden.
+Clover near oak is a double synergy: clover within 8 voxels gives a +40 emergence score bonus for trees (making oaks more likely to appear), and once growing, 3+ clover leaf voxels within 5 voxels of oak roots grant a 1.5x growth boost (nitrogen handshake). This is the game's signature synergy.
 
-**Conditions:** Moderate water + moderate light + rich soil + mature garden (20+ plants) → oak emerges. Clover appears naturally near moderate conditions.
+**Conditions:** Establish clover first (moderate conditions), then sow nearby in rich soil → neighbor influence strongly favors tree emergence → oak appears and grows faster thanks to clover.
 
 ### Encouraging Willow (The Water Engine)
 

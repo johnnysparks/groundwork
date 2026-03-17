@@ -9,12 +9,17 @@ When a seed germinates, `pick_species_from_conditions()` (in `systems.rs`) score
 1. **Water fitness** — matches species water_need (Low/Medium/High) against local water level
 2. **Light fitness** — matches species shade_tolerance against local light level
 3. **Nutrient fitness** — plant type determines soil richness requirements (trees need rich soil, groundcover thrives anywhere)
-4. **Maturity gating** — garden development stage controls which plant types can emerge:
+4. **Neighbor influence** — scans 8-voxel radius for nearby species (trunk/leaf voxels with species_id):
+   - Clover (id 11) nearby → +40 score for trees (nitrogen fixing boosts tree emergence)
+   - Any groundcover nearby → +25 for flowers (succession: groundcover enables flowers)
+   - Any tree nearby → +25 for shade-tolerant species (canopy effect: shade_tolerance < 80)
+   - Same species nearby → -15 score (diversity pressure prevents monoculture)
+5. **Maturity gating** — garden development stage controls which plant types can emerge:
    - Groundcover: always (4.0x multiplier — pioneer species)
    - Flowers: need 3+ existing plants (2.0x)
    - Shrubs: need 5+ groundcover and 10+ total plants (2.0x)
    - Trees: need 10+ groundcover and 20+ total plants (1.5x)
-5. **Temporal bias** — early ticks (< 200) favor fast growers via growth_rate bonus
+6. **Temporal bias** — early ticks (< 200) favor fast growers via growth_rate bonus
 
 **Result:** Same conditions at the same tick/position always produce the same species (deterministic). Different environmental conditions produce different species mixes.
 

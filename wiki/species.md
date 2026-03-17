@@ -246,6 +246,7 @@ When a seed germinates, `pick_species_from_conditions()` scores all 12 species a
 | Water fitness | Local water level vs. species water_need | Willow favored near water, grass in dry areas |
 | Light fitness | Local light level vs. shade_tolerance | Fern/moss in shade, daisy/grass in sun |
 | Nutrient fitness | Soil nutrients vs. plant type needs | Trees need rich soil, groundcover thrives anywhere |
+| Neighbor influence | Species within 8 voxels | Clover boosts trees, groundcover boosts flowers, trees boost shade-lovers, same-species penalized |
 | Garden maturity | Total plants + groundcover count | Groundcover dominates early; trees only in mature gardens |
 | Temporal bias | Tick count < 200 | Fast growers (moss, grass) favored at start |
 
