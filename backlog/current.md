@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-17T23:00:00
-**Status:** Alpha complete. 220 sprints. Full cross-system connectivity: firefly water reflections, star water reflections, night moths, decomposition fungi, squirrel footprints, raindrop plinks, ecosystem warmth glow, garden vitality audio scaling, sunrise/sunset bloom flash, distant dawn chorus. 15-layer responsive audio, 23 SFX types, complete fauna trails. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-18T01:00:00
+**Status:** Alpha complete. 230 sprints. Full cross-system connectivity + fauna behavior particles: bee waggle dance, butterfly pollen trail, bird nesting twigs, pollen-in-sunbeams, moonbeam shafts, water fog wisps. Rain-boosted frog chorus, drought cicada drone. 16-layer responsive audio, 25 SFX types, complete fauna trails. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -196,6 +196,15 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Night moth particles flutter near active fireflies
 - Raindrop plink sound (10% of visual splashes)
 - Ecosystem health warm glow (warmth + saturation scale with vitality)
+- Garden whisper harmonic (barely audible chord in dense gardens)
+- Pollen visible in sunbeams (density + golden tint scales with pollinator count)
+- Bee waggle dance (golden figure-8 particles during active pollination)
+- Butterfly pollen trail (soft yellow motes drift from wings)
+- Bird nesting particles (brown twig fragments tumble from perched birds)
+- Moonbeam shafts at night (cool blue particles through canopy)
+- Rain amplifies frog chorus (louder, active during daytime rain)
+- Drought cicada drone (harsh high-frequency buzz during drought daytime)
+- Water surface fog wisps (cool mist above water at dawn)
 
 ---
 
