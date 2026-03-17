@@ -39,7 +39,9 @@ export type QuestId =
   | 'sowNearWater'
   | 'sowDryGround'
   | 'firstTree'
-  | 'threeSpecies';
+  | 'threeSpecies'
+  | 'fiveSpecies'
+  | 'gardenAlive';
 
 interface QuestDef {
   id: QuestId;
@@ -140,6 +142,19 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 6,
     detail: 'Your garden has groundcover, flowers, and trees. An ecosystem is forming.',
   },
+  // Chapter 7: The Garden Sustains Itself — the ultimate milestone
+  {
+    id: 'fiveSpecies',
+    name: 'Five species',
+    chapter: 7,
+    detail: 'Five different species are thriving. The garden is choosing its own path.',
+  },
+  {
+    id: 'gardenAlive',
+    name: 'The garden is alive',
+    chapter: 7,
+    detail: 'Plants, fauna, and diversity — your garden has become a living ecosystem.',
+  },
 ];
 
 const CHAPTER_NAMES = [
@@ -150,6 +165,7 @@ const CHAPTER_NAMES = [
   'The Garden Grows',
   'Conditions Matter',
   'A Tree Appeared',
+  'The Garden Is Alive',
 ];
 
 // ---------------------------------------------------------------------------
@@ -428,9 +444,9 @@ export class QuestLog {
       }
     }
 
-    // Fauna check for first bloom quest (bee arrives)
+    // Fauna check for bloom quest and garden-alive quest
     let hasFauna = false;
-    if (needsBloom) {
+    if (needsBloom || this.questActive('gardenAlive')) {
       try { hasFauna = getFaunaCount() > 0; } catch {}
     }
 
@@ -505,6 +521,13 @@ export class QuestLog {
         case 'threeSpecies':
           // 3+ plant types: groundcover + flower + tree (or shrub)
           complete = this.actions.plantTypesPresent >= 3;
+          break;
+        case 'fiveSpecies':
+          complete = speciesCount >= 5;
+          break;
+        case 'gardenAlive':
+          // The garden is alive: 5+ species, 3+ fauna, 1000+ plant voxels
+          complete = speciesCount >= 5 && hasFauna && this.actions.plantTypesPresent >= 3;
           break;
       }
 
