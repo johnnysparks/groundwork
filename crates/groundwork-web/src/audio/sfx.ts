@@ -368,6 +368,26 @@ export function playSquirrelChitter(): void {
   }
 }
 
+/** Play a tiny water drip tinkle — accompanies dawn dew sparkles */
+export function playDewDrop(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // High, delicate sine with quick attack and fast decay — like a droplet
+  const freq = 1800 + Math.random() * 600;
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.7, t + 0.15);
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0.02, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.2);
+}
+
 /** Play a soft ascending "growth" shimmer — gentle reward for plant growth */
 export function playGrowth(): void {
   const c = getContext();
