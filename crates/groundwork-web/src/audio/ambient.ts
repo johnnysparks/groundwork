@@ -20,6 +20,8 @@ let pollinatorGain: GainNode | null = null;
 let frogGain: GainNode | null = null;
 let beetleGain: GainNode | null = null;
 let waterSoundGain: GainNode | null = null;
+let cricketRhythm1: OscillatorNode | null = null;
+let cricketRhythm2: OscillatorNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -181,6 +183,9 @@ function createCricketSound(audioCtx: AudioContext, output: GainNode): void {
   osc2.connect(chirpGate2);
   chirpGate2.connect(cricketGain);
   cricketGain.connect(output);
+
+  cricketRhythm1 = rhythm;
+  cricketRhythm2 = rhythm2;
 
   osc.start();
   tremolo.start();
@@ -535,13 +540,32 @@ export function setFrogChorus(waterCount: number, dayTime: number): void {
 }
 
 /** Fade cricket sounds in for dusk/night, out for day.
+ *  Also vary chirp tempo by time: warmer (dusk) = faster, colder (deep night) = slower.
+ *  Inspired by Dolbear's Law: temperature correlates with chirp rate.
  *  Call each frame with the day cycle time (0–1). */
 export function setNightAmbient(dayTime: number): void {
   const shouldChirp = dayTime >= 0.65 || dayTime < 0.05;
-  if (shouldChirp === isNight) return;
-  isNight = shouldChirp;
-  if (cricketGain && ctx) {
-    const target = shouldChirp ? 0.03 : 0; // very quiet — background texture
-    cricketGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
+  if (shouldChirp !== isNight) {
+    isNight = shouldChirp;
+    if (cricketGain && ctx) {
+      const target = shouldChirp ? 0.03 : 0;
+      cricketGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
+    }
+  }
+
+  // Tempo variation: warm dusk (0.65-0.80) = 2.5Hz base, cold midnight (0.95-0.05) = 1.5Hz
+  if (shouldChirp && cricketRhythm1 && cricketRhythm2 && ctx) {
+    let warmth: number;
+    if (dayTime >= 0.65) {
+      // 0.65→1.0: warm→cold (evening cooling)
+      warmth = 1.0 - (dayTime - 0.65) / 0.35;
+    } else {
+      // 0.0→0.05: cold (pre-dawn)
+      warmth = 0;
+    }
+    const rate1 = 1.5 + warmth * 1.0; // 1.5-2.5 Hz
+    const rate2 = 1.3 + warmth * 0.9; // 1.3-2.2 Hz (offset)
+    cricketRhythm1.frequency.linearRampToValueAtTime(rate1, ctx.currentTime + 2);
+    cricketRhythm2.frequency.linearRampToValueAtTime(rate2, ctx.currentTime + 2);
   }
 }
