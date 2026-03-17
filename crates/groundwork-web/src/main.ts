@@ -25,6 +25,7 @@ import { DewRenderer } from './rendering/dew';
 import { DustMoteRenderer } from './rendering/dustmotes';
 import { GnatRenderer } from './rendering/gnats';
 import { MistRenderer } from './rendering/mist';
+import { CloudShadow } from './rendering/cloudshadow';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
@@ -663,6 +664,11 @@ async function main() {
 
   const mist = new MistRenderer();
   scene.add(mist.group);
+
+  // --- Cloud shadow ground plane ---
+
+  const cloudShadow = new CloudShadow();
+  scene.add(cloudShadow.mesh);
 
   // --- Dust motes (midday ambient) ---
 
@@ -1642,6 +1648,9 @@ async function main() {
       const targetCloud = prevWeatherState === 1 ? 0.75 : prevWeatherState === 2 ? 0.12 : 0.35;
       skyUniforms.uCloudDensity.value += (targetCloud - skyUniforms.uCloudDensity.value) * dt * 0.3;
     }
+
+    // Cloud shadow ground plane: matches sky cloud density + fades at night
+    cloudShadow.update(elapsed, skyUniforms.uCloudDensity.value, 1.0 - (skyUniforms.uNightAmount?.value ?? 0));
 
     // Drought visual: warmer, hazier atmosphere + foliage stress
     if (isInitialized()) {
