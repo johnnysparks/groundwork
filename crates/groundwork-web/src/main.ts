@@ -193,7 +193,7 @@ const ECO_TIPS = [
   'Tip: The garden gnome does the work — zone areas and watch',
   'Tip: Trees share health through underground mycorrhizal networks — violet glow between roots in x-ray view',
   'Tip: Dead wood becomes a nurse log — golden glow means seedlings grow 1.5x faster nearby',
-  'Tip: Too many plants? The garden has a carrying capacity — thin for health',
+  'Tip: Too many plants? Amber particles at surface show soil stagnation — thin for health',
   'Tip: Berry bushes attract birds — birds spread seeds to new areas',
   'Tip: Birch grows fast in open ground — perfect pioneer for bare patches',
   'Tip: Each new species adds +100 to your garden score',

@@ -116,6 +116,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.40, 0.38, 0.18),  // earthy green-brown
     new THREE.Color(0.30, 0.40, 0.22),  // dark green-brown
   ],
+  overgrowth: [
+    new THREE.Color(0.50, 0.38, 0.20),  // stagnant amber
+    new THREE.Color(0.45, 0.32, 0.16),  // dull brown
+    new THREE.Color(0.40, 0.35, 0.22),  // dusty earth
+  ],
 };
 
 interface EcoParticle {
@@ -475,6 +480,38 @@ export class EcologyParticles {
             1,
           );
           break; // one emission per grid cell
+        }
+      }
+    }
+
+    // Overgrowth: very dense root zones near surface → soil bacteria decline.
+    // Stagnant amber particles show the carrying capacity limit being reached.
+    // Discovery: "The soil quality dropped under my dense forest!"
+    const ogStep = 16;
+    for (let sy = 0; sy < GRID_Y; sy += ogStep) {
+      for (let sx = 0; sx < GRID_X; sx += ogStep) {
+        // Check just below surface for dense root zones
+        for (let sz = GROUND_LEVEL - 3; sz <= GROUND_LEVEL; sz++) {
+          const centerIdx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[centerIdx] !== Material.Root) continue;
+
+          // Count adjacent roots (matches sim's 4+ threshold)
+          let rootNeighbors = 0;
+          if (sx > 0 && grid[(centerIdx - VOXEL_BYTES)] === Material.Root) rootNeighbors++;
+          if (sx + 1 < GRID_X && grid[(centerIdx + VOXEL_BYTES)] === Material.Root) rootNeighbors++;
+          if (sy > 0 && grid[(centerIdx - GRID_X * VOXEL_BYTES)] === Material.Root) rootNeighbors++;
+          if (sy + 1 < GRID_Y && grid[(centerIdx + GRID_X * VOXEL_BYTES)] === Material.Root) rootNeighbors++;
+
+          if (rootNeighbors >= 4) {
+            this.emitTrail(
+              sx + 0.5,
+              GROUND_LEVEL + 0.5,
+              sy + 0.5,
+              INTERACTION_COLORS.overgrowth,
+              1,
+            );
+          }
+          break; // one check per column
         }
       }
     }
