@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-17T21:00:00
-**Status:** Alpha complete. 190 sprints. Living ecosystem with visible ecological interactions, 12-layer responsive audio landscape (cricket tempo varies by warmth!), full day-night atmosphere (dawn mist scaled by water + dew tinkle + soil steam + bird chorus, midday dust motes, golden hour warmth, dusk synchronized fireflies/frogs/crickets, night owls), dynamic wind with petal scatter and wind chimes, species-colored falling leaves, gnome emotion sounds, squirrel chitters, bee waggle dance particles, rain splash + post-rain leaf drip, seed dispersal trails, plant wilting particles, water day-cycle tinting, garden age milestones. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-17T23:00:00
+**Status:** Alpha complete. 195 sprints. Living ecosystem with visible ecological interactions, 13-layer responsive audio landscape (20 SFX types), full day-night atmosphere (dawn mist/dew/steam/chorus, midday dust, golden hour bloom boost, dusk fireflies/frogs/crickets, night vitality drone/owls), camera-reactive foliage, fauna arrival celebrations, tree growth creaks, bee waggle dances, weather-driven atmosphere (post-rain drip, mist density, water tinting), garden age milestones. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -166,6 +166,11 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Mist density scales with water volume (wetter = thicker dawn fog)
 - Dew drop tinkle (delicate high sine during dew time)
 - Garden age milestones (1k/5k/10k/25k celebration messages)
+- Camera pan rustle (leaf fragments scatter from canopy on fast panning)
+- Garden vitality drone (low harmonic hum at night in thriving gardens)
+- Golden hour bloom boost (bloom strength peaks during 0.65-0.80)
+- Fauna arrival sparkle burst (12 gold particles spiral at new fauna)
+- Tree growth creak (woody resonant sound on stage transitions)
 
 ---
 
