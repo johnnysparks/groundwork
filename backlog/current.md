@@ -236,4 +236,4 @@ See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`
 
 - Mobile drag-to-zone (desktop only currently — needs long-press or mode toggle)
 - Multiple gnomes, biome variety, undo/redo, share garden
-- SSAO (disabled, needs tuning — shadows now enabled with warm PCF)
+- Irrigation overlay: root mesh dominance in x-ray makes moisture heatmap subtle; consider render order
