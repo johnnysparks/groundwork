@@ -160,6 +160,62 @@ export function playBirdCall(): void {
   osc2.stop(t + 0.22);
 }
 
+/** Play a warbling trill — rapid 4-note ascending pattern, like a wren */
+export function playBirdWarble(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Base pitch with random variation
+  const base = 1800 + Math.random() * 600;
+  const notes = [base, base * 1.12, base * 1.25, base * 1.33];
+
+  for (let i = 0; i < notes.length; i++) {
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    const start = t + i * 0.06;
+    osc.frequency.setValueAtTime(notes[i], start);
+    osc.frequency.exponentialRampToValueAtTime(notes[i] * 0.85, start + 0.05);
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.04, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.06);
+    osc.connect(gain).connect(c.destination);
+    osc.start(start);
+    osc.stop(start + 0.07);
+  }
+}
+
+/** Play a robin-like song — melodic 5-note phrase that rises and falls */
+export function playRobinSong(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  const base = 1400 + Math.random() * 400;
+  // Rise-and-fall melodic contour
+  const intervals = [1.0, 1.2, 1.35, 1.25, 1.05];
+  const durations = [0.09, 0.07, 0.1, 0.08, 0.12];
+
+  let offset = 0;
+  for (let i = 0; i < intervals.length; i++) {
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    const start = t + offset;
+    const freq = base * intervals[i];
+    osc.frequency.setValueAtTime(freq, start);
+    // Slight downward sweep on each note for natural feel
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.9, start + durations[i]);
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.05, start);
+    gain.gain.setValueAtTime(0.05, start + durations[i] * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + durations[i] + 0.02);
+    osc.connect(gain).connect(c.destination);
+    osc.start(start);
+    osc.stop(start + durations[i] + 0.03);
+    offset += durations[i] + 0.02;
+  }
+}
+
 /** Play a brief sparkle for a shooting star — descending high-freq shimmer */
 export function playShootingStar(): void {
   const c = getContext();

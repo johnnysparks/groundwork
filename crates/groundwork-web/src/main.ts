@@ -41,7 +41,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -1450,9 +1450,19 @@ async function main() {
           // Pick a random fauna and play its sound
           const idx = Math.floor(Math.random() * faunaCount);
           const f = readFauna(fView, idx);
-          if (f.type === 2) playBirdCall();       // Bird chirp
-          else if (f.type <= 1 && !isDawn) playBuzz(); // Bee/butterfly (not at dawn)
-          else if (isDawn) playBirdCall();         // Extra bird calls at dawn
+          if (f.type === 2 || isDawn) {
+            // Dawn chorus: varied bird songs; otherwise standard chirp
+            const r = Math.random();
+            if (isDawn) {
+              if (r < 0.35) playBirdCall();
+              else if (r < 0.65) playBirdWarble();
+              else playRobinSong();
+            } else {
+              playBirdCall();
+            }
+          } else if (f.type <= 1) {
+            playBuzz(); // Bee/butterfly (not at dawn)
+          }
         }
       }
     }
