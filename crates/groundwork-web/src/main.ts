@@ -11,7 +11,7 @@ import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, 
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
-import { buildChunkMesh, setXrayMode, adjustCutawayDepth } from './rendering/terrain';
+import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint } from './rendering/terrain';
 import { buildWaterMesh, updateWaterTime, updateWaterSun } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
@@ -1233,6 +1233,28 @@ async function main() {
     // Animate foliage wind sway + day-night color tinting
     foliage.update(elapsed);
     foliage.setDayTint(dayCycle.getTime());
+
+    // Terrain day-night tint (reuse foliage tint values — same color temperature)
+    {
+      const t = dayCycle.getTime();
+      let r = 1, g = 1, b = 1;
+      if (t < 0.2) {
+        const f = t / 0.2;
+        r = 0.7 + f * 0.3; g = 0.72 + f * 0.25; b = 0.85 - f * 0.1;
+      } else if (t < 0.35) {
+        const f = (t - 0.2) / 0.15;
+        r = 1.0; g = 0.97 - f * 0.02; b = 0.75 + f * 0.25;
+      } else if (t < 0.65) {
+        r = 1.0; g = 0.98; b = 1.0;
+      } else if (t < 0.8) {
+        const f = (t - 0.65) / 0.15;
+        r = 1.0 + f * 0.05; g = 0.95 - f * 0.08; b = 0.95 - f * 0.2;
+      } else {
+        const f = (t - 0.8) / 0.2;
+        r = 1.05 - f * 0.4; g = 0.87 - f * 0.17; b = 0.75 + f * 0.1;
+      }
+      setTerrainDayTint(r, g, b);
+    }
 
     // Update fauna positions and animation
     fauna.update(elapsed);

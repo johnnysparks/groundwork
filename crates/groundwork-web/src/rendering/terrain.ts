@@ -123,6 +123,25 @@ function isSoilOrStone(mat: number): boolean {
   return mat === Material.Soil || mat === Material.Stone;
 }
 
+/** Shared material for solid terrain (trunk, branch, etc.) — tinted by day cycle */
+let solidMaterial: THREE.MeshLambertMaterial | null = null;
+
+/** Get or create the shared solid terrain material */
+export function getSolidMaterial(): THREE.MeshLambertMaterial {
+  if (!solidMaterial) {
+    solidMaterial = new THREE.MeshLambertMaterial({
+      vertexColors: true,
+    });
+  }
+  return solidMaterial;
+}
+
+/** Set terrain day-night tint (multiplied against vertex colors) */
+export function setTerrainDayTint(r: number, g: number, b: number): void {
+  if (solidMaterial) solidMaterial.color.setRGB(r, g, b);
+  if (soilMaterial) soilMaterial.color.setRGB(r, g, b);
+}
+
 /** Shared material for soil/stone meshes — toggled transparent for x-ray */
 let soilMaterial: THREE.MeshLambertMaterial | null = null;
 
@@ -245,7 +264,7 @@ export function buildChunkMesh(chunk: ChunkMesh, grid?: Uint8Array): ChunkMeshRe
   }
 
   const solidMesh = buildMeshFromQuads(solidQuads, `chunk_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
-    new THREE.MeshLambertMaterial({ vertexColors: true }), grid);
+    getSolidMaterial(), grid);
   const soilMesh = buildMeshFromQuads(soilQuads, `soil_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
     getSoilMaterial());
   const rootMesh = buildMeshFromQuads(rootQuads, `root_${chunk.cx}_${chunk.cy}_${chunk.cz}`,
