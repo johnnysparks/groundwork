@@ -36,15 +36,15 @@ check_enum() {
 
   local rust_variants
   rust_variants=$(sed -n "/pub enum $rs_enum/,/^}/p" "$rs_file" \
-    | grep -E '^\s+\w+ = [0-9]+,' \
-    | sed 's/^\s*//; s/,$//')
+    | grep -E '^[[:space:]]+[A-Za-z]+ = [0-9]+,' \
+    | sed 's/^[[:space:]]*//; s/,$//')
 
   local ts_block
   ts_block=$(grep -A20 "^export const $ts_const " "$TS_BRIDGE" | head -20)
 
   while IFS= read -r line; do
     local name value
-    name=$(echo "$line" | sed 's/\s*=.*//')
+    name=$(echo "$line" | sed 's/[[:space:]]*=.*//')
     value=$(echo "$line" | sed 's/.*= //')
     if echo "$ts_block" | grep -q "$name: $value"; then
       ok "$ts_const.$name = $value"
@@ -56,7 +56,7 @@ check_enum() {
   # Check contract test coverage
   while IFS= read -r line; do
     local name
-    name=$(echo "$line" | sed 's/\s*=.*//')
+    name=$(echo "$line" | sed 's/[[:space:]]*=.*//')
     if grep -q "$name:" "$CONTRACT_TEST"; then
       ok "$ts_const.$name covered in contract tests"
     else
@@ -115,13 +115,13 @@ done
 heading "Material enum (voxel.rs ↔ bridge.ts)"
 
 rust_materials=$(sed -n '/pub enum Material/,/^}/p' "$VOXEL_RS" \
-  | grep -E '^\s+\w+ = [0-9]+,' \
-  | sed 's/.*#\[default\]//; s/^\s*//; s/,$//')
+  | grep -E '^[[:space:]]+[A-Za-z]+ = [0-9]+,' \
+  | sed 's/.*#\[default\]//; s/^[[:space:]]*//; s/,$//')
 
 ts_material_block=$(grep -A20 "^export const Material" "$TS_BRIDGE" | head -15)
 
 while IFS= read -r line; do
-  name=$(echo "$line" | sed 's/\s*=.*//')
+  name=$(echo "$line" | sed 's/[[:space:]]*=.*//')
   value=$(echo "$line" | sed 's/.*= //')
   if echo "$ts_material_block" | grep -q "$name: $value"; then
     ok "Material.$name = $value"
@@ -132,7 +132,7 @@ done <<< "$rust_materials"
 
 # Material contract test coverage
 while IFS= read -r line; do
-  name=$(echo "$line" | sed 's/\s*=.*//')
+  name=$(echo "$line" | sed 's/[[:space:]]*=.*//')
   if grep -q "$name:" "$CONTRACT_TEST"; then
     ok "Material.$name covered in contract tests"
   else

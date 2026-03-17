@@ -966,20 +966,37 @@ mod tests {
         assert_eq!(FaunaState::Leaving as u8, 3);
 
         // Export record size (must match FAUNA_BYTES in bridge.ts)
-        assert_eq!(FAUNA_EXPORT_BYTES, 16, "Fauna export size changed — update FAUNA_BYTES in bridge.ts");
+        assert_eq!(
+            FAUNA_EXPORT_BYTES, 16,
+            "Fauna export size changed — update FAUNA_BYTES in bridge.ts"
+        );
 
         // Export byte layout: [type: u8, state: u8, pad, pad, x: f32, y: f32, z: f32]
         let mut fl = FaunaList::default();
         fl.fauna.push(Fauna {
             fauna_type: FaunaType::Squirrel,
             state: FaunaState::Acting,
-            x: 1.0, y: 2.0, z: 3.0,
-            target_x: 0.0, target_y: 0.0, target_z: 0.0,
-            age: 0, max_age: 100, rng_seed: 0,
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+            target_x: 0.0,
+            target_y: 0.0,
+            target_z: 0.0,
+            age: 0,
+            max_age: 100,
+            rng_seed: 0,
         });
         fl.pack_export();
-        assert_eq!(fl.export_buf[0], FaunaType::Squirrel as u8, "fauna_type at offset 0");
-        assert_eq!(fl.export_buf[1], FaunaState::Acting as u8, "state at offset 1");
+        assert_eq!(
+            fl.export_buf[0],
+            FaunaType::Squirrel as u8,
+            "fauna_type at offset 0"
+        );
+        assert_eq!(
+            fl.export_buf[1],
+            FaunaState::Acting as u8,
+            "state at offset 1"
+        );
         // x at offset 4 (little-endian f32)
         let x = f32::from_le_bytes(fl.export_buf[4..8].try_into().unwrap());
         assert!((x - 1.0).abs() < 0.001, "x at offset 4");

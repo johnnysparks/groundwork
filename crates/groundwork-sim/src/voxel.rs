@@ -161,7 +161,11 @@ mod tests {
     #[test]
     fn wasm_bridge_sync_guard() {
         // Material enum values (must match bridge.ts Material object)
-        assert_eq!(Material::Air as u8, 0, "Material::Air changed — update bridge.ts");
+        assert_eq!(
+            Material::Air as u8,
+            0,
+            "Material::Air changed — update bridge.ts"
+        );
         assert_eq!(Material::Soil as u8, 1);
         assert_eq!(Material::Stone as u8, 2);
         assert_eq!(Material::Water as u8, 3);
@@ -171,10 +175,18 @@ mod tests {
         assert_eq!(Material::Branch as u8, 7);
         assert_eq!(Material::Leaf as u8, 8);
         assert_eq!(Material::DeadWood as u8, 9);
-        assert_eq!(Material::COUNT, 10, "Material variant count changed — update bridge.ts and bridge.contract.test.ts");
+        assert_eq!(
+            Material::COUNT,
+            10,
+            "Material variant count changed — update bridge.ts and bridge.contract.test.ts"
+        );
 
         // Voxel struct: 4 bytes, repr(C), field order matters for zero-copy
-        assert_eq!(std::mem::size_of::<Voxel>(), 4, "Voxel size changed — update VOXEL_BYTES in bridge.ts");
+        assert_eq!(
+            std::mem::size_of::<Voxel>(),
+            4,
+            "Voxel size changed — update VOXEL_BYTES in bridge.ts"
+        );
         assert_eq!(std::mem::align_of::<Voxel>(), 1);
 
         // Verify byte layout: [material, water_level, light_level, nutrient_level]

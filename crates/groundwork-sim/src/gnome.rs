@@ -774,8 +774,14 @@ mod tests {
         assert_eq!(GnomeState::Inspecting as u8, 6);
 
         // Export sizes (must match GNOME_BYTES=32 and GHOST_EXPORT_BYTES=8 in bridge.ts)
-        assert_eq!(GNOME_EXPORT_BYTES, 32, "Gnome export size changed — update bridge.ts");
-        assert_eq!(GHOST_EXPORT_BYTES, 8, "Ghost export size changed — update bridge.ts");
+        assert_eq!(
+            GNOME_EXPORT_BYTES, 32,
+            "Gnome export size changed — update bridge.ts"
+        );
+        assert_eq!(
+            GHOST_EXPORT_BYTES, 8,
+            "Ghost export size changed — update bridge.ts"
+        );
 
         // Export byte layout: verify field offsets match bridge.ts getGnomeState()
         let mut gd = GnomeData::default();
