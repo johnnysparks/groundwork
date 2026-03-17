@@ -76,14 +76,14 @@ const launchOptions = {
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.ts',
-  timeout: 120_000, // 2 minutes per test (sim + screenshots take time)
+  timeout: 180_000, // 3 minutes per test (SwiftShader software rendering is slow)
   projects: [
     // Mobile-first: iPhone 15 Pro is the primary screenshot target
     {
       name: 'iphone-15-pro',
       use: {
         viewport: { width: 393, height: 852 },
-        deviceScaleFactor: 3,
+        deviceScaleFactor: 2, // capped from 3 — SwiftShader can't handle 3x in time
         isMobile: true,
         hasTouch: true,
         launchOptions,
@@ -116,7 +116,7 @@ export default defineConfig({
       name: 'pixel-8',
       use: {
         viewport: { width: 412, height: 915 },
-        deviceScaleFactor: 2.625,
+        deviceScaleFactor: 2, // capped from 2.625 — SwiftShader perf
         isMobile: true,
         hasTouch: true,
         launchOptions,
@@ -126,7 +126,7 @@ export default defineConfig({
     {
       name: 'desktop',
       use: {
-        viewport: { width: 1920, height: 1080 },
+        viewport: { width: 1280, height: 720 }, // reduced from 1920×1080 for SwiftShader
         launchOptions,
       },
     },
