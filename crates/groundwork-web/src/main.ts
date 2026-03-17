@@ -1576,7 +1576,14 @@ async function main() {
         for (let i = 0; i < fc; i++) {
           const f = readFauna(fv, i);
           if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) pollinators++;
-          else if (f.type === FaunaType.Beetle) beetles++;
+          else if (f.type === FaunaType.Beetle) {
+            beetles++;
+            // Beetle trail shimmer: faint iridescent particles showing decomposition path
+            if ((f.state === FaunaState.Seeking || f.state === FaunaState.Acting)
+                && Math.random() < dt * 0.4) {
+              particles.emitBeetleTrail(f.x, f.y);
+            }
+          }
           // Worm soil disturbance: tiny earthy puffs when active underground
           if (f.type === FaunaType.Worm && (f.state === FaunaState.Seeking || f.state === FaunaState.Acting)
               && Math.random() < dt * 0.5) {

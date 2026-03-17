@@ -795,6 +795,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a faint iridescent shimmer behind a beetle — shows their path
+   * through the garden as they decompose organic matter.
+   */
+  emitBeetleTrail(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.6 + Math.random() * 0.4;
+    p.maxLife = p.life;
+
+    // Just above ground behind beetle
+    p.x = worldX + (Math.random() - 0.5) * 0.4;
+    p.y = GROUND_LEVEL + 0.15;
+    p.z = worldZ + (Math.random() - 0.5) * 0.4;
+
+    // Tiny drift
+    p.vx = (Math.random() - 0.5) * 0.05;
+    p.vy = 0.02;
+    p.vz = (Math.random() - 0.5) * 0.05;
+
+    // Iridescent green-blue (moss/beetle wing shimmer)
+    const t = Math.random();
+    p.color.setRGB(0.3 + t * 0.15, 0.5 + t * 0.2, 0.35 + t * 0.25);
+  }
+
+  /**
    * Emit a ground-level wet shimmer — creates the impression of puddles
    * forming on flat ground during rain. Short-lived reflective sparkle.
    */
