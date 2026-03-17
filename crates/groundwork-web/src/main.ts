@@ -1009,6 +1009,7 @@ async function main() {
   let prevGnomeState = -1; // for detecting gnome state transitions
   let owlHootTimer = 30 + Math.random() * 30; // seconds until next owl hoot
   let gardenWhisperTimer = 20 + Math.random() * 20; // seconds until next garden whisper
+  let activePollinators = 0; // cross-block pollinator count for sunbeam pollen effect
   let leafDripTimer = 0; // remaining seconds of post-rain leaf dripping
   let leafDripInterval = 0; // accumulator for drip emit rate
   let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
@@ -1673,6 +1674,7 @@ async function main() {
           }
         }
       }
+      activePollinators = pollinators;
       setPollinatorHum(pollinators);
       setBeetleClick(beetles, dayTime);
     }
@@ -1687,10 +1689,15 @@ async function main() {
     }
 
     // Sunbeam shafts: golden particles stream through canopy during bright daylight
-    if (dayTime >= 0.3 && dayTime <= 0.65 && foliage.count > 500 && Math.random() < dt * 1.5) {
-      const sx = 15 + Math.random() * (GRID_X - 30);
-      const sz = 15 + Math.random() * (GRID_Y - 30);
-      particles.emitSunbeam(sx, sz);
+    // Pollinators add visible pollen — more golden, denser, slightly driftier
+    if (dayTime >= 0.3 && dayTime <= 0.65 && foliage.count > 500) {
+      const pollenAmount = Math.min(1, activePollinators / 4); // 0-1 based on pollinator count
+      const beamRate = 1.5 + pollenAmount * 2.0; // up to 3.5/sec with heavy pollen
+      if (Math.random() < dt * beamRate) {
+        const sx = 15 + Math.random() * (GRID_X - 30);
+        const sz = 15 + Math.random() * (GRID_Y - 30);
+        particles.emitSunbeam(sx, sz, pollenAmount);
+      }
     }
 
     // Camera rustle: fast panning scatters leaf fragments from nearby canopy

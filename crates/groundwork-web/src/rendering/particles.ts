@@ -809,7 +809,7 @@ export class GrowthParticles {
    * Emit a sunbeam shaft particle — bright golden motes streaming downward
    * through gaps in the canopy. Creates visible light columns.
    */
-  emitSunbeam(worldX: number, worldZ: number): void {
+  emitSunbeam(worldX: number, worldZ: number, pollen = 0): void {
     const p = this.findDeadParticle();
     if (!p) return;
 
@@ -822,14 +822,14 @@ export class GrowthParticles {
     p.y = GROUND_LEVEL + 10 + Math.random() * 15;
     p.z = worldZ + (Math.random() - 0.5) * 1.5;
 
-    // Slow downward drift with slight horizontal wander
-    p.vx = (Math.random() - 0.5) * 0.05;
+    // Slow downward drift with slight horizontal wander; pollen drifts more
+    p.vx = (Math.random() - 0.5) * (0.05 + pollen * 0.08);
     p.vy = -0.3 - Math.random() * 0.2;
-    p.vz = (Math.random() - 0.5) * 0.05;
+    p.vz = (Math.random() - 0.5) * (0.05 + pollen * 0.08);
 
-    // Warm golden-white (bright)
+    // Warm golden-white; shifts deeper gold when pollen is high
     const t = Math.random();
-    p.color.setRGB(1.0, 0.92 + t * 0.08, 0.7 + t * 0.2);
+    p.color.setRGB(1.0, 0.92 + t * 0.08 - pollen * 0.1, 0.7 + t * 0.2 - pollen * 0.2);
   }
 
   /**
