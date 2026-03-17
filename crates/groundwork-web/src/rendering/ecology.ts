@@ -164,9 +164,14 @@ export class EcologyParticles {
       for (let i = 0; i < faunaCount; i++) {
         const f = readFauna(faunaView, i);
         if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) {
-          // Golden pollen trail behind pollinator — stronger when actively pollinating
-          const count = f.state === FaunaState.Acting ? 10 : 5;
-          this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.pollination, count);
+          if (f.type === FaunaType.Bee && f.state === FaunaState.Acting) {
+            // Waggle dance: figure-8 pattern while actively pollinating
+            this.emitWaggleDance(f.x, f.z, f.y);
+          } else {
+            // Standard pollination trail
+            const count = f.state === FaunaState.Acting ? 10 : 5;
+            this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.pollination, count);
+          }
         } else if (f.type === FaunaType.Worm) {
           // Nutrient particles rising from worm activity (underground)
           this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.nutrient, 3);
@@ -304,6 +309,42 @@ export class EcologyParticles {
       const c = palette[Math.floor(Math.random() * palette.length)];
       p.color.copy(c);
     }
+  }
+
+  /** Emit a waggle dance figure-8 around a pollinating bee.
+   *  8 particles placed along a lemniscate curve for visual flair. */
+  private wagglePhase = 0;
+  private emitWaggleDance(worldX: number, worldY: number, worldZ: number): void {
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDead();
+      if (!p) return;
+
+      p.alive = true;
+      p.maxLife = 0.8 + Math.random() * 0.4;
+      p.life = p.maxLife;
+
+      // Figure-8 (lemniscate) placement around the bee
+      const angle = this.wagglePhase + (i / count) * Math.PI * 2;
+      const r = 0.5;
+      const lx = r * Math.sin(angle);
+      const lz = r * Math.sin(angle) * Math.cos(angle);
+
+      p.x = worldX + lx;
+      p.y = worldY + (Math.random() - 0.5) * 0.2;
+      p.z = worldZ + lz;
+
+      // Gentle outward drift from the figure-8
+      p.vx = lx * 0.3;
+      p.vy = 0.1 + Math.random() * 0.15;
+      p.vz = lz * 0.3;
+
+      const c = INTERACTION_COLORS.pollination[
+        Math.floor(Math.random() * INTERACTION_COLORS.pollination.length)
+      ];
+      p.color.copy(c);
+    }
+    this.wagglePhase += 0.4; // advance phase each emission for animation
   }
 
   /** Emit small soil disturbance particles at the surface above a worm.
