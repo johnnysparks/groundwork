@@ -30,6 +30,15 @@ function setVoxel(grid: Uint8Array, x: number, y: number, z: number, mat: number
   grid[idx] = mat;
 }
 
+/** Set voxel with species_id (byte 3 = nutrient_level) for species-specific coloring */
+function setVoxelSpecies(grid: Uint8Array, x: number, y: number, z: number, mat: number, speciesId: number): void {
+  if (x < 0 || x >= GRID_X || y < 0 || y >= GRID_Y || z < 0 || z >= GRID_Z) return;
+  const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+  grid[idx] = mat;
+  grid[idx + 1] = 200; // water_level = healthy
+  grid[idx + 3] = speciesId;
+}
+
 function getVoxel(grid: Uint8Array, x: number, y: number, z: number): number {
   if (x < 0 || x >= GRID_X || y < 0 || y >= GRID_Y || z < 0 || z >= GRID_Z) return Material.Air;
   return grid[(x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES];
@@ -457,6 +466,7 @@ export const SCENES: SceneDef[] = [
   { id: 'sim', name: 'Simulation', description: 'Live WASM simulation (requires wasm build)', createGrid: null },
   { id: 'oak', name: 'Oak Stages', description: 'Five oak growth stages — seedling to old-growth', createGrid: () => createPlantDemoGrid() },
   { id: 'garden', name: 'Dense Garden', description: 'A mixed garden with all species', createGrid: () => createDenseGardenGrid() },
+  { id: 'viewer', name: 'Model Viewer', description: 'Single species at all growth stages (?species=oak)', createGrid: () => createModelViewerGrid() },
 ];
 
 /** Get the scene ID from the URL, or a sensible default */
@@ -661,6 +671,445 @@ function createDenseGardenGrid(): Uint8Array {
         }
       }
     }
+  }
+
+  return grid;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Model Viewer — single species at all growth stages (?species=oak)
+// Developer tool for wiki screenshots and growth tuning.
+// ═══════════════════════════════════════════════════════════════════════
+
+// --- Species-aware placement helpers ---
+
+function trunkS(
+  grid: Uint8Array, cx: number, cy: number,
+  zBase: number, height: number, radius: number, sid: number,
+): void {
+  for (let h = 0; h < height; h++) {
+    const z = zBase + h;
+    if (radius <= 0) {
+      setVoxelSpecies(grid, cx, cy, z, Material.Trunk, sid);
+    } else {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          if (dx * dx + dy * dy <= radius * radius) {
+            setVoxelSpecies(grid, cx + dx, cy + dy, z, Material.Trunk, sid);
+          }
+        }
+      }
+    }
+  }
+}
+
+function leafDiscS(
+  grid: Uint8Array, cx: number, cy: number, z: number, radius: number, sid: number,
+): void {
+  if (z < 0 || z >= GRID_Z) return;
+  for (let dx = -radius; dx <= radius; dx++) {
+    for (let dy = -radius; dy <= radius; dy++) {
+      if (dx * dx + dy * dy <= radius * radius) {
+        const gx = cx + dx, gy = cy + dy;
+        if (gx >= 0 && gx < GRID_X && gy >= 0 && gy < GRID_Y) {
+          if (getVoxel(grid, gx, gy, z) === Material.Air) {
+            setVoxelSpecies(grid, gx, gy, z, Material.Leaf, sid);
+          }
+        }
+      }
+    }
+  }
+}
+
+function crownS(
+  grid: Uint8Array, cx: number, cy: number,
+  zBase: number, maxR: number, height: number,
+  shape: 'round' | 'narrow' | 'wide' | 'conical', sid: number,
+): void {
+  for (let dz = 0; dz < height; dz++) {
+    const z = zBase + dz;
+    const frac = dz / Math.max(1, height - 1);
+    let r: number;
+    switch (shape) {
+      case 'round': r = Math.max(1, Math.round(maxR * Math.sin((frac * 0.8 + 0.15) * Math.PI))); break;
+      case 'narrow': r = Math.max(1, Math.round(maxR * 0.55)); break;
+      case 'wide': r = frac < 0.6 ? maxR : Math.max(1, Math.round(maxR * (1 - (frac - 0.6) / 0.4 * 0.7))); break;
+      case 'conical': r = Math.max(1, Math.round(maxR * (1 - frac * 0.9))); break;
+    }
+    leafDiscS(grid, cx, cy, z, r, sid);
+  }
+}
+
+function branchS(
+  grid: Uint8Array, cx: number, cy: number,
+  z: number, reach: number, dirSeed: number, sid: number,
+): void {
+  const dirs: [number, number][] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  const d1 = dirs[dirSeed % 4];
+  const d2 = dirs[(dirSeed + 2) % 4];
+  for (let r = 1; r <= reach; r++) {
+    setVoxelSpecies(grid, cx + d1[0] * r, cy + d1[1] * r, z, Material.Branch, sid);
+    setVoxelSpecies(grid, cx + d2[0] * r, cy + d2[1] * r, z, Material.Branch, sid);
+  }
+}
+
+function rootS(
+  grid: Uint8Array, cx: number, cy: number,
+  zSurface: number, depth: number, spread: number, sid: number,
+): void {
+  for (let dz = 1; dz <= depth; dz++) {
+    const z = zSurface - dz;
+    if (z < 0) break;
+    if (getVoxel(grid, cx, cy, z) === Material.Soil) {
+      setVoxelSpecies(grid, cx, cy, z, Material.Root, sid);
+    }
+  }
+  const dirs: [number, number][] = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  for (const [dx, dy] of dirs) {
+    for (let r = 1; r <= spread; r++) {
+      const z = zSurface - 2 - Math.floor(r * 0.3);
+      if (z < 0) break;
+      const gx = cx + dx * r, gy = cy + dy * r;
+      if (gx >= 0 && gx < GRID_X && gy >= 0 && gy < GRID_Y) {
+        if (getVoxel(grid, gx, gy, z) === Material.Soil) {
+          setVoxelSpecies(grid, gx, gy, z, Material.Root, sid);
+        }
+      }
+    }
+  }
+}
+
+// --- Species definitions ---
+
+type StagePlacer = (g: Uint8Array, x: number, y: number, sz: number, gl: number, sid: number) => void;
+
+interface SpeciesViewDef {
+  id: string;
+  name: string;
+  speciesId: number;
+  stages: { name: string; place: StagePlacer }[];
+}
+
+const TREE_IDS = ['oak', 'birch', 'willow', 'pine'];
+const SHRUB_IDS = ['fern', 'berry-bush', 'holly'];
+
+const VIEWER_SPECIES: SpeciesViewDef[] = [
+  // --- Trees ---
+  {
+    id: 'oak', name: 'Oak', speciesId: 1,
+    stages: [
+      { name: 'Seedling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 1, 0, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Leaf, s);
+        rootS(g, x, y, gl, 3, 0, s);
+      }},
+      { name: 'Sapling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 10, 1, s);
+        branchS(g, x, y, sz + 7, 3, 0, s);
+        crownS(g, x, y, sz + 6, 5, 5, 'wide', s);
+        rootS(g, x, y, gl, 8, 6, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 20, 2, s);
+        branchS(g, x, y, sz + 14, 6, 0, s);
+        branchS(g, x, y, sz + 17, 5, 1, s);
+        crownS(g, x, y, sz + 12, 10, 8, 'wide', s);
+        rootS(g, x, y, gl, 14, 12, s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 28, 3, s);
+        branchS(g, x, y, sz + 16, 10, 0, s);
+        branchS(g, x, y, sz + 20, 8, 1, s);
+        branchS(g, x, y, sz + 24, 6, 2, s);
+        crownS(g, x, y, sz + 14, 16, 12, 'wide', s);
+        rootS(g, x, y, gl, 20, 18, s);
+      }},
+    ],
+  },
+  {
+    id: 'birch', name: 'Birch', speciesId: 2,
+    stages: [
+      { name: 'Seedling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 2, 0, s);
+        setVoxelSpecies(g, x, y, sz + 2, Material.Leaf, s);
+        rootS(g, x, y, gl, 2, 0, s);
+      }},
+      { name: 'Sapling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 12, 0, s);
+        crownS(g, x, y, sz + 8, 4, 5, 'narrow', s);
+        rootS(g, x, y, gl, 6, 4, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 18, 1, s);
+        branchS(g, x, y, sz + 12, 4, 0, s);
+        branchS(g, x, y, sz + 14, 3, 1, s);
+        crownS(g, x, y, sz + 10, 6, 8, 'narrow', s);
+        rootS(g, x, y, gl, 10, 8, s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 24, 1, s);
+        branchS(g, x, y, sz + 14, 6, 0, s);
+        branchS(g, x, y, sz + 18, 5, 1, s);
+        crownS(g, x, y, sz + 12, 8, 12, 'narrow', s);
+        rootS(g, x, y, gl, 14, 10, s);
+      }},
+    ],
+  },
+  {
+    id: 'willow', name: 'Willow', speciesId: 3,
+    stages: [
+      { name: 'Seedling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 2, 0, s);
+        setVoxelSpecies(g, x, y, sz + 2, Material.Leaf, s);
+        rootS(g, x, y, gl, 3, 0, s);
+      }},
+      { name: 'Sapling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 8, 1, s);
+        crownS(g, x, y, sz + 5, 5, 4, 'wide', s);
+        rootS(g, x, y, gl, 6, 5, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 14, 1, s);
+        branchS(g, x, y, sz + 10, 6, 2, s);
+        crownS(g, x, y, sz + 8, 8, 6, 'wide', s);
+        // Weeping fronds hanging from crown edge
+        for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [4, 4], [-4, 4]]) {
+          for (let dz = 0; dz < 5; dz++) {
+            setVoxelSpecies(g, x + dx, y + dy, sz + 8 - dz, Material.Leaf, s);
+          }
+        }
+        rootS(g, x, y, gl, 10, 10, s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 18, 2, s);
+        branchS(g, x, y, sz + 12, 8, 2, s);
+        crownS(g, x, y, sz + 10, 12, 8, 'wide', s);
+        // Weeping fronds
+        for (const [dx, dy] of [[10, 0], [-10, 0], [0, 10], [0, -10], [7, 7], [-7, 7], [7, -7], [-7, -7]]) {
+          for (let dz = 0; dz < 8; dz++) {
+            setVoxelSpecies(g, x + dx, y + dy, sz + 10 - dz, Material.Leaf, s);
+          }
+        }
+        rootS(g, x, y, gl, 14, 14, s);
+      }},
+    ],
+  },
+  {
+    id: 'pine', name: 'Pine', speciesId: 4,
+    stages: [
+      { name: 'Seedling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 2, 0, s);
+        setVoxelSpecies(g, x, y, sz + 2, Material.Leaf, s);
+        rootS(g, x, y, gl, 3, 0, s);
+      }},
+      { name: 'Sapling', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 10, 0, s);
+        crownS(g, x, y, sz + 4, 4, 7, 'conical', s);
+        rootS(g, x, y, gl, 6, 4, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 18, 1, s);
+        crownS(g, x, y, sz + 5, 7, 14, 'conical', s);
+        rootS(g, x, y, gl, 10, 8, s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, gl, s) => {
+        trunkS(g, x, y, sz, 26, 1, s);
+        crownS(g, x, y, sz + 6, 10, 20, 'conical', s);
+        rootS(g, x, y, gl, 14, 12, s);
+      }},
+    ],
+  },
+  // --- Shrubs ---
+  {
+    id: 'fern', name: 'Fern', speciesId: 5,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Leaf, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, _gl, s) => {
+        trunkS(g, x, y, sz, 2, 0, s);
+        crownS(g, x, y, sz + 1, 3, 2, 'round', s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, _gl, s) => {
+        trunkS(g, x, y, sz, 3, 0, s);
+        crownS(g, x, y, sz + 1, 4, 3, 'round', s);
+      }},
+    ],
+  },
+  {
+    id: 'berry-bush', name: 'Berry Bush', speciesId: 6,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Leaf, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, _gl, s) => {
+        trunkS(g, x, y, sz, 2, 0, s);
+        crownS(g, x, y, sz + 1, 3, 3, 'round', s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, _gl, s) => {
+        trunkS(g, x, y, sz, 3, 0, s);
+        crownS(g, x, y, sz + 2, 4, 3, 'round', s);
+      }},
+    ],
+  },
+  {
+    id: 'holly', name: 'Holly', speciesId: 7,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Leaf, s);
+      }},
+      { name: 'Young', place: (g, x, y, sz, _gl, s) => {
+        trunkS(g, x, y, sz, 3, 0, s);
+        crownS(g, x, y, sz + 1, 3, 4, 'narrow', s);
+      }},
+      { name: 'Mature', place: (g, x, y, sz, _gl, s) => {
+        trunkS(g, x, y, sz, 4, 0, s);
+        crownS(g, x, y, sz + 2, 4, 5, 'narrow', s);
+      }},
+    ],
+  },
+  // --- Flowers ---
+  {
+    id: 'wildflower', name: 'Wildflower', speciesId: 8,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Leaf, s);
+      }},
+      { name: 'Budding', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 2, Material.Leaf, s);
+      }},
+      { name: 'Bloom', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 2, Material.Trunk, s);
+        leafDiscS(g, x, y, sz + 3, 2, s);
+      }},
+    ],
+  },
+  {
+    id: 'daisy', name: 'Daisy', speciesId: 9,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Leaf, s);
+      }},
+      { name: 'Budding', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Leaf, s);
+      }},
+      { name: 'Bloom', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Trunk, s);
+        setVoxelSpecies(g, x, y, sz + 1, Material.Trunk, s);
+        leafDiscS(g, x, y, sz + 2, 2, s);
+      }},
+    ],
+  },
+  // --- Groundcover ---
+  {
+    id: 'moss', name: 'Moss', speciesId: 10,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Leaf, s);
+      }},
+      { name: 'Patch', place: (g, x, y, sz, _gl, s) => {
+        leafDiscS(g, x, y, sz, 2, s);
+      }},
+      { name: 'Carpet', place: (g, x, y, sz, _gl, s) => {
+        leafDiscS(g, x, y, sz, 4, s);
+      }},
+    ],
+  },
+  {
+    id: 'grass', name: 'Grass', speciesId: 11,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Leaf, s);
+      }},
+      { name: 'Patch', place: (g, x, y, sz, _gl, s) => {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            setVoxelSpecies(g, x + dx, y + dy, sz, Material.Leaf, s);
+          }
+        }
+        setVoxelSpecies(g, x, y, sz + 1, Material.Leaf, s);
+      }},
+      { name: 'Carpet', place: (g, x, y, sz, _gl, s) => {
+        leafDiscS(g, x, y, sz, 3, s);
+        for (let dx = -2; dx <= 2; dx += 2) {
+          for (let dy = -2; dy <= 2; dy += 2) {
+            setVoxelSpecies(g, x + dx, y + dy, sz + 1, Material.Leaf, s);
+          }
+        }
+      }},
+    ],
+  },
+  {
+    id: 'clover', name: 'Clover', speciesId: 12,
+    stages: [
+      { name: 'Sprout', place: (g, x, y, sz, _gl, s) => {
+        setVoxelSpecies(g, x, y, sz, Material.Leaf, s);
+      }},
+      { name: 'Patch', place: (g, x, y, sz, _gl, s) => {
+        leafDiscS(g, x, y, sz, 2, s);
+      }},
+      { name: 'Carpet', place: (g, x, y, sz, _gl, s) => {
+        leafDiscS(g, x, y, sz, 5, s);
+      }},
+    ],
+  },
+];
+
+/** Get viewer species from URL ?species= param */
+export function getViewerSpecies(): SpeciesViewDef {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('species') || 'oak';
+  return VIEWER_SPECIES.find(s => s.id === id) || VIEWER_SPECIES[0];
+}
+
+/** All available species for the viewer (for UI dropdowns) */
+export { VIEWER_SPECIES };
+
+function createModelViewerGrid(): Uint8Array {
+  const species = getViewerSpecies();
+
+  // Size grid based on species type
+  let gw: number, gd: number, gh: number, gl: number;
+  if (TREE_IDS.includes(species.id)) {
+    gw = 160; gd = 50; gh = 80; gl = 30;
+  } else if (SHRUB_IDS.includes(species.id)) {
+    gw = 60; gd = 30; gh = 40; gl = 15;
+  } else {
+    gw = 50; gd = 20; gh = 30; gl = 10;
+  }
+
+  setGridDimensions(gw, gd, gh, gl);
+  const size = GRID_X * GRID_Y * GRID_Z * VOXEL_BYTES;
+  const grid = new Uint8Array(size);
+
+  // Terrain: stone base + soil
+  for (let z = 0; z < GRID_Z; z++) {
+    for (let y = 0; y < GRID_Y; y++) {
+      for (let x = 0; x < GRID_X; x++) {
+        const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+        if (z < Math.floor(gl / 3)) grid[idx] = Material.Stone;
+        else if (z <= gl) grid[idx] = Material.Soil;
+      }
+    }
+  }
+
+  // Place stages evenly spaced along X
+  const numStages = species.stages.length;
+  const spacing = Math.floor(gw / (numStages + 1));
+  const cy = Math.floor(gd / 2);
+  const sz = gl + 1;
+
+  for (let i = 0; i < numStages; i++) {
+    const cx = spacing * (i + 1);
+    species.stages[i].place(grid, cx, cy, sz, gl, species.speciesId);
   }
 
   return grid;
