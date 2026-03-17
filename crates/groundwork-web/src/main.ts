@@ -2098,7 +2098,7 @@ async function main() {
       const newWind = currentWind + (targetWind - currentWind) * 0.05;
       foliage.setWindStrength(newWind);
       foliage.setWindDirection(windAngle);
-      updateTerrainWind(dt, newWind);
+      updateTerrainWind(dt, newWind, windAngle);
       setWindAmbient(newWind);
       setLeafRustle(foliage.count, newWind);
     }

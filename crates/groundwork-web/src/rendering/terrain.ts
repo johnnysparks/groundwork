@@ -142,15 +142,18 @@ export function getSolidMaterial(): THREE.MeshLambertMaterial {
     solidMaterial.onBeforeCompile = (shader) => {
       shader.uniforms.uWindStrength = windStrengthUniform;
       shader.uniforms.uWindTime = windTimeUniform;
+      shader.uniforms.uWindDir = windDirUniform;
       // Add uniforms before main
       shader.vertexShader = shader.vertexShader.replace(
         'void main() {',
         `uniform float uWindStrength;
 uniform float uWindTime;
+uniform vec2 uWindDir;
 void main() {`,
       );
       // Displace above-ground vertices (Y > GROUND_LEVEL in Three.js Y-up)
       // Only sway above ground; amplitude scales with height for natural top-heavy motion
+      // Directional lean: trunks/branches lean in the wind direction during gusts
       shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
         `#include <begin_vertex>
@@ -160,6 +163,10 @@ if (heightAboveGround > 1.0 && uWindStrength > 0.01) {
   float phase = position.x * 0.3 + position.z * 0.2 + uWindTime * 1.5;
   transformed.x += sin(phase) * swayAmount;
   transformed.z += cos(phase * 0.7 + 1.3) * swayAmount * 0.5;
+  // Directional lean: stronger wind = more lean in wind direction
+  float leanAmount = heightAboveGround * 0.005 * uWindStrength * uWindStrength;
+  transformed.x += uWindDir.x * leanAmount;
+  transformed.z += uWindDir.y * leanAmount;
 }`,
       );
     };
@@ -170,11 +177,15 @@ if (heightAboveGround > 1.0 && uWindStrength > 0.01) {
 /** Wind sway uniforms — shared across all solid terrain meshes */
 const windStrengthUniform = { value: 0.0 };
 const windTimeUniform = { value: 0.0 };
+const windDirUniform = { value: new THREE.Vector2(1, 0) };
 
 /** Update terrain wind sway. Call each frame with dt in seconds. */
-export function updateTerrainWind(dt: number, windStrength: number): void {
+export function updateTerrainWind(dt: number, windStrength: number, windAngle?: number): void {
   windTimeUniform.value += dt;
   windStrengthUniform.value = windStrength;
+  if (windAngle !== undefined) {
+    windDirUniform.value.set(Math.cos(windAngle), Math.sin(windAngle));
+  }
 }
 
 /** Set terrain day-night tint (multiplied against vertex colors) */
