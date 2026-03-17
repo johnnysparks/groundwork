@@ -178,6 +178,9 @@ export class EcologyParticles {
         } else if (f.type === FaunaType.Bird && f.state === FaunaState.Acting) {
           // Bird seed-drop: golden seeds falling from the bird
           this.emitSeedDrop(f.x, f.z, f.y);
+        } else if (f.type === FaunaType.Squirrel && f.state === FaunaState.Acting) {
+          // Squirrel caching: earthy dig particles at feet
+          this.emitSoilDisturbance(f.x, f.y);
         }
       }
     }
