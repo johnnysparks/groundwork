@@ -228,6 +228,8 @@ export interface PostProcessing {
   setHeatShimmer(strength: number, time: number): void;
   /** Set ecosystem warmth boost (0 = no boost, 1 = full thriving glow). */
   setEcoWarmth(amount: number): void;
+  /** Adjust DOF based on camera zoom level (1.0 = default). */
+  setZoomDOF(zoom: number): void;
 }
 
 /**
@@ -326,6 +328,16 @@ export function createPostProcessing(
     setEcoWarmth(amount: number) {
       colorGradePass.uniforms.warmth.value = baseWarmth + amount * 0.015;
       colorGradePass.uniforms.saturation.value = baseSaturation + amount * 0.08;
+    },
+    /** Adjust DOF based on camera zoom — closer = tighter focus band, more blur */
+    setZoomDOF(zoom: number) {
+      if (!tiltShiftPass) return;
+      // zoom 0.35 (far) → wide focus (0.35), weak blur (2.5)
+      // zoom 1.0 (default) → moderate (0.25, 4.5)
+      // zoom 4.0 (close) → narrow focus (0.12), strong blur (6.0)
+      const t = Math.max(0, Math.min(1, (zoom - 0.35) / 3.65)); // 0-1 normalized
+      tiltShiftPass.uniforms.focusWidth.value = 0.35 - t * 0.23;
+      tiltShiftPass.uniforms.blurMax.value = 2.5 + t * 3.5;
     },
   };
 }
