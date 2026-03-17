@@ -406,6 +406,21 @@ export class GrowthParticles {
       }
     }
 
+    // Detect die-off: vegetation lost since last tick → emit wilting particles
+    // Sample up to 5 lost positions to avoid performance hit
+    let wiltCount = 0;
+    for (const prevKey of this.prevLeafPositions) {
+      if (wiltCount >= 5) break;
+      if (!newLeafPositions.has(prevKey)) {
+        // Decode position from key
+        const x = prevKey % GRID_X;
+        const y = Math.floor(prevKey / GRID_X) % GRID_Y;
+        const z = Math.floor(prevKey / (GRID_X * GRID_Y));
+        this.emitWilt(x + 0.5, z + 0.5, y + 0.5);
+        wiltCount++;
+      }
+    }
+
     this.prevLeafPositions = newLeafPositions;
     this.seedPositions = newSeedPositions;
     this.prevSeedKeys = newSeedKeys;
@@ -506,6 +521,36 @@ export class GrowthParticles {
 
     const c = SEED_COLORS[Math.floor(Math.random() * SEED_COLORS.length)];
     p.color.copy(c);
+  }
+
+  /**
+   * Emit brown wilting particles when vegetation dies.
+   * Amber-brown particles drift downward — visual "letting go."
+   */
+  private emitWilt(worldX: number, worldY: number, worldZ: number): void {
+    const count = 3;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 1.0 + Math.random() * 0.8;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.6;
+      p.y = worldY + (Math.random() - 0.5) * 0.4;
+      p.z = worldZ + (Math.random() - 0.5) * 0.6;
+
+      // Drift downward and outward
+      const angle = Math.random() * Math.PI * 2;
+      p.vx = Math.cos(angle) * 0.15;
+      p.vy = -0.3 - Math.random() * 0.2; // falls
+      p.vz = Math.sin(angle) * 0.15;
+
+      // Dry brown/amber
+      const t = Math.random();
+      p.color.setRGB(0.55 + t * 0.15, 0.40 + t * 0.1, 0.15 + t * 0.1);
+    }
   }
 
   /**
