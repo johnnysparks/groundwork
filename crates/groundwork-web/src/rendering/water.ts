@@ -613,3 +613,125 @@ export function scanWaterFrontier(grid: Uint8Array, maxFrontier = 8): { count: n
 
   return { count, frontier };
 }
+
+// ---------------------------------------------------------------------------
+// Water surface bubbles — tiny rising particles suggesting aquatic life
+// ---------------------------------------------------------------------------
+
+const MAX_BUBBLES = 40;
+const BUBBLE_LIFE = 1.5;
+
+interface Bubble {
+  x: number; y: number; z: number;
+  life: number;
+  speed: number;
+}
+
+export class WaterBubbles {
+  readonly mesh: THREE.Points;
+  private bubbles: Bubble[] = [];
+  private positions: Float32Array;
+  private alphas: Float32Array;
+  private timer = 0;
+  private waterSurfaces: { x: number; y: number; threeY: number }[] = [];
+
+  constructor() {
+    this.positions = new Float32Array(MAX_BUBBLES * 3);
+    this.alphas = new Float32Array(MAX_BUBBLES);
+    for (let i = 0; i < MAX_BUBBLES; i++) {
+      this.positions[i * 3 + 1] = -1000;
+      this.alphas[i] = 0;
+      this.bubbles.push({ x: 0, y: -1000, z: 0, life: 0, speed: 0 });
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alphas, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */ `
+        attribute float aAlpha;
+        varying float vAlpha;
+        void main() {
+          vAlpha = aAlpha;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = mix(2.0, 4.0, aAlpha) * (200.0 / -mv.z);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5) * 2.0;
+          if (d > 1.0) discard;
+          float ring = smoothstep(0.6, 0.8, d) * 0.5 + (1.0 - d * d) * 0.5;
+          gl_FragColor = vec4(0.85, 0.92, 0.98, ring * vAlpha * 0.7);
+        }`,
+      transparent: true,
+      depthWrite: false,
+    });
+
+    this.mesh = new THREE.Points(geo, mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.name = 'water-bubbles';
+  }
+
+  /** Cache water surface positions from grid scan */
+  setWaterSurfaces(surfaces: { x: number; y: number; z: number }[]): void {
+    this.waterSurfaces = surfaces.map(s => ({
+      x: s.x + 0.5,
+      y: s.y + 0.5,
+      threeY: s.z + 1.0,
+    }));
+  }
+
+  update(dt: number): void {
+    if (this.waterSurfaces.length === 0) return;
+
+    // Spawn 1-2 bubbles per second
+    this.timer += dt;
+    const spawnInterval = 0.5 + Math.random() * 0.5;
+    if (this.timer >= spawnInterval) {
+      this.timer = 0;
+      // Find a dead bubble slot
+      for (const b of this.bubbles) {
+        if (b.life <= 0) {
+          const surf = this.waterSurfaces[Math.floor(Math.random() * this.waterSurfaces.length)];
+          b.x = surf.x + (Math.random() - 0.5) * 0.6;
+          b.z = surf.y + (Math.random() - 0.5) * 0.6;
+          b.y = surf.threeY - 0.1;
+          b.life = BUBBLE_LIFE;
+          b.speed = 0.3 + Math.random() * 0.4;
+          break;
+        }
+      }
+    }
+
+    // Update all bubbles
+    for (let i = 0; i < MAX_BUBBLES; i++) {
+      const b = this.bubbles[i];
+      if (b.life > 0) {
+        b.life -= dt;
+        b.y += b.speed * dt;
+        // Slight wobble
+        b.x += Math.sin(b.life * 8 + i) * 0.01;
+        const t = b.life / BUBBLE_LIFE;
+        this.positions[i * 3] = b.x;
+        this.positions[i * 3 + 1] = b.y;
+        this.positions[i * 3 + 2] = b.z;
+        // Fade in then out
+        this.alphas[i] = t < 0.2 ? t / 0.2 : t > 0.8 ? (1 - t) / 0.2 : 1.0;
+      } else {
+        this.positions[i * 3 + 1] = -1000;
+        this.alphas[i] = 0;
+      }
+    }
+
+    (this.mesh.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
+    (this.mesh.geometry.getAttribute('aAlpha') as THREE.BufferAttribute).needsUpdate = true;
+  }
+
+  dispose(): void {
+    this.mesh.geometry.dispose();
+    (this.mesh.material as THREE.Material).dispose();
+  }
+}

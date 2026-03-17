@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint, updateTerrainWind, updateRootPulse } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, updateWaterWindDir, scanWaterFrontier } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, updateWaterWindDir, scanWaterFrontier, WaterBubbles } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -602,6 +602,32 @@ async function main() {
   const waterMesh = buildWaterMesh(grid);
   if (waterMesh) {
     scene.add(waterMesh);
+  }
+
+  // Water surface bubbles — tiny rising particles suggesting aquatic life
+  const waterBubbles = new WaterBubbles();
+  scene.add(waterBubbles.mesh);
+  {
+    // Cache water surface positions for bubble spawning
+    const { frontier } = scanWaterFrontier(grid, 200);
+    // Use all water surfaces, not just frontier
+    const surfaces: { x: number; y: number; z: number }[] = [];
+    for (let sy = 0; sy < GRID_Y; sy++) {
+      for (let sx = 0; sx < GRID_X; sx++) {
+        for (let sz = GRID_Z - 1; sz >= 0; sz--) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] !== Material.Water) continue;
+          const aboveZ = sz + 1;
+          if (aboveZ < GRID_Z) {
+            const ai = (sx + sy * GRID_X + aboveZ * GRID_X * GRID_Y) * VOXEL_BYTES;
+            if (grid[ai] !== Material.Air) continue;
+          }
+          surfaces.push({ x: sx, y: sy, z: sz });
+          break;
+        }
+      }
+    }
+    waterBubbles.setWaterSurfaces(surfaces);
   }
 
   // Sync sun direction to water shader
@@ -1665,8 +1691,9 @@ async function main() {
     // Fade quest notifications
     questLog.tickNotification();
 
-    // Animate water ripples + spring pulse
+    // Animate water ripples + spring pulse + bubbles
     updateWaterTime(elapsed);
+    waterBubbles.update(dt);
     springLight.intensity = 1.5 + Math.sin(elapsed * 2.0) * 0.8;
 
     // Update day cycle (sun position, colors, sky gradient)
