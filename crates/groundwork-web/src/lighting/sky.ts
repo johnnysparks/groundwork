@@ -25,6 +25,7 @@ uniform float uTime;
 uniform float uCloudDensity;
 uniform float uRainbow;
 uniform vec3 uSunDir;
+uniform vec2 uWindDir;
 varying vec3 vWorldPosition;
 
 // Simple pseudo-random hash for star placement
@@ -119,8 +120,9 @@ void main() {
   if (h > 0.0 && uCloudDensity > 0.0) {
     // Project onto dome — stretch near horizon for depth
     vec2 cloudUV = dir.xz / max(h, 0.06) * 1.2;
-    // Slow drift: main layer + slight vertical creep
-    cloudUV += vec2(uTime * 0.008, uTime * 0.002);
+    // Drift in wind direction (base speed 0.008, cross-wind 0.002)
+    float windSpeed = 0.008;
+    cloudUV += uWindDir * uTime * windSpeed + vec2(-uWindDir.y, uWindDir.x) * uTime * 0.002;
 
     float n = fbm(cloudUV);
     // Second layer offset for depth
@@ -223,6 +225,7 @@ export interface SkyUniforms {
   uCloudDensity: THREE.IUniform<number>;
   uRainbow: THREE.IUniform<number>;
   uSunDir: THREE.IUniform<THREE.Vector3>;
+  uWindDir: THREE.IUniform<THREE.Vector2>;
   [key: string]: THREE.IUniform<unknown>;
 }
 
@@ -240,6 +243,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     uCloudDensity: { value: 0.4 },                          // 0=clear sky, 1=overcast (0.4=scattered cumulus)
     uRainbow: { value: 0.0 },                                 // 0=invisible, 1=full rainbow (fades after rain)
     uSunDir: { value: new THREE.Vector3(0.5, 0.5, 0.0) },     // normalized sun direction in world space
+    uWindDir: { value: new THREE.Vector2(1.0, 0.0) },          // cloud drift direction (matches wind)
   };
 
   const skyMat = new THREE.ShaderMaterial({

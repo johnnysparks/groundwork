@@ -1699,7 +1699,9 @@ async function main() {
     }
 
     // Cloud shadow ground plane: matches sky cloud density + fades at night
-    cloudShadow.update(elapsed, skyUniforms.uCloudDensity.value, 1.0 - (skyUniforms.uNightAmount?.value ?? 0));
+    cloudShadow.update(elapsed, skyUniforms.uCloudDensity.value, 1.0 - (skyUniforms.uNightAmount?.value ?? 0), windAngle);
+    // Sky cloud drift direction matches wind
+    skyUniforms.uWindDir.value.set(Math.cos(windAngle), Math.sin(windAngle));
     updateWaterClouds(skyUniforms.uCloudDensity.value);
 
     // Drought visual: warmer, hazier atmosphere + foliage stress

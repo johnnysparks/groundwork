@@ -25,6 +25,7 @@ const SHADOW_FRAG = /* glsl */ `
 uniform float uTime;
 uniform float uCloudDensity;
 uniform float uDayAmount;
+uniform vec2 uWindDir;
 
 varying vec2 vUv;
 
@@ -55,8 +56,9 @@ float fbm(vec2 p) {
 void main() {
   // Scale UVs to match sky cloud projection scale
   vec2 cloudUV = vUv * 3.0;
-  // Same drift speed as sky clouds for coherence
-  cloudUV += vec2(uTime * 0.008, uTime * 0.002);
+  // Drift in wind direction — matches sky clouds for coherence
+  float windSpeed = 0.008;
+  cloudUV += uWindDir * uTime * windSpeed + vec2(-uWindDir.y, uWindDir.x) * uTime * 0.002;
 
   float n = fbm(cloudUV);
   float n2 = fbm(cloudUV * 0.7 + vec2(uTime * 0.005, 3.7));
@@ -87,6 +89,7 @@ export class CloudShadow {
         uTime: { value: 0.0 },
         uCloudDensity: { value: 0.4 },
         uDayAmount: { value: 1.0 },
+        uWindDir: { value: new THREE.Vector2(1.0, 0.0) },
       },
       transparent: true,
       depthWrite: false,
@@ -102,10 +105,15 @@ export class CloudShadow {
     this.mesh.name = 'cloud-shadow';
   }
 
-  update(time: number, cloudDensity: number, dayAmount: number): void {
+  update(time: number, cloudDensity: number, dayAmount: number, windAngle?: number): void {
     this.material.uniforms.uTime.value = time;
     this.material.uniforms.uCloudDensity.value = cloudDensity;
     this.material.uniforms.uDayAmount.value = dayAmount;
+    if (windAngle !== undefined) {
+      (this.material.uniforms.uWindDir.value as THREE.Vector2).set(
+        Math.cos(windAngle), Math.sin(windAngle),
+      );
+    }
   }
 
   dispose(): void {
