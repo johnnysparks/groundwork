@@ -795,6 +795,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a wind streak — a fast-moving horizontal particle that shows
+   * the wind direction. Called during gusts for visible air movement.
+   */
+  emitWindStreak(windAngle: number, strength: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.4 + Math.random() * 0.3;
+    p.maxLife = p.life;
+
+    // Random position above the garden
+    p.x = 10 + Math.random() * (GRID_X - 20);
+    p.y = GROUND_LEVEL + 2 + Math.random() * 15;
+    p.z = 10 + Math.random() * (GRID_Y - 20);
+
+    // Fast horizontal movement in wind direction
+    const speed = (3 + Math.random() * 2) * strength;
+    p.vx = Math.cos(windAngle) * speed;
+    p.vy = (Math.random() - 0.5) * 0.3;
+    p.vz = Math.sin(windAngle) * speed;
+
+    // Nearly invisible white — just visible enough to show direction
+    p.color.setRGB(0.8, 0.82, 0.85);
+  }
+
+  /**
    * Emit a faint iridescent shimmer behind a beetle — shows their path
    * through the garden as they decompose organic matter.
    */

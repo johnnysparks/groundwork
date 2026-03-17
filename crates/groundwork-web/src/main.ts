@@ -991,6 +991,7 @@ async function main() {
   let droughtStress = 0; // 0-1 smooth drought foliage yellowing
   let gustTimer = 8 + Math.random() * 12; // seconds until next wind gust
   let gustStrength = 0; // 0-1 current gust intensity (decays after gust)
+  let windAngle = Math.random() * Math.PI * 2; // slowly drifting wind direction
   let ambientSoundTimer = 0; // seconds until next ambient fauna sound
   let growthSoundCooldown = 0; // ticks until next growth sound can play
   let prevPlantCount = 0; // for detecting growth bursts
@@ -1676,6 +1677,14 @@ async function main() {
       // Gust decays smoothly over ~3s
       gustStrength *= Math.max(0, 1 - dt * 0.5);
       if (gustStrength < 0.01) gustStrength = 0;
+
+      // Wind direction drifts slowly (full rotation every ~2 min)
+      windAngle += dt * 0.05;
+
+      // Wind streak particles during gusts — shows air direction
+      if (gustStrength > 0.1 && Math.random() < dt * gustStrength * 4) {
+        particles.emitWindStreak(windAngle, gustStrength);
+      }
 
       const targetWind = Math.min(1, baseWind + gustStrength);
       const currentWind = foliage.getWindStrength();
