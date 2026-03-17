@@ -22,4 +22,32 @@ if git diff --cached --name-only | grep -q 'crates/groundwork-web/src/'; then
     }
 fi
 
+# Sim ↔ Web sync check: runs when either side changes
+SIM_CHANGED=$(git diff --cached --name-only | grep -c 'crates/groundwork-sim/src/' || true)
+WEB_CHANGED=$(git diff --cached --name-only | grep -c 'crates/groundwork-web/src/' || true)
+
+if [ "$SIM_CHANGED" -gt 0 ] || [ "$WEB_CHANGED" -gt 0 ]; then
+    echo "pre-commit: checking sim ↔ web sync..."
+    ./scripts/sync-check.sh || {
+        echo ""
+        echo "ERROR: Sim ↔ Web bridge sync check failed."
+        echo "Run './scripts/sync-check.sh' to see details."
+        exit 1
+    }
+
+    # When sim changes touch WASM-facing code, remind about web contract tests
+    if [ "$SIM_CHANGED" -gt 0 ]; then
+        SIM_WASM_CHANGED=$(git diff --cached --name-only | grep -c 'wasm_bridge\|voxel\|fauna\|gnome' || true)
+        if [ "$SIM_WASM_CHANGED" -gt 0 ]; then
+            echo "pre-commit: sim WASM-facing files changed — running web contract tests..."
+            (cd crates/groundwork-web && npx vitest run src/bridge.contract.test.ts 2>&1) || {
+                echo ""
+                echo "ERROR: Web contract tests failed after sim changes."
+                echo "Update bridge.ts and/or bridge.contract.test.ts to match."
+                exit 1
+            }
+        fi
+    fi
+fi
+
 echo "pre-commit: OK"
