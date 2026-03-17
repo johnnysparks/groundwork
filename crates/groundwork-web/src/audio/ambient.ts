@@ -18,6 +18,7 @@ let rustleGain: GainNode | null = null;
 let rustleFilter: BiquadFilterNode | null = null;
 let pollinatorGain: GainNode | null = null;
 let frogGain: GainNode | null = null;
+let beetleGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -364,6 +365,41 @@ function createFrogChorus(audioCtx: AudioContext, output: GainNode): void {
   rhythm2.start();
 }
 
+/** Create ambient beetle clicking — soft rhythmic ticking that scales with beetle count. */
+function createBeetleClick(audioCtx: AudioContext, output: GainNode): void {
+  // Sharp clicks via short high-freq oscillator bursts
+  const osc = audioCtx.createOscillator();
+  osc.type = 'square';
+  osc.frequency.value = 800;
+
+  // Rapid rhythmic gating: ~6Hz gives quick tick-tick-tick
+  const gate = audioCtx.createGain();
+  gate.gain.value = 0;
+  const rhythm = audioCtx.createOscillator();
+  const rhythmGain = audioCtx.createGain();
+  rhythm.frequency.value = 6;
+  rhythmGain.gain.value = 1.0;
+  rhythm.connect(rhythmGain);
+  rhythmGain.connect(gate.gain);
+
+  // Highpass filter to make it clicky, not tonal
+  const hpf = audioCtx.createBiquadFilter();
+  hpf.type = 'highpass';
+  hpf.frequency.value = 2000;
+  hpf.Q.value = 5;
+
+  beetleGain = audioCtx.createGain();
+  beetleGain.gain.value = 0; // starts silent
+
+  osc.connect(hpf);
+  hpf.connect(gate);
+  gate.connect(beetleGain);
+  beetleGain.connect(output);
+
+  osc.start();
+  rhythm.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -384,6 +420,7 @@ export function initAmbientAudio(): void {
     createLeafRustleSound(ctx, masterGain);
     createPollinatorHum(ctx, masterGain);
     createFrogChorus(ctx, masterGain);
+    createBeetleClick(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -461,6 +498,15 @@ export function setPollinatorHum(pollinatorCount: number): void {
   // 0 pollinators = silent, 5+ = full hum (very quiet — background texture)
   const vol = Math.min(1, pollinatorCount / 5) * 0.015;
   pollinatorGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
+}
+
+/** Set beetle clicking intensity based on active beetle count.
+ *  More beetles = louder clicking. Daytime only (beetles are diurnal). */
+export function setBeetleClick(beetleCount: number, dayTime: number): void {
+  if (!ctx || !beetleGain) return;
+  const isDaytime = dayTime >= 0.25 && dayTime <= 0.75;
+  const vol = isDaytime ? Math.min(1, beetleCount / 3) * 0.008 : 0;
+  beetleGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
 }
 
 /** Set frog chorus intensity based on water count and time of day.

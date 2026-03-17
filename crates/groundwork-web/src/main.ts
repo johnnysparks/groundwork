@@ -40,7 +40,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick } from './audio/ambient';
 import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1395,13 +1395,16 @@ async function main() {
       const fc = getFaunaCount();
       const fv = getFaunaView();
       let pollinators = 0;
+      let beetles = 0;
       if (fv) {
         for (let i = 0; i < fc; i++) {
           const f = readFauna(fv, i);
           if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) pollinators++;
+          else if (f.type === FaunaType.Beetle) beetles++;
         }
       }
       setPollinatorHum(pollinators);
+      setBeetleClick(beetles, dayTime);
     }
 
     // Animate growth particles
