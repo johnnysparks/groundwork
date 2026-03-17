@@ -218,6 +218,25 @@ export function initAgentAPI(config: AgentAPIConfig): void {
       return counts;
     },
 
+    /** Get health distribution from leaf voxels (byte 1 = tree.health * 255) */
+    getHealthHistogram: () => {
+      if (!isInitialized()) return {};
+      const grid = getGridView();
+      const leafMat = 8; // Material.Leaf
+      let total = 0, dead = 0, dying = 0, stressed = 0, ok = 0, thriving = 0;
+      for (let i = 0; i < grid.length; i += 4) {
+        if (grid[i] !== leafMat) continue;
+        total++;
+        const h = grid[i + 1]; // health: 0=dead, 255=thriving
+        if (h === 0) dead++;
+        else if (h < 50) dying++;
+        else if (h < 130) stressed++;
+        else if (h < 200) ok++;
+        else thriving++;
+      }
+      return { total, dead, dying, stressed, ok, thriving };
+    },
+
     /** Get voxel counts per species (only plant materials: seed, trunk, branch, leaf, root) */
     getSpeciesCounts: () => {
       if (!isInitialized()) return {};
