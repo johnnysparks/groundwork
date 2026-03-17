@@ -2095,7 +2095,7 @@ async function main() {
 
     // Ecology interaction indicators
     const freshGridForEco = isInitialized() ? getGridView() : grid;
-    ecology.update(dt, freshGridForEco);
+    ecology.update(dt, freshGridForEco, skyUniforms.uNightAmount.value);
 
     orbit.update(dt);
     updateForestCulling(forestRing, orbit.getTheta());

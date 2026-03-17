@@ -121,6 +121,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.45, 0.32, 0.16),  // dull brown
     new THREE.Color(0.40, 0.35, 0.22),  // dusty earth
   ],
+  bioluminescent: [
+    new THREE.Color(0.15, 0.65, 0.50),  // soft teal-green glow
+    new THREE.Color(0.20, 0.55, 0.40),  // muted green
+    new THREE.Color(0.10, 0.50, 0.55),  // blue-teal
+  ],
 };
 
 interface EcoParticle {
@@ -186,7 +191,7 @@ export class EcologyParticles {
    * Scan the grid and fauna for interaction hotspots and emit particles.
    * Call periodically (not every frame — every ~0.5s is fine).
    */
-  emitFromInteractions(grid: Uint8Array): void {
+  emitFromInteractions(grid: Uint8Array, nightAmount = 0): void {
     // Emit pollination particles near pollinators
     const faunaCount = getFaunaCount();
     const faunaView = getFaunaView();
@@ -515,6 +520,24 @@ export class EcologyParticles {
         }
       }
     }
+
+    // Bioluminescent fungi: dead wood glows softly at night.
+    // Magical teal-green glow near decomposing wood — makes the night garden feel enchanted.
+    // Discovery: "The dead wood is glowing at night!"
+    if (nightAmount > 0.3) {
+      const blStep = 14;
+      for (let sy = 0; sy < GRID_Y; sy += blStep) {
+        for (let sx = 0; sx < GRID_X; sx += blStep) {
+          for (let sz = GROUND_LEVEL; sz <= GROUND_LEVEL + 3; sz++) {
+            const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+            if (grid[idx] !== Material.DeadWood) continue;
+            // Glow intensity scales with night darkness
+            this.emitBioluminescent(sx + 0.5, sz + 0.5, sy + 0.5, nightAmount);
+            break; // one per column
+          }
+        }
+      }
+    }
   }
 
   /** Emit a small trail of particles at a position */
@@ -665,6 +688,35 @@ export class EcologyParticles {
     }
   }
 
+  /** Emit bioluminescent fungi glow near dead wood at night.
+   *  Soft teal-green particles hover and slowly rise — magical fairy-garden effect. */
+  private emitBioluminescent(worldX: number, worldY: number, worldZ: number, nightAmount: number): void {
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDead();
+      if (!p) return;
+
+      p.alive = true;
+      p.maxLife = 1.8 + Math.random() * 1.2;
+      p.life = p.maxLife;
+
+      p.x = worldX + (Math.random() - 0.5) * 1.0;
+      p.y = worldY + Math.random() * 0.5;
+      p.z = worldZ + (Math.random() - 0.5) * 1.0;
+
+      // Slow ethereal rise with gentle drift
+      p.vx = (Math.random() - 0.5) * 0.06;
+      p.vy = 0.03 + Math.random() * 0.04;
+      p.vz = (Math.random() - 0.5) * 0.06;
+
+      const c = INTERACTION_COLORS.bioluminescent[
+        Math.floor(Math.random() * INTERACTION_COLORS.bioluminescent.length)
+      ];
+      // Brighten with night intensity
+      p.color.setRGB(c.r * nightAmount, c.g * nightAmount, c.b * nightAmount);
+    }
+  }
+
   /** Emit seed particles falling from a bird's position */
   private emitSeedDrop(worldX: number, worldY: number, worldZ: number): void {
     const count = 5;
@@ -693,12 +745,12 @@ export class EcologyParticles {
   }
 
   /** Update particles. Call each frame. */
-  update(dt: number, grid: Uint8Array): void {
+  update(dt: number, grid: Uint8Array, nightAmount = 0): void {
     // Periodically emit new interaction particles
     this.emitTimer += dt;
     if (this.emitTimer > this.emitInterval) {
       this.emitTimer = 0;
-      this.emitFromInteractions(grid);
+      this.emitFromInteractions(grid, nightAmount);
     }
 
     // Simulate particles
