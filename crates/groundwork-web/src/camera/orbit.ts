@@ -64,6 +64,9 @@ export class OrbitCamera {
   private idleOrbitActive = false;
   private static readonly IDLE_THRESHOLD = 45; // seconds
   private static readonly IDLE_ORBIT_SPEED = 0.04; // radians per second — very slow
+  private static readonly IDLE_BREATHE_SPEED = 0.15; // sine wave speed for zoom breathe
+  private static readonly IDLE_BREATHE_AMP = 0.03; // ±3% zoom variation
+  private idleElapsed = 0; // cumulative time during idle orbit
 
   constructor(aspect: number, opts?: { mobile?: boolean }) {
     // Compute defaults from live grid dimensions (may have been overridden by demo grid)
@@ -106,6 +109,11 @@ export class OrbitCamera {
     if (this.idleTimer >= OrbitCamera.IDLE_THRESHOLD) {
       this.idleOrbitActive = true;
       this.targetTheta += OrbitCamera.IDLE_ORBIT_SPEED * dt;
+      // Subtle zoom breathe — the garden "breathes" while idle
+      this.idleElapsed += dt;
+      const breathe = Math.sin(this.idleElapsed * OrbitCamera.IDLE_BREATHE_SPEED);
+      const baseZoom = this.targetZoom;
+      this.camera.zoom = baseZoom * (1 + breathe * OrbitCamera.IDLE_BREATHE_AMP);
     }
 
     // --- Damped interpolation ---
@@ -140,6 +148,7 @@ export class OrbitCamera {
   resetIdle(): void {
     this.idleTimer = 0;
     this.idleOrbitActive = false;
+    this.idleElapsed = 0;
   }
 
   /** Whether the camera is in idle auto-orbit mode */
