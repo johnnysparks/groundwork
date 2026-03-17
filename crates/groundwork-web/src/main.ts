@@ -1637,6 +1637,12 @@ async function main() {
     // Update day cycle (sun position, colors, sky gradient)
     dayCycle.update(dt, lights, scene, skyUniforms);
 
+    // Cloud density: weather-driven (0=Clear→0.35, 1=Rain→0.75, 2=Drought→0.12)
+    {
+      const targetCloud = prevWeatherState === 1 ? 0.75 : prevWeatherState === 2 ? 0.12 : 0.35;
+      skyUniforms.uCloudDensity.value += (targetCloud - skyUniforms.uCloudDensity.value) * dt * 0.3;
+    }
+
     // Drought visual: warmer, hazier atmosphere + foliage stress
     if (isInitialized()) {
       const ws = getWeatherState();

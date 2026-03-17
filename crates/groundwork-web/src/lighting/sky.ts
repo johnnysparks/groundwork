@@ -22,6 +22,7 @@ uniform vec3 bottomColor;
 uniform vec3 horizonColor;
 uniform float uNightAmount;
 uniform float uTime;
+uniform float uCloudDensity;
 varying vec3 vWorldPosition;
 
 // Simple pseudo-random hash for star placement
@@ -30,6 +31,28 @@ float hash(vec2 p) {
 }
 float hash1(float p) {
   return fract(sin(p * 78.233) * 43758.5453);
+}
+
+// Value noise for cloud shapes
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// Fractal Brownian motion — 4 octaves for soft fluffy clouds
+float fbm(vec2 p) {
+  float f = 0.0;
+  f += 0.50 * vnoise(p); p *= 2.03;
+  f += 0.25 * vnoise(p); p *= 2.01;
+  f += 0.125 * vnoise(p); p *= 2.02;
+  f += 0.0625 * vnoise(p);
+  return f / 0.9375;
 }
 
 void main() {
@@ -44,6 +67,35 @@ void main() {
   } else {
     float t = smoothstep(-0.5, 0.0, h);
     color = mix(bottomColor, horizonColor, t);
+  }
+
+  // Clouds: soft drifting shapes above horizon, fade at night
+  if (h > 0.0 && uCloudDensity > 0.0) {
+    // Project onto dome — stretch near horizon for depth
+    vec2 cloudUV = dir.xz / max(h, 0.06) * 1.2;
+    // Slow drift: main layer + slight vertical creep
+    cloudUV += vec2(uTime * 0.008, uTime * 0.002);
+
+    float n = fbm(cloudUV);
+    // Second layer offset for depth
+    float n2 = fbm(cloudUV * 0.7 + vec2(uTime * 0.005, 3.7));
+
+    // Blend layers: thick cumulus + thin wispy
+    float cloudShape = smoothstep(0.50 - uCloudDensity * 0.12, 0.68, n) * 0.7
+                     + smoothstep(0.45 - uCloudDensity * 0.10, 0.62, n2) * 0.3;
+
+    // Height mask: fade near horizon (avoid harsh line) and at zenith
+    float heightMask = smoothstep(0.02, 0.18, h) * smoothstep(0.85, 0.35, h);
+    cloudShape *= heightMask;
+
+    // Cloud color: warm white tinted by sky, darker at base
+    vec3 cloudBright = mix(vec3(1.0, 0.98, 0.95), horizonColor, 0.2);
+    vec3 cloudDark = mix(horizonColor, vec3(0.7, 0.7, 0.72), 0.3);
+    // Use noise as self-shadow approximation
+    vec3 cloudCol = mix(cloudDark, cloudBright, n * 0.6 + 0.4);
+
+    float dayAmount = 1.0 - uNightAmount;
+    color = mix(color, cloudCol, cloudShape * dayAmount * 0.55);
   }
 
   // Stars: faint points above horizon, visible only at night
@@ -100,6 +152,7 @@ export interface SkyUniforms {
   horizonColor: THREE.IUniform<THREE.Color>;
   uNightAmount: THREE.IUniform<number>;
   uTime: THREE.IUniform<number>;
+  uCloudDensity: THREE.IUniform<number>;
   [key: string]: THREE.IUniform<unknown>;
 }
 
@@ -114,6 +167,7 @@ export function createSkyGradient(scene: THREE.Scene): SkyUniforms {
     bottomColor: { value: new THREE.Color(0x3a3228) },    // dark earth (below-horizon, rarely seen)
     uNightAmount: { value: 0.0 },                          // 0=day, 1=full night (drives star visibility)
     uTime: { value: 0.0 },                                 // elapsed time for shooting stars
+    uCloudDensity: { value: 0.4 },                          // 0=clear sky, 1=overcast (0.4=scattered cumulus)
   };
 
   const skyMat = new THREE.ShaderMaterial({
