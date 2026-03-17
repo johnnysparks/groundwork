@@ -160,6 +160,29 @@ export function playBirdCall(): void {
   osc2.stop(t + 0.22);
 }
 
+/** Play a distant bird call — quieter, slightly delayed, varied pitch.
+ *  Layering these with nearby calls creates a full dawn chorus soundscape. */
+export function playDistantBird(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime + Math.random() * 0.3; // stagger start
+  const base = 1800 + Math.random() * 1200; // wider pitch range for variety
+  const volume = 0.01 + Math.random() * 0.02; // quieter = farther away
+
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(base, t);
+  osc.frequency.exponentialRampToValueAtTime(base * (0.5 + Math.random() * 0.5), t + 0.12);
+
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(volume, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.16);
+}
+
 /** Play a soft wind chime — 2-3 high sine tones with long decay, garden feels cultivated */
 export function playWindChime(): void {
   const c = getContext();
