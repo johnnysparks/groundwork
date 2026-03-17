@@ -775,12 +775,12 @@ pub fn print_help() {
     println!("  tui                           Launch interactive terminal UI");
     println!("  help                          Show this help");
     println!();
-    println!("Materials: air/dig, seed, water, soil, stone");
-    println!("  air/dig = shovel (removes anything)");
+    println!("Materials: air/dig, seed, soil, stone");
+    println!("  air/dig = shovel (removes anything; dig channels for irrigation)");
     println!("  seed    = seed bag (falls, dies on stone) — plants oak by default");
-    println!("  water   = watering can (falls, no-op on water)");
-    println!("  soil    = soil (falls through air)");
-    println!("  stone   = stone (placed directly)");
+    println!("  soil    = soil (falls through air; build berms/dams for water control)");
+    println!("  stone   = stone (placed directly; water barriers/aqueducts)");
+    println!("  water   = [debug only] place water directly (deprecated — use shovel to dig irrigation channels)");
     println!();
     println!("Species (use as material name to plant a specific seed):");
     println!("  Trees:       oak, birch, willow, pine");

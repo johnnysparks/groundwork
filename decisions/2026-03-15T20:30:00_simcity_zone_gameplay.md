@@ -20,7 +20,7 @@
 ## What Changes
 
 - **Seeds are zones**: clicking with a species selected fills an area, not a single voxel
-- **Water is irrigation**: placing water creates a persistent source that waters surrounding soil
+- **Water is irrigation**: no water placement tool — players dig channels from natural water sources (springs, rain, ponds) to guide flow toward plants. Terrain shaping IS water management. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`
 - **Tools are broad**: shovel clears an area, not one voxel
 - **Feedback is fast**: visible growth within seconds, not minutes of ticking
 - **There's a score**: biodiversity, canopy coverage, fauna count — something to chase

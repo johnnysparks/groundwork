@@ -7,7 +7,7 @@
 The garden gnome now has personality. Complete animation overhaul of `gardener.ts`:
 
 - **6 idle behaviors**: looking around, yawning, sitting, inspecting plants, waving at camera, stretching
-- **Tool-specific work animations**: dig pumps, watering can tipping, seed sprinkling
+- **Tool-specific work animations**: dig pumps, seed sprinkling (watering can tipping removed — irrigation via digging replaces it)
 - **3 celebration tiers**: task hop, queue-empty dance, milestone triumph
 - **Emotion particles**: hearts, sparkles, sweat, zzz, music notes, exclamation marks
 - **Animatable body parts**: arms, head tilt, eye blinks, mouth expressions, hat sway, rosy cheeks, tool in hand

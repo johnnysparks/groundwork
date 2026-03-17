@@ -11,7 +11,7 @@ Complete rewrite of `crates/groundwork-web/src/gardener/gardener.ts` — the gno
 
 - **Idle** with 6 sub-behaviors: Standing (breathing), LookingAround, Yawning, SittingDown, InspectingPlant, WavingAtCamera, Stretching
 - **Walking** with directional lean, arm swing, hat sway, cheerful expression
-- **Working** with tool-specific animations (dig pumps for shovel, gentle tipping for watering can, sprinkling for seeds)
+- **Working** with tool-specific animations (dig pumps for shovel, sprinkling for seeds) — watering can animation removed per irrigation decision
 - **Celebrating** with 3 tiers: TaskDone (quick hop), QueueEmpty (happy dance with music notes), BigMilestone (arms-up triumph after 10+ task streaks)
 
 ### Animatable Body Parts (GLSL Shader)
@@ -21,7 +21,7 @@ New shader uniforms drive procedural body part animation:
 - **Head tilt** (`uHeadTilt`): head and hat follow together, -1 to 1
 - **Eye state** (`uEyeState`): 0=open, 1=blink (closed), 2=happy squint
 - **Mouth** (`uMouthState`): 0=neutral line, 1=smile arc, 2=yawn (open circle)
-- **Tool in hand** (`uToolType`): shovel, watering can, or seed bag rendered at right hand position
+- **Tool in hand** (`uToolType`): shovel or seed bag rendered at right hand position (watering can removed)
 - **Hat sway** (`uHatSway`): independent hat tip with rotation
 - **Rosy cheeks** (`uCheekGlow`): warm glow when happy/working hard
 - **Sitting** (`uSitting`): body lowers, boots spread, head drops
@@ -44,9 +44,9 @@ All animations use smooth interpolation (lerp toward target) for buttery transit
 **Walking personality**: Body leans into direction, arms swing opposite, hat sways with movement, cheerful smile.
 
 **Work animations** vary by tool type:
-- Shovel: arm pumps up/down, body leans into digs
-- Watering can: gentle tipping motion
+- Shovel: arm pumps up/down, body leans into digs (also used for irrigation channel digging)
 - Seeds: sprinkling/scattering motion
+- (Watering can animation removed — irrigation via terrain shaping replaces it)
 
 **Celebrations trigger automatically:**
 - Every 5th completed task: small hop with arms up

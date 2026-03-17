@@ -53,7 +53,7 @@ export function playPlant(): void {
   noise.start(t);
 }
 
-/** Play a gentle "splash" for watering */
+/** Play a gentle "splash" — used for water flow events (watering can tool removed; irrigation via digging) */
 export function playWater(): void {
   const c = getContext();
   if (!c) return;

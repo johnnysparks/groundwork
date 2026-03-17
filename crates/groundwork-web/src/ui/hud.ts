@@ -26,7 +26,8 @@ export interface ToolUIDef {
 const TOOL_UI: Record<string, { icon: string; description: string }> = {
   Shovel: { icon: 'Dig', description: 'Clear an area' },
   Seed:   { icon: 'Plant', description: 'Zone with seeds (costs 15 water)' },
-  Water:  { icon: 'Water', description: 'Irrigate an area (costs 20 water)' },
+  // Water tool removed — irrigation is done by digging channels with the shovel.
+  // See decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md
   Soil:   { icon: 'Soil', description: 'Place soil (costs 10 water)' },
   Stone:  { icon: 'Stone', description: 'Place stone (costs 10 water)' },
 };

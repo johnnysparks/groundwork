@@ -10,7 +10,9 @@ GROUNDWORK is a cozy ecological voxel garden builder game. The player composes e
 
 **What makes it replayable:** Two pillars drive "one more garden" across hundreds of hours. First, *knowledge transfer* — each garden teaches something that changes how you start the next one. Your tenth garden looks different from your first not because of unlocks, but because you *understand ecology now*. Second, *biome variety* — each biome is a complete ecosystem with its own species, interactions, fauna, and visual identity. Mastering temperate doesn't prepare you for desert. Systemic intuition transfers; specific recipes don't. And each biome's art, lighting, and atmosphere is a pull motivator on its own — you want to see what that world *looks and feels like*. See `decisions/2026-03-15T18:00:00_replayability_model.md`.
 
-**The gardener gnome:** The player doesn't directly manipulate voxels. Instead, you **zone areas** (drag-to-paint) and a charming **garden gnome** character waddles over and does the work — planting seeds, digging trenches, watering soil. The gnome is a **sim-side entity** (following the fauna pattern): it has hunger, energy, and builds trust with fauna like squirrels and birds. Ghost overlays show planned-but-not-yet-executed work. The garden sustains the gnome; the gnome tends the garden. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
+**The gardener gnome:** The player doesn't directly manipulate voxels. Instead, you **zone areas** (drag-to-paint) and a charming **garden gnome** character waddles over and does the work — planting seeds, digging trenches, shaping irrigation channels. The gnome is a **sim-side entity** (following the fauna pattern): it has hunger, energy, and builds trust with fauna like squirrels and birds. Ghost overlays show planned-but-not-yet-executed work. The garden sustains the gnome; the gnome tends the garden. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`. **Executive mandate.**
+
+**Irrigation, not watering can:** There is no water placement tool. Water comes from natural sources (springs, rain, ponds). Players dig channels with the shovel to guide water flow toward their plants — **Timberborn-style terrain shaping**. Irrigation is the "road" mechanic: you optimize hydration by sculpting the terrain. The `water_flow` sim system handles gravity-driven flow and lateral spread automatically. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`. **Executive mandate.**
 
 **Current phase:** Core game development. The simulation foundation is complete (12 species, water/light/soil/root systems, procedural trees). The primary workstream is now the **Three.js web renderer** — making the game beautiful and playable in the browser.
 
@@ -172,6 +174,7 @@ crates/
 - **12 species, 4 plant types**: Tree/Shrub/Groundcover/Flower. Trees use space colonization branching, others use templates.
 - **System execution order**: water_spring → water_flow → soil_absorption → root_water_absorption → soil_evolution → light_propagation → seed_growth → tree_growth → branch_growth → tree_rasterize → self_pruning → seed_dispersal → tick_counter
 - **Garden gnome mediated actions**: Player zones are queued via `queue_gnome_task()` WASM export. The gnome is a sim-side entity (like fauna) with position, task queue, hunger, energy, and fauna trust. Gnome walks to tasks and applies tools on arrival. Renderer reads gnome state via zero-copy export buffer. See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`.
+- **Irrigation, not watering can**: No water placement tool. Water flows from natural sources (springs, rain) through player-dug channels. Terrain shaping IS water management — Timberborn-style. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`.
 
 ### Sim API
 
@@ -208,11 +211,12 @@ JS reads:
 
 All tools are used by **painting zones** (drag-to-select area). The garden gnome then walks to each zoned voxel and executes the action. Ghost overlays show planned work before execution.
 
-- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone). Ghost: red-brown wireframe.
+- `air`/`dig` = **shovel** — removes anything (seeds, roots, soil, stone). Also the primary **irrigation tool**: dig channels from water sources to gardens. Ghost: red-brown wireframe.
 - `seed` = **seed bag** — plants a seed; falls through air; dies on stone. Ghost: soft green pulse.
-- `water` = **watering can** — pours water; falls through air; no-op on water. Ghost: translucent blue shimmer.
-- `soil` = **soil** — places soil; falls through air. Ghost: translucent warm brown.
-- `stone` = **stone** — places stone directly (no gravity). Ghost: translucent gray.
+- `soil` = **soil** — places soil; falls through air. Use for berms, dams, and raised beds to direct water flow. Ghost: translucent warm brown.
+- `stone` = **stone** — places stone directly (no gravity). Use for permanent water barriers and aqueducts. Ghost: translucent gray.
+
+**No watering can.** Water comes from natural sources (springs, rain). Players shape terrain to create irrigation channels. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`.
 
 ## Species
 - **Trees:** `oak`, `birch`, `willow`, `pine` — tall, space colonization branching
@@ -235,7 +239,7 @@ These principles define what makes the game *engaging over time*, not just legib
 2. **Surprise must reward observation.** The best moments are consequences the player didn't plan but can trace backward. You planted oak and wildflower near each other — now bees appeared, and the wildflower spreads faster via pollination you didn't arrange. Emergence isn't a side effect of simulation; it's the core delight. Design for interactions that produce outcomes neither species would achieve alone.
 
 3. **Discovery must shift the player's mental model.** The game has a learning arc, not just a building arc:
-   - First hour: "Seeds need soil and water." (Mechanics)
+   - First hour: "Seeds need soil and water — I need to dig channels from the spring." (Mechanics)
    - Third hour: "The oak's roots are stealing water from the birch." (Competition)
    - Tenth hour: "Clover fixes nitrogen, which feeds the oak, whose canopy shades the fern, which holds moisture for the moss." (Synergy)
    - Twentieth hour: "I can design a self-sustaining loop where every species serves a role." (Ecology as architecture)

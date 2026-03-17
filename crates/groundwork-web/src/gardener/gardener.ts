@@ -785,7 +785,7 @@ export class GardenerSprite {
 
     // Tool visibility
     p.shovel.visible = this.toolType >= 0.5 && this.toolType < 1.5;
-    p.waterCan.visible = this.toolType >= 1.5 && this.toolType < 2.5;
+    p.waterCan.visible = false; // Watering can removed — irrigation via digging channels
     p.seedBag.visible = this.toolType >= 2.5;
   }
 

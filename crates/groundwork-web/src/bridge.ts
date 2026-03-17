@@ -59,7 +59,7 @@ export type MaterialType = number;
 export const ToolCode: Record<string, number> = {
   Shovel: 0,
   Seed: 1,
-  Water: 2,
+  Water: 2, // Debug only — watering can removed from player tools. Irrigation via digging channels.
   Soil: 3,
   Stone: 4,
 };
