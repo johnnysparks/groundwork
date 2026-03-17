@@ -98,10 +98,17 @@ export class MistRenderer {
     this.active = dayTime >= 0.10 && dayTime <= 0.30;
   }
 
+  private rainBoost = 0; // decays over time, boosts density after rain
+
   /** Scale mist density with water volume — wetter gardens get thicker morning mist. */
   setWaterInfluence(waterCount: number): void {
     // 0 water → density 0.3 (thin), 100+ water → density 1.5 (thick)
-    this.density = 0.3 + Math.min(1.2, waterCount / 80);
+    this.density = 0.3 + Math.min(1.2, waterCount / 80) + this.rainBoost;
+  }
+
+  /** Boost next dawn mist after rain. Call when rain stops. */
+  setRainBoost(): void {
+    this.rainBoost = 0.8;
   }
 
   /** Set wind parameters so mist drifts with the wind */
@@ -113,6 +120,8 @@ export class MistRenderer {
 
   /** Update mist drift. Call each frame. */
   update(dt: number): void {
+    // Rain boost decays slowly (~60s)
+    if (this.rainBoost > 0) this.rainBoost = Math.max(0, this.rainBoost - dt / 60);
     const targetActive = this.active ? this.density : 0;
 
     for (let i = 0; i < MAX_WISPS; i++) {

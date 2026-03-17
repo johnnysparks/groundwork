@@ -1589,6 +1589,7 @@ async function main() {
             hud.addEvent('The rain passes \u2014 skies clear');
             leafDripTimer = 30 + Math.random() * 30;
             postRainGlow = 15; // 15 seconds of petrichor bloom boost
+            mist.setRainBoost(); // thicker dawn mist after rain
             skyUniforms.uRainbow.value = 1.0;
             if (!_firstRainbowNotified) { _firstRainbowNotified = true; hud.addEvent('A rainbow arcs across the sky!'); }
           }
