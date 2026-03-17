@@ -167,6 +167,15 @@ test.describe('Deep Playtest', () => {
     await execAction({ type: 'CameraZoom', level: 0.7 });
     await screenshot('17-mature-garden');
 
+    // === 12b. INSPECT PANEL — tap a tree to show health diagnosis ===
+    await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 55 });
+    await execAction({ type: 'CameraZoom', level: 1.2 });
+    // Click near center of viewport to hit a tree
+    const viewport = page.viewportSize()!;
+    await page.click('canvas', { position: { x: viewport.width * 0.55, y: viewport.height * 0.4 } });
+    await page.waitForTimeout(500);
+    await screenshot('17b-inspect-panel');
+
     // X-ray: root competition should show red borders where species overlap
     await page.keyboard.press('q');
     await page.waitForTimeout(200);
