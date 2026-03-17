@@ -110,6 +110,7 @@ let _dieOffPlantCount = 0;
 let _mycorrhizalNotified = false;
 let _lightCompetitionNotified = false;
 let _pineAllelopathyNotified = false;
+const _habitatNotified = new Set<string>();
 
 /** Previous tree growth stages — keyed by "rootX,rootY" to detect transitions */
 const _prevTreeStages = new Map<string, number>();
@@ -387,6 +388,46 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
     hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
     _recentDieOff = false;
     _eventCooldown = 30;
+  }
+
+  // Habitat formation: natural assemblages of related species
+  if (stats.speciesIds && _eventCooldown <= 0) {
+    const ids = stats.speciesIds;
+    // Wetland: willow(2) + moss(9) + fern(4) near water
+    if (!_habitatNotified.has('wetland') && ids.has(2) && ids.has(9) && ids.has(4)) {
+      hud.addEvent('A wetland is forming — willow, fern, and moss thrive together near water');
+      playDiscovery();
+      _habitatNotified.add('wetland');
+      _eventCooldown = 30;
+    }
+    // Meadow: grass(10) + wildflower(7) + clover(11)
+    if (!_habitatNotified.has('meadow') && ids.has(10) && ids.has(7) && ids.has(11)) {
+      hud.addEvent('A meadow is emerging — grass, wildflower, and clover form a flowering carpet');
+      playDiscovery();
+      _habitatNotified.add('meadow');
+      _eventCooldown = 30;
+    }
+    // Forest understory: oak(0) + fern(4) + moss(9)
+    if (!_habitatNotified.has('understory') && ids.has(0) && ids.has(4) && ids.has(9)) {
+      hud.addEvent('A forest understory — fern and moss flourish in the oak\'s shade');
+      playDiscovery();
+      _habitatNotified.add('understory');
+      _eventCooldown = 30;
+    }
+    // Pine barren: pine(3) + moss(9) + fern(4)
+    if (!_habitatNotified.has('pineBarren') && ids.has(3) && ids.has(9) && ids.has(4)) {
+      hud.addEvent('A pine barren — moss and fern adapted to the acidic soil under pine');
+      playDiscovery();
+      _habitatNotified.add('pineBarren');
+      _eventCooldown = 30;
+    }
+    // Hedgerow: berry bush(5) + holly(6) + grass(10)
+    if (!_habitatNotified.has('hedgerow') && ids.has(5) && ids.has(6) && ids.has(10)) {
+      hud.addEvent('A hedgerow is forming — berry bush, holly, and grass create shelter for wildlife');
+      playDiscovery();
+      _habitatNotified.add('hedgerow');
+      _eventCooldown = 30;
+    }
   }
 
   // Contextual ecology tips — suggest next discovery based on garden state
