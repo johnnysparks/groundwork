@@ -85,7 +85,7 @@ No weather events for the first 500 ticks (~50 seconds). This protects your init
 
 **Cause:** Youth vulnerability. Seedlings take 4x stress damage, saplings 3x. In a crowded garden, shade + root competition kills young plants before they can establish.
 
-**What to do:** Space your plantings. Seeds within 6 voxels of an existing trunk won't even germinate (territorial suppression). Give each tree room to develop roots and canopy before planting neighbors.
+**What to do:** Space your density zones. Seeds within 6 voxels of an existing trunk won't even germinate (territorial suppression). Give each tree room to develop roots and canopy before sowing nearby.
 
 ### "One Tree Is Thriving, the Others Are Dying"
 
@@ -109,33 +109,49 @@ No weather events for the first 500 ticks (~50 seconds). This protects your init
 
 ## Species Strategies
 
-### The Fast Start: Birch
+You don't choose species directly — you create **conditions** that favor the species you want. The sim's `pick_species_from_conditions()` scores all 12 species against local water, light, nutrients, and garden maturity.
 
-Birch grows 1.5x faster in open ground (pioneer vigor). It's your fastest tree — but the bonus disappears once other trunks appear within 8 voxels. Use birch to establish the first canopy, then plant oaks and willows nearby as successors.
+### Encouraging Birch (The Fast Start)
 
-### The Anchor: Oak + Clover
+Birch emerges in bright, dry areas with moderate nutrients. It grows 1.5x faster in open ground (pioneer vigor) — but the bonus disappears once other trunks appear within 8 voxels. Birch establishes the first canopy, then oaks and willows emerge nearby as successors.
 
-Plant clover around your oak's base. When 3+ clover leaf voxels sit within 5 voxels of the oak's root position, the oak gets a 1.5x growth boost (nitrogen handshake). This is the game's signature synergy — the foundation of every productive garden.
+**Conditions:** Bright light + low water + moderate soil → birch favored.
 
-### The Water Engine: Willow + Irrigation
+### Encouraging Oak + Clover (The Anchor)
 
-Place willows near the pond or along irrigation channels you've dug. With water_intake > 50, willows grow at 2x rate. Their wide crowns (1.5m radius, widest in the game) create excellent shade canopy for fern and moss underneath.
+When 3+ clover leaf voxels sit within 5 voxels of an oak's root position, the oak gets a 1.5x growth boost (nitrogen handshake). This is the game's signature synergy — the foundation of every productive garden.
+
+**Conditions:** Moderate water + moderate light + rich soil + mature garden (20+ plants) → oak emerges. Clover appears naturally near moderate conditions.
+
+### Encouraging Willow (The Water Engine)
+
+Willows emerge near abundant water. With water_intake > 50, willows grow at 2x rate. Their wide crowns (widest in the game) create shade canopy for fern and moss underneath.
+
+**Conditions:** Dig irrigation channels from the pond → high water + moderate light → willow favored.
 
 ### The Pollinator Loop: Flowers + Trees
 
-Plant a cluster of 5+ wildflowers or daisies. This doubles pollinator (bee/butterfly) spawn rates. Each pollinator within 10 voxels of a tree gives +0.005 health recovery (max +0.02 from 4 pollinators). Stressed trees near flower meadows recover.
+Flower clusters (5+ flower leaves) double pollinator spawn rates. Each pollinator within 10 voxels of a tree gives +0.005 health recovery (max +0.02 from 4 pollinators). Stressed trees near flower meadows recover.
+
+**Conditions:** Sow dense zones in bright, moderate-water areas → flowers emerge naturally.
 
 ### The Bird Express: Berry Bush Network
 
-Berry bushes attract birds. Birds pick up seeds from nearby trees and drop them 10-20 voxels away — plus fertilizing the drop site (+3 nutrients, +2 organic). A berry bush near an oak creates a slow, reliable spread of oak seedlings across the garden.
+Berry bushes attract birds. Birds carry seeds 10-20 voxels away + fertilize the drop site (+3 nutrients, +2 organic). A berry bush near an oak creates reliable spread of oak seedlings across the garden.
+
+**Conditions:** Berry bush emerges in moderate conditions once shrub maturity gate is met (10+ plants).
 
 ### The Pine Fortress
 
-Pine is slow (0.7x growth) but creates exclusive territory through soil acidification. A mature pine surrounded by fern and moss is a self-sustaining biome that no other tree can invade. Use pine to "claim" a corner of the garden.
+Pine is slow (0.7x growth) but creates exclusive territory through soil acidification. A mature pine surrounded by fern and moss is a self-sustaining biome no other tree can invade.
 
-### The Survivor: Holly
+**Conditions:** Dry, bright areas with rich soil in a mature garden → pine favored. Once established, its acid zone ensures only pine/fern/moss persist nearby.
 
-Holly grows slowly (0.6x) but handles shade and drought better than anything else. Plant holly where nothing else will grow — dry hilltops, deep shade. It won't impress, but it won't die.
+### Holly in Harsh Conditions
+
+Holly grows slowly (0.6x) but handles shade and drought better than anything else. It appears where nothing else will grow — dry hilltops, deep shade.
+
+**Conditions:** Low water + low light + moderate nutrients → holly emerges where other shrubs can't.
 
 ---
 
@@ -186,23 +202,23 @@ A healthy idle garden generates ~34 visible events per 600 ticks. If you stop cl
 The deepest ecological interaction you can build:
 
 ```
-Plant clover near oak roots
-  -> Nitrogen handshake: oak grows 1.5x faster
-    -> Oak develops full canopy
-      -> Canopy shades the ground below
-        -> Fern thrives in shade (1.5x canopy effect)
-          -> Fern holds moisture, soil stays wetter
-            -> Moss colonizes nearby (pioneer succession)
-              -> Dense groundcover triggers Tier 1 unlock
-                -> Flowers become available
-                  -> Wildflower cluster attracts bees
-                    -> Bees boost oak health (+0.02/tick)
-                      -> Oak reaches OldGrowth
-                        -> 2x seed rain creates oak offspring
-                          -> Same-species roots share health (mycorrhizal network)
+Sow dense zone near water with rich soil
+  -> Clover emerges (moderate conditions, pioneer species)
+    -> Oak emerges nearby (mature garden, rich soil)
+      -> Nitrogen handshake: clover near oak roots = 1.5x growth
+        -> Oak develops full canopy
+          -> Canopy shades the ground below
+            -> Fern emerges in shade (1.5x canopy effect)
+              -> Fern holds moisture, soil stays wetter
+                -> Moss colonizes nearby (pioneer succession)
+                  -> Dense groundcover raises maturity for more species
+                    -> Wildflower cluster emerges, attracts bees
+                      -> Bees boost oak health (+0.02/tick)
+                        -> Oak reaches OldGrowth
+                          -> 2x seed rain creates oak offspring
 ```
 
-13 steps from a single clover placement. This is the "twentieth hour" discovery — designing ecosystems where every species serves a role and the garden sustains itself.
+13 steps from a single density zone. This is the "twentieth hour" discovery — designing conditions where every species serves a role and the garden sustains itself.
 
 ---
 

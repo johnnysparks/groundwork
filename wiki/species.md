@@ -233,21 +233,48 @@ Flowers use a stem + bloom template. The bloom is a **disc of leaf voxels** at t
 
 ---
 
-## Species Discovery
+## Species Emergence
 
-Players don't see all 12 species at the start. Species are **discovered** through ecological processes:
+Players don't choose species. They paint **density zones** with the seed tool, and the sim decides what grows based on local conditions. Species are *discovered* through the inspect panel after they appear.
 
-| Mechanism | Species Discovered |
-|-----------|--------------------|
-| Always available | Moss, Grass, Clover |
-| Pioneer succession | Moss, Grass, Wildflower |
-| Seed dispersal | Parent tree's species |
-| Bird Express | Species of nearby tree |
-| Squirrel acorn | Oak |
-| Player planting | Whatever they plant |
+### How the Sim Picks Species
 
-Tier unlock (milestones gate which plant types are available):
-- **Tier 0:** Groundcover (always)
-- **Tier 1:** Flowers (after 10+ groundcover leaf voxels)
-- **Tier 2:** Shrubs (after 2+ pollinators attracted)
-- **Tier 3:** Trees (after 4+ fauna, 3+ species diversity)
+When a seed germinates, `pick_species_from_conditions()` scores all 12 species against local environment:
+
+| Factor | What It Checks | Effect |
+|--------|---------------|--------|
+| Water fitness | Local water level vs. species water_need | Willow favored near water, grass in dry areas |
+| Light fitness | Local light level vs. shade_tolerance | Fern/moss in shade, daisy/grass in sun |
+| Nutrient fitness | Soil nutrients vs. plant type needs | Trees need rich soil, groundcover thrives anywhere |
+| Garden maturity | Total plants + groundcover count | Groundcover dominates early; trees only in mature gardens |
+| Temporal bias | Tick count < 200 | Fast growers (moss, grass) favored at start |
+
+### Maturity Gating
+
+Species emergence follows a natural succession tied to garden development:
+
+| Garden State | What Emerges | Multiplier |
+|-------------|-------------|------------|
+| Empty (< 3 plants) | Groundcover (moss, grass, clover) | 4.0x |
+| Young (3-10 plants) | + Flowers (wildflower, daisy) | 2.0x |
+| Developing (10+ plants, 5+ groundcover) | + Shrubs (fern, berry bush, holly) | 2.0x |
+| Mature (20+ plants, 10+ groundcover) | + Trees (oak, birch, willow, pine) | 1.5x |
+
+### Emergence Patterns
+
+| Conditions | Likely Species |
+|-----------|---------------|
+| Wet, shady, poor soil | Moss, fern |
+| Dry, bright, poor soil | Grass, daisy |
+| Moderate water + light | Clover, wildflower |
+| Very wet, moderate light, rich soil | Willow |
+| Dry, bright, very rich soil | Pine, birch |
+
+### Other Discovery Sources
+
+| Source | Species | Notes |
+|--------|---------|-------|
+| Pioneer succession | Moss → Grass → Wildflower | Bare moist soil, every 50 ticks |
+| Seed dispersal | Parent tree's species | Mature trees drop seeds nearby |
+| Bird Express | Nearby tree species | Birds carry seeds 10-20 voxels |
+| Squirrel acorn | Oak | Squirrels cache acorns that sprout |

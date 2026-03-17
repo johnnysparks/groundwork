@@ -5,11 +5,11 @@ The game teaches ecology through play, not tutorials. Each hour of play shifts t
 ## Hour 1: Mechanics
 **"Seeds need soil and water."**
 
-The player places seeds, adds water, and watches growth. They learn:
+The player paints density zones, adds water, and watches growth. They learn:
 - Seeds need adjacent water (level >= 30) and light (level >= 30)
 - Growth is visible within ~3 seconds (seed -> trunk at tick 17, first leaf at tick 27-35)
 - The pond provides water that flows downhill through soil — dig channels to direct it
-- Different species exist (groundcover available immediately)
+- Different species appear based on conditions — groundcover dominates early gardens
 
 **Systems active:** seed_growth, water_flow, light_propagation, water_spring
 
@@ -52,18 +52,18 @@ The player designs intentional ecosystems:
 
 ---
 
-## Progression Gating
+## Emergence Gating
 
-To ensure players experience this arc in order (not skip to trees immediately):
+The sim ensures players experience this arc naturally. The player paints density zones — the sim picks species based on environmental fitness and garden maturity:
 
-| Tier | Available | Unlock Condition |
-|------|-----------|-----------------|
-| 0 | Moss, Grass, Clover | Always |
-| 1 | Wildflower, Daisy | 10+ groundcover leaf voxels |
-| 2 | Fern, Berry Bush, Holly | 2+ pollinators attracted |
-| 3 | Oak, Birch, Willow, Pine | 4+ fauna, 3+ species diversity |
+| Garden State | What Emerges | Why |
+|-------------|-------------|-----|
+| Empty garden | Groundcover (moss, grass, clover) | 4x emergence multiplier — pioneer species |
+| 3+ plants | + Flowers (wildflower, daisy) | Moderate maturity unlocks flowers |
+| 10+ plants, 5+ groundcover | + Shrubs (fern, berry bush, holly) | Established groundcover supports understory |
+| 20+ plants, 10+ groundcover | + Trees (oak, birch, willow, pine) | Only mature ecosystems can sustain trees |
 
-Within each tier, only **discovered** species are plantable. Discovery happens through ecological processes (pioneer succession, bird seeds, squirrel acorns), not menus.
+Species aren't selected from menus. They're *discovered* through the inspect panel after they emerge. Each new species appearance triggers a discovery event.
 
 ## Design Philosophy
 

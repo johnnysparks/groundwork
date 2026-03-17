@@ -30,7 +30,7 @@ Seeds within 6 voxels (~30cm) of any Trunk voxel are suppressed — they don't a
 ## Seed Sources
 | Source | Species | Distance | Frequency |
 |--------|---------|----------|-----------|
-| Player planting | Selected | At click | On demand |
+| Player density zone | Sim-selected (based on conditions) | At zone | On demand |
 | Seed dispersal | Parent tree | 0.5-1.5m | Every 80-120 ticks (mature) |
 | OldGrowth rain | Parent tree | 0.5-1.5m | Every 40-60 ticks (2x frequency) |
 | Bird Express | Nearby tree | 10-20 voxels | ~5%/effect tick |

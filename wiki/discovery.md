@@ -1,51 +1,51 @@
-# Discovery & Milestones
+# Discovery & Species Emergence
 
-The progression system ensures players experience the ecology in the right order.
+The player doesn't choose species. They paint **density zones** with the seed tool, and the sim decides what grows. Species are *discovered* through the inspect panel after they appear.
 
-## Species Discovery
+## Condition-Based Emergence
 
-Players don't see all 12 species in a menu. Species are **discovered** through ecological processes.
+When a seed germinates, `pick_species_from_conditions()` (in `systems.rs`) scores all 12 species against local conditions and picks probabilistically using deterministic hashing:
 
-**Always discovered:** Moss (9), Grass (10), Clover (11)
+1. **Water fitness** — matches species water_need (Low/Medium/High) against local water level
+2. **Light fitness** — matches species shade_tolerance against local light level
+3. **Nutrient fitness** — plant type determines soil richness requirements (trees need rich soil, groundcover thrives anywhere)
+4. **Maturity gating** — garden development stage controls which plant types can emerge:
+   - Groundcover: always (4.0x multiplier — pioneer species)
+   - Flowers: need 3+ existing plants (2.0x)
+   - Shrubs: need 5+ groundcover and 10+ total plants (2.0x)
+   - Trees: need 10+ groundcover and 20+ total plants (1.5x)
+5. **Temporal bias** — early ticks (< 200) favor fast growers via growth_rate bonus
 
-**Discovery mechanisms:**
-| Process | What Gets Discovered |
-|---------|---------------------|
-| Pioneer succession | Moss, Grass, Wildflower |
-| Seed dispersal | Parent tree's species |
-| Bird Express | Species of nearby tree |
-| Squirrel acorn | Oak |
-| Player planting | Whatever they plant |
+**Result:** Same conditions at the same tick/position always produce the same species (deterministic). Different environmental conditions produce different species mixes.
 
-**Implementation:** `DiscoveredSpecies` resource — u32 bitfield (bit N = species N discovered). Scanned every 20 ticks. One-way: once discovered, stays discovered.
+## Natural Succession
 
-## Milestone Tiers
+Beyond player-planted density zones, species also appear through ecological processes:
 
-Plant types gate behind ecological milestones.
+| Process | What Appears | Trigger |
+|---------|-------------|---------|
+| Pioneer succession | Moss → Grass → Wildflower | Bare moist soil, sampled every 50 ticks |
+| Seed dispersal | Parent tree's species | Mature trees drop seeds nearby (80-120 tick interval) |
+| OldGrowth seed rain | Parent tree's species | 2x dispersal frequency |
+| Bird Express | Nearby tree species | Birds carry seeds 10-20 voxels away |
+| Squirrel acorn cache | Oak | Squirrels cache acorns that sprout (~30% chance) |
+| Wind drift | Inherited from seed | +1 voxel lateral shift every 3 ticks at altitude |
 
-| Tier | Unlocks | Condition |
-|------|---------|-----------|
-| 0 | Groundcover (moss, grass, clover) | Always |
-| 1 | Flowers (wildflower, daisy) | 10+ groundcover leaf voxels |
-| 2 | Shrubs (fern, berry bush, holly) | 2+ pollinators present |
-| 3 | Trees (oak, birch, willow, pine) | 4+ fauna AND 3+ species diversity |
+## Species Discovery (Inspect Panel)
 
-**Implementation:** `EcoMilestones` resource. Tiers are one-way. Raw progress counts exported for UI.
+The inspect panel is the primary way players learn what species appeared and why. When the player inspects a grown plant, they see:
+- Species name and type
+- Current health and growth stage
+- Environmental conditions at that location
 
-## The UI Model
-
-The species picker shows **plant types** (Groundcover, Flower, Shrub, Tree), not individual species. Within each unlocked type, only discovered species appear. This means:
-
-1. Player starts → sees only "Groundcover" with moss/grass/clover
-2. Plants groundcover → milestone tier 1 → "Flower" appears
-3. Flowers attract bees → milestone tier 2 → "Shrub" appears
-4. Ecosystem develops → milestone tier 3 → "Tree" appears
-
-**Within each type:** `pick_discovered_species(plant_type, rng)` returns a random discovered species of that type. The player picks a *category*, the sim picks the *species*.
+Every new species that appears generates a discovery event in the event feed.
 
 ## WASM Exports
-- `milestone_tier1_flowers()`, `milestone_tier2_shrubs()`, `milestone_tier3_trees()`: tier states
-- `milestone_groundcover_count()`, `milestone_pollinator_count()`, `milestone_fauna_count()`, `milestone_species_diversity()`: raw progress
-- `discovered_species()`: u32 bitfield
+
+- `discovered_species()`: u32 bitfield (bit N = species N seen)
 - `is_species_discovered(id)`: per-species check
-- `pick_discovered_species(type, rng)`: random pick from discovered species of a type
+- `milestone_groundcover_count()`, `milestone_pollinator_count()`, `milestone_fauna_count()`, `milestone_species_diversity()`: raw progress counts
+
+## Design Philosophy
+
+The density-not-species model supports the core discovery loop: the player shapes conditions, observes what emerges, and learns to create the right environment for desired species. "How do I get an oak?" is answered by sustained rich conditions and a mature ecosystem — not by clicking a menu item.
