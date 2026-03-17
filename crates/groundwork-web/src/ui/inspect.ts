@@ -75,10 +75,10 @@ export function readVoxelAt(grid: Uint8Array, x: number, y: number, z: number): 
   let condition: string | null = null;
   let stressHint: string | null = null;
   if (isPlant && mat !== Material.Seed) {
-    // For leaf voxels: water_level byte encodes health (0=healthy, 1-59=stressed)
+    // For leaf voxels: sim writes tree.health * 255 into water_level (255=healthy, 0=dead)
     // For trunk/root voxels: use light as proxy for shade stress
     const isLeaf = mat === Material.Leaf;
-    const health = isLeaf ? (water === 0 ? 1.0 : Math.min(water / 60, 1)) : null;
+    const health = isLeaf ? water / 255 : null;
 
     // Assess conditions from environment
     const lowLight = light < 30;

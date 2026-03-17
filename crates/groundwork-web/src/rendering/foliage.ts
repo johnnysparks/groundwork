@@ -432,12 +432,10 @@ export class FoliageRenderer {
             ? SPECIES_FOLIAGE[speciesId]
             : LEAF_COLORS[hash % LEAF_COLORS.length];
 
-          // Health-based stress tint: water_level byte MAY store health.
-          // However, leaf voxels in the canopy often have water_level=0 (no
-          // water above ground), which is NOT "dead" — it means "no data".
-          // Treat 0 as fully healthy. Only values 1–59 indicate actual stress.
+          // Health-based stress tint: sim writes tree.health * 255 into water_level.
+          // 255 = fully healthy, 0 = dead. Stress tint ramps from green → yellow → brown.
           const health = grid[idx + 1];
-          const healthFrac = health === 0 ? 1.0 : Math.min(health / 60, 1);
+          const healthFrac = health / 255;
           const stressTint = Math.pow(Math.max(0, 1 - healthFrac), 2);
 
           // Light-responsive tinting: sunlit leaves warm/bright, shaded cool/blue
