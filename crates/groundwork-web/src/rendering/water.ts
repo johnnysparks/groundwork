@@ -304,10 +304,11 @@ const waterFragmentShader = /* glsl */ `
     float glint = sparkle(vWorldPos.xy, uTime);
     lit += vec3(1.0, 0.97, 0.85) * glint * 0.7 * uSunIntensity;
 
-    // Sky reflection tint (subtle, based on normal perturbation)
+    // Sky reflection tint: fresnel-based, colored by day tint (golden at sunset, blue at noon)
     float skyFresnel = 1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0);
     skyFresnel = pow(skyFresnel, 3.0) * 0.2;
-    lit += vec3(0.53, 0.81, 0.92) * skyFresnel; // sky blue tint
+    vec3 skyReflect = mix(vec3(0.53, 0.81, 0.92), uDayTint, 0.5); // blend base blue with day tint
+    lit += skyReflect * skyFresnel;
 
     // Rain ripple rings: concentric circles from random drop points
     if (uRainStrength > 0.0) {
