@@ -111,6 +111,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.75, 0.25, 0.10),  // dark stress
     new THREE.Color(0.65, 0.35, 0.20),  // muted rust
   ],
+  soilBinding: [
+    new THREE.Color(0.35, 0.45, 0.20),  // olive-green (roots binding)
+    new THREE.Color(0.40, 0.38, 0.18),  // earthy green-brown
+    new THREE.Color(0.30, 0.40, 0.22),  // dark green-brown
+  ],
 };
 
 interface EcoParticle {
@@ -443,6 +448,33 @@ export class EcologyParticles {
             INTERACTION_COLORS.rootCompetition,
             2,
           );
+        }
+      }
+    }
+
+    // Soil Binding: grass (10) and clover (11) roots stabilize soil near surface.
+    // Olive-green particles show "soil binding" — clay increasing, water retention improving.
+    // Discovery: "The soil holds water better where I planted grass first."
+    const sbStep = 14;
+    const GRASS_SPECIES = 10;
+    const CLOVER_SPECIES = 11;
+    for (let sy = 0; sy < GRID_Y; sy += sbStep) {
+      for (let sx = 0; sx < GRID_X; sx += sbStep) {
+        // Check for grass/clover roots just below surface
+        for (let sz = GROUND_LEVEL - 3; sz < GROUND_LEVEL; sz++) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] !== Material.Root) continue;
+          const sp = grid[idx + 3];
+          if (sp !== GRASS_SPECIES && sp !== CLOVER_SPECIES) continue;
+          // Emit subtle soil binding particles at ground surface
+          this.emitTrail(
+            sx + 0.5,
+            GROUND_LEVEL + 0.3,
+            sy + 0.5,
+            INTERACTION_COLORS.soilBinding,
+            1,
+          );
+          break; // one emission per grid cell
         }
       }
     }

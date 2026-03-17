@@ -187,7 +187,7 @@ const ECO_TIPS = [
   'Tip: Press V to see water, light, or nutrient overlays',
   'Tip: Birds near trees carry seeds to surprising new spots',
   'Tip: Pine roots acidify soil — amber particles show the acid zone. Fern and moss tolerate it, others struggle',
-  'Tip: Groundcover enriches soil for everyone nearby',
+  'Tip: Groundcover enriches soil — olive-green particles show grass and clover binding the soil',
   'Tip: Blue particles under trees = dappled shade. Ferns and moss love it!',
   'Tip: Crowded plants die — give trees space to claim territory',
   'Tip: The garden gnome does the work — zone areas and watch',
