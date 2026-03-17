@@ -1820,27 +1820,27 @@ async function main() {
 
       // Bloom boost: sunrise (0.22-0.28), golden hour (0.65-0.80), sunset (0.78-0.85)
       {
-        let bloom = 0.25; // base
-        // Golden hour: strongest bloom
+        let bloom = 0.15; // gentle base — enough warmth without washing out foliage
+        // Golden hour: mild bloom lift
         if (t >= 0.65 && t < 0.80) {
           const f = (t - 0.65) / 0.15;
-          bloom += Math.sin(f * Math.PI) * 0.20;
+          bloom += Math.sin(f * Math.PI) * 0.08;
         }
-        // Sunrise flash: brief vivid pulse as sun crests horizon
+        // Sunrise flash: brief warm pulse
         if (t >= 0.22 && t < 0.28) {
           const f = (t - 0.22) / 0.06;
-          bloom += Math.sin(f * Math.PI) * 0.15;
+          bloom += Math.sin(f * Math.PI) * 0.06;
         }
         // Sunset glow: warm pulse as sun drops below
         if (t >= 0.78 && t < 0.85) {
           const f = (t - 0.78) / 0.07;
-          bloom += Math.sin(f * Math.PI) * 0.12;
+          bloom += Math.sin(f * Math.PI) * 0.05;
         }
         // Post-rain petrichor glow: brief bloom boost after rain stops
         if (postRainGlow > 0) {
           postRainGlow -= dt;
           const glowFade = Math.min(postRainGlow / 5, 1); // fade out over last 5s
-          bloom += 0.12 * glowFade;
+          bloom += 0.05 * glowFade;
         }
         postProcessing.setBloomStrength(bloom);
       }

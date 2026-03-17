@@ -26,7 +26,7 @@ const TiltShiftShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
     resolution: { value: new THREE.Vector2(1, 1) },
-    blurMax: { value: 4.5 },        // max blur in pixels — stronger miniature effect
+    blurMax: { value: 3.0 },        // max blur in pixels — gentle miniature feel
     focusCenter: { value: 0.45 },    // Y center of focus band (0–1, slightly below middle)
     focusWidth: { value: 0.25 },     // narrower focus band — more pronounced DOF
   },
@@ -90,9 +90,9 @@ const TiltShiftShader = {
 const ColorGradeShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    warmth: { value: 0.035 },      // red/yellow shift — cozy warmth
-    contrast: { value: 1.10 },     // contrast multiplier around mid-gray
-    saturation: { value: 1.18 },   // saturation multiplier — vivid greens and golds
+    warmth: { value: 0.02 },       // subtle warmth — cozy without amber cast
+    contrast: { value: 1.05 },     // gentle contrast lift around mid-gray
+    saturation: { value: 1.08 },   // mild saturation — natural greens, not neon
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -137,8 +137,8 @@ const ColorGradeShader = {
 const VignetteShader = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
-    darkness: { value: 0.35 },   // noticeable darkening at corners — frames the garden
-    offset: { value: 1.3 },      // starts slightly closer for a warmer frame
+    darkness: { value: 0.18 },   // subtle edge darkening — gentle framing, not a tunnel
+    offset: { value: 1.5 },      // starts further out so most of the view is unaffected
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -272,9 +272,9 @@ export function createPostProcessing(
     : new THREE.Vector2(width, height);
   const bloomPass = new UnrealBloomPass(
     bloomRes,
-    mobile ? 0.20 : 0.25,   // slightly reduced on mobile
-    0.9,    // radius — wide, soft glow
-    0.80,   // threshold — catches sunlit canopy highlights
+    mobile ? 0.10 : 0.15,   // gentle glow, not overblown
+    0.8,    // radius — wide, soft glow
+    0.88,   // threshold — only brightest highlights bloom
   );
   composer.addPass(bloomPass);
 
@@ -328,23 +328,23 @@ export function createPostProcessing(
     },
     /** Set ecosystem warmth boost: healthy gardens glow slightly warmer and more saturated */
     setEcoWarmth(amount: number) {
-      colorGradePass.uniforms.warmth.value = baseWarmth + amount * 0.015;
-      colorGradePass.uniforms.saturation.value = baseSaturation + amount * 0.08;
+      colorGradePass.uniforms.warmth.value = baseWarmth + amount * 0.008;
+      colorGradePass.uniforms.saturation.value = baseSaturation + amount * 0.04;
     },
     /** Adjust DOF based on camera zoom — closer = tighter focus band, more blur */
     setZoomDOF(zoom: number) {
       if (!tiltShiftPass) return;
-      // zoom 0.35 (far) → wide focus (0.35), weak blur (2.5)
-      // zoom 1.0 (default) → moderate (0.25, 4.5)
-      // zoom 4.0 (close) → narrow focus (0.12), strong blur (6.0)
+      // zoom 0.35 (far) → wide focus (0.35), weak blur (2.0)
+      // zoom 1.0 (default) → moderate (0.28, 3.0)
+      // zoom 4.0 (close) → narrow focus (0.15), stronger blur (4.5)
       const t = Math.max(0, Math.min(1, (zoom - 0.35) / 3.65)); // 0-1 normalized
-      tiltShiftPass.uniforms.focusWidth.value = 0.35 - t * 0.23;
-      tiltShiftPass.uniforms.blurMax.value = 2.5 + t * 3.5;
+      tiltShiftPass.uniforms.focusWidth.value = 0.35 - t * 0.20;
+      tiltShiftPass.uniforms.blurMax.value = 2.0 + t * 2.5;
     },
     /** Night atmosphere: stronger vignette + cooler color grade at night */
     setNightAtmosphere(amount: number) {
-      // Vignette deepens at night: 0.35 → 0.55 (draws eye to illuminated center)
-      vignettePass.uniforms.darkness.value = 0.35 + amount * 0.20;
+      // Vignette deepens slightly at night: 0.18 → 0.28
+      vignettePass.uniforms.darkness.value = 0.18 + amount * 0.10;
       // Cool blue shift at night: warmth decreases, slight blue tint emerges
       if (amount > 0.01) {
         colorGradePass.uniforms.warmth.value = baseWarmth * (1 - amount * 0.8);
