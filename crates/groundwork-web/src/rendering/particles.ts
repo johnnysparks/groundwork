@@ -268,6 +268,34 @@ export class GrowthParticles {
     }
   }
 
+  /** Emit golden seed scatter from a planting action — seeds tumbling from the bag. */
+  emitSeedScatter(worldX: number, worldY: number, worldZ: number): void {
+    const count = 6;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.7 + Math.random() * 0.5;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.3;
+      p.y = worldY + 0.3 + Math.random() * 0.3;
+      p.z = worldZ + (Math.random() - 0.5) * 0.3;
+
+      // Seeds scatter outward and fall gently
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.3 + Math.random() * 0.4;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = 0.2 + Math.random() * 0.2; // slight upward then gravity pulls down
+      p.vz = Math.sin(angle) * speed;
+
+      // Golden seed color with warm variation
+      const t = Math.random();
+      p.color.setRGB(0.75 + t * 0.15, 0.60 + t * 0.10, 0.15 + t * 0.10);
+    }
+  }
+
   /** Emit a spray of soil particles from a dig action — satisfying shovel feedback. */
   emitDigSpray(worldX: number, worldY: number, worldZ: number): void {
     const count = 8;

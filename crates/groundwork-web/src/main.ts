@@ -1155,6 +1155,8 @@ async function main() {
       // Visual + audio feedback
       if (tool === ToolCode.Shovel) {
         particles.emitDigSpray(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      } else if (tool === ToolCode.Seed) {
+        particles.emitSeedScatter(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       } else {
         particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       }
@@ -1571,6 +1573,8 @@ async function main() {
           if (task) {
             if (task.tool === ToolCode.Shovel) {
               particles.emitDigSpray(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+            } else if (task.tool === ToolCode.Seed) {
+              particles.emitSeedScatter(task.x + 0.5, task.z + 0.5, task.y + 0.5);
             } else {
               particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
             }
