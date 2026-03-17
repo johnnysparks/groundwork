@@ -2180,6 +2180,7 @@ async function main() {
 
     orbit.update(dt);
     postProcessing.setZoomDOF(orbit.camera.zoom);
+    postProcessing.setNightAtmosphere(skyUniforms.uNightAmount.value);
     updateForestCulling(forestRing, orbit.getTheta());
 
     // Root pulse — warm emissive heartbeat in x-ray mode

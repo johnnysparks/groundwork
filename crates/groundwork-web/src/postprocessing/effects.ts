@@ -230,6 +230,8 @@ export interface PostProcessing {
   setEcoWarmth(amount: number): void;
   /** Adjust DOF based on camera zoom level (1.0 = default). */
   setZoomDOF(zoom: number): void;
+  /** Set night amount (0-1) for atmospheric color shift + vignette. */
+  setNightAtmosphere(amount: number): void;
 }
 
 /**
@@ -338,6 +340,15 @@ export function createPostProcessing(
       const t = Math.max(0, Math.min(1, (zoom - 0.35) / 3.65)); // 0-1 normalized
       tiltShiftPass.uniforms.focusWidth.value = 0.35 - t * 0.23;
       tiltShiftPass.uniforms.blurMax.value = 2.5 + t * 3.5;
+    },
+    /** Night atmosphere: stronger vignette + cooler color grade at night */
+    setNightAtmosphere(amount: number) {
+      // Vignette deepens at night: 0.35 → 0.55 (draws eye to illuminated center)
+      vignettePass.uniforms.darkness.value = 0.35 + amount * 0.20;
+      // Cool blue shift at night: warmth decreases, slight blue tint emerges
+      if (amount > 0.01) {
+        colorGradePass.uniforms.warmth.value = baseWarmth * (1 - amount * 0.8);
+      }
     },
   };
 }
