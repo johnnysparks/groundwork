@@ -1820,13 +1820,23 @@ async function main() {
         postProcessing.setHeatShimmer(shimmer, elapsed);
       }
 
-      // Fog color follows time of day (unless drought overrides)
+      // Fog color and density follow time of day (unless drought overrides)
       if (scene.fog instanceof THREE.FogExp2 && prevWeatherState !== 2) {
         // Target fog color by time of day
         const fogR = r * 0.8;
         const fogG = g * 0.82;
         const fogB = b * 0.85;
         scene.fog.color.lerp(new THREE.Color(fogR, fogG, fogB), 0.02);
+        // Fog density: thicker at dawn (0.15-0.3), dusk (0.7-0.85), and night; lighter at midday
+        let targetDensity = 0.0025; // base
+        if (t < 0.15) targetDensity = 0.0035;           // pre-dawn: misty
+        else if (t < 0.30) targetDensity = 0.003 - (t - 0.15) * 0.01; // dawn clearing
+        else if (t < 0.65) targetDensity = 0.0018;      // midday: crisp clear
+        else if (t < 0.85) targetDensity = 0.002 + (t - 0.65) * 0.005; // dusk thickening
+        else targetDensity = 0.003;                       // night: moderate
+        // Rain makes fog thicker
+        if (prevWeatherState === 1) targetDensity = Math.max(targetDensity, 0.0035);
+        scene.fog.density += (targetDensity - scene.fog.density) * dt * 0.3;
       }
     }
 
