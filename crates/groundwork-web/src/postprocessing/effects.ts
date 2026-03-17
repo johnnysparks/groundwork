@@ -180,6 +180,8 @@ export interface PostProcessing {
   resize(width: number, height: number): void;
   /** Set scene desaturation (0 = full color, 1 = greyscale). Used for x-ray mode. */
   setDesaturation(amount: number): void;
+  /** Adjust bloom strength — boost for golden hour warmth. */
+  setBloomStrength(strength: number): void;
 }
 
 /**
@@ -259,6 +261,10 @@ export function createPostProcessing(
     setDesaturation(amount: number) {
       // amount: 0 = full color (normal), 1 = full greyscale (x-ray)
       colorGradePass.uniforms.saturation.value = baseSaturation * (1 - amount * 0.85);
+    },
+    /** Adjust bloom strength — use to boost warm glow at golden hour */
+    setBloomStrength(strength: number) {
+      bloomPass.strength = strength;
     },
   };
 }

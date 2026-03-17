@@ -1407,6 +1407,15 @@ async function main() {
       }
       setTerrainDayTint(r, g, b);
       updateWaterDayTint(r, g, b);
+
+      // Golden hour bloom boost: warm soft glow during 0.65-0.80
+      if (t >= 0.65 && t < 0.80) {
+        const f = (t - 0.65) / 0.15;
+        const peak = Math.sin(f * Math.PI); // rises and falls
+        postProcessing.setBloomStrength(0.25 + peak * 0.20);
+      } else {
+        postProcessing.setBloomStrength(0.25);
+      }
     }
 
     // Update fauna positions and animation
