@@ -175,6 +175,28 @@ export function updateForestCulling(group: THREE.Group, cameraTheta: number): vo
 }
 
 /**
+ * Gentle wind sway for forest ring trees. Each tree tilts slightly
+ * based on time + its unique angle, creating a living forest edge.
+ * Call once per frame with elapsed time and current wind strength.
+ */
+export function updateForestSway(group: THREE.Group, time: number, windStrength: number): void {
+  if (!group.visible) return;
+
+  group.traverse((obj) => {
+    const angle = obj.userData.treeAngle as number | undefined;
+    if (angle === undefined) return;
+
+    // Unique phase per tree based on its angular position
+    const phase = angle * 3.7;
+    // Very gentle tilt — max ~1.5 degrees at full wind
+    const sway = Math.sin(time * 0.6 + phase) * 0.025 * (0.3 + windStrength);
+    const swayZ = Math.cos(time * 0.4 + phase * 1.3) * 0.015 * (0.3 + windStrength);
+    obj.rotation.x = sway;
+    obj.rotation.z = swayZ;
+  });
+}
+
+/**
  * Build the full glade landscape: meadow ground plane, dense forest ring
  * with charming varied tree models, and scattered trees fading to distance.
  */

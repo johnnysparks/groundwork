@@ -27,7 +27,7 @@ import { GnatRenderer } from './rendering/gnats';
 import { MistRenderer } from './rendering/mist';
 import { CloudShadow } from './rendering/cloudshadow';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
-import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
+import { buildSkirtMesh, buildForestRing, updateForestCulling, updateForestSway, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
 import { createLighting } from './lighting/sun';
 import { createPostProcessing } from './postprocessing/effects';
@@ -2211,6 +2211,7 @@ async function main() {
     postProcessing.setZoomDOF(orbit.camera.zoom);
     postProcessing.setNightAtmosphere(skyUniforms.uNightAmount.value);
     updateForestCulling(forestRing, orbit.getTheta());
+    updateForestSway(forestRing, elapsed, foliage.getWindStrength());
 
     // Root pulse — warm emissive heartbeat in x-ray mode
     updateRootPulse(elapsed);
