@@ -10,6 +10,11 @@ pub const GRID_Z: usize = 100;
 /// 60 voxels above ground = 3m of sky and canopy.
 pub const GROUND_LEVEL: usize = 40;
 
+/// Pond center position — spring-fed pool at the top of the slope.
+/// Water spring system replenishes water here every tick.
+pub const POND_X: usize = GRID_X / 2;
+pub const POND_Y: usize = GRID_Y / 5; // near the high (north) end of the slope
+
 /// The voxel grid is the central data structure of the simulation.
 /// Flat array indexed by x + y*GRID_X + z*GRID_X*GRID_Y.
 /// Z=0 is deepest underground, Z=GROUND_LEVEL is the surface, Z=GRID_Z-1 is sky.
@@ -33,80 +38,42 @@ impl VoxelGrid {
     }
 
     /// Height map value for position (x, y). Returns a surface elevation
-    /// creating gentle rolling ground for the glen.
+    /// creating a gentle slope — high at the north (y=0) end, low at the south.
+    /// The pond sits at the high end; water flows downhill naturally.
     pub fn surface_height(x: usize, y: usize) -> usize {
-        // Two overlapping sine waves for gentle, natural-looking hills.
-        // Frequencies normalized to grid size; amplitudes in meters converted to voxels.
-        use crate::scale::VOXEL_SIZE_M;
-        let fx = x as f64;
-        let fy = y as f64;
-        let freq_x1 = 7.2 / GRID_X as f64;
-        let freq_y1 = 6.0 / GRID_Y as f64;
-        let freq_x2 = 4.2 / GRID_X as f64;
-        let freq_y2 = 5.4 / GRID_Y as f64;
-        let phase_x = 0.33 * GRID_X as f64;
-        let phase_y = 0.25 * GRID_Y as f64;
-        // Small glen: gentle undulation (0.15m and 0.08m)
-        let amp1 = 0.15 / VOXEL_SIZE_M;
-        let amp2 = 0.08 / VOXEL_SIZE_M;
-        let h1 = (fx * freq_x1).sin() * (fy * freq_y1).sin() * amp1;
-        let h2 = ((fx + phase_x) * freq_x2).cos() * ((fy + phase_y) * freq_y2).cos() * amp2;
-        let base = GROUND_LEVEL as f64 + h1 + h2;
-        // Clamp to ±0.3m from GROUND_LEVEL
-        let range = (0.3 / VOXEL_SIZE_M) as usize;
-        (base.round() as usize).clamp(GROUND_LEVEL - range, GROUND_LEVEL + range)
+        // Gentle linear slope: ~4 voxels drop from y=0 to y=GRID_Y.
+        // Slight x-axis waviness for visual interest (not perfectly flat side-to-side).
+        let slope = 4.0 * (1.0 - y as f64 / GRID_Y as f64);
+        let waviness = 0.5 * (x as f64 * std::f64::consts::PI / GRID_X as f64).sin();
+        let base = GROUND_LEVEL as f64 + slope + waviness;
+        (base.round() as usize).clamp(GROUND_LEVEL, GROUND_LEVEL + 5)
     }
 
-    /// Whether (x, y) is part of the stream bed. The stream runs from the
-    /// spring (center) toward the southeast edge, ~2-3 voxels wide.
-    pub fn is_stream(x: usize, y: usize) -> bool {
-        // Stream flows from grid center toward the SE edge.
-        let cx = GRID_X / 2;
-        let cy = GRID_Y / 2;
-        if x < cx || y < cy {
-            return false;
-        }
-        let dx = x as f64 - cx as f64;
-        let dy = y as f64 - cy as f64;
-        let dist = (dx - dy).abs() / 1.414;
-        // Stream width ~0.06m, exclusion zone ~0.1m (in voxel units)
-        let width = 0.06 / crate::scale::VOXEL_SIZE_M;
-        let exclusion = 0.1 / crate::scale::VOXEL_SIZE_M;
-        dist <= width && (dx + dy) > exclusion
-    }
-
-    /// Whether (x, y, z) is a stone outcrop. Creates 3-4 rocky clusters
-    /// that poke through the surface near edges.
-    fn is_stone_outcrop(x: usize, y: usize, z: usize) -> bool {
-        let surface = Self::surface_height(x, y);
-        // Low boulders: poke 0.1m above surface, extend 0.5m below
-        let above = crate::scale::meters_to_voxels(0.1).max(1);
-        let below = crate::scale::meters_to_voxels(0.5).max(1);
-        if z > surface + above || z + below < surface {
-            return false;
-        }
-        // Cluster positions as fractions of grid dimensions.
-        // Wider radii (8-10%) so outcrops look like boulders, not pillars.
-        let grid_extent = GRID_X.min(GRID_Y) as f64;
-        let clusters: [(f64, f64, f64); 3] = [
-            (8.0 / 60.0, 12.0 / 60.0, (grid_extent * 0.10).powi(2)),
-            (50.0 / 60.0, 8.0 / 60.0, (grid_extent * 0.08).powi(2)),
-            (12.0 / 60.0, 48.0 / 60.0, (grid_extent * 0.09).powi(2)),
-        ];
-        for (fx, fy, r_sq) in clusters {
-            let cx = (fx * GRID_X as f64).round() as isize;
-            let cy = (fy * GRID_Y as f64).round() as isize;
-            let d = ((x as isize - cx) * (x as isize - cx) + (y as isize - cy) * (y as isize - cy))
-                as f64;
-            if d < r_sq {
-                return true;
-            }
-        }
-        false
+    /// Whether (x, y) is part of the pond. Roughly circular pool at the
+    /// high end of the slope, radius ~6 voxels.
+    fn is_pond(x: usize, y: usize) -> bool {
+        let dx = x as f64 - POND_X as f64;
+        let dy = y as f64 - POND_Y as f64;
+        let pond_radius_sq = 6.0_f64 * 6.0; // ~6 voxels radius = 0.3m
+        (dx * dx + dy * dy) <= pond_radius_sq
     }
 
     pub fn new() -> Self {
         let mut cells = vec![Voxel::default(); GRID_X * GRID_Y * GRID_Z];
+
+        // Find the pond surface level (lowest surface_height within the pond)
+        // so water sits at a flat level and the basin is carved into the slope.
+        let pond_z = {
+            let mut min_z = GRID_Z;
+            for py in 0..GRID_Y {
+                for px in 0..GRID_X {
+                    if Self::is_pond(px, py) {
+                        min_z = min_z.min(Self::surface_height(px, py));
+                    }
+                }
+            }
+            min_z.saturating_sub(1) // pond floor is 1 below the lowest surface in the basin
+        };
 
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
@@ -125,50 +92,17 @@ impl VoxelGrid {
                     }
                 }
 
-                // Stone outcrops: low boulders near surface
-                let out_above = crate::scale::meters_to_voxels(0.1).max(1);
-                let out_below = crate::scale::meters_to_voxels(0.5).max(1);
-                for z in (surface.saturating_sub(out_below))..=(surface + out_above).min(GRID_Z - 1)
-                {
-                    if Self::is_stone_outcrop(x, y, z) {
+                // Pond: carve basin and fill with water
+                if Self::is_pond(x, y) {
+                    // Carve down to pond floor, fill with water at pond_z
+                    for z in pond_z..=surface {
                         let idx = Self::index(x, y, z);
-                        cells[idx].material = Material::Stone;
+                        cells[idx].material = Material::Water;
+                        cells[idx].water_level = 255;
                     }
-                }
-
-                // Stream bed: carve 1 level below surface, fill with water
-                if Self::is_stream(x, y) {
-                    // Carve the stream bed 1 below surface
-                    let stream_z = surface;
-                    let idx = Self::index(x, y, stream_z);
-                    cells[idx].material = Material::Water;
-                    cells[idx].water_level = 200;
-                    // Air above the stream
-                    if stream_z + 1 < GRID_Z {
-                        let idx_above = Self::index(x, y, stream_z + 1);
-                        cells[idx_above].material = Material::Air;
-                    }
-                }
-            }
-        }
-
-        // Water spring at center — a small pool at surface level
-        let cx = GRID_X / 2;
-        let cy = GRID_Y / 2;
-        let pool_half = crate::scale::meters_to_voxels(0.2);
-        let spring_z = Self::surface_height(cx, cy);
-        for dy in (cy.saturating_sub(pool_half))..=(cy + pool_half - 1) {
-            for dx in (cx.saturating_sub(pool_half))..=(cx + pool_half - 1) {
-                let sz = Self::surface_height(dx, dy).max(spring_z);
-                // Water sits at the spring level
-                let wz = sz;
-                if wz < GRID_Z {
-                    let idx = Self::index(dx, dy, wz);
-                    cells[idx].material = Material::Water;
-                    cells[idx].water_level = 255;
-                    // Ensure air above
-                    if wz + 1 < GRID_Z {
-                        let idx_above = Self::index(dx, dy, wz + 1);
+                    // Ensure air above the pond surface
+                    if surface + 1 < GRID_Z {
+                        let idx_above = Self::index(x, y, surface + 1);
                         cells[idx_above].material = Material::Air;
                     }
                 }
@@ -267,12 +201,10 @@ mod tests {
         // Well above surface should be air
         let above = (sh + 4).min(GRID_Z - 1);
         assert_eq!(grid.get(0, 0, above).unwrap().material, Material::Air);
-        // Water spring at center sits at surface height
-        let cx = GRID_X / 2;
-        let cy = GRID_Y / 2;
-        let spring_z = VoxelGrid::surface_height(cx, cy);
+        // Pond at POND_X, POND_Y sits at surface height
+        let pond_z = VoxelGrid::surface_height(POND_X, POND_Y);
         assert_eq!(
-            grid.get(cx, cy, spring_z).unwrap().material,
+            grid.get(POND_X, POND_Y, pond_z).unwrap().material,
             Material::Water
         );
     }

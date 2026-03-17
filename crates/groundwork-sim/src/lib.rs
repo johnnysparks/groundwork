@@ -207,120 +207,22 @@ pub fn create_world() -> World {
     world
 }
 
-/// Create a world with the full glen dressing: peripheral forest ring and starter garden.
+/// Create a world with terrain ready to play: gentle slope with a pond.
 /// Called by the WASM init and TUI new-world paths.
+/// Runs a few pre-ticks so the pond has water and soil is moist from tick 0.
 pub fn create_world_with_garden() -> World {
     let mut world = create_world();
-    plant_starter_garden(&mut world);
 
-    // Pre-tick so the world has visible growth and wet soil from tick 0.
-    // Seeds sprout, water flows into soil, the oak begins branching,
-    // and groundcover carpets the floor. 200 ticks gives generation-1
-    // groundcover time to mature and disperse generation-2, creating a
-    // green carpet instead of sparse dots. Tree canopies also fill in.
+    // Pre-tick so water flows from the pond into surrounding soil.
+    // 50 ticks is enough for the spring to fill and water to seep downhill.
     let mut schedule = create_schedule();
-    for _ in 0..200 {
+    for _ in 0..50 {
         tick(&mut world, &mut schedule);
     }
     // Reset tick counter so the player starts at tick 0
     world.resource_mut::<Tick>().0 = 0;
 
     world
-}
-
-/// Plant a small starter garden near the spring so the world feels alive from tick 0.
-/// Places a young oak, a few seeds of varied species, and some groundcover.
-fn plant_starter_garden(world: &mut World) {
-    use tree::{init_skeleton, GrowthStage, Tree};
-
-    let cx = grid::GRID_X / 2;
-    let cy = grid::GRID_Y / 2;
-    let species_table = world.resource::<SpeciesTable>().species.clone();
-
-    // -- Young oak a few voxels from the spring --
-    let oak_x = cx + 8;
-    let oak_y = cy + 4;
-    let oak_z = VoxelGrid::surface_height(oak_x, oak_y) + 1;
-    let oak_species = &species_table[0]; // Oak
-                                         // Initialize the skeleton so branch_growth and tree_rasterize work correctly.
-                                         // Without this, the tree has empty branches and the skeleton path never fires,
-                                         // causing a floating tree when it transitions to Mature during pre-ticks.
-    let (branches, attraction_points) = init_skeleton(oak_species, &GrowthStage::YoungTree, 42);
-    world.spawn(Tree {
-        species_id: 0,
-        root_pos: (oak_x, oak_y, oak_z),
-        age: 80,
-        stage: GrowthStage::YoungTree,
-        health: 1.0,
-        accumulated_water: 2900.0,
-        accumulated_light: 2900.0,
-        rng_seed: 42,
-        dirty: true,
-        voxel_footprint: Vec::new(),
-        branches,
-        attraction_points,
-        skeleton_initialized: true,
-        stage_changed: true,
-        pending_voxels: Vec::new(),
-        revealed_z: 0,
-    });
-
-    // -- Scatter seeds of varied species around the spring --
-    // Each (species_id, dx_from_center, dy_from_center)
-    let mut seed_spots: Vec<(usize, isize, isize)> = vec![
-        (1, -6, 3),  // birch
-        (4, 3, -5),  // fern
-        (7, -4, -3), // wildflower
-        (7, 2, 7),   // wildflower
-        (8, -3, -6), // daisy
-        (5, -7, -6), // berry bush
-    ];
-
-    // Groundcover carpet: grid pattern within the watered zone around the
-    // spring. Seeds need water_level >= 30 to germinate, so only plant where
-    // water reaches (~25 voxels from center). Spacing 8 voxels for dense
-    // coverage with crown_radius overlap.
-    let groundcover_species = [9_usize, 10, 11];
-    let mut gc_idx = 0;
-    let spacing = 8_isize;
-    let range = 25_isize;
-    {
-        let mut dy = -range;
-        while dy <= range {
-            let mut dx = -range;
-            while dx <= range {
-                seed_spots.push((groundcover_species[gc_idx % 3], dx, dy));
-                gc_idx += 1;
-                dx += spacing;
-            }
-            dy += spacing;
-        }
-    }
-
-    // Collect which seeds landed, then update the species map separately
-    let mut planted_seeds: Vec<(usize, usize, usize, usize)> = Vec::new();
-    {
-        let grid = world.resource_mut::<VoxelGrid>().into_inner();
-        for &(species_id, dx, dy) in &seed_spots {
-            let sx = (cx as isize + dx) as usize;
-            let sy = (cy as isize + dy) as usize;
-            let sz = VoxelGrid::surface_height(sx, sy) + 1;
-            if VoxelGrid::in_bounds(sx, sy, sz) {
-                if let Some(cell) = grid.get_mut(sx, sy, sz) {
-                    if cell.material == Material::Air {
-                        cell.set_material(Material::Seed);
-                        planted_seeds.push((sx, sy, sz, species_id));
-                    }
-                }
-            }
-        }
-    }
-    {
-        let mut seed_map = world.resource_mut::<SeedSpeciesMap>();
-        for (sx, sy, sz, species_id) in planted_seeds {
-            seed_map.map.insert((sx, sy, sz), species_id);
-        }
-    }
 }
 
 /// Create the simulation schedule with all systems in order.

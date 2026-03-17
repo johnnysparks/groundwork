@@ -116,15 +116,23 @@ pub fn weather_system(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>, mut weather:
 /// Persistent water spring: refills the spring and stream source each tick.
 /// Without this, the spring dries up by tick ~200 and the garden dies.
 pub fn water_spring(mut grid: ResMut<VoxelGrid>) {
-    // Refill the 4x4 spring at center
-    let cx = GRID_X / 2;
-    let cy = GRID_Y / 2;
-    let pool_half = crate::scale::meters_to_voxels(0.2);
-    for dy in (cy.saturating_sub(pool_half))..=(cy + pool_half - 1) {
-        for dx in (cx.saturating_sub(pool_half))..=(cx + pool_half - 1) {
-            let sz = VoxelGrid::surface_height(dx, dy);
-            let wz = sz; // Spring sits at surface level
-            if let Some(cell) = grid.get_mut(dx, dy, wz) {
+    // Refill the pond at the top of the slope
+    use crate::grid::{POND_X, POND_Y};
+    let pond_radius: isize = 6;
+    let pond_radius_sq = pond_radius * pond_radius;
+    for dy in (POND_Y as isize - pond_radius)..=(POND_Y as isize + pond_radius) {
+        for dx in (POND_X as isize - pond_radius)..=(POND_X as isize + pond_radius) {
+            if dx < 0 || dy < 0 {
+                continue;
+            }
+            let (ux, uy) = (dx as usize, dy as usize);
+            let ddx = dx - POND_X as isize;
+            let ddy = dy - POND_Y as isize;
+            if ddx * ddx + ddy * ddy > pond_radius_sq {
+                continue;
+            }
+            let sz = VoxelGrid::surface_height(ux, uy);
+            if let Some(cell) = grid.get_mut(ux, uy, sz) {
                 if cell.material == Material::Water || cell.material == Material::Air {
                     cell.material = Material::Water;
                     cell.water_level = 255;

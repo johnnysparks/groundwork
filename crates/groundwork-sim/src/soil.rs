@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Resource;
 
-use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
+use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, POND_X, POND_Y};
 use crate::scale::meters_to_voxels;
 use crate::voxel::Material;
 
@@ -200,25 +200,18 @@ impl SoilGrid {
             }
         }
 
-        // Peat patches near the water spring (28-31, 28-31) and along stream
+        // Peat patches near the pond
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
                 let surface = VoxelGrid::surface_height(x, y);
-                // Near spring or stream
-                let cx = GRID_X / 2;
-                let cy = GRID_Y / 2;
-                let spring_range = meters_to_voxels(0.3);
-                let near_spring = x >= cx.saturating_sub(spring_range)
-                    && x < cx + spring_range
-                    && y >= cy.saturating_sub(spring_range)
-                    && y < cy + spring_range;
-                let near_stream = VoxelGrid::is_stream(x, y)
-                    || (x > 0 && VoxelGrid::is_stream(x - 1, y))
-                    || (y > 0 && VoxelGrid::is_stream(x, y - 1))
-                    || VoxelGrid::is_stream(x + 1, y)
-                    || VoxelGrid::is_stream(x, y + 1);
+                // Near the pond — peat forms in waterlogged soil
+                let pond_dx = x as isize - POND_X as isize;
+                let pond_dy = y as isize - POND_Y as isize;
+                let pond_dist_sq = (pond_dx * pond_dx + pond_dy * pond_dy) as f64;
+                let pond_peat_radius = 8.0_f64; // slightly larger than pond itself
+                let near_spring = pond_dist_sq <= pond_peat_radius * pond_peat_radius;
 
-                if !near_spring && !near_stream {
+                if !near_spring {
                     continue;
                 }
 
@@ -231,12 +224,6 @@ impl SoilGrid {
                         100
                     } else {
                         50
-                    };
-                    // Weaker peat along stream than at spring
-                    let peat_strength = if near_spring {
-                        peat_strength
-                    } else {
-                        peat_strength / 2
                     };
                     let base = &cells[idx];
                     cells[idx] = SoilComposition {
@@ -475,15 +462,15 @@ mod tests {
     #[test]
     fn soil_grid_peat_near_spring() {
         let soil = SoilGrid::new();
-        // Near water spring at surface should have high organic
-        let sx = GRID_X / 2 - 1;
-        let sy = GRID_Y / 2 - 1;
+        // Near pond at surface should have high organic
+        let sx = POND_X;
+        let sy = POND_Y + 1; // just outside the pond basin
         let surface = VoxelGrid::surface_height(sx, sy);
-        let near_spring = soil.get(sx, sy, surface).unwrap();
+        let near_pond = soil.get(sx, sy, surface).unwrap();
         assert!(
-            near_spring.organic > 100,
-            "Near-spring topsoil should be organic-rich, got {}",
-            near_spring.organic
+            near_pond.organic > 100,
+            "Near-pond topsoil should be organic-rich, got {}",
+            near_pond.organic
         );
     }
 
