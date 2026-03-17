@@ -340,6 +340,7 @@ fn pick_species_from_conditions(
     total_plants: u32,
     groundcover_count: u32,
     neighbor_species: &[bool; 12],
+    local_seed_density: u32,
 ) -> usize {
     use crate::tree::{PlantType, ResourceNeed};
 
@@ -449,6 +450,25 @@ fn pick_species_from_conditions(
         if tick < 200 {
             let speed_bonus = (sp.growth_rate * 10.0) as u32;
             score += speed_bonus;
+        }
+
+        // --- Density influence ---
+        // Dense sowing (many seeds in area) favors fast-growing pioneers.
+        // Sparse sowing in good conditions allows slower species through.
+        // Dense = 5+ seeds in radius → groundcover +30, others -10
+        // Sparse = 0-1 seeds → no modifier (let conditions decide)
+        if local_seed_density >= 5 {
+            match sp.plant_type {
+                PlantType::Groundcover => { score += 30; } // pioneers win in crowds
+                PlantType::Flower => { score = score.saturating_sub(5); }
+                PlantType::Shrub => { score = score.saturating_sub(10); }
+                PlantType::Tree => { score = score.saturating_sub(10); }
+            }
+        } else if local_seed_density >= 3 {
+            // Moderate density: slight pioneer advantage
+            if sp.plant_type == PlantType::Groundcover {
+                score += 15;
+            }
         }
 
         scores[i] = score;
@@ -716,6 +736,19 @@ pub fn seed_growth(
                                 }
                             }
 
+                            // Count nearby seeds for density influence
+                            let seed_u8 = Material::Seed.as_u8();
+                            let mut local_seed_density: u32 = 0;
+                            let density_r: usize = 5;
+                            for sy in y.saturating_sub(density_r)..=(y + density_r).min(GRID_Y - 1) {
+                                for sx in x.saturating_sub(density_r)..=(x + density_r).min(GRID_X - 1) {
+                                    let sidx = sx + sy * GRID_X + z * z_stride;
+                                    if cells[sidx].material.as_u8() == seed_u8 {
+                                        local_seed_density += 1;
+                                    }
+                                }
+                            }
+
                             pick_species_from_conditions(
                                 cell_water,
                                 cell_light,
@@ -729,6 +762,7 @@ pub fn seed_growth(
                                 total_plants,
                                 groundcover_count,
                                 &neighbor_species,
+                                local_seed_density,
                             )
                         });
                         let rng_seed = tick.0.wrapping_mul(x as u64 + 1).wrapping_mul(y as u64 + 1);
@@ -5686,6 +5720,7 @@ mod tests {
                     0, // no existing plants (early garden)
                     0,
                     &[false; 12], // no neighbors
+                    0, // sparse sowing
                 );
                 assert!(id < 12, "species_id should be valid (got {id})");
                 species_seen.insert(id);
@@ -5724,6 +5759,7 @@ mod tests {
                 30, // 30 existing plants
                 15, // 15 groundcover
                 &[false; 12], // no neighbors
+                1, // sparse sowing
             );
             if species_table.species[id].plant_type == crate::tree::PlantType::Tree {
                 tree_emerged = true;
@@ -5755,7 +5791,7 @@ mod tests {
                 let id_with = pick_species_from_conditions(
                     150, 150, 150, 128, 500,
                     x, y, GROUND_LEVEL + 1,
-                    &species_table, 30, 15, &neighbors_clover,
+                    &species_table, 30, 15, &neighbors_clover, 1,
                 );
                 if species_table.species[id_with].plant_type == PlantType::Tree {
                     trees_with += 1;
@@ -5763,7 +5799,7 @@ mod tests {
                 let id_without = pick_species_from_conditions(
                     150, 150, 150, 128, 500,
                     x, y, GROUND_LEVEL + 1,
-                    &species_table, 30, 15, &[false; 12],
+                    &species_table, 30, 15, &[false; 12], 1,
                 );
                 if species_table.species[id_without].plant_type == PlantType::Tree {
                     trees_without += 1;
@@ -5773,6 +5809,41 @@ mod tests {
         assert!(
             trees_with > trees_without,
             "Clover neighbor should boost tree emergence over 2500 samples: with={trees_with}, without={trees_without}"
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn dense_sowing_favors_groundcover() {
+        // Dense seed zones should produce more groundcover than sparse zones.
+        use crate::tree::PlantType;
+        let species_table = crate::tree::SpeciesTable::default();
+
+        let mut gc_dense: u32 = 0;
+        let mut gc_sparse: u32 = 0;
+        for x in 10..60usize {
+            for y in 10..60usize {
+                let id_dense = pick_species_from_conditions(
+                    100, 100, 50, 128, 200,
+                    x, y, GROUND_LEVEL + 1,
+                    &species_table, 0, 0, &[false; 12], 8, // dense
+                );
+                if species_table.species[id_dense].plant_type == PlantType::Groundcover {
+                    gc_dense += 1;
+                }
+                let id_sparse = pick_species_from_conditions(
+                    100, 100, 50, 128, 200,
+                    x, y, GROUND_LEVEL + 1,
+                    &species_table, 0, 0, &[false; 12], 0, // sparse
+                );
+                if species_table.species[id_sparse].plant_type == PlantType::Groundcover {
+                    gc_sparse += 1;
+                }
+            }
+        }
+        assert!(
+            gc_dense > gc_sparse,
+            "Dense sowing should produce more groundcover: dense={gc_dense}, sparse={gc_sparse}"
         );
     }
 }

@@ -51,9 +51,11 @@ The game is about *building conditions and discovering what emerges*. The player
 
 4. **Neighbor influence** — scans 8-voxel radius around germinating seeds for existing plants. Clover nearby boosts tree scores +40 (nitrogen handshake). Groundcover boosts flower scores +25 (succession). Tree canopy boosts shade-tolerant species +25 (canopy effect). Same species nearby reduces score -15 (diversity pressure).
 
-**Remaining (P2):**
+**Sprint 242: Density influence implemented.**
 
-5. **Density influence** — dense sowing should favor fast-growing groundcover; sparse sowing in rich conditions should allow slower species. Currently density zone spacing is uniform.
+5. **Density influence** — dense sowing (5+ seeds within radius 5) boosts groundcover +30, penalizes slower species -10. Moderate density (3+) gives +15 groundcover bonus. Sparse sowing lets conditions decide freely.
+
+**All 5 items complete.**
 
 ## Changes Made
 
