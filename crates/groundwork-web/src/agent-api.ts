@@ -223,18 +223,22 @@ export function initAgentAPI(config: AgentAPIConfig): void {
       if (!isInitialized()) return {};
       const grid = getGridView();
       const plantMats = new Set([4, 5, 6, 7, 8]); // root, seed, trunk, branch, leaf
+      const maxSpeciesId = SPECIES.length; // valid IDs: 0..11
       const speciesCounts: Record<number, number> = {};
+      let invalidCount = 0;
       for (let i = 0; i < grid.length; i += 4) {
         if (!plantMats.has(grid[i])) continue;
         const speciesId = grid[i + 3];
+        if (speciesId >= maxSpeciesId) { invalidCount++; continue; }
         speciesCounts[speciesId] = (speciesCounts[speciesId] ?? 0) + 1;
       }
       // Map species IDs to names
       const result: Record<string, number> = {};
       for (const [id, count] of Object.entries(speciesCounts)) {
         const sp = SPECIES.find(s => s.index === Number(id));
-        result[sp?.name ?? `unknown-${id}`] = count;
+        result[sp?.name ?? `id-${id}`] = count;
       }
+      if (invalidCount > 0) result['_invalid'] = invalidCount;
       return result;
     },
   };
