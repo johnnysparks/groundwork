@@ -264,7 +264,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
         }
       }
     }
-    _eventCooldown = 25;
+    _eventCooldown = 50;
   }
 
   // New species growing — check if it's pioneer succession or wild plant
@@ -310,7 +310,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
             if (found) break;
           }
         }
-        _eventCooldown = 20;
+        _eventCooldown = 40;
         break; // one event per tick
       }
     }
@@ -369,7 +369,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
   // Major plant growth burst
   if (stats.plants > _prevStats.plants + 500 && _prevStats.plants > 0) {
     hud.addEvent('Growth burst — your garden is flourishing');
-    _eventCooldown = 30;
+    _eventCooldown = 60;
   }
 
   // "The garden is alive" milestone — one-time celebration when ecosystem is thriving
@@ -410,7 +410,7 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
     ];
     hud.addEvent(msgs[Math.floor(Math.random() * msgs.length)]);
     _recentDieOff = false;
-    _eventCooldown = 30;
+    _eventCooldown = 60;
   }
 
   // Habitat formation: natural assemblages of related species
@@ -455,11 +455,11 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
 
   // Contextual ecology tips — suggest next discovery based on garden state
   _tipTimer++;
-  if (_tipTimer > 60 && _eventCooldown <= 0) {
+  if (_tipTimer > 150 && _eventCooldown <= 0) {
     const tip = getContextualTip(stats);
     hud.addEvent(tip);
     _tipTimer = 0;
-    _eventCooldown = 10;
+    _eventCooldown = 30;
   }
 
   if (stats.speciesIds) _prevSpeciesIds = new Set(stats.speciesIds);
@@ -1095,37 +1095,48 @@ async function main() {
     }
   }
 
-  // --- Gnome click detection ---
-  // When the player clicks near the gnome, treat it as a gnome tap (for quest + camera follow).
-  // Uses distance-based check in sim coordinates (not raycasting against gnome mesh).
-  function isClickNearGnome(hitX: number, hitY: number): boolean {
-    const dx = hitX - gardener.visualX;
-    const dy = hitY - gardener.visualY;
-    return (dx * dx + dy * dy) < 9; // within 3 voxels
-  }
-
   // Track whether the gnome-tap quest has been completed this session
   let gnomeTapped = false;
+
+  // Screen-space gnome hit test: project gnome position to screen coords.
+  // Needed because the gnome mesh isn't in terrainGroup, so terrain raycasts miss it.
+  function isClickNearGnomeScreen(clientX: number, clientY: number): boolean {
+    const gnome3D = new THREE.Vector3(
+      gardener.visualX + 0.5,
+      gardener.visualZ + 1.5,  // sim Z → Three.js Y, roughly gnome center height
+      gardener.visualY + 0.5,  // sim Y → Three.js Z
+    );
+    gnome3D.project(orbit.camera);
+    const screenX = (gnome3D.x * 0.5 + 0.5) * window.innerWidth;
+    const screenY = (-gnome3D.y * 0.5 + 0.5) * window.innerHeight;
+    const dx = clientX - screenX;
+    const dy = clientY - screenY;
+    return (dx * dx + dy * dy) < 50 * 50; // within 50px on screen
+  }
 
   // Canvas click handler for gnome tapping + inspect panel
   renderer.domElement.addEventListener('pointerup', (e) => {
     // Don't handle if it was a drag (camera orbit)
     if (hud.containsElement(e.target)) return;
 
-    const hit = raycastVoxel(e.clientX, e.clientY, orbit.camera, terrainGroup, false);
-    if (!hit) return;
-
-    // Check gnome tap — before phase 1 tools are available
-    if (!gnomeTapped && isClickNearGnome(hit.hitX, hit.hitY)) {
+    // Gnome tap — uses screen-space proximity so it works even if the
+    // raycast misses terrain (clicking directly on the gnome billboard).
+    if (!gnomeTapped && isClickNearGnomeScreen(e.clientX, e.clientY)) {
       gnomeTapped = true;
       questLog.recordTapGnome();
-      // Smooth camera focus on gnome
-      orbit.setFocus(gardener.visualX, gardener.visualY);
+      // Smooth drone-like camera follow on gnome — tracks him as he moves
+      orbit.startFollow({
+        getX: () => gardener.visualX,
+        getY: () => gardener.visualY,
+      });
       hud.addEvent('Your garden gnome waves hello!');
       const freshGrid = isInitialized() ? getGridView() : grid;
       questLog.check(freshGrid);
       return;
     }
+
+    const hit = raycastVoxel(e.clientX, e.clientY, orbit.camera, terrainGroup, false);
+    if (!hit) return;
 
     // Inspect panel — tap any non-air voxel to see info
     const freshGrid = isInitialized() ? getGridView() : grid;
@@ -1282,7 +1293,7 @@ async function main() {
   let leafDripInterval = 0; // accumulator for drip emit rate
   let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
   let nextAgeMilestone = 1000; // next tick count to celebrate
-  const BASE_TICK_MS = 100;
+  const BASE_TICK_MS = 200;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
   // --- Camera orbit input ---

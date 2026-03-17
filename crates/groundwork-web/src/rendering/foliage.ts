@@ -290,9 +290,9 @@ const FOLIAGE_FRAG = /* glsl */ `
     shimmer = max(0.0, shimmer); // only brightening, never darkening
     // Stronger in upper canopy, during daytime
     float canopyHeight = max(0.0, (vHeight - ${GROUND_LEVEL.toFixed(1)}) * 0.06);
-    float shimmerStrength = shimmer * canopyHeight * uDayAmount * 0.15;
+    float shimmerStrength = shimmer * canopyHeight * uDayAmount * 0.07;
 
-    gl_FragColor = vec4(vColor * (shade + shimmerStrength), alpha * 0.92);
+    gl_FragColor = vec4(vColor * (shade + shimmerStrength), alpha * 0.82);
   }
 `;
 
@@ -351,7 +351,7 @@ export class FoliageRenderer {
       fragmentShader: FOLIAGE_FRAG,
       uniforms: {
         uTime: { value: 0 },
-        uWindStrength: { value: 0.35 },
+        uWindStrength: { value: 0.25 },
         uWindDir: { value: new THREE.Vector2(1, 0) },
         uDayTint: { value: new THREE.Color(1, 1, 1) },
         uDayAmount: { value: 1.0 },

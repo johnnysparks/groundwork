@@ -101,6 +101,16 @@ export class OrbitCamera {
 
   /** Call each frame with delta time in seconds */
   update(dt: number): void {
+    // --- Follow mode: gently track the target each frame ---
+    if (this.followTarget) {
+      const tx = this.followTarget.getX();
+      const tz = this.followTarget.getY(); // sim Y → Three.js Z
+      // Smooth follow — lerp target center toward the followed entity
+      this.targetCenter.x += (tx - this.targetCenter.x) * 0.05;
+      this.targetCenter.z += (tz - this.targetCenter.z) * 0.05;
+      this.targetCenter.y = GROUND_LEVEL;
+    }
+
     // --- Keyboard-driven panning ---
     this.applyKeyboardPan(dt);
 
@@ -153,6 +163,8 @@ export class OrbitCamera {
     this.idleTimer = 0;
     this.idleOrbitActive = false;
     this.idleElapsed = 0;
+    // User interaction cancels follow mode
+    this.followTarget = null;
   }
 
   /** Whether the camera is in idle auto-orbit mode */
@@ -170,6 +182,26 @@ export class OrbitCamera {
    *  Smooth camera pan to the target. */
   setFocus(simX: number, simY: number): void {
     this.setCenter(simX, GROUND_LEVEL, simY);
+  }
+
+  // --- Follow mode: smooth drone-like tracking of a moving target ---
+  private followTarget: { getX: () => number; getY: () => number } | null = null;
+
+  /** Start following a target. The camera smoothly tracks it each frame.
+   *  Params are sim coords (x, y). Any user input cancels follow. */
+  startFollow(target: { getX: () => number; getY: () => number }): void {
+    this.followTarget = target;
+    this.resetIdle();
+  }
+
+  /** Stop following */
+  stopFollow(): void {
+    this.followTarget = null;
+  }
+
+  /** Whether the camera is currently following a target */
+  get isFollowing(): boolean {
+    return this.followTarget !== null;
   }
 
   /** Gently nudge camera toward an event (doesn't reset idle).

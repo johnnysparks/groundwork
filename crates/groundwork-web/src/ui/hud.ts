@@ -435,15 +435,15 @@ export class Hud {
     el.className = 'event-item';
     el.textContent = text;
     feed.appendChild(el);
-    // Keep max 5 items
-    while (feed.children.length > 5) {
+    // Keep max 3 items — less visual clutter
+    while (feed.children.length > 3) {
       feed.firstElementChild?.remove();
     }
-    // Fade out after 8s
+    // Fade out after 12s — let messages breathe
     setTimeout(() => {
       el.classList.add('fading');
       setTimeout(() => el.remove(), 500);
-    }, 8000);
+    }, 12000);
   }
 
   /** Brief save indicator — shows "Saved" for 2s, doesn't clutter event feed */
