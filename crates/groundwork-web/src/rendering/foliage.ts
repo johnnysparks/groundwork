@@ -279,6 +279,22 @@ export class FoliageRenderer {
     }
   }
 
+  /** Set drought stress level (0=healthy, 1=fully stressed).
+   *  Lerps foliage tint toward dry yellow-brown. */
+  setDroughtStress(stress: number): void {
+    if (stress <= 0) return;
+    const tint = this.material.uniforms.uDayTint.value as THREE.Color;
+    // Push toward dry yellow-brown proportional to stress
+    const dr = 1.05 + stress * 0.1;
+    const dg = 0.95 - stress * 0.25;
+    const db = 0.85 - stress * 0.35;
+    tint.setRGB(
+      tint.r * (1 - stress * 0.3) + dr * stress * 0.3,
+      tint.g * (1 - stress * 0.3) + dg * stress * 0.3,
+      tint.b * (1 - stress * 0.3) + db * stress * 0.3,
+    );
+  }
+
   /** Current number of active foliage sprites */
   get count(): number {
     return this.instanceCount;

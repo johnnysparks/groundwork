@@ -882,6 +882,7 @@ async function main() {
   let tickAccumulator = 0;
   let tickSpeed = 1; // 1x, 2x, 5x
   let prevWeatherState = 0; // 0=Clear, 1=Rain, 2=Drought
+  let droughtStress = 0; // 0-1 smooth drought foliage yellowing
   let ambientSoundTimer = 0; // seconds until next ambient fauna sound
   let growthSoundCooldown = 0; // ticks until next growth sound can play
   let prevPlantCount = 0; // for detecting growth bursts
@@ -1246,14 +1247,22 @@ async function main() {
     // Update day cycle (sun position, colors, sky gradient)
     dayCycle.update(dt, lights, scene, skyUniforms);
 
-    // Drought visual: warmer, hazier atmosphere
+    // Drought visual: warmer, hazier atmosphere + foliage stress
     if (isInitialized()) {
       const ws = getWeatherState();
-      if (ws === 2 && scene.fog instanceof THREE.FogExp2) {
-        // Push fog toward warm amber and slightly thicker
-        scene.fog.color.lerp(new THREE.Color(0.65, 0.50, 0.35), 0.02);
-        scene.fog.density = Math.min(scene.fog.density * 1.001, 0.004);
+      if (ws === 2) {
+        if (scene.fog instanceof THREE.FogExp2) {
+          // Push fog toward warm amber and slightly thicker
+          scene.fog.color.lerp(new THREE.Color(0.65, 0.50, 0.35), 0.02);
+          scene.fog.density = Math.min(scene.fog.density * 1.001, 0.004);
+        }
+        // Foliage stress: gradually yellow during drought
+        droughtStress = Math.min(droughtStress + dt * 0.1, 1.0);
+      } else {
+        // Recovery: foliage greens up when drought ends
+        droughtStress = Math.max(droughtStress - dt * 0.2, 0.0);
       }
+      foliage.setDroughtStress(droughtStress);
     }
 
     // Animate foliage wind sway + day-night color tinting
