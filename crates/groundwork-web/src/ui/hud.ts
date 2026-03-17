@@ -114,6 +114,14 @@ export class Hud {
       this.toolButtons.push(btn);
     }
 
+    // Wire up x-ray toggle button
+    const xrayBtn = this.container.querySelector('#xray-toggle')!;
+    xrayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._xrayActive = !this._xrayActive;
+      this._onXrayToggle?.(this._xrayActive);
+    });
+
     // Wire up x-ray lens picker buttons
     const lensBar = this.container.querySelector('#xray-lens-bar')!;
     for (const btn of lensBar.querySelectorAll('.lens-btn')) {
@@ -444,10 +452,14 @@ export class Hud {
   onNewGarden(cb: () => void): void { this._onNewGarden = cb; }
 
   private _onLensChange: ((lens: string) => void) | null = null;
+  private _onXrayToggle: ((active: boolean) => void) | null = null;
   private _xrayActive = false;
 
   /** Register callback for lens changes */
   onLensChange(cb: (lens: string) => void): void { this._onLensChange = cb; }
+
+  /** Register callback for x-ray toggle (from the button) */
+  onXrayToggle(cb: (active: boolean) => void): void { this._onXrayToggle = cb; }
 
   /** Toggle x-ray mode — swaps tool bar for lens picker */
   setXrayUI(active: boolean): void {
@@ -455,13 +467,16 @@ export class Hud {
     const toolBar = this.container.querySelector('#tool-bar') as HTMLElement;
     const lensBar = this.container.querySelector('#xray-lens-bar') as HTMLElement;
     const speciesPanel = this.container.querySelector('#species-panel') as HTMLElement;
+    const xrayBtn = this.container.querySelector('#xray-toggle') as HTMLElement;
     if (active) {
       toolBar.style.display = 'none';
       speciesPanel.style.display = 'none';
       lensBar.style.display = 'flex';
+      xrayBtn.classList.add('active');
     } else {
       toolBar.style.display = 'flex';
       lensBar.style.display = 'none';
+      xrayBtn.classList.remove('active');
       // species panel visibility managed by render()
     }
   }
@@ -609,6 +624,7 @@ export class Hud {
 
 const HUD_HTML = `
   <div id="tool-bar"></div>
+  <button id="xray-toggle" title="X-ray mode [Q]">X-Ray</button>
   <div id="xray-lens-bar" style="display:none">
     <button class="lens-btn active" data-lens="roots" title="Root networks by species">Roots</button>
     <button class="lens-btn" data-lens="moisture" title="Soil moisture levels">Moisture</button>
@@ -672,6 +688,34 @@ const HUD_CSS = `
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   pointer-events: auto;
+}
+
+/* X-ray toggle button — always visible next to tool bar */
+#xray-toggle {
+  position: absolute;
+  bottom: 22px;
+  right: calc(50% - 180px);
+  padding: 8px 12px;
+  border: 1px solid rgba(100, 140, 200, 0.25);
+  border-radius: 8px;
+  background: rgba(30, 35, 50, 0.85);
+  color: rgba(160, 185, 220, 0.8);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s;
+}
+#xray-toggle:hover {
+  background: rgba(50, 65, 100, 0.9);
+  color: #e0e8f0;
+}
+#xray-toggle.active {
+  background: rgba(70, 100, 160, 0.9);
+  border-color: rgba(120, 160, 220, 0.6);
+  color: #fff;
 }
 
 /* X-ray lens picker — replaces tool bar when x-ray is active */

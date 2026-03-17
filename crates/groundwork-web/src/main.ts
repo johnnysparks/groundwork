@@ -729,6 +729,20 @@ async function main() {
   }
 
   // New Garden button — resets sim, HUD, and re-meshes
+  // X-ray toggle from the HUD button (works on mobile + desktop)
+  hud.onXrayToggle((active: boolean) => {
+    xrayActive = active;
+    setXrayMode(xrayActive);
+    postProcessing.setDesaturation(active ? 1.0 : 0.0);
+    hud.setXrayUI(active);
+    if (active) {
+      overlay.setMode(OverlayMode.Off);
+    } else {
+      overlay.setMode(OverlayMode.Off);
+    }
+    questLog.recordDepthChange();
+  });
+
   // X-ray lens picker: switch data visualization when user picks a lens
   hud.onLensChange((lens: string) => {
     const freshGrid = isInitialized() ? getGridView() : grid;
