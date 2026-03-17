@@ -57,7 +57,11 @@ void main() {
       float dist = length(fract(starUV) - 0.5);
       float star = smoothstep(0.15, 0.0, dist) * (0.5 + 0.5 * starVal);
       float heightFade = smoothstep(0.05, 0.4, h);
-      color += vec3(star * uNightAmount * heightFade * 0.7);
+      // Twinkle: each star has unique phase and speed from its hash
+      float twinklePhase = hash(cell + 100.0) * 6.283;
+      float twinkleSpeed = 0.5 + hash(cell + 200.0) * 1.5;
+      float twinkle = 0.6 + 0.4 * sin(uTime * twinkleSpeed + twinklePhase);
+      color += vec3(star * uNightAmount * heightFade * 0.7 * twinkle);
     }
 
     // Shooting star: one every ~45 seconds, lasts 0.6 seconds
