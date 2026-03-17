@@ -1230,8 +1230,9 @@ async function main() {
       }
     }
 
-    // Animate foliage wind sway
+    // Animate foliage wind sway + day-night color tinting
     foliage.update(elapsed);
+    foliage.setDayTint(dayCycle.getTime());
 
     // Update fauna positions and animation
     fauna.update(elapsed);

@@ -28,12 +28,13 @@ const FOLIAGE_VERT = /* glsl */ `
 
   uniform float uTime;
   uniform float uWindStrength;
+  uniform vec3 uDayTint;
 
   varying vec3 vColor;
   varying vec2 vUv;
 
   void main() {
-    vColor = instanceColor;
+    vColor = instanceColor * uDayTint;
     vUv = uv;
 
     // Billboard: extract instance position from instance matrix
@@ -136,6 +137,7 @@ export class FoliageRenderer {
       uniforms: {
         uTime: { value: 0 },
         uWindStrength: { value: 0.35 },
+        uDayTint: { value: new THREE.Color(1, 1, 1) },
       },
       transparent: true,
       depthWrite: false,
@@ -248,6 +250,33 @@ export class FoliageRenderer {
   /** Set wind strength (0 = still, 1 = gusty) */
   setWindStrength(strength: number): void {
     this.material.uniforms.uWindStrength.value = strength;
+  }
+
+  /** Set foliage tint based on time of day (0-1 cycle).
+   *  Dawn=warm gold, noon=neutral, golden hour=amber, night=cool blue. */
+  setDayTint(dayTime: number): void {
+    const tint = this.material.uniforms.uDayTint.value as THREE.Color;
+    // Day cycle: 0.25=dawn, 0.5=noon, 0.75=golden hour, 1.0=night
+    if (dayTime < 0.2) {
+      // Night → dawn transition: cool blue → warm
+      const t = dayTime / 0.2;
+      tint.setRGB(0.6 + t * 0.4, 0.65 + t * 0.3, 0.85 - t * 0.15);
+    } else if (dayTime < 0.35) {
+      // Dawn: warm golden
+      const t = (dayTime - 0.2) / 0.15;
+      tint.setRGB(1.0 + t * 0.05, 0.95 - t * 0.05, 0.7 + t * 0.3);
+    } else if (dayTime < 0.65) {
+      // Midday: neutral warm white
+      tint.setRGB(1.05, 0.98, 1.0);
+    } else if (dayTime < 0.8) {
+      // Golden hour: warm amber
+      const t = (dayTime - 0.65) / 0.15;
+      tint.setRGB(1.0 + t * 0.1, 0.95 - t * 0.1, 0.95 - t * 0.25);
+    } else {
+      // Night: cool blue-grey
+      const t = (dayTime - 0.8) / 0.2;
+      tint.setRGB(1.1 - t * 0.5, 0.85 - t * 0.2, 0.7 + t * 0.15);
+    }
   }
 
   /** Current number of active foliage sprites */
