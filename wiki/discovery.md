@@ -14,12 +14,16 @@ When a seed germinates, `pick_species_from_conditions()` (in `systems.rs`) score
    - Any groundcover nearby → +25 for flowers (succession: groundcover enables flowers)
    - Any tree nearby → +25 for shade-tolerant species (canopy effect: shade_tolerance < 80)
    - Same species nearby → -15 score (diversity pressure prevents monoculture)
-5. **Maturity gating** — garden development stage controls which plant types can emerge:
+5. **Density influence** — counts seeds within 5-voxel radius:
+   - Dense (5+ seeds): groundcover +30, flowers -5, shrubs/trees -10 (pioneers win in crowds)
+   - Moderate (3-4 seeds): groundcover +15
+   - Sparse (0-2 seeds): no modifier — let conditions decide
+6. **Maturity gating** — garden development stage controls which plant types can emerge:
    - Groundcover: always (4.0x multiplier — pioneer species)
    - Flowers: need 3+ existing plants (2.0x)
    - Shrubs: need 5+ groundcover and 10+ total plants (2.0x)
    - Trees: need 10+ groundcover and 20+ total plants (1.5x)
-6. **Temporal bias** — early ticks (< 200) favor fast growers via growth_rate bonus
+7. **Temporal bias** — early ticks (< 200) favor fast growers via growth_rate bonus
 
 **Result:** Same conditions at the same tick/position always produce the same species (deterministic). Different environmental conditions produce different species mixes.
 

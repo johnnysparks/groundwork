@@ -109,7 +109,9 @@ No weather events for the first 500 ticks (~50 seconds). This protects your init
 
 ## Species Strategies
 
-You don't choose species directly — you create **conditions** that favor the species you want. The sim's `pick_species_from_conditions()` scores all 12 species against local water, light, nutrients, and garden maturity.
+You don't choose species directly — you create **conditions** that favor the species you want. The sim scores all 12 species against local water, light, nutrients, garden maturity, neighbors, and sowing density.
+
+**Density tip:** Dense sowing (drag large zones) favors fast-growing groundcover. Sparse sowing (small clicks in rich conditions) gives slower species like shrubs and trees a better chance to emerge.
 
 ### Encouraging Birch (The Fast Start)
 

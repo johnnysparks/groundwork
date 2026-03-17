@@ -247,6 +247,7 @@ When a seed germinates, `pick_species_from_conditions()` scores all 12 species a
 | Light fitness | Local light level vs. shade_tolerance | Fern/moss in shade, daisy/grass in sun |
 | Nutrient fitness | Soil nutrients vs. plant type needs | Trees need rich soil, groundcover thrives anywhere |
 | Neighbor influence | Species within 8 voxels | Clover boosts trees, groundcover boosts flowers, trees boost shade-lovers, same-species penalized |
+| Density influence | Seeds within 5 voxels | Dense sowing (5+) favors groundcover (+30); sparse lets conditions decide |
 | Garden maturity | Total plants + groundcover count | Groundcover dominates early; trees only in mature gardens |
 | Temporal bias | Tick count < 200 | Fast growers (moss, grass) favored at start |
 
