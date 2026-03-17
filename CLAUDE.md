@@ -130,6 +130,9 @@ crates/
       ui/raycaster.ts     Mouse click → voxel coordinate raycasting
       ui/controls.ts      Input controls, keyboard shortcuts, drag-to-zone painting
       ui/hud.ts           HUD overlay: tool palette, species picker, task queue counter
+      ui/quests.ts        Gentle quest progression: 4 quest lines, 8 quests
+      ui/inspect.ts       Inspect panel: tap a cell to see species + conditions
+      ui/lenspicker.ts    X-ray lens picker: roots, irrigation, future lenses
     vite.config.ts        WASM plugin, COOP/COEP headers, GitHub Pages base
     package.json          three, vite, vite-plugin-wasm, typescript
 
@@ -229,6 +232,22 @@ All tools are used by **painting zones** (drag-to-select area). The garden gnome
 - **Dispersers:** `bird` — spawn near mature trees, carry seeds 10-50 voxels
 - **Decomposers:** `worm`, `beetle` — enrich soil, break down dead wood
 - **Companions:** `squirrel` — spawn near oak/berry, domesticable by the gnome, cache acorns that sprout
+
+## Onboarding Progression
+
+The game starts gently. Each quest line introduces one concept with breathing room. No auto-advance timers — the player moves at their own pace. See `decisions/2026-03-17T18:00:00_reduce_progression_intensity.md`. **Executive mandate.**
+
+| Quest Line | Phase | What Unlocks | Key Moment |
+|-----------|-------|-------------|------------|
+| 0: Meet Your Gnome | 0 | Nothing — just garden + gnome + quest panel | Tap gnome → camera follows |
+| 1: Start Your Garden | 1 | Seed tool (sow zones) + inspect panel | Plant seeds → discover species via inspect |
+| 2: See Below the Surface | 2 | X-ray mode + lens picker (roots, irrigation) | See root networks + moisture heatmap |
+| 3: Shape the Water | 3 | Shovel + full tool bar + events | Dig channels → first bloom → first bee |
+| 4+: (WIP) | 4+ | Score panel, species tiers, full UI | Ecological discovery deepens |
+
+**X-ray lens system:** X-ray is no longer on/off. It's a lens picker with multiple visualization modes. Each lens has a unique color theme. Current lenses: Roots (green, transparent ground), Irrigation (blue=wet, red=dry moisture heatmap). Future: Nutrients, Light, Soil composition.
+
+**Inspect panel:** Tapping any cell shows species name, moisture level, light level in a warm overlay panel. Teaches observation before optimization.
 
 ## Gameplay Depth Principles
 
