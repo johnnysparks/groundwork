@@ -86,6 +86,21 @@ void main() {
     color += sunHalo * halo * 0.4 * sunVis;
   }
 
+  // Moon disc: cool silvery circle opposite the sun, visible at night
+  if (uNightAmount > 0.05) {
+    // Moon is roughly opposite the sun, raised above horizon
+    vec3 moonDir = normalize(vec3(-uSunDir.x, max(0.25, 0.6 - uSunDir.y), -uSunDir.z));
+    float moonDot = dot(dir, moonDir);
+    // Crisp disc + soft glow
+    float moonDisc = smoothstep(0.998, 0.9995, moonDot);
+    float moonGlow = smoothstep(0.985, 0.999, moonDot);
+    // Cool silvery-blue color
+    vec3 moonColor = vec3(0.85, 0.88, 0.95);
+    vec3 moonHaloColor = vec3(0.5, 0.55, 0.7);
+    color += moonColor * moonDisc * uNightAmount * 0.9;
+    color += moonHaloColor * moonGlow * uNightAmount * 0.15;
+  }
+
   // Clouds: soft drifting shapes above horizon, fade at night
   if (h > 0.0 && uCloudDensity > 0.0) {
     // Project onto dome — stretch near horizon for depth
