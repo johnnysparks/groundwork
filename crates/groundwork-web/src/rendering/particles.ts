@@ -783,6 +783,38 @@ export class GrowthParticles {
     p.color.setRGB(0.55 + t * 0.25, 0.7 + t * 0.2, 0.85 + t * 0.15);
   }
 
+  /**
+   * Emit an expanding ring of particles on the water surface.
+   * Called when flying fauna passes over water — creates a gentle ripple.
+   */
+  emitWaterRipple(worldX: number, waterY: number, worldZ: number): void {
+    const count = 8;
+    const baseAngle = Math.random() * Math.PI * 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.6 + Math.random() * 0.3;
+      p.maxLife = p.life;
+
+      // Start at center, expand outward in a ring
+      const angle = baseAngle + (i / count) * Math.PI * 2;
+      p.x = worldX + Math.cos(angle) * 0.15;
+      p.y = waterY + 0.1;
+      p.z = worldZ + Math.sin(angle) * 0.15;
+
+      const speed = 0.6 + Math.random() * 0.3;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = 0; // stays on water surface
+      p.vz = Math.sin(angle) * speed;
+
+      // Pale blue-white water ring
+      const t = Math.random();
+      p.color.setRGB(0.6 + t * 0.2, 0.75 + t * 0.15, 0.9 + t * 0.1);
+    }
+  }
+
   private findDeadParticle(): Particle | null {
     for (let i = 0; i < MAX_PARTICLES; i++) {
       if (!this.particles[i].alive) return this.particles[i];

@@ -1558,6 +1558,15 @@ async function main() {
           const f = readFauna(fv, i);
           if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) pollinators++;
           else if (f.type === FaunaType.Beetle) beetles++;
+          // Flying fauna over water → ripple (low probability per frame to keep it subtle)
+          if ((f.type === FaunaType.Bee || f.type === FaunaType.Butterfly || f.type === FaunaType.Bird)
+              && prevWaterCount > 0 && Math.random() < dt * 0.15) {
+            // Check if fauna is near water surface level
+            const faunaWorldY = f.z; // sim z → height
+            if (faunaWorldY >= GROUND_LEVEL && faunaWorldY <= GROUND_LEVEL + 5) {
+              particles.emitWaterRipple(f.x, GROUND_LEVEL + 0.2, f.y);
+            }
+          }
         }
       }
       setPollinatorHum(pollinators);
