@@ -86,6 +86,7 @@ let _particles: GrowthParticles | null = null;
 let _squirrelCacheNotified = false;
 let _pollinatorActNotified = false;
 let _birdDropNotified = false;
+let _gardenAliveNotified = false;
 
 /** Species the player has deliberately planted (via seed tool) */
 const _playerPlantedSpecies = new Set<number>();
@@ -334,6 +335,22 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
   if (stats.plants > _prevStats.plants + 500 && _prevStats.plants > 0) {
     hud.addEvent('Growth burst — your garden is flourishing');
     _eventCooldown = 30;
+  }
+
+  // "The garden is alive" milestone — one-time celebration when ecosystem is thriving
+  if (!_gardenAliveNotified && stats.plants > 1000 && stats.fauna >= 5 && stats.species >= 3) {
+    hud.addEvent('The garden is alive \u2014 an ecosystem hums with interconnected life');
+    playDiscovery();
+    // Emit a large celebration burst from the center
+    if (_particles) {
+      for (let i = 0; i < 5; i++) {
+        const cx = GRID_X / 2 + (Math.random() - 0.5) * 20;
+        const cz = GRID_Y / 2 + (Math.random() - 0.5) * 20;
+        _particles.emitFaunaArrival(cx, GROUND_LEVEL + 3, cz);
+      }
+    }
+    _gardenAliveNotified = true;
+    _eventCooldown = 50;
   }
 
   // Plant die-off from competition
