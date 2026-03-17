@@ -432,6 +432,19 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
           baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
         }
       }
+    } else if (quad.material === Material.Stone) {
+      // Stone mineral variety: warm gray, cool blue-gray, or standard
+      const stoneHue = voxelNoise(quad.x, quad.y, quad.z);
+      const base = MATERIAL_COLORS[Material.Stone]!;
+      if (stoneHue < 0.33) {
+        // Warm sandstone tint
+        baseColor = _scratchColor.set(base.r + 0.04, base.g, base.b - 0.03);
+      } else if (stoneHue < 0.66) {
+        baseColor = base; // neutral gray
+      } else {
+        // Cool blue-gray tint
+        baseColor = _scratchColor.set(base.r - 0.03, base.g, base.b + 0.04);
+      }
     } else {
       baseColor = MATERIAL_COLORS[quad.material] ?? DEFAULT_COLOR;
     }
