@@ -289,12 +289,11 @@ export class QuestLog {
     switch (tool) {
       case ToolCode.Shovel:
         this.recordUseShovel();
+        // Digging IS irrigation now — shovel completes the irrigation quest
+        this.recordPlaceWater();
         break;
       case ToolCode.Seed:
         this.recordPlantSeed(speciesIndex);
-        break;
-      case ToolCode.Water:
-        this.recordPlaceWater();
         break;
     }
   }

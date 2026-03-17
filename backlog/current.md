@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
 **Last updated:** 2026-03-17T12:00:00
-**Status:** Alpha complete. 145 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars/moonlight/shooting stars, discovery feedback loop, dawn chorus, welcome flow, growth stage celebrations, stout tree proportions, water caustics, squirrel trust arc. **Irrigation replaces watering can** (executive mandate).
+**Status:** Alpha complete. 156 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle, atmospheric particles (dew/dust/fireflies/stars), dynamic wind gusts, cloud shadow pulses, garden-responsive leaf rustle audio, weather transitions, drought stress visuals. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -123,6 +123,19 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 ### Quality of Life (Sprints 111-112)
 - Auto-save "Saved" indicator (bottom-right, fades after 1.5s)
 - Contextual ecology tips (suggests next discovery based on garden state)
+
+### Atmospheric Particles (Sprints 150-151)
+- Morning dew sparkles at dawn (0.15-0.35)
+- Midday dust motes (0.3-0.65)
+
+### Weather Transitions (Sprints 152-153)
+- Smooth rain intensity ramp (3s up, 2s down) with scaled drop count
+- Drought foliage yellowing (tint lerps toward dry yellow-brown)
+
+### Dynamic Atmosphere (Sprints 154-156)
+- Wind gusts: periodic pulses spike foliage sway + scatter leaves + whoosh sound
+- Cloud shadow pulses: 3 overlapping sine waves modulate sun intensity during day
+- Leaf rustle ambient: bandpass noise scales with foliage count + wind strength
 
 ---
 

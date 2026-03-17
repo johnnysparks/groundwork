@@ -32,12 +32,15 @@ const TOOL_UI: Record<string, { icon: string; description: string }> = {
   Stone:  { icon: 'Stone', description: 'Place stone (costs 10 water)' },
 };
 
-/** Build tool UI definitions from engine-provided tool list */
+/** Build tool UI definitions from engine-provided tool list.
+ *  Filters out Water tool — irrigation is done via digging channels. */
 function buildTools(): ToolUIDef[] {
-  return BRIDGE_TOOLS.map((t, i) => {
-    const ui = TOOL_UI[t.name] ?? { icon: t.name.charAt(0), description: t.name };
-    return { code: t.code, name: t.name, icon: ui.icon, key: String(i + 1), description: ui.description };
-  });
+  return BRIDGE_TOOLS
+    .filter(t => t.name !== 'Water')
+    .map((t, i) => {
+      const ui = TOOL_UI[t.name] ?? { icon: t.name.charAt(0), description: t.name };
+      return { code: t.code, name: t.name, icon: ui.icon, key: String(i + 1), description: ui.description };
+    });
 }
 
 export { type SpeciesDef } from '../bridge';

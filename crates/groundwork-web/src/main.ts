@@ -40,7 +40,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle } from './audio/ambient';
-import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -866,7 +866,6 @@ async function main() {
       }
       particles.emit((x1 + x2) / 2 + 0.5, z + 0.5, (y1 + y2) / 2 + 0.5);
       if (tool === ToolCode.Seed) playPlant();
-      else if (tool === ToolCode.Water) playWater();
       else playDig();
       hud.addEvent(`Zone painted: ${(x2 - x1 + 1)}×${(y2 - y1 + 1)} area queued`);
     },
