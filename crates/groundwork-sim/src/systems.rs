@@ -318,6 +318,133 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
     }
 }
 
+/// Condition-based species emergence: when the player paints density zones
+/// (species=255), the sim picks what species emerges based on local conditions.
+///
+/// Scoring: each species gets a fitness score based on how well local water,
+/// light, and nutrient levels match its needs. Groundcover is strongly favored
+/// in early/sparse gardens; trees require established ecosystem maturity.
+///
+/// Uses deterministic hashing for weighted random selection — same conditions
+/// at same tick/position always produce the same species.
+fn pick_species_from_conditions(
+    water: u8,
+    light: u8,
+    nutrient: u8,
+    _ph: u8,
+    tick: u64,
+    x: usize,
+    y: usize,
+    z: usize,
+    species_table: &SpeciesTable,
+    total_plants: u32,
+    groundcover_count: u32,
+) -> usize {
+    use crate::tree::{PlantType, ResourceNeed};
+
+    let mut scores: [u32; 12] = [0; 12];
+
+    for (i, sp) in species_table.species.iter().enumerate() {
+        let mut score: u32 = 10; // base score for all species
+
+        // --- Water fitness ---
+        let water_match = match sp.water_need {
+            ResourceNeed::Low => {
+                if water < 80 { 30 } else if water < 150 { 15 } else { 5 }
+            }
+            ResourceNeed::Medium => {
+                if (60..180).contains(&water) { 30 } else { 10 }
+            }
+            ResourceNeed::High => {
+                if water >= 120 { 30 } else if water >= 60 { 15 } else { 2 }
+            }
+        };
+        score += water_match;
+
+        // --- Light fitness ---
+        // shade_tolerance: low value = shade-loving, high value = needs sun
+        let light_match = if sp.shade_tolerance < 80 {
+            // Shade-tolerant: thrives in low light
+            if light < 100 { 30 } else if light < 180 { 20 } else { 10 }
+        } else if sp.shade_tolerance < 130 {
+            // Moderate: flexible
+            if (50..200).contains(&light) { 25 } else { 10 }
+        } else {
+            // Sun-loving: needs bright light
+            if light >= 120 { 30 } else if light >= 60 { 15 } else { 2 }
+        };
+        score += light_match;
+
+        // --- Nutrient fitness ---
+        let nut_match = match sp.plant_type {
+            PlantType::Groundcover => {
+                // Groundcover thrives even in poor soil
+                if nutrient < 60 { 25 } else { 20 }
+            }
+            PlantType::Flower => {
+                if nutrient >= 40 { 25 } else { 10 }
+            }
+            PlantType::Shrub => {
+                if nutrient >= 80 { 25 } else if nutrient >= 40 { 15 } else { 5 }
+            }
+            PlantType::Tree => {
+                if nutrient >= 100 { 25 } else if nutrient >= 60 { 15 } else { 3 }
+            }
+        };
+        score += nut_match;
+
+        // --- Maturity gating ---
+        // Groundcover: always available (pioneer species)
+        // Flowers: need at least a few plants established
+        // Shrubs: need established groundcover
+        // Trees: need a thriving ecosystem
+        let maturity_mult = match sp.plant_type {
+            PlantType::Groundcover => 40, // strong bonus — these are pioneers
+            PlantType::Flower => {
+                if total_plants >= 3 { 20 } else { 8 }
+            }
+            PlantType::Shrub => {
+                if groundcover_count >= 5 && total_plants >= 10 { 20 } else if total_plants >= 5 { 8 } else { 2 }
+            }
+            PlantType::Tree => {
+                if groundcover_count >= 10 && total_plants >= 20 { 15 }
+                else if total_plants >= 10 { 5 }
+                else { 1 }
+            }
+        };
+        score = score * maturity_mult / 10;
+
+        // --- Temporal bias: early ticks favor fast growers ---
+        if tick < 200 {
+            let speed_bonus = (sp.growth_rate * 10.0) as u32;
+            score += speed_bonus;
+        }
+
+        scores[i] = score;
+    }
+
+    // Weighted random selection using deterministic hash
+    let total: u32 = scores.iter().sum();
+    if total == 0 {
+        return 9; // fallback: moss
+    }
+
+    let hash = crate::tree::tree_hash(
+        tick.wrapping_add(x as u64 * 31).wrapping_add(y as u64 * 97).wrapping_add(z as u64 * 53),
+        0,
+    );
+    let pick = (hash % total as u64) as u32;
+
+    let mut cumulative: u32 = 0;
+    for (i, &s) in scores.iter().enumerate() {
+        cumulative += s;
+        if pick < cumulative {
+            return i;
+        }
+    }
+    9 // fallback: moss
+}
+
 /// Seeds grow into tree seedlings when they have enough water and light.
 /// Uses nutrient_level as a growth counter: increments by 3-8 each tick
 /// (based on adjacent soil quality) when conditions are met, spawns a Tree entity at 200.
@@ -327,6 +454,8 @@ pub fn seed_growth(
     mut commands: Commands,
     tick: Res<Tick>,
     mut seed_species: ResMut<SeedSpeciesMap>,
+    species_table: Res<SpeciesTable>,
+    existing_trees: Query<&Tree>,
 ) {
     // No snapshot needed: seeds only read neighbor water/material and write to
     // themselves. Seeds don't affect each other's neighbor checks.
@@ -522,7 +651,32 @@ pub fn seed_growth(
                             }
                         }
 
-                        let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or(0);
+                        let species_id = seed_species.map.remove(&(x, y, z)).unwrap_or_else(|| {
+                            // Count existing plants for maturity gating
+                            let mut total_plants: u32 = 0;
+                            let mut groundcover_count: u32 = 0;
+                            for t in existing_trees.iter() {
+                                total_plants += 1;
+                                if species_table.species[t.species_id].plant_type
+                                    == crate::tree::PlantType::Groundcover
+                                {
+                                    groundcover_count += 1;
+                                }
+                            }
+                            pick_species_from_conditions(
+                                cell_water,
+                                cell_light,
+                                best_nutrient,
+                                min_ph,
+                                tick.0,
+                                x,
+                                y,
+                                z,
+                                &species_table,
+                                total_plants,
+                                groundcover_count,
+                            )
+                        });
                         let rng_seed = tick.0.wrapping_mul(x as u64 + 1).wrapping_mul(y as u64 + 1);
                         // Start with accumulated resources so Seedling→Sapling
                         // happens within ~10 ticks (threshold 80, start at 40).
@@ -5440,5 +5594,81 @@ mod tests {
             alive >= 1,
             "At least 1 oak should survive in the cluster (alive={alive}, dead={dead})"
         );
+    }
+
+    #[test]
+    fn condition_based_species_emergence_produces_variety() {
+        // When seeds are placed without a species (species=255 / density painting),
+        // the sim should pick different species based on conditions — not all oak.
+        let species_table = crate::tree::SpeciesTable::default();
+
+        let mut species_seen = std::collections::HashSet::new();
+        let conditions: [(u8, u8, u8); 6] = [
+            (200, 50, 20),   // wet, shady, poor soil → moss/fern
+            (30, 200, 30),   // dry, bright, poor → grass/daisy
+            (120, 150, 100), // moderate water, good light, rich → flowers/shrubs
+            (80, 80, 60),    // moderate everything → clover/wildflower
+            (250, 100, 150), // very wet, moderate light, rich → willow
+            (50, 250, 200),  // dry, bright, very rich → pine/birch
+        ];
+
+        for (ci, &(water, light, nutrient)) in conditions.iter().enumerate() {
+            for pos in 0..5u64 {
+                let id = pick_species_from_conditions(
+                    water,
+                    light,
+                    nutrient,
+                    128, // neutral pH
+                    100 + pos * 7 + ci as u64 * 31,
+                    10 + ci * 5,
+                    20 + pos as usize,
+                    GROUND_LEVEL + 1,
+                    &species_table,
+                    0, // no existing plants (early garden)
+                    0,
+                );
+                assert!(id < 12, "species_id should be valid (got {id})");
+                species_seen.insert(id);
+            }
+        }
+
+        assert!(
+            species_seen.len() >= 4,
+            "Condition-based emergence should produce variety: only got {:?}",
+            species_seen
+        );
+        // Groundcover should dominate in early gardens (no existing plants)
+        assert!(
+            species_seen.iter().any(|&id| {
+                species_table.species[id].plant_type == crate::tree::PlantType::Groundcover
+            }),
+            "Groundcover should emerge in early gardens"
+        );
+    }
+
+    #[test]
+    fn mature_garden_enables_trees() {
+        // Trees should only emerge when the garden has established groundcover
+        let species_table = crate::tree::SpeciesTable::default();
+
+        // Mature garden: 30 plants, 15 groundcover
+        let mut tree_emerged = false;
+        for i in 0..50u64 {
+            let id = pick_species_from_conditions(
+                150, 150, 150, 128, // rich conditions
+                500 + i * 13,
+                30 + i as usize % 20,
+                40,
+                GROUND_LEVEL + 1,
+                &species_table,
+                30, // 30 existing plants
+                15, // 15 groundcover
+            );
+            if species_table.species[id].plant_type == crate::tree::PlantType::Tree {
+                tree_emerged = true;
+                break;
+            }
+        }
+        assert!(tree_emerged, "Trees should emerge in mature gardens with rich conditions");
     }
 }
