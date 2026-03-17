@@ -1428,6 +1428,15 @@ async function main() {
       } else {
         postProcessing.setBloomStrength(0.25);
       }
+
+      // Fog color follows time of day (unless drought overrides)
+      if (scene.fog instanceof THREE.FogExp2 && prevWeatherState !== 2) {
+        // Target fog color by time of day
+        const fogR = r * 0.8;
+        const fogG = g * 0.82;
+        const fogB = b * 0.85;
+        scene.fog.color.lerp(new THREE.Color(fogR, fogG, fogB), 0.02);
+      }
     }
 
     // Update fauna positions and animation
