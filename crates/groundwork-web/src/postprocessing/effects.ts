@@ -256,14 +256,16 @@ export function createPostProcessing(
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 
-  // 2. SSAO — disabled: creates dark halo artifacts at larger grid scales.
-  // TODO: re-tune kernelRadius/minDistance/maxDistance for variable grid sizes.
-  // const ssaoPass = new SSAOPass(scene, camera, width, height);
-  // ssaoPass.kernelRadius = 2;
-  // ssaoPass.minDistance = 0.002;
-  // ssaoPass.maxDistance = 0.08;
-  // ssaoPass.output = SSAOPass.OUTPUT.Default;
-  // composer.addPass(ssaoPass);
+  // 2. SSAO — subtle ambient occlusion for diorama depth.
+  // Conservative parameters to avoid dark halo artifacts. Skipped on mobile.
+  if (!mobile) {
+    const ssaoPass = new SSAOPass(scene, camera, width, height);
+    ssaoPass.kernelRadius = 1;       // tight kernel — subtle crevice darkening
+    ssaoPass.minDistance = 0.005;     // raised floor to avoid self-occlusion halos
+    ssaoPass.maxDistance = 0.04;      // shorter range — AO stays near contact edges
+    ssaoPass.output = SSAOPass.OUTPUT.Default;
+    composer.addPass(ssaoPass);
+  }
 
   // 3. Bloom — warm glow on sunlit edges and golden foliage
   // On mobile: half resolution for cheaper fill rate
