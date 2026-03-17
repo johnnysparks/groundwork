@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, scanWaterFrontier } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -712,6 +712,13 @@ async function main() {
       growthSoundCooldown = 15; // ~15 ticks cooldown (~1.5s at 100ms/tick)
     }
     prevPlantCount = plantCount;
+
+    // Water flow detection: emit blue sparkle particles at expanding water edges
+    const { count: waterCount, frontier } = scanWaterFrontier(freshGrid);
+    if (waterCount > prevWaterCount && frontier.length > 0) {
+      particles.emitWaterFlow(frontier);
+    }
+    prevWaterCount = waterCount;
   }
 
   // New Garden button — resets sim, HUD, and re-meshes
@@ -898,6 +905,7 @@ async function main() {
   let ambientSoundTimer = 0; // seconds until next ambient fauna sound
   let growthSoundCooldown = 0; // ticks until next growth sound can play
   let prevPlantCount = 0; // for detecting growth bursts
+  let prevWaterCount = 0; // for detecting water expansion (channel filling)
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 

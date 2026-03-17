@@ -467,3 +467,52 @@ export function updateWaterRain(strength: number): void {
     waterMaterial.uniforms.uRainStrength.value = strength;
   }
 }
+
+/**
+ * Count water surface cells in the grid and return a few frontier positions.
+ * "Frontier" = water cells adjacent to non-water (the expanding edge).
+ * Returns { count, frontier: [x, y, z][] } for up to maxFrontier positions.
+ */
+export function scanWaterFrontier(grid: Uint8Array, maxFrontier = 8): { count: number; frontier: [number, number, number][] } {
+  let count = 0;
+  const frontier: [number, number, number][] = [];
+
+  for (let y = 0; y < GRID_Y; y++) {
+    for (let x = 0; x < GRID_X; x++) {
+      for (let z = GRID_Z - 1; z >= 0; z--) {
+        const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+        if (grid[idx] !== Material.Water) continue;
+
+        // Check if air above (surface cell)
+        const aboveZ = z + 1;
+        if (aboveZ < GRID_Z) {
+          const ai = (x + y * GRID_X + aboveZ * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[ai] !== Material.Air) continue;
+        }
+
+        count++;
+
+        // Frontier: has at least one non-water horizontal neighbor
+        if (frontier.length < maxFrontier) {
+          const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+          for (const [dx, dy] of dirs) {
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y) {
+              frontier.push([x, y, z]);
+              break;
+            }
+            const ni = (nx + ny * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+            if (grid[ni] !== Material.Water) {
+              frontier.push([x, y, z]);
+              break;
+            }
+          }
+        }
+
+        break; // only surface per column
+      }
+    }
+  }
+
+  return { count, frontier };
+}

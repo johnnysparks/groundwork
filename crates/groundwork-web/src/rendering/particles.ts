@@ -206,6 +206,38 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit blue sparkle particles at water flow frontier positions.
+   * Call when water surface area increases (channel filling).
+   */
+  emitWaterFlow(positions: [number, number, number][]): void {
+    for (const [x, y, z] of positions) {
+      const count = 3;
+      for (let i = 0; i < count; i++) {
+        const p = this.findDeadParticle();
+        if (!p) return;
+
+        p.alive = true;
+        p.life = 0.8 + Math.random() * 0.5;
+        p.maxLife = p.life;
+
+        // Sim coords → Three.js (x, z, y)
+        p.x = x + 0.5 + (Math.random() - 0.5) * 0.5;
+        p.y = z + 1.0 + Math.random() * 0.3;
+        p.z = y + 0.5 + (Math.random() - 0.5) * 0.5;
+
+        // Small upward splash
+        p.vx = (Math.random() - 0.5) * 0.3;
+        p.vy = 0.3 + Math.random() * 0.4;
+        p.vz = (Math.random() - 0.5) * 0.3;
+
+        // Blue-white water sparkle
+        const t = Math.random();
+        p.color.setRGB(0.4 + t * 0.4, 0.6 + t * 0.3, 0.8 + t * 0.2);
+      }
+    }
+  }
+
+  /**
    * Detect new Leaf voxels in the grid and emit growth bursts.
    * Call after each sim tick with the current grid.
    */
