@@ -202,6 +202,7 @@ const waterFragmentShader = /* glsl */ `
   uniform float uNightAmount;
   uniform float uCloudDensity;
   uniform vec2 uWindDir;
+  uniform float uFoliageDensity;
 
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -406,6 +407,16 @@ const waterFragmentShader = /* glsl */ `
       lit += vec3(0.7, 0.75, 0.85) * moonRef * uNightAmount * 0.3;
     }
 
+    // Foliage reflection: water near trees picks up subtle green tint
+    // Simulates canopy reflecting in the water surface — more with more trees
+    if (uFoliageDensity > 0.0 && uNightAmount < 0.8) {
+      vec3 canopyGreen = vec3(0.15, 0.28, 0.10);
+      // Ripple-distorted so it doesn't look like a flat color wash
+      float reflNoise = noise(vWorldPos.xy * 0.8 + vec2(uTime * 0.15, uTime * 0.1));
+      float reflAmount = uFoliageDensity * (0.4 + reflNoise * 0.6) * (1.0 - uNightAmount);
+      lit = mix(lit, lit + canopyGreen, reflAmount * 0.12);
+    }
+
     gl_FragColor = vec4(lit, alpha);
   }
 `;
@@ -494,6 +505,7 @@ export function buildWaterMesh(grid: Uint8Array): THREE.Mesh | null {
         uNightAmount: { value: 0 },
         uCloudDensity: { value: 0.35 },
         uWindDir: { value: new THREE.Vector2(1.0, 0.0) },
+        uFoliageDensity: { value: 0 },
       },
       transparent: true,
       depthWrite: false,   // transparent surfaces shouldn't write depth
@@ -574,6 +586,16 @@ export function updateWaterWindDir(windAngle: number): void {
     (waterMaterial.uniforms.uWindDir.value as THREE.Vector2).set(
       Math.cos(windAngle), Math.sin(windAngle),
     );
+  }
+}
+
+/**
+ * Set foliage density for canopy reflection tint on water surface.
+ * value 0-1: 0 = no trees, 1 = dense canopy
+ */
+export function updateWaterFoliage(density: number): void {
+  if (waterMaterial) {
+    waterMaterial.uniforms.uFoliageDensity.value = density;
   }
 }
 

@@ -12,7 +12,7 @@ import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
 import { buildChunkMesh, setXrayMode, adjustCutawayDepth, setTerrainDayTint, updateTerrainWind, updateRootPulse } from './rendering/terrain';
-import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, updateWaterWindDir, scanWaterFrontier, WaterBubbles } from './rendering/water';
+import { buildWaterMesh, updateWaterTime, updateWaterSun, updateWaterRain, updateWaterDayTint, updateWaterNight, updateWaterClouds, updateWaterWindDir, updateWaterFoliage, scanWaterFrontier, WaterBubbles } from './rendering/water';
 import { FoliageRenderer } from './rendering/foliage';
 import { SeedRenderer } from './rendering/seeds';
 import { GrowthParticles } from './rendering/particles';
@@ -1794,6 +1794,8 @@ async function main() {
       }
       setTerrainDayTint(r, g, b);
       updateWaterDayTint(r, g, b);
+      // Canopy reflection in water: more foliage = greener water tint
+      updateWaterFoliage(Math.min(1, foliage.count / 2000));
       // Star reflections on water: match sky night amount
       const nightAmount = t >= 0.8 ? (t - 0.8) / 0.15
         : t <= 0.15 ? 1.0
