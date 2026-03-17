@@ -178,6 +178,8 @@ export interface PostProcessing {
   composer: EffectComposer;
   /** Call on window resize */
   resize(width: number, height: number): void;
+  /** Set scene desaturation (0 = full color, 1 = greyscale). Used for x-ray mode. */
+  setDesaturation(amount: number): void;
 }
 
 /**
@@ -244,6 +246,8 @@ export function createPostProcessing(
   const outputPass = new OutputPass();
   composer.addPass(outputPass);
 
+  const baseSaturation = colorGradePass.uniforms.saturation.value;
+
   return {
     composer,
     resize(w: number, h: number) {
@@ -251,6 +255,10 @@ export function createPostProcessing(
       if (tiltShiftPass) {
         tiltShiftPass.uniforms.resolution.value.set(w, h);
       }
+    },
+    setDesaturation(amount: number) {
+      // amount: 0 = full color (normal), 1 = full greyscale (x-ray)
+      colorGradePass.uniforms.saturation.value = baseSaturation * (1 - amount * 0.85);
     },
   };
 }

@@ -1,16 +1,26 @@
 ---
 name: first-minute-design-direction
-description: User's vision for the first 10 seconds of gameplay — calm, simple, gnome-first
+description: Complete redesign of first 2 minutes — calm, discovery-paced, irrigation-focused
 type: feedback
 ---
 
-The first 10 seconds must be calm and simple, not intense with popups:
+The first 2 minutes are too intense and not fun enough. Complete redesign:
 
-- Start with **empty green space** (not brown dirt) + **small pond** (not a full water system)
-- Player is **greeted by the gnome** — he's the focal point, not quest panels
-- After pivoting around the gnome, the **only possible action is "sow small"**
-- Way too many popups and too much UI intensity right now
+**Flow:**
+1. Empty green space, small pond, greeted by gnome
+2. Tap gnome → camera follows. Existing camera quests unlock manual control.
+3. "Sow small" — sim-city style zoning. You don't know what will grow.
+4. "Inspect" — tap seeded cell to discover species + see moisture status ("medium/dry")
+5. "X-ray" mode — lens picker (default: roots). Transparent ground shows root growth.
+6. "Irrigation" lens — 3D moisture heatmap (blue=wet, red=dry, neutral=mid)
+7. "Irrigate" — dig channels (Timberborn-style) to control water flow
+8. "Bloom" — fast forward until first flower blooms, introducing first bee
 
-**Why:** First impression must make an impact and stick. The current experience overwhelms with quest panels, milestone toasts, tool palettes, and brown dirt. A new player should feel welcomed into a calm green space, meet a charming character, then do one simple thing.
+**Key principles:**
+- NO water placement tool. Irrigation = terrain shaping (dig channels from springs)
+- Each x-ray lens has its own color theme for clarity
+- Progression unlocks through doing, not score thresholds
+- User is "completely overwhelmed by activity, completely underwhelmed by fun"
+- Another session is actively implementing this redesign
 
-**How to apply:** Strip the first-time experience to the absolute minimum. Green ground, pond, gnome, one action. Everything else reveals progressively. Don't show tools, quests, scores, or milestones until the player has planted something and seen it grow.
+**How to apply:** Don't duplicate the gameplay-refinement session's work. Focus on visual/rendering support if asked. The water tool is gone — irrigation via shovel is the mechanic. The quest system is being completely reworked.

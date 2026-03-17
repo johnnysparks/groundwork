@@ -887,6 +887,7 @@ async function main() {
     setXrayMode: (active: boolean) => {
       xrayActive = active;
       setXrayMode(xrayActive);
+      postProcessing.setDesaturation(active ? 1.0 : 0.0);
     },
     setTickCount: (count: number) => hud.setTickCount(count),
     overlay: overlay,
@@ -1092,9 +1093,10 @@ async function main() {
         }
         break;
       case 'q':
-        // Toggle x-ray: make soil/stone transparent to see roots underground
+        // Toggle x-ray: greyscale scene + transparent soil to see roots
         xrayActive = !xrayActive;
         setXrayMode(xrayActive);
+        postProcessing.setDesaturation(xrayActive ? 1.0 : 0.0);
         questLog.recordDepthChange();
         if (xrayActive && !_xrayTipShown) {
           hud.addEvent('X-ray: each species has a unique root color — watch for root wars!');
