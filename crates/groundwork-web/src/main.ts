@@ -1644,8 +1644,14 @@ async function main() {
       if (fv) {
         for (let i = 0; i < fc; i++) {
           const f = readFauna(fv, i);
-          if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) pollinators++;
-          else if (f.type === FaunaType.Beetle) {
+          if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) {
+            pollinators++;
+            // Bee waggle dance: golden figure-8 particles when actively pollinating
+            if (f.type === FaunaType.Bee && f.state === FaunaState.Acting
+                && Math.random() < dt * 1.2) {
+              particles.emitBeeWaggle(f.x, f.y); // sim x,y → world x,z
+            }
+          } else if (f.type === FaunaType.Beetle) {
             beetles++;
             // Beetle trail shimmer: faint iridescent particles showing decomposition path
             if ((f.state === FaunaState.Seeking || f.state === FaunaState.Acting)

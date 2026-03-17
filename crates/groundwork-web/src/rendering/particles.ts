@@ -833,6 +833,35 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a golden figure-8 particle for bee waggle dance during pollination.
+   * Two particles trace opposing loops to suggest the iconic dance pattern.
+   */
+  emitBeeWaggle(worldX: number, worldZ: number): void {
+    for (let k = 0; k < 2; k++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.6 + Math.random() * 0.4;
+      p.maxLife = p.life;
+
+      // Near bee position at ground level, opposing figure-8 halves
+      const sign = k === 0 ? 1 : -1;
+      p.x = worldX + sign * 0.15;
+      p.y = GROUND_LEVEL + 1.5 + Math.random() * 0.3;
+      p.z = worldZ;
+
+      // Figure-8: horizontal loop + vertical bob
+      p.vx = sign * (0.4 + Math.random() * 0.2);
+      p.vy = 0.1 * (Math.random() - 0.5);
+      p.vz = (Math.random() - 0.5) * 0.3;
+
+      // Warm honey-gold
+      p.color.setRGB(1.0, 0.82 + Math.random() * 0.1, 0.3 + Math.random() * 0.15);
+    }
+  }
+
+  /**
    * Emit a pale moth particle that flutters near a light source.
    * Creates night-time insect activity around fireflies.
    */
