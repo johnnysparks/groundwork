@@ -600,7 +600,7 @@ const HUD_HTML = `
       <select id="scene-select" title="Choose a scene"></select>
     </div>
   </div>
-  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay</div>
+  <div id="hud-help">Drag: orbit | Scroll: zoom | 1-5: tools | Z/C: species | Q: x-ray | V: overlay | <a href="wiki/" id="wiki-link">Wiki</a></div>
   <button id="new-garden-btn" title="Start a fresh garden">New Garden</button>
 `;
 
@@ -780,10 +780,18 @@ const HUD_CSS = `
   right: 16px;
   font-size: 10px;
   color: rgba(200, 180, 140, 0.3);
-  pointer-events: none;
+  pointer-events: auto;
   text-align: right;
   max-width: 200px;
   line-height: 1.5;
+}
+#wiki-link {
+  color: rgba(140, 196, 255, 0.5);
+  text-decoration: none;
+}
+#wiki-link:hover {
+  color: rgba(140, 196, 255, 0.8);
+  text-decoration: underline;
 }
 
 /* --- Shared button style for top controls --- */

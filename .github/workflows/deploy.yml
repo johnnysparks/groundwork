@@ -53,6 +53,12 @@ jobs:
         working-directory: crates/groundwork-web
         run: npm run build
 
+      - name: Copy wiki to dist
+        run: |
+          mkdir -p crates/groundwork-web/dist/wiki
+          cp wiki/*.md crates/groundwork-web/dist/wiki/
+          cp -r wiki/images crates/groundwork-web/dist/wiki/images
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

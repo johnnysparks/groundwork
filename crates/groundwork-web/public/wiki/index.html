@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Groundwork Wiki</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --text: #e0e0e0;
+    --text-muted: #a0a0b0;
+    --accent: #7ec878;
+    --accent-dim: #4a8a44;
+    --link: #8bc4ff;
+    --border: #2a2a4a;
+    --code-bg: #0f1525;
+    --table-stripe: #1c2540;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+  nav {
+    width: 260px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  nav h2 {
+    font-size: 1rem;
+    color: var(--accent);
+    margin: 1.2rem 0 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  nav h2:first-child { margin-top: 0; }
+  nav a {
+    display: block;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+  nav a:hover, nav a.active {
+    color: var(--text);
+    background: var(--border);
+  }
+  nav .back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--link);
+    font-size: 0.85rem;
+  }
+  main {
+    flex: 1;
+    max-width: 800px;
+    padding: 2rem 3rem;
+    min-width: 0;
+  }
+  #content h1 { font-size: 1.8rem; color: var(--accent); margin: 0 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; }
+  #content h2 { font-size: 1.35rem; color: var(--accent); margin: 2rem 0 0.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+  #content h3 { font-size: 1.1rem; color: var(--text); margin: 1.5rem 0 0.4rem; }
+  #content h4 { font-size: 1rem; color: var(--text-muted); margin: 1.2rem 0 0.3rem; }
+  #content p { margin: 0.6rem 0; }
+  #content a { color: var(--link); text-decoration: none; }
+  #content a:hover { text-decoration: underline; }
+  #content ul, #content ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+  #content li { margin: 0.2rem 0; }
+  #content code {
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  #content pre {
+    background: var(--code-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.8rem 0;
+    border: 1px solid var(--border);
+  }
+  #content pre code { background: none; padding: 0; }
+  #content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8rem 0;
+    font-size: 0.9rem;
+  }
+  #content th, #content td {
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.7rem;
+    text-align: left;
+  }
+  #content th { background: var(--surface); color: var(--accent); font-weight: 600; }
+  #content tr:nth-child(even) { background: var(--table-stripe); }
+  #content hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+  #content blockquote {
+    border-left: 3px solid var(--accent-dim);
+    padding-left: 1rem;
+    color: var(--text-muted);
+    margin: 0.8rem 0;
+  }
+  #content strong { color: #fff; }
+  #content img {
+    max-width: 120px;
+    height: auto;
+    border-radius: 4px;
+    margin: 0.2rem 0.3rem;
+    vertical-align: middle;
+    background: var(--surface);
+  }
+  #loading { color: var(--text-muted); font-style: italic; }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    nav { width: 100%; min-width: 0; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="back-link" href="../">&larr; Back to Game</a>
+  <h2>Core Systems</h2>
+  <a href="#world">World &amp; Scale</a>
+  <a href="#water">Water</a>
+  <a href="#light">Light</a>
+  <a href="#soil">Soil</a>
+  <a href="#gnome">Garden Gnome</a>
+  <h2>Growth</h2>
+  <a href="#seeds">Seeds &amp; Germination</a>
+  <a href="#tree-growth">Tree Growth</a>
+  <a href="#branching">Branching</a>
+  <a href="#competition">Competition</a>
+  <h2>Ecology</h2>
+  <a href="#species">Species Catalog</a>
+  <a href="#fauna">Fauna</a>
+  <a href="#interactions">Interaction Chains</a>
+  <a href="#succession">Succession &amp; Recovery</a>
+  <h2>Progression</h2>
+  <a href="#discovery">Discovery &amp; Milestones</a>
+  <a href="#weather">Weather</a>
+  <h2>Design</h2>
+  <a href="#learning-arc">Player Learning Arc</a>
+  <a href="#balance">Balance Philosophy</a>
+  <a href="#strategy-guide">Strategy Guide</a>
+</nav>
+
+<main>
+  <div id="content"><p id="loading">Loading wiki...</p></div>
+</main>
+
+<script>
+// Minimal markdown to HTML — handles the subset used in the wiki
+function md(src) {
+  let html = src;
+  // Fenced code blocks
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) =>
+    `<pre><code>${esc(code.trimEnd())}</code></pre>`);
+  // Tables
+  html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)*)/gm, (_, hdr, sep, body) => {
+    const cols = hdr.split('|').slice(1, -1).map(c => `<th>${inline(c.trim())}</th>`).join('');
+    const rows = body.trim().split('\n').map(r => {
+      const cells = r.split('|').slice(1, -1).map(c => `<td>${inline(c.trim())}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table>`;
+  });
+  // Block-level processing
+  const lines = html.split('\n');
+  let out = '', inList = false, listType = '';
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    // Already processed (table/pre tags)
+    if (l.startsWith('<table') || l.startsWith('<pre')) {
+      if (inList) { out += `</${listType}>`; inList = false; }
+      // Gather until closing tag
+      let block = l;
+      const close = l.startsWith('<table') ? '</table>' : '</pre>';
+      while (i < lines.length - 1 && !block.includes(close)) { i++; block += '\n' + lines[i]; }
+      out += block + '\n';
+      continue;
+    }
+    // Headings
+    const hm = l.match(/^(#{1,4})\s+(.+)/);
+    if (hm) {
+      if (inList) { out += `</${listType}>`; inList = false; }
+      const lvl = hm[1].length;
+      const text = inline(hm[2]);
+      const id = hm[2].toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+      out += `<h${lvl} id="${id}">${text}</h${lvl}>\n`;
+      continue;
+    }
+    // HR
+    if (/^---+$/.test(l.trim())) {
+      if (inList) { out += `</${listType}>`; inList = false; }
+      out += '<hr>\n';
+      continue;
+    }
+    // List items
+    const ulm = l.match(/^(\s*)[-*]\s+(.*)/);
+    const olm = l.match(/^(\s*)\d+\.\s+(.*)/);
+    if (ulm || olm) {
+      const tag = ulm ? 'ul' : 'ol';
+      const text = inline((ulm || olm)[2]);
+      if (!inList || listType !== tag) {
+        if (inList) out += `</${listType}>`;
+        out += `<${tag}>`;
+        inList = true; listType = tag;
+      }
+      out += `<li>${text}</li>\n`;
+      continue;
+    }
+    if (inList && l.trim() === '') { out += `</${listType}>`; inList = false; }
+    // Blockquote
+    if (l.startsWith('>')) {
+      if (inList) { out += `</${listType}>`; inList = false; }
+      out += `<blockquote>${inline(l.slice(1).trim())}</blockquote>\n`;
+      continue;
+    }
+    // Paragraph
+    if (l.trim()) {
+      if (inList) { out += `</${listType}>`; inList = false; }
+      out += `<p>${inline(l)}</p>\n`;
+    }
+  }
+  if (inList) out += `</${listType}>`;
+  return out;
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function inline(s) {
+  return s
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, src) => {
+      // Image paths are relative to wiki dir (images/species/... etc.)
+      const fixedSrc = src;
+      return `<img src="${fixedSrc}" alt="${esc(alt)}" loading="lazy">`;
+    })
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, href) => {
+      // Convert .md links to hash links
+      if (href.endsWith('.md')) {
+        const page = href.replace(/\.md$/, '');
+        return `<a href="#${page}">${text}</a>`;
+      }
+      return `<a href="${href}">${text}</a>`;
+    })
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+// Pages (order matches nav)
+const pages = [
+  'world','water','light','soil','gnome',
+  'seeds','tree-growth','branching','competition',
+  'species','fauna','interactions','succession',
+  'discovery','weather',
+  'learning-arc','balance','strategy-guide'
+];
+
+const basePath = './';
+const content = document.getElementById('content');
+
+async function loadPage(name) {
+  content.innerHTML = '<p id="loading">Loading...</p>';
+  try {
+    const resp = await fetch(`${basePath}${name}.md`);
+    if (!resp.ok) throw new Error(`${resp.status}`);
+    const text = await resp.text();
+    content.innerHTML = md(text);
+  } catch (e) {
+    content.innerHTML = `<h1>Error</h1><p>Could not load ${name}.md: ${e.message}</p>`;
+  }
+  // Highlight active nav link
+  document.querySelectorAll('nav a').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + name);
+  });
+  window.scrollTo(0, 0);
+}
+
+// Route based on hash
+function route() {
+  const hash = location.hash.slice(1) || 'world';
+  const page = pages.includes(hash) ? hash : 'world';
+  loadPage(page);
+}
+
+// Intercept nav clicks for wiki-internal .md links
+content.addEventListener('click', (e) => {
+  const a = e.target.closest('a');
+  if (a && a.getAttribute('href')?.startsWith('#')) {
+    e.preventDefault();
+    location.hash = a.getAttribute('href');
+  }
+});
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
