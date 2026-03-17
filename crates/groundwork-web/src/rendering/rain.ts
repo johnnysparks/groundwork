@@ -72,6 +72,7 @@ export class RainRenderer {
   private geometry: THREE.BufferGeometry;
   private material: THREE.ShaderMaterial;
   private active = false;
+  private intensity = 0;  // 0-1 smooth ramp
 
   constructor() {
     this.drops = new Array(MAX_DROPS);
@@ -104,42 +105,59 @@ export class RainRenderer {
 
   /** Set whether rain is active (call when weather state changes) */
   setActive(raining: boolean): void {
-    if (raining === this.active) return;
-    this.active = raining;
-    this.points.visible = raining;
-
-    if (raining) {
-      // Initialize all drops at random positions in the rain volume
+    if (raining && !this.active) {
+      // Starting rain: initialize drops
       for (let i = 0; i < MAX_DROPS; i++) {
         this.respawn(this.drops[i]);
-        // Stagger vertically so they don't all start at the top
         this.drops[i].y = RAIN_MIN_Y + Math.random() * (RAIN_MAX_Y - RAIN_MIN_Y);
       }
     }
+    this.active = raining;
+  }
+
+  /** Current rain intensity (0-1), smooth-ramped */
+  getIntensity(): number {
+    return this.intensity;
   }
 
   /** Update rain simulation. Call each frame with delta time. */
   update(dt: number): void {
-    if (!this.active) return;
+    // Smooth intensity ramp: 3s ramp-up, 2s fade-down
+    const target = this.active ? 1 : 0;
+    const rampSpeed = this.active ? dt / 3.0 : dt / 2.0;
+    this.intensity += (target - this.intensity) * Math.min(rampSpeed * 3, 1);
+    this.intensity = Math.max(0, Math.min(1, this.intensity));
+
+    // Show mesh if any intensity
+    this.points.visible = this.intensity > 0.01;
+    if (!this.points.visible) return;
+
+    // Number of active drops scales with intensity
+    const activeCount = Math.floor(MAX_DROPS * this.intensity);
 
     for (let i = 0; i < MAX_DROPS; i++) {
       const drop = this.drops[i];
 
-      // Fall
-      drop.y -= drop.speed * dt;
+      if (i < activeCount) {
+        // Fall
+        drop.y -= drop.speed * dt;
 
-      // Hit the ground? Respawn at top
-      if (drop.y < RAIN_MIN_Y) {
-        this.respawn(drop);
+        // Hit the ground? Respawn at top
+        if (drop.y < RAIN_MIN_Y) {
+          this.respawn(drop);
+        }
+
+        // Life = how far from ground, scaled by intensity for opacity fade
+        const life = (drop.y - RAIN_MIN_Y) / (RAIN_MAX_Y - RAIN_MIN_Y);
+        this.positions[i * 3] = drop.x;
+        this.positions[i * 3 + 1] = drop.y;
+        this.positions[i * 3 + 2] = drop.z;
+        this.lifes[i] = Math.max(0, life) * this.intensity;
+      } else {
+        // Inactive drops: park offscreen
+        this.positions[i * 3 + 1] = -1000;
+        this.lifes[i] = 0;
       }
-
-      // Life = how far from ground (1.0 = top, 0.0 = ground)
-      const life = (drop.y - RAIN_MIN_Y) / (RAIN_MAX_Y - RAIN_MIN_Y);
-
-      this.positions[i * 3] = drop.x;
-      this.positions[i * 3 + 1] = drop.y;
-      this.positions[i * 3 + 2] = drop.z;
-      this.lifes[i] = Math.max(0, life);
     }
 
     const posAttr = this.geometry.getAttribute('position') as THREE.BufferAttribute;

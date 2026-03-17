@@ -1333,7 +1333,7 @@ async function main() {
       const weatherState = getWeatherState();
       rain.setActive(weatherState === 1); // 1 = Rain
       setRaining(weatherState === 1);    // rain audio
-      updateWaterRain(weatherState === 1 ? 1.0 : 0.0);
+      updateWaterRain(rain.getIntensity());
       // Wind strength varies with weather: gusty in rain, still in drought
       const targetWind = weatherState === 1 ? 0.7 : weatherState === 2 ? 0.12 : 0.35;
       const currentWind = foliage.getWindStrength();
