@@ -1167,8 +1167,6 @@ const HUD_CSS = `
 #hud[data-phase="0"] #garden-score,
 #hud[data-phase="0"] #event-feed,
 #hud[data-phase="0"] #hud-top-bar,
-#hud[data-phase="0"] #hud-help,
-#hud[data-phase="0"] #new-garden-btn,
 #hud[data-phase="0"] #quest-panel {
   opacity: 0 !important;
   visibility: hidden !important;
@@ -1179,8 +1177,6 @@ const HUD_CSS = `
 /* Phase 1 (Sow): only seed tool visible. Player discovers "sow small."
    Quest panel, score, help, non-seed tools all hidden. */
 #hud[data-phase="1"] #garden-score,
-#hud[data-phase="1"] #hud-help,
-#hud[data-phase="1"] #new-garden-btn,
 #hud[data-phase="1"] #quest-panel,
 #hud[data-phase="1"] #hud-top-bar,
 #hud[data-phase="1"] #event-feed {
@@ -1195,9 +1191,7 @@ const HUD_CSS = `
 }
 
 /* Phase 2 (Irrigate): seed + shovel visible. Player learns to dig channels. */
-#hud[data-phase="2"] #garden-score,
-#hud[data-phase="2"] #hud-help,
-#hud[data-phase="2"] #new-garden-btn {
+#hud[data-phase="2"] #garden-score {
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
