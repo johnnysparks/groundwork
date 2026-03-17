@@ -41,7 +41,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound, playOwlHoot } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -943,6 +943,7 @@ async function main() {
   let dustPuffTimer = 0; // seconds until next gnome footstep dust puff
   let prevGnomeState = -1; // for detecting gnome state transitions
   let owlHootTimer = 30 + Math.random() * 30; // seconds until next owl hoot
+  let prevShootingStarSlot = -1; // for detecting shooting star events (shader fires every ~45s)
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -1403,6 +1404,13 @@ async function main() {
         playOwlHoot();
         owlHootTimer = 30 + Math.random() * 40;
       }
+    }
+
+    // Shooting star sound: matches shader event timing (every ~45s, night only)
+    const starSlot = Math.floor(elapsed / 45);
+    if (starSlot !== prevShootingStarSlot) {
+      prevShootingStarSlot = starSlot;
+      if (isDeepNight) playShootingStar();
     }
 
     // Falling leaves: ambient canopy motion

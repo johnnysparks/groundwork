@@ -160,6 +160,27 @@ export function playBirdCall(): void {
   osc2.stop(t + 0.22);
 }
 
+/** Play a brief sparkle for a shooting star — descending high-freq shimmer */
+export function playShootingStar(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Quick descending shimmer: high sine sweep down
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(4000, t);
+  osc.frequency.exponentialRampToValueAtTime(1500, t + 0.4);
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.03, t + 0.05);
+  gain.gain.setValueAtTime(0.03, t + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  osc.connect(gain).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.5);
+}
+
 /** Play a soft owl hoot — two low descending tones, classic "hoo-hoo" */
 export function playOwlHoot(): void {
   const c = getContext();
