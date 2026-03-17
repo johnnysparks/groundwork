@@ -230,6 +230,13 @@ export class FaunaRenderer {
           slot.model.position.y -= 0.4; // dip toward flower
           slot.model.position.y += Math.sin(elapsedTime * 1.2 + i * 2.1) * 0.03; // tiny breath
           slot.model.rotation.z = 0; // wings level while landed
+        } else if (f.type === FaunaType.Bird && f.state === FaunaState.Idle) {
+          // Bird perching: sits still with tiny head-bob
+          slot.model.position.y -= 0.3; // lower into canopy
+          slot.model.position.y += Math.sin(elapsedTime * 1.5 + i * 3.0) * 0.02;
+          slot.model.rotation.z = 0;
+          // Slight head tilt side to side
+          slot.model.rotation.x = Math.sin(elapsedTime * 0.8 + i * 1.7) * 0.06;
         } else {
           const bobSpeed = f.type === FaunaType.Butterfly ? 3 : f.type === FaunaType.Bird ? 2 : 5;
           const bobAmp = f.type === FaunaType.Bird ? 0.25 : 0.15;
@@ -330,14 +337,21 @@ export class FaunaRenderer {
       model.position.y += Math.sin((time + offset) * 2) * floatAmp;
 
     } else if (type === FaunaType.Bird) {
-      // Slow wing soar
-      const soar = Math.sin((time + offset) * 2) * 0.4;
       const wingL = model.getObjectByName('wing_l');
       const wingR = model.getObjectByName('wing_r');
-      if (wingL) wingL.rotation.z = 0.3 + soar;
-      if (wingR) wingR.rotation.z = -0.3 - soar;
-      // Gentle float
-      model.position.y += Math.sin((time + offset) * 1.5) * 0.15;
+      if (state === FaunaState.Idle) {
+        // Perching: wings tucked close to body, minimal movement
+        if (wingL) wingL.rotation.z = 0.15;
+        if (wingR) wingR.rotation.z = -0.15;
+        model.position.y += Math.sin((time + offset) * 1.0) * 0.02;
+      } else {
+        // Flying: slow wing soar
+        const soar = Math.sin((time + offset) * 2) * 0.4;
+        if (wingL) wingL.rotation.z = 0.3 + soar;
+        if (wingR) wingR.rotation.z = -0.3 - soar;
+        // Gentle float
+        model.position.y += Math.sin((time + offset) * 1.5) * 0.15;
+      }
     }
     // Squirrel: quick scurrying bob when seeking, dig animation when acting
     if (type === FaunaType.Squirrel) {
