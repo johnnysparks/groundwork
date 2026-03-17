@@ -111,6 +111,8 @@ let _dieOffPlantCount = 0;
 let _mycorrhizalNotified = false;
 let _lightCompetitionNotified = false;
 let _pineAllelopathyNotified = false;
+let _waterCompetitionNotified = false;
+let _nitrogenHandshakeNotified = false;
 const _habitatNotified = new Set<string>();
 let _firstSunsetNotified = false;
 let _firstNightNotified = false;
@@ -992,6 +994,53 @@ async function main() {
               const name = SPECIES[t.speciesId]?.name ?? 'A plant';
               hud.addEvent(`${name} is struggling near the pine — acidic soil from pine needles!`);
               _pineAllelopathyNotified = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Water competition: a tree is stressed, not shaded, but near another tree
+      // → its roots are losing the water race underground
+      if (!_waterCompetitionNotified && treeCount >= 2) {
+        for (let i = 0; i < treeCount; i++) {
+          const t = readTreeStat(treeView, i);
+          if (t.health > 0.5 || t.stage <= GrowthStage.Sapling) continue;
+          // Check this tree isn't shaded (has a larger neighbor) — that's light competition
+          let isShaded = false;
+          let hasNearbyRival = false;
+          for (let j = 0; j < treeCount; j++) {
+            if (j === i) continue;
+            const other = readTreeStat(treeView, j);
+            const dx = Math.abs(t.rootX - other.rootX);
+            const dy = Math.abs(t.rootY - other.rootY);
+            if (dx <= 12 && dy <= 12) {
+              if (other.stage > t.stage) isShaded = true;
+              if (other.health > t.health + 0.2) hasNearbyRival = true;
+            }
+          }
+          if (!isShaded && hasNearbyRival) {
+            const name = SPECIES[t.speciesId]?.name ?? 'A tree';
+            hud.addEvent(`${name}'s roots are competing for water — the stronger tree drinks first`);
+            _waterCompetitionNotified = true;
+            break;
+          }
+        }
+      }
+
+      // Nitrogen handshake: a tree thriving with groundcover nearby
+      if (!_nitrogenHandshakeNotified && treeCount >= 1) {
+        // Use global _prevSpeciesIds for species presence (updated each tick)
+        const hasGroundcover = _prevSpeciesIds.has(10) || _prevSpeciesIds.has(11) || _prevSpeciesIds.has(9);
+        if (hasGroundcover) {
+          for (let i = 0; i < treeCount; i++) {
+            const t = readTreeStat(treeView, i);
+            if (t.speciesId > 3 || t.stage < GrowthStage.YoungTree) continue;
+            if (t.health > 0.85) {
+              const name = SPECIES[t.speciesId]?.name ?? 'Your tree';
+              hud.addEvent(`${name} is thriving — groundcover enriches the soil near its roots`);
+              playDiscovery();
+              _nitrogenHandshakeNotified = true;
               break;
             }
           }
