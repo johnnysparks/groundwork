@@ -530,6 +530,7 @@ async function main() {
   // --- Rain particles ---
 
   const rain = new RainRenderer();
+  rain.onSplash((x, y, z) => particles.emitRainSplash(x, y, z));
   scene.add(rain.points);
 
   // --- Ecology interaction particles ---

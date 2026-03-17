@@ -297,6 +297,32 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a tiny rain splash at ground impact point.
+   */
+  emitRainSplash(worldX: number, worldY: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.3 + Math.random() * 0.2;
+    p.maxLife = p.life;
+
+    p.x = worldX;
+    p.y = worldY + 0.1;
+    p.z = worldZ;
+
+    // Tiny outward splash
+    const angle = Math.random() * Math.PI * 2;
+    p.vx = Math.cos(angle) * 0.2;
+    p.vy = 0.2 + Math.random() * 0.15;
+    p.vz = Math.sin(angle) * 0.2;
+
+    // Light blue-white
+    const t = Math.random();
+    p.color.setRGB(0.6 + t * 0.3, 0.7 + t * 0.2, 0.85 + t * 0.15);
+  }
+
+  /**
    * Emit blue sparkle particles at water flow frontier positions.
    * Call when water surface area increases (channel filling).
    */

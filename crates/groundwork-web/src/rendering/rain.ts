@@ -73,6 +73,7 @@ export class RainRenderer {
   private material: THREE.ShaderMaterial;
   private active = false;
   private intensity = 0;  // 0-1 smooth ramp
+  private splashCallback: ((x: number, y: number, z: number) => void) | null = null;
 
   constructor() {
     this.drops = new Array(MAX_DROPS);
@@ -101,6 +102,11 @@ export class RainRenderer {
     this.points.name = 'rain';
     this.points.frustumCulled = false;
     this.points.visible = false;
+  }
+
+  /** Register a callback for splash particles at raindrop impact points. */
+  onSplash(cb: (x: number, y: number, z: number) => void): void {
+    this.splashCallback = cb;
   }
 
   /** Set whether rain is active (call when weather state changes) */
@@ -142,8 +148,11 @@ export class RainRenderer {
         // Fall
         drop.y -= drop.speed * dt;
 
-        // Hit the ground? Respawn at top
+        // Hit the ground? Emit splash and respawn
         if (drop.y < RAIN_MIN_Y) {
+          if (this.splashCallback && Math.random() < 0.08) {
+            this.splashCallback(drop.x, RAIN_MIN_Y, drop.z);
+          }
           this.respawn(drop);
         }
 
