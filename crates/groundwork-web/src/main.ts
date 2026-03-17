@@ -1717,6 +1717,13 @@ async function main() {
       }
     }
 
+    // Moonbeam shafts: cool blue particles stream through canopy at night
+    if ((dayTime >= 0.85 || dayTime <= 0.15) && foliage.count > 500 && Math.random() < dt * 0.8) {
+      const mx = 15 + Math.random() * (GRID_X - 30);
+      const mz = 15 + Math.random() * (GRID_Y - 30);
+      particles.emitMoonbeam(mx, mz);
+    }
+
     // Camera rustle: fast panning scatters leaf fragments from nearby canopy
     const panSpeed = orbit.getPanSpeed();
     if (panSpeed > 5 && foliage.count > 50 && Math.random() < dt * panSpeed * 0.1) {

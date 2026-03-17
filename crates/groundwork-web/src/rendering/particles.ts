@@ -833,6 +833,32 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a cool blue-white moonbeam particle streaming through canopy at night.
+   * Slower and dimmer than sunbeams, with a slight ethereal drift.
+   */
+  emitMoonbeam(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 2.0 + Math.random() * 1.5;
+    p.maxLife = p.life;
+
+    p.x = worldX + (Math.random() - 0.5) * 2.0;
+    p.y = GROUND_LEVEL + 8 + Math.random() * 12;
+    p.z = worldZ + (Math.random() - 0.5) * 2.0;
+
+    // Slower drift than sunbeams — moonlight is gentler
+    p.vx = (Math.random() - 0.5) * 0.04;
+    p.vy = -0.15 - Math.random() * 0.1;
+    p.vz = (Math.random() - 0.5) * 0.04;
+
+    // Cool blue-white
+    const t = Math.random();
+    p.color.setRGB(0.7 + t * 0.15, 0.75 + t * 0.15, 0.9 + t * 0.1);
+  }
+
+  /**
    * Emit a golden figure-8 particle for bee waggle dance during pollination.
    * Two particles trace opposing loops to suggest the iconic dance pattern.
    */
