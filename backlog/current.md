@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-18T03:00:00
-**Status:** Alpha complete. 233 sprints. **Condition-based species emergence + neighbor influence** (P0 gap closed, P2 neighbor influence done). Density zones produce diverse species based on water/light/nutrients/neighbors. Clover boosts nearby trees (nitrogen handshake). Tree canopy favors shade-tolerant species. Quest Chapter 4: "The Garden Grows" (idle watch + wild species discovery). Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-18T04:00:00
+**Status:** Alpha complete. 234 sprints. **Condition-based species emergence complete** with neighbor influence + condition-attribution discovery messages. 6 quest chapters (30 quests → 12 quests across 6 chapters). Species discovery explains WHY each species emerged ("A willow grew near water — it loves the moisture"). Quest Chapter 5: "Conditions Matter" (sow near water vs dry ground). Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
