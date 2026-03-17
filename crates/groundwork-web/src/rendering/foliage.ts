@@ -36,6 +36,8 @@ const FOLIAGE_VERT = /* glsl */ `
   varying vec3 vColor;
   varying vec2 vUv;
   varying float vSpecies;
+  varying float vHeight;
+  varying vec3 vWorldPos;
 
   void main() {
     vColor = instanceColor * uDayTint;
@@ -114,6 +116,8 @@ const FOLIAGE_VERT = /* glsl */ `
       + cameraUp * position.y * scale * bloomScale * breatheScale
       + vec3(swayX, swayY, swayZ);
 
+    vHeight = worldPos.y;
+    vWorldPos = worldPos.xyz;
     gl_Position = projectionMatrix * viewMatrix * vec4(vertexWorld, 1.0);
   }
 `;
@@ -129,9 +133,14 @@ const FOLIAGE_VERT = /* glsl */ `
  *  - Groundcover: flat organic disc with textured edge
  */
 const FOLIAGE_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uDayAmount;
+
   varying vec3 vColor;
   varying vec2 vUv;
   varying float vSpecies;
+  varying float vHeight;
+  varying vec3 vWorldPos;
 
   // Hash for procedural noise
   float hash21(vec2 p) {
@@ -264,7 +273,16 @@ const FOLIAGE_FRAG = /* glsl */ `
     // Slight edge darkening on top of species shading
     shade *= (1.0 - dist * 0.08);
 
-    gl_FragColor = vec4(vColor * shade, alpha * 0.92);
+    // Canopy shimmer: upper-canopy leaves catch sunlight as camera orbits
+    // Hash per-instance creates unique phase so each leaf sparkles independently
+    float shimmerPhase = hash21(vWorldPos.xz * 7.3) * 6.28;
+    float shimmer = sin(uTime * 0.8 + shimmerPhase + vWorldPos.x * 1.3 + vWorldPos.z * 0.9);
+    shimmer = max(0.0, shimmer); // only brightening, never darkening
+    // Stronger in upper canopy, during daytime
+    float canopyHeight = max(0.0, (vHeight - ${GROUND_LEVEL.toFixed(1)}) * 0.06);
+    float shimmerStrength = shimmer * canopyHeight * uDayAmount * 0.15;
+
+    gl_FragColor = vec4(vColor * (shade + shimmerStrength), alpha * 0.92);
   }
 `;
 
