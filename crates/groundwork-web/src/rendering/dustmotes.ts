@@ -111,9 +111,10 @@ export class DustMoteRenderer {
     this.group.add(this.mesh);
   }
 
-  /** Set whether dust motes should be active (based on time of day). */
+  /** Set whether dust motes should be active (based on time of day).
+   *  Active during bright daylight (0.3–0.65) AND golden hour (0.65–0.80). */
   setActive(dayTime: number): void {
-    this.active = dayTime >= 0.3 && dayTime <= 0.65;
+    this.active = dayTime >= 0.3 && dayTime <= 0.80;
   }
 
   /** Update mote positions. Call each frame. */
