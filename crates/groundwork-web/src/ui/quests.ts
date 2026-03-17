@@ -33,7 +33,9 @@ export type QuestId =
   | 'openXray'
   | 'irrigationLens'
   | 'digChannel'
-  | 'firstBloom';
+  | 'firstBloom'
+  | 'idleWatch'
+  | 'wildSpecies';
 
 interface QuestDef {
   id: QuestId;
@@ -95,6 +97,19 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 3,
     detail: 'Let time pass. When your first flower blooms, something special arrives...',
   },
+  // Chapter 4: Discovery — the garden grows on its own
+  {
+    id: 'idleWatch',
+    name: 'Watch it grow',
+    chapter: 4,
+    detail: 'Stop planting and watch. Your garden is growing without you.',
+  },
+  {
+    id: 'wildSpecies',
+    name: 'An uninvited guest',
+    chapter: 4,
+    detail: 'A new species appeared somewhere you didn\'t plant. How did it get there?',
+  },
 ];
 
 const CHAPTER_NAMES = [
@@ -102,6 +117,7 @@ const CHAPTER_NAMES = [
   'Start Your Garden',
   'See Below the Surface',
   'Shape the Water',
+  'The Garden Grows',
 ];
 
 // ---------------------------------------------------------------------------
@@ -124,6 +140,12 @@ interface ActionTracker {
   placedWater: boolean;
   toggledAutoTick: boolean;
   steppedManually: boolean;
+  /** Ticks since the player last used a tool */
+  idleTicks: number;
+  /** Species count when the player last planted */
+  speciesAtLastPlant: number;
+  /** True when a species appeared that the player didn't sow */
+  wildSpeciesAppeared: boolean;
 }
 
 function createActionTracker(): ActionTracker {
@@ -142,6 +164,9 @@ function createActionTracker(): ActionTracker {
     placedWater: false,
     toggledAutoTick: false,
     steppedManually: false,
+    idleTicks: 0,
+    speciesAtLastPlant: 0,
+    wildSpeciesAppeared: false,
   };
 }
 
@@ -260,6 +285,14 @@ export class QuestLog {
   recordPlantSeed(speciesIndex: number): void {
     this.actions.plantedSeed = true;
     this.actions.speciesPlanted.add(speciesIndex);
+    this.actions.idleTicks = 0;
+  }
+
+  /** Update the species count from the garden (call when species count changes) */
+  recordSpeciesCount(count: number): void {
+    if (this.actions.speciesAtLastPlant === 0) {
+      this.actions.speciesAtLastPlant = count;
+    }
   }
 
   recordToggleAutoTick(): void {
@@ -283,6 +316,7 @@ export class QuestLog {
   }
 
   recordToolUse(tool: ToolCodeType, speciesIndex: number): void {
+    this.actions.idleTicks = 0; // any tool use resets idle counter
     switch (tool) {
       case ToolCode.Shovel:
         this.recordUseShovel();
@@ -306,9 +340,13 @@ export class QuestLog {
   /**
    * Check quest completion against current grid state and recorded actions.
    * Call after each tick and after each tool placement.
+   * @param speciesCount - number of unique species currently in the garden
    */
-  check(grid: Uint8Array): void {
+  check(grid: Uint8Array, speciesCount = 0): void {
     if (this.allComplete) return;
+
+    // Increment idle ticks each check (called once per sim tick)
+    this.actions.idleTicks++;
 
     // Check for bloom (any Leaf material = flower bloomed or tree leafed)
     const needsBloom = this.questActive('firstBloom');
@@ -323,6 +361,11 @@ export class QuestLog {
     let hasFauna = false;
     if (needsBloom) {
       try { hasFauna = getFaunaCount() > 0; } catch {}
+    }
+
+    // Wild species detection: species count grew while player was idle
+    if (speciesCount > this.actions.speciesAtLastPlant && this.actions.idleTicks > 30) {
+      this.actions.wildSpeciesAppeared = true;
     }
 
     const newlyCompleted: { index: number; name: string }[] = [];
@@ -357,6 +400,14 @@ export class QuestLog {
         case 'firstBloom':
           // Complete when a flower blooms AND fauna arrives (the magical moment)
           complete = hasBloom && hasFauna;
+          break;
+        case 'idleWatch':
+          // 100 idle ticks without planting (~8 seconds) — the player observes
+          complete = this.actions.idleTicks >= 100;
+          break;
+        case 'wildSpecies':
+          // A new species appeared while the player wasn't planting
+          complete = this.actions.wildSpeciesAppeared;
           break;
       }
 

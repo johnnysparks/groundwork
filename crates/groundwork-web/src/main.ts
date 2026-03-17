@@ -1327,13 +1327,14 @@ async function main() {
         // Gnome processes tasks — walks to each one and executes
         // (gnome update happens in the frame loop below)
         const freshGrid = getGridView();
-        questLog.check(freshGrid);
         if (overlay.mode !== OverlayMode.Off) overlay.rebuild(freshGrid);
         // Replenish water budget from spring (2 per tick)
         hud.replenishWater(2);
         // Update garden stats for HUD + detect ecological events
         const stats = computeGardenStats(freshGrid);
         hud.setGardenStats(stats);
+        questLog.recordSpeciesCount(stats.species);
+        questLog.check(freshGrid, stats.species);
         detectEvents(stats, hud);
         fallingLeaves.setTreeSpecies(Array.from(stats.speciesIds));
         // Weather transition events
