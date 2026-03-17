@@ -1082,6 +1082,17 @@ pub fn init_skeleton(
 mod tests {
     use super::*;
 
+    /// Sync guard: if GrowthStage enum changes, update bridge.ts GrowthStage object.
+    #[test]
+    fn wasm_bridge_sync_guard() {
+        assert_eq!(GrowthStage::Seedling as u8, 0);
+        assert_eq!(GrowthStage::Sapling as u8, 1);
+        assert_eq!(GrowthStage::YoungTree as u8, 2);
+        assert_eq!(GrowthStage::Mature as u8, 3);
+        assert_eq!(GrowthStage::OldGrowth as u8, 4);
+        assert_eq!(GrowthStage::Dead as u8, 5);
+    }
+
     #[test]
     fn seedling_template_has_trunk_and_root() {
         let species = &SpeciesTable::default().species[0]; // Oak

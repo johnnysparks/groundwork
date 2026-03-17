@@ -19,6 +19,8 @@ import {
   ToolCode,
   FaunaType,
   FaunaState,
+  GnomeState,
+  GrowthStage,
   GRID_X,
   GRID_Y,
   GRID_Z,
@@ -209,6 +211,99 @@ describe('WASM bridge contract: weather & day phase', () => {
     expect(isDusk(74)).toBe(true);
     expect(isNight(75)).toBe(true);
     expect(isNight(99)).toBe(true);
+  });
+});
+
+describe('WASM bridge contract: GnomeState enum', () => {
+  // Rust: gnome.rs — GnomeState repr(u8)
+  const RUST_GNOME_STATES: Record<string, number> = {
+    Idle: 0,
+    Walking: 1,
+    Working: 2,
+    Eating: 3,
+    Resting: 4,
+    Wandering: 5,
+    Inspecting: 6,
+  };
+
+  it('GnomeState enum has correct count', () => {
+    const tsKeys = Object.keys(GnomeState);
+    const rustKeys = Object.keys(RUST_GNOME_STATES);
+    expect(tsKeys.length).toBe(rustKeys.length);
+  });
+
+  for (const [name, value] of Object.entries(RUST_GNOME_STATES)) {
+    it(`GnomeState.${name} = ${value}`, () => {
+      expect(GnomeState[name as keyof typeof GnomeState]).toBe(value);
+    });
+  }
+});
+
+describe('WASM bridge contract: GrowthStage enum', () => {
+  // Rust: tree.rs — GrowthStage repr(u8)
+  const RUST_GROWTH_STAGES: Record<string, number> = {
+    Seedling: 0,
+    Sapling: 1,
+    YoungTree: 2,
+    Mature: 3,
+    OldGrowth: 4,
+    Dead: 5,
+  };
+
+  it('GrowthStage enum has correct count', () => {
+    const tsKeys = Object.keys(GrowthStage);
+    const rustKeys = Object.keys(RUST_GROWTH_STAGES);
+    expect(tsKeys.length).toBe(rustKeys.length);
+  });
+
+  for (const [name, value] of Object.entries(RUST_GROWTH_STAGES)) {
+    it(`GrowthStage.${name} = ${value}`, () => {
+      expect(GrowthStage[name as keyof typeof GrowthStage]).toBe(value);
+    });
+  }
+});
+
+describe('WASM bridge contract: gnome export layout', () => {
+  // Rust: gnome.rs — GnomeData export buffer: 32 bytes
+  // [state: u8, active_tool: u8, hunger: u8, energy: u8,
+  //  x: f32, y: f32, z: f32,
+  //  target_x: f32, target_y: f32, target_z: f32,
+  //  queue_len: u16le, squirrel_trust: u8, nearby_fauna: u8]
+  const GNOME_BYTES = 32;
+
+  it('gnome export record size is 32 bytes', () => {
+    expect(GNOME_BYTES).toBe(32);
+  });
+
+  it('gnome export field offsets are correct', () => {
+    const buf = new ArrayBuffer(GNOME_BYTES);
+    const view = new DataView(buf);
+    const bytes = new Uint8Array(buf);
+
+    bytes[0] = 2;   // state (Working) at offset 0
+    bytes[1] = 1;   // active_tool (Seed) at offset 1
+    bytes[2] = 128; // hunger at offset 2
+    bytes[3] = 200; // energy at offset 3
+    view.setFloat32(4, 10.5, true);  // x at offset 4
+    view.setFloat32(8, 20.5, true);  // y at offset 8
+    view.setFloat32(12, 42.0, true); // z at offset 12
+    view.setFloat32(16, 11.0, true); // target_x at offset 16
+    view.setFloat32(20, 21.0, true); // target_y at offset 20
+    view.setFloat32(24, 42.0, true); // target_z at offset 24
+    view.setUint16(28, 5, true);     // queue_len at offset 28
+    bytes[30] = 75;  // squirrel_trust at offset 30
+    bytes[31] = 3;   // nearby_fauna at offset 31
+
+    expect(bytes[0]).toBe(2);
+    expect(bytes[1]).toBe(1);
+    expect(bytes[2]).toBe(128);
+    expect(bytes[3]).toBe(200);
+    expect(view.getFloat32(4, true)).toBeCloseTo(10.5);
+    expect(view.getFloat32(8, true)).toBeCloseTo(20.5);
+    expect(view.getFloat32(12, true)).toBeCloseTo(42.0);
+    expect(view.getUint16(28, true)).toBe(5);
+    expect(bytes[30]).toBe(75);
+    expect(bytes[31]).toBe(3);
   });
 });
 

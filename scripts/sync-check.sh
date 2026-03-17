@@ -16,6 +16,8 @@ TS_BRIDGE="$ROOT/crates/groundwork-web/src/bridge.ts"
 CONTRACT_TEST="$ROOT/crates/groundwork-web/src/bridge.contract.test.ts"
 FAUNA_RS="$ROOT/crates/groundwork-sim/src/fauna.rs"
 VOXEL_RS="$ROOT/crates/groundwork-sim/src/voxel.rs"
+GNOME_RS="$ROOT/crates/groundwork-sim/src/gnome.rs"
+TREE_RS="$ROOT/crates/groundwork-sim/src/tree.rs"
 
 errors=0
 warnings=0
@@ -24,6 +26,44 @@ heading() { printf "\n\033[1;36m=== %s ===\033[0m\n" "$1"; }
 ok()      { printf "  \033[32m✓\033[0m %s\n" "$1"; }
 warn()    { printf "  \033[33m⚠\033[0m %s\n" "$1"; warnings=$((warnings + 1)); }
 fail()    { printf "  \033[31m✗\033[0m %s\n" "$1"; errors=$((errors + 1)); }
+
+# Helper: check enum variants match between Rust source and TS const object.
+# Usage: check_enum <label> <rust_file> <rust_enum_name> <ts_const_name>
+check_enum() {
+  local label="$1" rs_file="$2" rs_enum="$3" ts_const="$4"
+
+  heading "$label ($rs_enum ↔ $ts_const)"
+
+  local rust_variants
+  rust_variants=$(sed -n "/pub enum $rs_enum/,/^}/p" "$rs_file" \
+    | grep -E '^\s+\w+ = [0-9]+,' \
+    | sed 's/^\s*//; s/,$//')
+
+  local ts_block
+  ts_block=$(grep -A20 "^export const $ts_const " "$TS_BRIDGE" | head -20)
+
+  while IFS= read -r line; do
+    local name value
+    name=$(echo "$line" | sed 's/\s*=.*//')
+    value=$(echo "$line" | sed 's/.*= //')
+    if echo "$ts_block" | grep -q "$name: $value"; then
+      ok "$ts_const.$name = $value"
+    else
+      fail "$ts_const.$name = $value in Rust but not matched in bridge.ts"
+    fi
+  done <<< "$rust_variants"
+
+  # Check contract test coverage
+  while IFS= read -r line; do
+    local name
+    name=$(echo "$line" | sed 's/\s*=.*//')
+    if grep -q "$name:" "$CONTRACT_TEST"; then
+      ok "$ts_const.$name covered in contract tests"
+    else
+      fail "$ts_const.$name missing from contract tests"
+    fi
+  done <<< "$rust_variants"
+}
 
 # ---------- 1. WASM exports vs TS bridge references ----------
 heading "WASM exports → TypeScript bridge"
@@ -71,14 +111,12 @@ for ref in $ts_refs; do
   fi
 done
 
-# ---------- 3. Material enum sync ----------
+# ---------- 3. Material enum (special: not inside a pub enum block) ----------
 heading "Material enum (voxel.rs ↔ bridge.ts)"
 
-# Extract Rust Material variants: "Air = 0", "Soil = 1", etc.
-rust_materials=$(grep -E '^\s+\w+ = [0-9]+,' "$VOXEL_RS" \
-  | sed 's/.*#\[default\]//' \
-  | sed 's/^\s*//' \
-  | sed 's/,$//')
+rust_materials=$(sed -n '/pub enum Material/,/^}/p' "$VOXEL_RS" \
+  | grep -E '^\s+\w+ = [0-9]+,' \
+  | sed 's/.*#\[default\]//; s/^\s*//; s/,$//')
 
 ts_material_block=$(grep -A20 "^export const Material" "$TS_BRIDGE" | head -15)
 
@@ -92,40 +130,7 @@ while IFS= read -r line; do
   fi
 done <<< "$rust_materials"
 
-# ---------- 4. FaunaType enum sync ----------
-heading "FaunaType enum (fauna.rs ↔ bridge.ts)"
-
-rust_fauna=$(sed -n '/pub enum FaunaType/,/^}/p' "$FAUNA_RS" \
-  | grep -E '^\s+\w+ = [0-9]+,' \
-  | sed 's/^\s*//' \
-  | sed 's/,$//')
-
-ts_fauna_block=$(grep -A10 "^export const FaunaType" "$TS_BRIDGE" | head -10)
-
-while IFS= read -r line; do
-  name=$(echo "$line" | sed 's/\s*=.*//')
-  value=$(echo "$line" | sed 's/.*= //')
-  if echo "$ts_fauna_block" | grep -q "$name: $value"; then
-    ok "FaunaType.$name = $value"
-  else
-    fail "FaunaType.$name = $value in Rust but not matched in bridge.ts"
-  fi
-done <<< "$rust_fauna"
-
-# ---------- 5. Contract test coverage ----------
-heading "Contract test coverage"
-
-# Check that every FaunaType variant is in the contract test
-while IFS= read -r line; do
-  name=$(echo "$line" | sed 's/\s*=.*//')
-  if grep -q "$name:" "$CONTRACT_TEST"; then
-    ok "FaunaType.$name covered in contract tests"
-  else
-    fail "FaunaType.$name missing from contract tests"
-  fi
-done <<< "$rust_fauna"
-
-# Check Material coverage
+# Material contract test coverage
 while IFS= read -r line; do
   name=$(echo "$line" | sed 's/\s*=.*//')
   if grep -q "$name:" "$CONTRACT_TEST"; then
@@ -135,25 +140,11 @@ while IFS= read -r line; do
   fi
 done <<< "$rust_materials"
 
-# ---------- 6. FaunaState enum sync ----------
-heading "FaunaState enum (fauna.rs ↔ bridge.ts)"
-
-rust_fauna_state=$(grep -A20 'pub enum FaunaState' "$FAUNA_RS" \
-  | grep -E '^\s+\w+ = [0-9]+,' \
-  | sed 's/^\s*//' \
-  | sed 's/,$//')
-
-ts_fauna_state_block=$(grep -A10 "^export const FaunaState" "$TS_BRIDGE" | head -10)
-
-while IFS= read -r line; do
-  name=$(echo "$line" | sed 's/\s*=.*//')
-  value=$(echo "$line" | sed 's/.*= //')
-  if echo "$ts_fauna_state_block" | grep -q "$name: $value"; then
-    ok "FaunaState.$name = $value"
-  else
-    fail "FaunaState.$name = $value in Rust but not matched in bridge.ts"
-  fi
-done <<< "$rust_fauna_state"
+# ---------- 4-7. Enum checks ----------
+check_enum "FaunaType enum"  "$FAUNA_RS" "FaunaType"  "FaunaType"
+check_enum "FaunaState enum" "$FAUNA_RS" "FaunaState"  "FaunaState"
+check_enum "GnomeState enum" "$GNOME_RS" "GnomeState"  "GnomeState"
+check_enum "GrowthStage enum" "$TREE_RS" "GrowthStage" "GrowthStage"
 
 # ---------- Summary ----------
 echo ""

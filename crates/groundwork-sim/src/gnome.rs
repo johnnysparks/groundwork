@@ -760,6 +760,44 @@ mod tests {
         assert_eq!(gd.ghost_buf[7], 3); // species
     }
 
+    /// Sync guard: if GnomeState enum or export layout changes,
+    /// this test fails — reminding you to update bridge.ts and bridge.contract.test.ts.
+    #[test]
+    fn wasm_bridge_sync_guard() {
+        // GnomeState repr(u8) values (must match bridge.ts GnomeState object)
+        assert_eq!(GnomeState::Idle as u8, 0);
+        assert_eq!(GnomeState::Walking as u8, 1);
+        assert_eq!(GnomeState::Working as u8, 2);
+        assert_eq!(GnomeState::Eating as u8, 3);
+        assert_eq!(GnomeState::Resting as u8, 4);
+        assert_eq!(GnomeState::Wandering as u8, 5);
+        assert_eq!(GnomeState::Inspecting as u8, 6);
+
+        // Export sizes (must match GNOME_BYTES=32 and GHOST_EXPORT_BYTES=8 in bridge.ts)
+        assert_eq!(GNOME_EXPORT_BYTES, 32, "Gnome export size changed — update bridge.ts");
+        assert_eq!(GHOST_EXPORT_BYTES, 8, "Ghost export size changed — update bridge.ts");
+
+        // Export byte layout: verify field offsets match bridge.ts getGnomeState()
+        let mut gd = GnomeData::default();
+        gd.gnome.state = GnomeState::Working;
+        gd.gnome.active_tool = 3;
+        gd.gnome.hunger = 100;
+        gd.gnome.energy = 200;
+        gd.gnome.x = 1.0;
+        gd.gnome.y = 2.0;
+        gd.gnome.z = 3.0;
+        gd.pack_export();
+        let buf = &gd.export_buf;
+        assert_eq!(buf[0], GnomeState::Working as u8, "state at offset 0");
+        assert_eq!(buf[1], 3, "active_tool at offset 1");
+        assert_eq!(buf[2], 100, "hunger at offset 2");
+        assert_eq!(buf[3], 200, "energy at offset 3");
+        let x = f32::from_le_bytes(buf[4..8].try_into().unwrap());
+        assert!((x - 1.0).abs() < 0.001, "x at offset 4");
+        let qlen = u16::from_le_bytes(buf[28..30].try_into().unwrap());
+        assert_eq!(qlen, 0, "queue_len at offset 28");
+    }
+
     /// Integration test: gnome walks to a task and executes it.
     #[test]
     fn gnome_walks_and_works() {
