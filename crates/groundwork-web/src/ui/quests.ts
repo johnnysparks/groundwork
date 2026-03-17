@@ -54,62 +54,63 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 0,
     detail: 'There\'s a water spring at the center. Orbit the camera until you spot the blue water column. Your gnome is waiting nearby.',
   },
-  // Chapter 1: First Plants — tools appear, zone your first groundcover
+  // Chapter 1: Sow — only the seed tool is available
   {
     id: 'plantFirstSeed',
-    name: 'Plant groundcover',
+    name: 'Sow groundcover',
     chapter: 1,
-    detail: 'Click near the spring to zone small plants. Your gnome will walk over and do the planting for you.',
+    detail: 'Click near the spring to zone small plants. Your gnome will walk over and do the planting.',
   },
   {
     id: 'watchItGrow',
     name: 'Watch it spread',
     chapter: 1,
-    detail: 'Groundcover grows fast and spreads. Watch the roots appear underground. Clover fixes nitrogen — it helps everything nearby.',
+    detail: 'Groundcover grows and spreads on its own. Watch the little stems emerge.',
   },
+  // Chapter 2: Irrigate — shovel unlocks, dig channels from the spring
   {
     id: 'placeWater',
     name: 'Irrigate your garden',
-    chapter: 1,
-    detail: 'Use the shovel to dig a channel from the spring toward your plants. Water flows downhill through channels and soaks into nearby soil.',
+    chapter: 2,
+    detail: 'Use the shovel to dig a channel from the spring toward your plants. Water flows downhill and soaks into soil — watch growth speed up!',
   },
-  // Chapter 2: Flowers & Fauna (score 500 unlocks flowers)
+  // Chapter 3: Flowers & Fauna
   {
     id: 'changeSpecies',
     name: 'Plant flowers',
-    chapter: 2,
-    detail: 'Flowers unlock at score 500. Plant wildflowers and daisies near your groundcover — they attract pollinators.',
+    chapter: 3,
+    detail: 'Plant wildflowers and daisies near your groundcover — they attract pollinators.',
   },
   {
     id: 'plantThreeSpecies',
     name: 'Attract pollinators',
-    chapter: 2,
+    chapter: 3,
     detail: 'With enough flowers, bees and butterflies arrive. They boost health of nearby plants and spread seeds.',
   },
-  // Chapter 3: Discover the Underground
+  // Chapter 4: Discover the Underground
   {
     id: 'changeDepth',
     name: 'Go underground',
-    chapter: 3,
-    detail: 'Press Q for x-ray mode. See root networks underground — each species has a different color. Roots compete for water.',
+    chapter: 4,
+    detail: 'Tap X-Ray to see underground. Pick a lens — roots, moisture, light, or nutrients. Each has its own color theme.',
   },
   {
     id: 'toggleAutoTick',
     name: 'Grow shrubs',
-    chapter: 3,
-    detail: 'Shrubs unlock at score 1500. Berry bushes attract birds that carry seeds to new spots. Ferns thrive in shade.',
+    chapter: 4,
+    detail: 'Berry bushes attract birds that carry seeds to new spots. Ferns thrive in shade under the canopy.',
   },
-  // Chapter 4: Trees (score 3000 unlocks trees)
+  // Chapter 5: Trees
   {
     id: 'plantAllTypes',
     name: 'Plant your first tree',
-    chapter: 4,
-    detail: 'Trees unlock at score 3000 — the reward for a thriving ecosystem. Plant an oak near clover for nitrogen-boosted growth!',
+    chapter: 5,
+    detail: 'Trees are the reward for a thriving ecosystem. Plant an oak near clover for nitrogen-boosted growth!',
   },
   {
     id: 'growATree',
     name: 'Grow a canopy',
-    chapter: 4,
+    chapter: 5,
     detail: 'Watch your tree claim territory — its canopy shades the ground, roots compete for water, and birds nest in its branches.',
   },
 ];

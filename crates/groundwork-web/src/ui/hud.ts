@@ -1194,6 +1194,21 @@ const HUD_CSS = `
   display: none !important;
 }
 
+/* Phase 2 (Irrigate): seed + shovel visible. Player learns to dig channels. */
+#hud[data-phase="2"] #garden-score,
+#hud[data-phase="2"] #hud-help,
+#hud[data-phase="2"] #new-garden-btn {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(20px);
+}
+/* In phase 2, show Seed (1) and Shovel (0) — hide Soil (3) and Stone (4) */
+#hud[data-phase="2"] .tool-btn[data-tool="3"],
+#hud[data-phase="2"] .tool-btn[data-tool="4"] {
+  display: none !important;
+}
+
 /* Smooth transitions for reveal */
 #tool-bar,
 #garden-score,

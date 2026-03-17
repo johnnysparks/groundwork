@@ -621,8 +621,12 @@ async function main() {
       hud.setPhase(Math.max(chapter, 1));
     }
     if (chapter === 1) {
-      // Seed tool auto-selected with groundcover — ready to plant
       hud.selectTool(ToolCode.Seed);
+    }
+    if (chapter === 2) {
+      // Shovel unlocks for irrigation — select it so the player sees it
+      hud.selectTool(ToolCode.Shovel);
+      hud.addEvent('Shovel unlocked — dig channels from the spring to irrigate!');
     }
   });
 
