@@ -39,7 +39,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus } from './audio/ambient';
 import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1339,6 +1339,7 @@ async function main() {
     dustMotes.setActive(dayTime);
     dustMotes.update(dt, elapsed);
     setNightAmbient(dayTime);
+    setFrogChorus(prevWaterCount, dayTime);
 
     // Falling leaves: ambient canopy motion
     fallingLeaves.setPlantCount(foliage.count);

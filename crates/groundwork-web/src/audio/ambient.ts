@@ -17,9 +17,11 @@ let windFilter: BiquadFilterNode | null = null;
 let rustleGain: GainNode | null = null;
 let rustleFilter: BiquadFilterNode | null = null;
 let pollinatorGain: GainNode | null = null;
+let frogGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
+let frogsActive = false;
 
 /** Create the procedural water sound */
 function createWaterSound(audioCtx: AudioContext, output: GainNode): void {
@@ -299,6 +301,69 @@ function createPollinatorHum(audioCtx: AudioContext, output: GainNode): void {
   osc2.start();
 }
 
+/** Create ambient frog chorus — low croaks near water during dusk/night. */
+function createFrogChorus(audioCtx: AudioContext, output: GainNode): void {
+  // Frog 1: deep croak at ~120Hz
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 120;
+
+  // Slow FM wobble gives organic croak quality
+  const wobble1 = audioCtx.createOscillator();
+  const wobbleGain1 = audioCtx.createGain();
+  wobble1.frequency.value = 5;
+  wobbleGain1.gain.value = 20; // ±20Hz pitch wobble
+  wobble1.connect(wobbleGain1);
+  wobbleGain1.connect(osc1.frequency);
+
+  // Rhythmic gating: croak pattern (~1.5Hz = one croak per ~0.7s)
+  const gate1 = audioCtx.createGain();
+  gate1.gain.value = 0;
+  const rhythm1 = audioCtx.createOscillator();
+  const rhythmGain1 = audioCtx.createGain();
+  rhythm1.frequency.value = 1.5;
+  rhythmGain1.gain.value = 1.0;
+  rhythm1.connect(rhythmGain1);
+  rhythmGain1.connect(gate1.gain);
+
+  // Frog 2: slightly higher, offset rhythm
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 145;
+
+  const wobble2 = audioCtx.createOscillator();
+  const wobbleGain2 = audioCtx.createGain();
+  wobble2.frequency.value = 4;
+  wobbleGain2.gain.value = 15;
+  wobble2.connect(wobbleGain2);
+  wobbleGain2.connect(osc2.frequency);
+
+  const gate2 = audioCtx.createGain();
+  gate2.gain.value = 0;
+  const rhythm2 = audioCtx.createOscillator();
+  const rhythmGain2 = audioCtx.createGain();
+  rhythm2.frequency.value = 1.1; // offset from frog 1
+  rhythmGain2.gain.value = 1.0;
+  rhythm2.connect(rhythmGain2);
+  rhythmGain2.connect(gate2.gain);
+
+  frogGain = audioCtx.createGain();
+  frogGain.gain.value = 0; // starts silent
+
+  osc1.connect(gate1);
+  gate1.connect(frogGain);
+  osc2.connect(gate2);
+  gate2.connect(frogGain);
+  frogGain.connect(output);
+
+  osc1.start();
+  wobble1.start();
+  rhythm1.start();
+  osc2.start();
+  wobble2.start();
+  rhythm2.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -318,6 +383,7 @@ export function initAmbientAudio(): void {
     createWindSound(ctx, masterGain);
     createLeafRustleSound(ctx, masterGain);
     createPollinatorHum(ctx, masterGain);
+    createFrogChorus(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -395,6 +461,19 @@ export function setPollinatorHum(pollinatorCount: number): void {
   // 0 pollinators = silent, 5+ = full hum (very quiet — background texture)
   const vol = Math.min(1, pollinatorCount / 5) * 0.015;
   pollinatorGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
+}
+
+/** Set frog chorus intensity based on water count and time of day.
+ *  Frogs croak at dusk/night when water is present. */
+export function setFrogChorus(waterCount: number, dayTime: number): void {
+  if (!ctx || !frogGain) return;
+  const isDusk = dayTime >= 0.60 || dayTime < 0.08;
+  const hasWater = waterCount > 20;
+  const shouldCroak = isDusk && hasWater;
+  if (shouldCroak === frogsActive) return;
+  frogsActive = shouldCroak;
+  const target = shouldCroak ? 0.02 : 0; // very quiet — background texture
+  frogGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
 }
 
 /** Fade cricket sounds in for dusk/night, out for day.
