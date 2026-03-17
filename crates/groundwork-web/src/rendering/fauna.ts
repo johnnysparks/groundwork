@@ -225,15 +225,22 @@ export class FaunaRenderer {
 
       // Flight bob for airborne fauna — gentle vertical oscillation
       if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly || f.type === FaunaType.Bird) {
-        const bobSpeed = f.type === FaunaType.Butterfly ? 3 : f.type === FaunaType.Bird ? 2 : 5;
-        const bobAmp = f.type === FaunaType.Bird ? 0.25 : 0.15;
-        slot.model.position.y += Math.sin(elapsedTime * bobSpeed + i * 2.1) * bobAmp;
-        // Gentle banking tilt (roll toward movement direction feel)
-        slot.model.rotation.z = Math.sin(elapsedTime * bobSpeed * 0.7 + i) * 0.08;
+        // Butterfly acting = settled on flower: minimal bob, lowered position
+        if (f.type === FaunaType.Butterfly && f.state === FaunaState.Acting) {
+          slot.model.position.y -= 0.4; // dip toward flower
+          slot.model.position.y += Math.sin(elapsedTime * 1.2 + i * 2.1) * 0.03; // tiny breath
+          slot.model.rotation.z = 0; // wings level while landed
+        } else {
+          const bobSpeed = f.type === FaunaType.Butterfly ? 3 : f.type === FaunaType.Bird ? 2 : 5;
+          const bobAmp = f.type === FaunaType.Bird ? 0.25 : 0.15;
+          slot.model.position.y += Math.sin(elapsedTime * bobSpeed + i * 2.1) * bobAmp;
+          // Gentle banking tilt (roll toward movement direction feel)
+          slot.model.rotation.z = Math.sin(elapsedTime * bobSpeed * 0.7 + i) * 0.08;
+        }
       }
 
-      // Acting state: extra bob on top of flight bob
-      if (f.state === FaunaState.Acting) {
+      // Acting state: extra bob (not butterflies — they settle instead)
+      if (f.state === FaunaState.Acting && f.type !== FaunaType.Butterfly) {
         slot.model.position.y += Math.sin(elapsedTime * 8 + i) * 0.15;
       }
 
@@ -306,8 +313,10 @@ export class FaunaRenderer {
       model.position.y += Math.sin((time + offset) * 5) * 0.2;
 
     } else if (type === FaunaType.Butterfly) {
-      // Gentle wing flap
-      const flap = Math.sin((time + offset) * 4) * 0.7;
+      // Wings: slow gentle pulse when landed (Acting), normal flap otherwise
+      const flapSpeed = state === FaunaState.Acting ? 1.2 : 4;
+      const flapAmp = state === FaunaState.Acting ? 0.2 : 0.7;
+      const flap = Math.sin((time + offset) * flapSpeed) * flapAmp;
       const names = ['wing_ul', 'wing_ur', 'wing_ll', 'wing_lr'];
       for (const name of names) {
         const w = model.getObjectByName(name);
@@ -316,8 +325,9 @@ export class FaunaRenderer {
         const side = name.endsWith('l') ? 1 : -1;
         w.rotation.z = side * flap * sign;
       }
-      // Float gently
-      model.position.y += Math.sin((time + offset) * 2) * 0.3;
+      // Float gently (reduced when landed)
+      const floatAmp = state === FaunaState.Acting ? 0.05 : 0.3;
+      model.position.y += Math.sin((time + offset) * 2) * floatAmp;
 
     } else if (type === FaunaType.Bird) {
       // Slow wing soar
