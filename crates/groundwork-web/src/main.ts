@@ -752,7 +752,11 @@ async function main() {
   inspectPanel.onInspect(() => questLog.recordInspectCell());
 
   // Wire lens picker to quest tracking + overlay/xray modes
-  lensPicker.onSelectIrrigation(() => questLog.recordSelectIrrigationLens());
+  lensPicker.onSelectIrrigation(() => {
+    questLog.recordSelectIrrigationLens();
+    const freshGrid = isInitialized() ? getGridView() : grid;
+    questLog.check(freshGrid);
+  });
   lensPicker.onChange((lens: XrayLens) => {
     if (lens === 'off') {
       xrayActive = false;

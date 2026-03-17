@@ -88,7 +88,7 @@ const QUEST_DEFS: QuestDef[] = [
     id: 'irrigationLens',
     name: 'Check moisture',
     chapter: 2,
-    detail: 'Open the lens picker and select "Irrigation." Blue is wet, red is dry — see where water flows.',
+    detail: 'Open the lens picker and select "Moisture." Blue is wet, red is dry — see where water flows.',
   },
   // Chapter 3: Shape the Water — irrigation and first ecological surprise
   {

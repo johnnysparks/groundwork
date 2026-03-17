@@ -21,7 +21,7 @@ interface LensDef {
 
 const LENS_DEFS: LensDef[] = [
   { id: 'roots', name: 'Roots', description: 'See root networks underground', color: '#88cc66' },
-  { id: 'irrigation', name: 'Irrigation', description: 'Moisture heatmap — blue=wet, red=dry', color: '#4488cc' },
+  { id: 'irrigation', name: 'Moisture', description: 'Moisture heatmap — blue=wet, red=dry', color: '#4488cc' },
 ];
 
 export class LensPicker {
