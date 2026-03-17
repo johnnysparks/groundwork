@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
 **Last updated:** 2026-03-17T23:00:00
-**Status:** Alpha complete. 210 sprints. Living ecosystem with complete fauna behavior matrix (every fauna type has visible state-specific animation + trail particles), 14-layer responsive audio landscape (21 SFX types including root crackle), heat shimmer post-processing, rain puddle shimmer, wind direction streaks, ambient gnat swarms, butterfly flower landing, bird perching. **Irrigation replaces watering can** (executive mandate).
+**Status:** Alpha complete. 220 sprints. Full cross-system connectivity: firefly water reflections, star water reflections, night moths, decomposition fungi, squirrel footprints, raindrop plinks, ecosystem warmth glow, garden vitality audio scaling, sunrise/sunset bloom flash, distant dawn chorus. 15-layer responsive audio, 23 SFX types, complete fauna trails. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -137,7 +137,7 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Cloud shadow pulses: 3 overlapping sine waves modulate sun intensity during day
 - Leaf rustle ambient: bandpass noise scales with foliage count + wind strength
 
-### Alive Garden Polish (Sprints 157-210)
+### Alive Garden Polish (Sprints 157-220)
 - Flower petal scatter on wind gusts (pink-purple + warm yellow per species)
 - Seed sprout pop particles (bright green burst on seed→plant transition)
 - Seed dispersal trail (golden particles descending at new seed landing sites)
@@ -186,6 +186,16 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Rain puddle shimmer (stationary blue-white reflective particles during rain)
 - Beetle iridescent trail (green-blue shimmer behind active beetles)
 - Wind streak particles (fast horizontal streaks during gusts, slowly drifting direction)
+- Firefly golden glow reflections on water surface
+- Squirrel footprint dust particles when scurrying
+- Distant bird calls layered into dawn chorus (1-2 per call)
+- Star reflections on water at night (wobble distortion)
+- Sunrise/sunset bloom flash (brief vivid glow at horizon transitions)
+- Garden vitality scales master ambient volume (0.6→1.0)
+- Decomposition fungi spore particles near dead wood
+- Night moth particles flutter near active fireflies
+- Raindrop plink sound (10% of visual splashes)
+- Ecosystem health warm glow (warmth + saturation scale with vitality)
 
 ---
 
