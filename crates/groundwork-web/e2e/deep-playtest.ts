@@ -48,6 +48,23 @@ test.describe('Deep Playtest', () => {
       await page.waitForTimeout(100);
     }
 
+    /** Log garden health metrics at a milestone */
+    async function logMetrics(label: string) {
+      const metrics = await page.evaluate(() => {
+        const api = (window as any).agentAPI;
+        if (!api) return null;
+        return {
+          tick: api.getTick(),
+          fauna: api.getFaunaCount(),
+          materials: api.getMaterialCounts(),
+        };
+      });
+      if (!metrics) return;
+      const m = metrics.materials as Record<string, number>;
+      const plants = (m.seed ?? 0) + (m.trunk ?? 0) + (m.branch ?? 0) + (m.leaf ?? 0) + (m.root ?? 0);
+      console.log(`  📊 [${label}] tick=${metrics.tick} plants=${plants} fauna=${metrics.fauna} | seed=${m.seed} trunk=${m.trunk} branch=${m.branch} leaf=${m.leaf} root=${m.root} water=${m.water} deadwood=${m.deadwood}`);
+    }
+
     // === 0. BUILD PHASE — plant a diverse garden for ecological drama ===
     // The default garden has a dense starter garden (21 seeds). Add more seeds
     // in diverse conditions to create competition, succession, and synergy.
@@ -63,6 +80,7 @@ test.describe('Deep Playtest', () => {
 
     // Grow for 300 ticks — enough for seeds to germinate and trees to start competing
     await execAction({ type: 'Tick', n: 300 });
+    await logMetrics('after-build');
 
     // === 1. INITIAL STATE — default view ===
     await screenshot('01-initial-default');
@@ -162,6 +180,8 @@ test.describe('Deep Playtest', () => {
     // Fast-forward 500 ticks for trees to mature and roots to overlap
     await execAction({ type: 'Tick', n: 500 });
 
+    await logMetrics('after-maturation');
+
     // Above-ground: mature garden overview
     await execAction({ type: 'CameraOrbit', theta_deg: 45, phi_deg: 60 });
     await execAction({ type: 'CameraZoom', level: 0.7 });
@@ -206,6 +226,7 @@ test.describe('Deep Playtest', () => {
     await page.keyboard.press('q');
     await page.waitForTimeout(200);
 
+    await logMetrics('final');
     console.log(`\nDone: 21 screenshots saved to ${SCREENSHOT_DIR}`);
   });
 });
