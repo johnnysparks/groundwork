@@ -1833,6 +1833,7 @@ async function main() {
     }
     mist.setActive(dayTime);
     mist.setWaterInfluence(prevWaterCount);
+    mist.setWind(windAngle, foliage.getWindStrength());
     mist.update(dt);
     dustMotes.setActive(dayTime);
     dustMotes.update(dt, elapsed);

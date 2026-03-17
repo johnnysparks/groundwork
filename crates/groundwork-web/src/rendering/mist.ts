@@ -51,6 +51,9 @@ export class MistRenderer {
   private wisps: MistWisp[] = [];
   private active = false;
   private density = 1.0; // 0.3 (dry garden) – 1.5 (lots of water)
+  private windDirX = 0;
+  private windDirZ = 0;
+  private windStrength = 0;
 
   constructor() {
     this.group = new THREE.Group();
@@ -101,6 +104,13 @@ export class MistRenderer {
     this.density = 0.3 + Math.min(1.2, waterCount / 80);
   }
 
+  /** Set wind parameters so mist drifts with the wind */
+  setWind(windAngle: number, strength: number): void {
+    this.windDirX = Math.cos(windAngle);
+    this.windDirZ = Math.sin(windAngle);
+    this.windStrength = strength;
+  }
+
   /** Update mist drift. Call each frame. */
   update(dt: number): void {
     const targetActive = this.active ? this.density : 0;
@@ -111,9 +121,9 @@ export class MistRenderer {
       // Smooth fade in/out (slower than dew — mist lingers)
       this.actives[i] += (targetActive - this.actives[i]) * Math.min(dt * 0.15, 1);
 
-      // Slow drift
-      w.x += w.vx * dt;
-      w.z += w.vz * dt;
+      // Slow drift + wind influence
+      w.x += (w.vx + this.windDirX * this.windStrength * 0.4) * dt;
+      w.z += (w.vz + this.windDirZ * this.windStrength * 0.4) * dt;
 
       // Gentle random direction wobble
       w.vx += (Math.random() - 0.5) * 0.02 * dt;
