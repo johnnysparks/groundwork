@@ -217,6 +217,26 @@ export function initAgentAPI(config: AgentAPIConfig): void {
       }
       return counts;
     },
+
+    /** Get voxel counts per species (only plant materials: seed, trunk, branch, leaf, root) */
+    getSpeciesCounts: () => {
+      if (!isInitialized()) return {};
+      const grid = getGridView();
+      const plantMats = new Set([4, 5, 6, 7, 8]); // root, seed, trunk, branch, leaf
+      const speciesCounts: Record<number, number> = {};
+      for (let i = 0; i < grid.length; i += 4) {
+        if (!plantMats.has(grid[i])) continue;
+        const speciesId = grid[i + 3];
+        speciesCounts[speciesId] = (speciesCounts[speciesId] ?? 0) + 1;
+      }
+      // Map species IDs to names
+      const result: Record<string, number> = {};
+      for (const [id, count] of Object.entries(speciesCounts)) {
+        const sp = SPECIES.find(s => s.index === Number(id));
+        result[sp?.name ?? `unknown-${id}`] = count;
+      }
+      return result;
+    },
   };
 
   (window as any).agentAPI = api;

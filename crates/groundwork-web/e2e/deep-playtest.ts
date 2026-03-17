@@ -57,12 +57,18 @@ test.describe('Deep Playtest', () => {
           tick: api.getTick(),
           fauna: api.getFaunaCount(),
           materials: api.getMaterialCounts(),
+          species: api.getSpeciesCounts(),
         };
       });
       if (!metrics) return;
       const m = metrics.materials as Record<string, number>;
       const plants = (m.seed ?? 0) + (m.trunk ?? 0) + (m.branch ?? 0) + (m.leaf ?? 0) + (m.root ?? 0);
       console.log(`  📊 [${label}] tick=${metrics.tick} plants=${plants} fauna=${metrics.fauna} | seed=${m.seed} trunk=${m.trunk} branch=${m.branch} leaf=${m.leaf} root=${m.root} water=${m.water} deadwood=${m.deadwood}`);
+      // Species breakdown — sorted by voxel count descending
+      const sp = metrics.species as Record<string, number>;
+      const sorted = Object.entries(sp).sort((a, b) => b[1] - a[1]);
+      const speciesLine = sorted.map(([name, count]) => `${name}=${count}`).join(' ');
+      console.log(`  🌿 [${label}] species: ${speciesLine}`);
     }
 
     // === 0. BUILD PHASE — plant a diverse garden for ecological drama ===
