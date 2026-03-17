@@ -41,7 +41,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -1522,6 +1522,8 @@ async function main() {
         playWindGust();
         fallingLeaves.emitGustBurst();
         particles.emitPetalBurst();
+        // Wind chime: dense foliage (300+) gardens ring softly on gusts (~40% chance)
+        if (foliage.count > 300 && Math.random() < 0.4) playWindChime();
       }
       // Gust decays smoothly over ~3s
       gustStrength *= Math.max(0, 1 - dt * 0.5);

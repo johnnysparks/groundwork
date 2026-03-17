@@ -160,6 +160,38 @@ export function playBirdCall(): void {
   osc2.stop(t + 0.22);
 }
 
+/** Play a soft wind chime — 2-3 high sine tones with long decay, garden feels cultivated */
+export function playWindChime(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  // Pentatonic wind chime tones (C6, E6, G6, A6) — pick 2-3 randomly
+  const tones = [1047, 1319, 1568, 1760];
+  const count = 2 + Math.floor(Math.random() * 2);
+  const used = new Set<number>();
+
+  for (let i = 0; i < count; i++) {
+    let idx: number;
+    do { idx = Math.floor(Math.random() * tones.length); } while (used.has(idx));
+    used.add(idx);
+
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    const freq = tones[idx] * (0.98 + Math.random() * 0.04); // slight detuning
+    osc.frequency.value = freq;
+
+    const gain = c.createGain();
+    const start = t + i * (0.08 + Math.random() * 0.12);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.025, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 1.2);
+    osc.connect(gain).connect(c.destination);
+    osc.start(start);
+    osc.stop(start + 1.3);
+  }
+}
+
 /** Play a warbling trill — rapid 4-note ascending pattern, like a wren */
 export function playBirdWarble(): void {
   const c = getContext();
