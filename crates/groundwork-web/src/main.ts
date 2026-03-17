@@ -1455,13 +1455,25 @@ async function main() {
         : 0;
       updateWaterNight(Math.max(0, Math.min(1, nightAmount)));
 
-      // Golden hour bloom boost: warm soft glow during 0.65-0.80
-      if (t >= 0.65 && t < 0.80) {
-        const f = (t - 0.65) / 0.15;
-        const peak = Math.sin(f * Math.PI); // rises and falls
-        postProcessing.setBloomStrength(0.25 + peak * 0.20);
-      } else {
-        postProcessing.setBloomStrength(0.25);
+      // Bloom boost: sunrise (0.22-0.28), golden hour (0.65-0.80), sunset (0.78-0.85)
+      {
+        let bloom = 0.25; // base
+        // Golden hour: strongest bloom
+        if (t >= 0.65 && t < 0.80) {
+          const f = (t - 0.65) / 0.15;
+          bloom += Math.sin(f * Math.PI) * 0.20;
+        }
+        // Sunrise flash: brief vivid pulse as sun crests horizon
+        if (t >= 0.22 && t < 0.28) {
+          const f = (t - 0.22) / 0.06;
+          bloom += Math.sin(f * Math.PI) * 0.15;
+        }
+        // Sunset glow: warm pulse as sun drops below
+        if (t >= 0.78 && t < 0.85) {
+          const f = (t - 0.78) / 0.07;
+          bloom += Math.sin(f * Math.PI) * 0.12;
+        }
+        postProcessing.setBloomStrength(bloom);
       }
 
       // Heat shimmer: active during drought or hot midday (0.4-0.6)
