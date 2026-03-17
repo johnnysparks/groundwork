@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-18T06:00:00
-**Status:** Alpha complete. 242 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + density influence + condition-attribution messages. Complete onboarding. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **4 new ecology particle types** (mycorrhizal network violet, pine allelopathy amber-red, nurse log golden, root competition red-orange). Density-not-species decision: all 5 items complete. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-18T07:30:00
+**Status:** Alpha complete. 259 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + density influence + condition-attribution messages. Complete onboarding. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **6 new ecology particle types** (mycorrhizal violet, allelopathy amber-red, nurse log golden, root competition red-orange, soil binding olive-green, overgrowth amber). Density-not-species decision: all 5 items complete. **Irrigation replaces watering can** (executive mandate). **Rich sky dome** (FBM clouds, cloud shadows, sun/moon discs, rainbow, horizon glow). **Dynamic water reflections** (sky tint, moon path, cloud reflections).
 
 ---
 
