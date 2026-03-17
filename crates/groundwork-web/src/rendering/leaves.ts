@@ -82,6 +82,8 @@ export class FallingLeaves {
   private timeUniform: { value: number };
   private plantCount = 0;
   private windStrength = 0.35;
+  private windDirX = 1;
+  private windDirZ = 0;
   private treeSpecies: number[] = []; // species IDs of trees in garden
 
   constructor() {
@@ -124,8 +126,12 @@ export class FallingLeaves {
   }
 
   /** Set wind strength (0–1) from weather system. Affects fall speed and lateral drift. */
-  setWind(strength: number): void {
+  setWind(strength: number, windAngle?: number): void {
     this.windStrength = strength;
+    if (windAngle !== undefined) {
+      this.windDirX = Math.cos(windAngle);
+      this.windDirZ = Math.sin(windAngle);
+    }
   }
 
   /** Set tree species present in the garden (species IDs 0-3 for trees). */
@@ -203,8 +209,9 @@ export class FallingLeaves {
       leaf.x += Math.sin(elapsedTime * leaf.swaySpeed + leaf.phase) * leaf.swayAmplitude * swayMul * dt;
       leaf.y += Math.cos(elapsedTime * leaf.swaySpeed * 0.7 + leaf.phase) * leaf.swayAmplitude * 0.5 * swayMul * dt;
 
-      // Wind pushes leaves in a consistent direction during gusts
-      leaf.x += this.windStrength * 0.5 * dt;
+      // Wind pushes leaves in the current wind direction during gusts
+      leaf.x += this.windDirX * this.windStrength * 0.5 * dt;
+      leaf.y += this.windDirZ * this.windStrength * 0.5 * dt;
 
       // Hit ground — respawn at top
       if (leaf.z <= GROUND_LEVEL) {

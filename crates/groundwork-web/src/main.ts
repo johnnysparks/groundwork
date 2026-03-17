@@ -1882,7 +1882,7 @@ async function main() {
 
     // Falling leaves: ambient canopy motion
     fallingLeaves.setPlantCount(foliage.count);
-    fallingLeaves.setWind(foliage.getWindStrength());
+    fallingLeaves.setWind(foliage.getWindStrength(), windAngle);
     fallingLeaves.update(dt, elapsed);
 
     // Ambient fauna sounds: periodic bird chirps and bee buzzes when present
