@@ -561,14 +561,15 @@ export function setBeetleClick(beetleCount: number, dayTime: number): void {
 
 /** Set frog chorus intensity based on water count and time of day.
  *  Frogs croak at dusk/night when water is present. */
-export function setFrogChorus(waterCount: number, dayTime: number): void {
+export function setFrogChorus(waterCount: number, dayTime: number, raining = false): void {
   if (!ctx || !frogGain) return;
   const isDusk = dayTime >= 0.60 || dayTime < 0.08;
   const hasWater = waterCount > 20;
-  const shouldCroak = isDusk && hasWater;
+  const shouldCroak = (isDusk && hasWater) || (raining && hasWater);
   if (shouldCroak === frogsActive) return;
   frogsActive = shouldCroak;
-  const target = shouldCroak ? 0.02 : 0; // very quiet — background texture
+  // Louder during rain (frogs love it), quieter ambient at dusk
+  const target = shouldCroak ? (raining ? 0.035 : 0.02) : 0;
   frogGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 3);
 }
 

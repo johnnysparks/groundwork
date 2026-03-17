@@ -1551,7 +1551,7 @@ async function main() {
     gnats.setFoliageCount(foliage.count);
     gnats.update(dt, elapsed);
     setNightAmbient(dayTime);
-    setFrogChorus(prevWaterCount, dayTime);
+    setFrogChorus(prevWaterCount, dayTime, prevWeatherState === 1);
     setWaterBabble(prevWaterCount);
     setGardenDrone(foliage.count, dayTime);
     {
