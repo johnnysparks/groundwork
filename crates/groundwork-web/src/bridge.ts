@@ -393,6 +393,58 @@ export function isInitialized(): boolean {
   return wasmModule !== null;
 }
 
+// --- Tree stats data ---
+
+/** Tree stats record: 12 bytes per tree.
+ *  [species_id: u8, health_u8: u8, stage: u8, _pad: u8,
+ *   root_x: u16le, root_y: u16le, root_count: u16le, water_intake: u16le] */
+export const TREE_STAT_BYTES = 12;
+
+/** GrowthStage enum (matches Rust GrowthStage repr(u8)) */
+export const GrowthStage = {
+  Seedling: 0,
+  Sapling: 1,
+  YoungTree: 2,
+  Mature: 3,
+  OldGrowth: 4,
+  Dead: 5,
+} as const;
+
+/** Pack tree stats into export buffer. Returns number of trees. */
+export function packTreeStats(): number {
+  if (!wasmModule?.pack_tree_stats) return 0;
+  return wasmModule.pack_tree_stats();
+}
+
+/** Get a live DataView of the tree stats buffer. Call packTreeStats() first. */
+export function getTreeStatsView(): DataView | null {
+  if (!wasmModule?.tree_stats_ptr || !wasmMemory) return null;
+  const ptr = wasmModule.tree_stats_ptr();
+  const len = wasmModule.tree_stats_len();
+  if (len === 0) return null;
+  return new DataView(wasmMemory.buffer, ptr, len);
+}
+
+/** Read a tree stat record from the packed buffer. */
+export function readTreeStat(view: DataView, index: number): {
+  speciesId: number;
+  health: number;
+  stage: number;
+  rootX: number;
+  rootY: number;
+  rootCount: number;
+} {
+  const off = index * TREE_STAT_BYTES;
+  return {
+    speciesId: view.getUint8(off),
+    health: view.getUint8(off + 1) / 255,
+    stage: view.getUint8(off + 2),
+    rootX: view.getUint16(off + 4, true),
+    rootY: view.getUint16(off + 6, true),
+    rootCount: view.getUint16(off + 8, true),
+  };
+}
+
 // --- Fauna data ---
 
 /** Fauna export record: 16 bytes per fauna.

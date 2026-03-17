@@ -65,6 +65,15 @@ const BURST_COLORS = [
   new THREE.Color(0.40, 0.60, 0.28),  // earthy green
 ];
 
+/** Stage transition burst colors — celebratory warm golds and greens */
+const STAGE_COLORS = [
+  new THREE.Color(0.95, 0.85, 0.30),  // bright gold
+  new THREE.Color(0.85, 0.70, 0.25),  // warm golden
+  new THREE.Color(0.40, 0.70, 0.30),  // vibrant green
+  new THREE.Color(0.90, 0.80, 0.40),  // light gold
+  new THREE.Color(0.50, 0.75, 0.35),  // fresh green
+];
+
 /** Seed sparkle colors — bright warm golds to mark where life is about to begin */
 const SEED_COLORS = [
   new THREE.Color(0.95, 0.85, 0.40),  // bright gold
@@ -161,6 +170,37 @@ export class GrowthParticles {
 
       // Random color from palette
       const c = BURST_COLORS[Math.floor(Math.random() * BURST_COLORS.length)];
+      p.color.copy(c);
+    }
+  }
+
+  /**
+   * Emit a large celebratory burst when a tree advances a growth stage.
+   * Bigger, longer-lived, and wider spread than normal growth sparkles.
+   */
+  emitStageBurst(worldX: number, worldY: number, worldZ: number): void {
+    const count = 20;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) break;
+
+      p.alive = true;
+      p.life = 2.0 + Math.random() * 1.0;
+      p.maxLife = p.life;
+
+      // Spawn around the tree position with wide spread
+      p.x = worldX + (Math.random() - 0.5) * 3.0;
+      p.y = worldY + Math.random() * 2.0;
+      p.z = worldZ + (Math.random() - 0.5) * 3.0;
+
+      // Outward and upward burst
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.4 + Math.random() * 0.5;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = 0.6 + Math.random() * 0.6;
+      p.vz = Math.sin(angle) * speed;
+
+      const c = STAGE_COLORS[Math.floor(Math.random() * STAGE_COLORS.length)];
       p.color.copy(c);
     }
   }

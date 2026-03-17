@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState } from './bridge';
+import { GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, VOXEL_BYTES, Material, ToolCode, SPECIES, FaunaType, FaunaState, GrowthStage, initSim, isInitialized, getGridView, tick as simTick, fillTool, getTick, getFaunaCount, getFaunaView, readFauna, resetSim, saveGrid, restoreGrid, setSelectedSpecies, getMilestones, queueGnomeTask, getGnomeState, getWeatherState, packTreeStats, getTreeStatsView, readTreeStat } from './bridge';
 import { CHUNK_SIZE } from './mesher/greedy';
 import { SCENES, getSceneId } from './mesher/mockGrid';
 import { ChunkManager } from './mesher/chunk';
@@ -89,6 +89,9 @@ let _xrayTipShown = false;
 let _recentDieOff = false;
 let _dieOffPlantCount = 0;
 
+/** Previous tree growth stages — keyed by "rootX,rootY" to detect transitions */
+const _prevTreeStages = new Map<string, number>();
+
 /** Companion species suggestions — shown once per species per session */
 const _companionSuggested = new Set<number>();
 const COMPANION_TIPS: Record<number, string> = {
@@ -113,6 +116,14 @@ const WILD_PLANT_MESSAGES: Record<number, string[]> = {
     'A berry bush appeared in a new spot — a bird must have dropped the seed!',
     'Berry bushes are spreading — birds carry their seeds across the garden',
   ],
+};
+
+/** Growth stage transition messages */
+const STAGE_MESSAGES: Record<number, string> = {
+  [GrowthStage.Sapling]: 'sprouted into a sapling',
+  [GrowthStage.YoungTree]: 'is growing tall — branches are spreading',
+  [GrowthStage.Mature]: 'has matured — a full canopy!',
+  [GrowthStage.OldGrowth]: 'reached old growth — a towering giant',
 };
 
 const FAUNA_NAMES: Record<number, string> = {
@@ -638,6 +649,26 @@ async function main() {
     seeds.rebuild(freshGrid);
     particles.detectGrowth(freshGrid);
 
+    // Detect tree growth stage transitions → celebratory burst + HUD message
+    const treeCount = packTreeStats();
+    const treeView = getTreeStatsView();
+    if (treeView) {
+      for (let i = 0; i < treeCount; i++) {
+        const t = readTreeStat(treeView, i);
+        const key = `${t.rootX},${t.rootY}`;
+        const prevStage = _prevTreeStages.get(key);
+        if (prevStage !== undefined && t.stage > prevStage && t.stage !== GrowthStage.Dead) {
+          // Sim coords (x,y) → Three.js (x, GROUND_LEVEL, y)
+          particles.emitStageBurst(t.rootX + 0.5, GROUND_LEVEL + 2, t.rootY + 0.5);
+          const name = SPECIES[t.speciesId]?.name ?? 'A tree';
+          const msg = STAGE_MESSAGES[t.stage];
+          if (msg) hud.addEvent(`${name} ${msg}`);
+          if (t.stage >= GrowthStage.Mature) playDiscovery();
+        }
+        _prevTreeStages.set(key, t.stage);
+      }
+    }
+
     // Growth sound: soft shimmer when vegetation increases noticeably
     if (growthSoundCooldown > 0) growthSoundCooldown--;
     const plantCount = foliage.count;
@@ -656,6 +687,7 @@ async function main() {
     hud.resetForNewGarden();
     hud.setTickCount(Number(getTick()));
     _prevStats = { plants: 0, fauna: 0, species: 0 };
+    _prevTreeStages.clear();
     _tipIndex = 0;
     _tipTimer = 0;
     remeshDirty();
