@@ -214,6 +214,17 @@ export class FireflyRenderer {
     (this.mesh.geometry.getAttribute('aActive') as THREE.BufferAttribute).needsUpdate = true;
   }
 
+  /** Get positions of currently-lit fireflies (sim coords: x, y, z). */
+  getActivePositions(): { x: number; y: number; z: number }[] {
+    const result: { x: number; y: number; z: number }[] = [];
+    for (let i = 0; i < MAX_FIREFLIES; i++) {
+      if (this.actives[i] > 0.3 && this.flies[i].blinkOn) {
+        result.push({ x: this.flies[i].x, y: this.flies[i].y, z: this.flies[i].z });
+      }
+    }
+    return result;
+  }
+
   dispose(): void {
     this.mesh.geometry.dispose();
     (this.mesh.material as THREE.Material).dispose();

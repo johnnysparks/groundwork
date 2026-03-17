@@ -1489,6 +1489,17 @@ async function main() {
     const dayTime = dayCycle.getTime();
     fireflies.setActive(dayTime);
     fireflies.update(dt, elapsed);
+    // Firefly water reflections: golden glow on water surface below lit fireflies
+    if (prevWaterCount > 0 && Math.random() < dt * 0.8) {
+      const litFlies = fireflies.getActivePositions();
+      if (litFlies.length > 0) {
+        const pick = litFlies[Math.floor(Math.random() * litFlies.length)];
+        // Only reflect if firefly is near ground (close to water level)
+        if (pick.z <= GROUND_LEVEL + 6) {
+          particles.emitFireflyReflection(pick.x, pick.y);
+        }
+      }
+    }
     dew.setActive(dayTime);
     dew.update(dt, elapsed);
     // Dew drop tinkle: occasional audio complement to visual dew sparkles

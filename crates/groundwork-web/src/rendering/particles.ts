@@ -795,6 +795,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a soft golden glow at water surface below a firefly.
+   * Creates the illusion of firefly light reflecting off water.
+   */
+  emitFireflyReflection(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.4 + Math.random() * 0.3;
+    p.maxLife = p.life;
+
+    // At water surface level
+    p.x = worldX + (Math.random() - 0.5) * 0.5;
+    p.y = GROUND_LEVEL + 0.1;
+    p.z = worldZ + (Math.random() - 0.5) * 0.5;
+
+    // Stationary — reflection stays on surface
+    p.vx = 0;
+    p.vy = 0;
+    p.vz = 0;
+
+    // Warm golden glow matching firefly color
+    const t = Math.random();
+    p.color.setRGB(0.7 + t * 0.3, 0.75 + t * 0.15, 0.25 + t * 0.15);
+  }
+
+  /**
    * Emit a wind streak — a fast-moving horizontal particle that shows
    * the wind direction. Called during gusts for visible air movement.
    */
