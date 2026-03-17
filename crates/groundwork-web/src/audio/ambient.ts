@@ -14,6 +14,8 @@ let rainGain: GainNode | null = null;
 let cricketGain: GainNode | null = null;
 let windGain: GainNode | null = null;
 let windFilter: BiquadFilterNode | null = null;
+let rustleGain: GainNode | null = null;
+let rustleFilter: BiquadFilterNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -220,6 +222,46 @@ function createWindSound(audioCtx: AudioContext, output: GainNode): void {
   lfo.start();
 }
 
+/** Create leaf rustle — higher-freq shimmer layered above wind rumble.
+ *  Scales with foliage count + wind strength for a garden-responsive soundscape. */
+function createLeafRustleSound(audioCtx: AudioContext, output: GainNode): void {
+  const bufferSize = audioCtx.sampleRate * 2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  noise.loop = true;
+
+  // Bandpass filter: 2500Hz — the "shh" of leaves in wind
+  rustleFilter = audioCtx.createBiquadFilter();
+  rustleFilter.type = 'bandpass';
+  rustleFilter.frequency.value = 2500;
+  rustleFilter.Q.value = 0.5;
+
+  // Gentle random modulation for organic shimmer
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.frequency.value = 0.4; // faster than wind LFO — leaf flutter
+  lfoGain.gain.value = 0.01;
+
+  rustleGain = audioCtx.createGain();
+  rustleGain.gain.value = 0; // starts silent — scales with foliage
+
+  noise.connect(rustleFilter);
+  rustleFilter.connect(rustleGain);
+  rustleGain.connect(output);
+
+  lfo.connect(lfoGain);
+  lfoGain.connect(rustleGain.gain);
+
+  noise.start();
+  lfo.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -237,6 +279,7 @@ export function initAmbientAudio(): void {
     createRainSound(ctx, masterGain);
     createCricketSound(ctx, masterGain);
     createWindSound(ctx, masterGain);
+    createLeafRustleSound(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -285,6 +328,25 @@ export function setWindAmbient(strength: number): void {
   if (windFilter) {
     const freq = 200 + strength * 600; // 200Hz (calm) to 800Hz (gusty)
     windFilter.frequency.linearRampToValueAtTime(freq, ctx.currentTime + 1);
+  }
+}
+
+/** Set leaf rustle intensity based on foliage count and wind strength.
+ *  More trees + more wind = louder shimmering rustle. */
+export function setLeafRustle(foliageCount: number, windStrength: number): void {
+  if (!ctx) return;
+  // foliageCount: 0 → no rustle, 5000+ → full coverage
+  const coverage = Math.min(1, foliageCount / 5000);
+  // wind strength: 0 → barely audible, 1 → full rustle
+  const windFactor = 0.3 + windStrength * 0.7;
+  const vol = coverage * windFactor * 0.05; // max 0.05 — subtle background
+  if (rustleGain) {
+    rustleGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 0.5);
+  }
+  // Higher wind pushes filter frequency up — more bright shimmer
+  if (rustleFilter) {
+    const freq = 2000 + windStrength * 2000; // 2000Hz calm → 4000Hz gusty
+    rustleFilter.frequency.linearRampToValueAtTime(freq, ctx.currentTime + 0.5);
   }
 }
 

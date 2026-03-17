@@ -39,7 +39,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle } from './audio/ambient';
 import { playPlant, playWater, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1379,6 +1379,7 @@ async function main() {
       const newWind = currentWind + (targetWind - currentWind) * 0.05;
       foliage.setWindStrength(newWind);
       setWindAmbient(newWind);
+      setLeafRustle(foliage.count, newWind);
     }
     rain.update(dt);
 
