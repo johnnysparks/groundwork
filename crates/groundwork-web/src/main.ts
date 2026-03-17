@@ -1022,6 +1022,11 @@ async function main() {
     _squirrelCacheNotified = false;
     _pollinatorActNotified = false;
     _birdDropNotified = false;
+    _gardenAliveNotified = false;
+    _mycorrhizalNotified = false;
+    _lightCompetitionNotified = false;
+    _pineAllelopathyNotified = false;
+    _habitatNotified.clear();
     _xrayTipShown = false;
     _recentDieOff = false;
     _tipIndex = 0;
