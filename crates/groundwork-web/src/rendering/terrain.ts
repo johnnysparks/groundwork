@@ -58,6 +58,10 @@ const SOIL_WET = new THREE.Color(0.20, 0.14, 0.10);   // saturated dark mud
 const SOIL_GRASS_DAMP = new THREE.Color(0.22, 0.42, 0.16); // rich damp grass
 const SOIL_GRASS_WET = new THREE.Color(0.18, 0.38, 0.14);  // deep wet grass
 
+/** Nutrient-rich soil colors — warmer golden-brown tint shows fertile earth */
+const SOIL_RICH = new THREE.Color(0.45, 0.32, 0.14);         // warm golden earth
+const SOIL_GRASS_RICH = new THREE.Color(0.22, 0.58, 0.16);   // lush vibrant green
+
 /** Species-specific root colors for x-ray differentiation.
  *  Saturated, distinct hues so root wars are immediately readable.
  *  Each tree/plant species gets a unique color family. */
@@ -326,6 +330,16 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
         baseColor = isGrass ? SOIL_GRASS_DAMP : SOIL_DAMP;
       } else {
         baseColor = isGrass ? SOIL_GRASS : MATERIAL_COLORS[Material.Soil];
+      }
+      // Nutrient-rich soil: blend toward warm golden tint. The richer the
+      // soil, the more visible the warm glow — teaches players where
+      // nitrogen handshake, worm activity, and decomposition enriched soil.
+      if (quad.nutrient >= 2) {
+        const richTarget = isGrass ? SOIL_GRASS_RICH : SOIL_RICH;
+        baseColor = _scratchColor.copy(baseColor).lerp(richTarget, 0.5);
+      } else if (quad.nutrient >= 1) {
+        const richTarget = isGrass ? SOIL_GRASS_RICH : SOIL_RICH;
+        baseColor = _scratchColor.copy(baseColor).lerp(richTarget, 0.2);
       }
     } else if (grid && (quad.material === Material.Trunk || quad.material === Material.Branch || quad.material === Material.Root || quad.material === Material.Leaf)) {
       // Look up species_id from voxel byte 3 for species-specific colors

@@ -28,6 +28,8 @@ export interface MeshQuad {
   ao: [number, number, number, number];
   /** Water level bucket for soil voxels (0=dry, 1=damp, 2=wet). 0 for non-soil. */
   wetness: number;
+  /** Nutrient level bucket for soil voxels (0=poor, 1=medium, 2=rich). 0 for non-soil. */
+  nutrient: number;
 }
 
 /** Chunk dimensions — counts are computed from live grid dimensions */
@@ -79,6 +81,20 @@ function wetnessBucket(waterLevel: number): number {
   if (waterLevel >= 80) return 2;  // wet
   if (waterLevel >= 30) return 1;  // damp
   return 0;                         // dry
+}
+
+/** Read nutrient level from the grid (byte 3). Returns 0 for out-of-bounds. */
+function readNutrientLevel(grid: Uint8Array, x: number, y: number, z: number): number {
+  if (x < 0 || x >= GRID_X || y < 0 || y >= GRID_Y || z < 0 || z >= GRID_Z) return 0;
+  const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
+  return grid[idx + 3];
+}
+
+/** Bucket nutrient level into fertility classes: 0=poor, 1=medium, 2=rich */
+function nutrientBucket(nutrientLevel: number): number {
+  if (nutrientLevel >= 120) return 2;  // rich (nitrogen handshake, worm-enriched)
+  if (nutrientLevel >= 50) return 1;   // medium
+  return 0;                             // poor
 }
 
 /**
@@ -240,10 +256,11 @@ export function meshChunk(
           const isRootBoundary = mat === Material.Root
             && (neighborMat === Material.Soil || neighborMat === Material.Stone);
           if (isSolid(mat) && (!isSolid(neighborMat) || isRootBoundary)) {
-            // For soil, encode wetness bucket so wet/dry don't greedy-merge
+            // For soil, encode wetness + nutrient bucket so different conditions don't greedy-merge
             if (mat === Material.Soil) {
               const wl = readWaterLevel(grid, x, y, z);
-              mask[mi] = mat | (wetnessBucket(wl) << 4);
+              const nl = readNutrientLevel(grid, x, y, z);
+              mask[mi] = mat | (wetnessBucket(wl) << 4) | (nutrientBucket(nl) << 6);
             } else {
               mask[mi] = mat;
             }
@@ -316,9 +333,10 @@ export function meshChunk(
             (ao >> 12) & 0xf,
           ];
 
-          // Extract real material and wetness from packed mask value
+          // Extract real material, wetness, and nutrient from packed mask value
           const realMat = (mat & 0x0F) as MaterialType;
           const wetness = (mat >> 4) & 0x03;
+          const nutrient = (mat >> 6) & 0x03;
 
           quads.push({
             x: qx, y: qy, z: qz,
@@ -327,6 +345,7 @@ export function meshChunk(
             material: realMat,
             ao: unpackedAO,
             wetness,
+            nutrient,
           });
 
           a += w;
