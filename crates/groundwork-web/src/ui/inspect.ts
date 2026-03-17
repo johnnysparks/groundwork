@@ -27,6 +27,10 @@ export interface InspectData {
   waterLabel: string;
   lightLabel: string;
   nutrientLabel: string;
+  /** Plant condition: 'thriving' | 'healthy' | 'stressed' | 'dying' | null (non-plant) */
+  condition: string | null;
+  /** Short diagnosis of why the plant is stressed, if applicable */
+  stressHint: string | null;
 }
 
 /** Human-readable label for a 0-255 value */
@@ -67,6 +71,42 @@ export function readVoxelAt(grid: Uint8Array, x: number, y: number, z: number): 
                   mat === Material.Branch || mat === Material.Root;
   const speciesName = isPlant && species ? species.name : '';
 
+  // Plant health diagnosis for leaves/trunk
+  let condition: string | null = null;
+  let stressHint: string | null = null;
+  if (isPlant && mat !== Material.Seed) {
+    // For leaf voxels: water_level byte encodes health (0=healthy, 1-59=stressed)
+    // For trunk/root voxels: use light as proxy for shade stress
+    const isLeaf = mat === Material.Leaf;
+    const health = isLeaf ? (water === 0 ? 1.0 : Math.min(water / 60, 1)) : null;
+
+    // Assess conditions from environment
+    const lowLight = light < 30;
+    const lowWater = water < 30 && !isLeaf; // leaf water_level is health, not moisture
+
+    if (health !== null) {
+      if (health > 0.8) condition = 'thriving';
+      else if (health > 0.5) condition = 'healthy';
+      else if (health > 0.2) condition = 'stressed';
+      else condition = 'dying';
+    } else if (mat === Material.Trunk || mat === Material.Branch) {
+      // Trunk/branch: infer from light
+      condition = lowLight ? 'shaded' : 'healthy';
+    } else if (mat === Material.Root) {
+      condition = lowWater ? 'dry' : 'healthy';
+    }
+
+    // Stress diagnosis hints
+    if (condition === 'stressed' || condition === 'dying') {
+      if (lowLight) stressHint = 'Not enough light — shaded by a taller tree?';
+      else stressHint = 'Struggling for water — dig channels from the spring';
+    } else if (condition === 'shaded') {
+      stressHint = 'In the shadow of a taller tree';
+    } else if (condition === 'dry') {
+      stressHint = 'Roots need moisture — dig irrigation channels nearby';
+    }
+  }
+
   return {
     x, y, z,
     material: mat,
@@ -79,6 +119,8 @@ export function readVoxelAt(grid: Uint8Array, x: number, y: number, z: number): 
     waterLabel: levelLabel(water),
     lightLabel: levelLabel(light),
     nutrientLabel: levelLabel(nutrient),
+    condition,
+    stressHint,
   };
 }
 
@@ -125,8 +167,25 @@ export class InspectPanel {
       title = data.speciesName;
     }
 
+    // Condition badge color
+    const conditionColor = data.condition === 'thriving' ? '#6a6' :
+      data.condition === 'healthy' ? '#8a8' :
+      data.condition === 'stressed' ? '#ca6' :
+      data.condition === 'dying' ? '#c66' :
+      data.condition === 'shaded' ? '#88a' :
+      data.condition === 'dry' ? '#ca8' : '';
+
+    const conditionHTML = data.condition
+      ? `<div class="inspect-condition" style="color:${conditionColor}">${data.condition}</div>`
+      : '';
+
+    const hintHTML = data.stressHint
+      ? `<div class="inspect-hint">${data.stressHint}</div>`
+      : '';
+
     this.el.innerHTML = `
       <div class="inspect-title">${title}</div>
+      ${conditionHTML}
       <div class="inspect-row">
         <span class="inspect-label">Moisture</span>
         <span class="inspect-value">${data.waterLabel}</span>
@@ -137,6 +196,7 @@ export class InspectPanel {
         <span class="inspect-value">${data.lightLabel}</span>
         ${lightBar}
       </div>
+      ${hintHTML}
       <div class="inspect-coord">(${data.x}, ${data.y}, z=${data.z})</div>
     `;
     this.el.classList.add('visible');
@@ -225,6 +285,21 @@ const INSPECT_CSS = `
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease;
+}
+
+.inspect-condition {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  margin-bottom: 6px;
+}
+
+.inspect-hint {
+  font-size: 11px;
+  color: rgba(220, 190, 140, 0.7);
+  font-style: italic;
+  margin: 4px 0 2px;
+  line-height: 1.3;
 }
 
 .inspect-coord {
