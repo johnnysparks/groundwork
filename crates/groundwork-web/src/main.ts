@@ -187,7 +187,7 @@ const ECO_TIPS = [
   'Tip: Blue particles under trees = dappled shade. Ferns and moss love it!',
   'Tip: Crowded plants die — give trees space to claim territory',
   'Tip: The garden gnome does the work — zone areas and watch',
-  'Tip: Trees share nutrients through underground mycorrhizal networks',
+  'Tip: Trees share health through underground mycorrhizal networks — violet glow between roots in x-ray view',
   'Tip: Dead wood becomes a nurse log — seedlings grow faster on it',
   'Tip: Too many plants? The garden has a carrying capacity — thin for health',
   'Tip: Berry bushes attract birds — birds spread seeds to new areas',

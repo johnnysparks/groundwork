@@ -91,6 +91,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.50, 0.38, 0.22),  // medium soil
     new THREE.Color(0.36, 0.26, 0.14),  // deep brown
   ],
+  mycorrhizal: [
+    new THREE.Color(0.70, 0.55, 0.85),  // soft violet
+    new THREE.Color(0.60, 0.50, 0.75),  // muted purple
+    new THREE.Color(0.80, 0.70, 0.90),  // pale lavender
+  ],
 };
 
 interface EcoParticle {
@@ -250,6 +255,42 @@ export class EcologyParticles {
       }
     }
 
+    // Mycorrhizal Network: same-species roots close together share health.
+    // Emit soft violet particles drifting between connected root clusters underground.
+    // Uses species_id (byte 3 = nutrient_level) to detect same-species proximity.
+    const mStep = 10;
+    for (let sy = 0; sy < GRID_Y; sy += mStep) {
+      for (let sx = 0; sx < GRID_X; sx += mStep) {
+        for (let sz = GROUND_LEVEL - 8; sz < GROUND_LEVEL; sz += 3) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] !== Material.Root) continue;
+          const speciesId = grid[idx + 3]; // nutrient_level = species_id for plant voxels
+          if (speciesId >= 12) continue;
+
+          // Look for a different root cluster of the SAME species within 3-6 voxels
+          let foundNeighbor = false;
+          for (let dy = -6; dy <= 6; dy += 3) {
+            for (let dx = -6; dx <= 6; dx += 3) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = sx + dx;
+              const ny = sy + dy;
+              if (nx < 0 || nx >= GRID_X || ny < 0 || ny >= GRID_Y) continue;
+              const nIdx = (nx + ny * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+              if (grid[nIdx] === Material.Root && grid[nIdx + 3] === speciesId) {
+                foundNeighbor = true;
+                // Emit particles at the midpoint between the two root clusters
+                const mx = (sx + nx) / 2 + 0.5;
+                const mz = (sy + ny) / 2 + 0.5;
+                this.emitMycorrhizal(mx, sz + 0.5, mz);
+                break;
+              }
+            }
+            if (foundNeighbor) break;
+          }
+        }
+      }
+    }
+
     // Canopy Effect: shade-tolerant ground plants near tall trunks
     // Detect Leaf voxels at ground level with low light (shaded) near Trunk voxels above
     const cStep = 16;
@@ -371,6 +412,34 @@ export class EcologyParticles {
 
       const c = INTERACTION_COLORS.soilDisturbance[
         Math.floor(Math.random() * INTERACTION_COLORS.soilDisturbance.length)
+      ];
+      p.color.copy(c);
+    }
+  }
+
+  /** Emit mycorrhizal network particles between connected root zones.
+   *  Soft violet glow drifts horizontally underground — the "wood-wide web." */
+  private emitMycorrhizal(worldX: number, worldY: number, worldZ: number): void {
+    const count = 3;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDead();
+      if (!p) return;
+
+      p.alive = true;
+      p.maxLife = 1.5 + Math.random() * 1.0;
+      p.life = p.maxLife;
+
+      p.x = worldX + (Math.random() - 0.5) * 1.5;
+      p.y = worldY + (Math.random() - 0.5) * 0.3;
+      p.z = worldZ + (Math.random() - 0.5) * 1.5;
+
+      // Slow horizontal drift — fungal threads spreading underground
+      p.vx = (Math.random() - 0.5) * 0.15;
+      p.vy = 0.02 + Math.random() * 0.05; // barely rises
+      p.vz = (Math.random() - 0.5) * 0.15;
+
+      const c = INTERACTION_COLORS.mycorrhizal[
+        Math.floor(Math.random() * INTERACTION_COLORS.mycorrhizal.length)
       ];
       p.color.copy(c);
     }
