@@ -16,6 +16,7 @@ let windGain: GainNode | null = null;
 let windFilter: BiquadFilterNode | null = null;
 let rustleGain: GainNode | null = null;
 let rustleFilter: BiquadFilterNode | null = null;
+let pollinatorGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -262,6 +263,42 @@ function createLeafRustleSound(audioCtx: AudioContext, output: GainNode): void {
   lfo.start();
 }
 
+/** Create ambient pollinator hum — warm oscillator buzz that scales with bee/butterfly count. */
+function createPollinatorHum(audioCtx: AudioContext, output: GainNode): void {
+  // Base bee buzz: ~230Hz sine with FM vibrato
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 230;
+
+  // Vibrato: slight frequency wobble for organic buzzy sound
+  const vibrato = audioCtx.createOscillator();
+  const vibratoGain = audioCtx.createGain();
+  vibrato.frequency.value = 8; // fast tremor
+  vibratoGain.gain.value = 12; // ±12Hz wobble
+  vibrato.connect(vibratoGain);
+  vibratoGain.connect(osc.frequency);
+
+  // Second harmonic for richer buzz
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 345; // ~1.5x fundamental — not a perfect harmonic, more organic
+
+  const osc2Gain = audioCtx.createGain();
+  osc2Gain.gain.value = 0.3; // quieter overtone
+
+  pollinatorGain = audioCtx.createGain();
+  pollinatorGain.gain.value = 0; // starts silent
+
+  osc.connect(pollinatorGain);
+  osc2.connect(osc2Gain);
+  osc2Gain.connect(pollinatorGain);
+  pollinatorGain.connect(output);
+
+  osc.start();
+  vibrato.start();
+  osc2.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -280,6 +317,7 @@ export function initAmbientAudio(): void {
     createCricketSound(ctx, masterGain);
     createWindSound(ctx, masterGain);
     createLeafRustleSound(ctx, masterGain);
+    createPollinatorHum(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -348,6 +386,15 @@ export function setLeafRustle(foliageCount: number, windStrength: number): void 
     const freq = 2000 + windStrength * 2000; // 2000Hz calm → 4000Hz gusty
     rustleFilter.frequency.linearRampToValueAtTime(freq, ctx.currentTime + 0.5);
   }
+}
+
+/** Set pollinator hum intensity based on active bee/butterfly count.
+ *  More pollinators = louder background buzz. */
+export function setPollinatorHum(pollinatorCount: number): void {
+  if (!ctx || !pollinatorGain) return;
+  // 0 pollinators = silent, 5+ = full hum (very quiet — background texture)
+  const vol = Math.min(1, pollinatorCount / 5) * 0.015;
+  pollinatorGain.gain.linearRampToValueAtTime(vol, ctx.currentTime + 1);
 }
 
 /** Fade cricket sounds in for dusk/night, out for day.

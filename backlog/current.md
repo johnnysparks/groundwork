@@ -148,11 +148,13 @@ See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`
 - Water tool removed from HUD, costs, audio triggers, gnome tool visuals
 - Bridge/WASM comments updated (water tool code kept for debug only)
 
-**Pending (implementation):**
-- P1: Remove Water from BRIDGE_TOOLS array so it doesn't appear in tool palette
-- P1: Update quest completion check for 'placeWater' → detect dig-near-water instead
-- P1: Enhance water_flow visualization (satisfying channel filling)
-- P1: Tutorial flow: first quest guides player to dig from spring to seed area
+**Completed (implementation, Sprints 157-158):**
+- Water tool filtered from HUD palette (BRIDGE_TOOLS → filter)
+- Quest 'placeWater' completes on shovel use (dig = irrigate)
+- Water flow sparkle particles at expanding water frontier
+- Tutorial text already guides to dig channels from spring
+
+**Pending:**
 - P2: Berm/dam mechanics with soil tool
 - P2: Flow rate visualization overlay
 - P2: Irrigation efficiency HUD feedback

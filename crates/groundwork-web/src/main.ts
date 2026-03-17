@@ -39,7 +39,7 @@ import { DayCycle } from './lighting/daycycle';
 import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
-import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle } from './audio/ambient';
+import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum } from './audio/ambient';
 import { playPlant, playDig, playFaunaArrival, playBirdCall, playBuzz, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
@@ -1352,6 +1352,20 @@ async function main() {
           else if (isDawn) playBirdCall();         // Extra bird calls at dawn
         }
       }
+    }
+
+    // Continuous pollinator hum: scales with active bee/butterfly count
+    if (isInitialized()) {
+      const fc = getFaunaCount();
+      const fv = getFaunaView();
+      let pollinators = 0;
+      if (fv) {
+        for (let i = 0; i < fc; i++) {
+          const f = readFauna(fv, i);
+          if (f.type === FaunaType.Bee || f.type === FaunaType.Butterfly) pollinators++;
+        }
+      }
+      setPollinatorHum(pollinators);
     }
 
     // Animate growth particles
