@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-17T17:00:00
-**Status:** Alpha complete. 175 sprints. Living ecosystem with visible ecological interactions, 10-layer responsive audio landscape, full day-night atmosphere (dawn mist/dew, midday dust motes, golden hour warmth, dusk fireflies/frogs, night crickets/owls), dynamic wind with petal scatter, species-colored falling leaves, gnome emotion sounds, rain splash particles, seed dispersal trails. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-17T19:00:00
+**Status:** Alpha complete. 182 sprints. Living ecosystem with visible ecological interactions, 11-layer responsive audio landscape, full day-night atmosphere (dawn mist/dew/bird chorus, midday dust motes, golden hour warmth, dusk synchronized fireflies/frogs, night crickets/owls), dynamic wind with petal scatter and wind chimes, species-colored falling leaves, gnome emotion sounds, rain splash + post-rain leaf drip, seed dispersal trails, plant wilting particles. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -137,7 +137,7 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Cloud shadow pulses: 3 overlapping sine waves modulate sun intensity during day
 - Leaf rustle ambient: bandpass noise scales with foliage count + wind strength
 
-### Alive Garden Polish (Sprints 157-175)
+### Alive Garden Polish (Sprints 157-182)
 - Flower petal scatter on wind gusts (pink-purple + warm yellow per species)
 - Seed sprout pop particles (bright green burst on seed→plant transition)
 - Seed dispersal trail (golden particles descending at new seed landing sites)
@@ -151,6 +151,13 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Beetle clicking sound (scales with beetle count, daytime only)
 - Owl hoot every 30-70s during deep night
 - Water babble scales with water volume (0.04→0.12 gain)
+- Idle camera zoom breathe (±3% at 0.15Hz during auto-orbit)
+- Shooting star shimmer sound (synced to shader timing)
+- Plant die-off wilting particles (brown/amber drift down)
+- Dawn chorus: 3 bird song variants (chirp, warble, robin)
+- Post-rain leaf drip (30-60s of water drops from foliage)
+- Firefly blink synchronization (gradual phase lock after 15s)
+- Wind chime on gusts in dense gardens (pentatonic sine, 40% chance)
 
 ---
 
