@@ -73,7 +73,8 @@ void main() {
   vec2 edge = smoothstep(vec2(0.0), vec2(0.05), vUv) * smoothstep(vec2(1.0), vec2(0.95), vUv);
   darkness *= edge.x * edge.y;
 
-  gl_FragColor = vec4(0.0, 0.0, 0.0, darkness);
+  // Cool blue shadow tint — real cloud shadows shift blue from scattered sky light
+  gl_FragColor = vec4(0.02, 0.04, 0.10, darkness);
 }
 `;
 
