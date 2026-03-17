@@ -69,6 +69,9 @@ export class FireflyRenderer {
   private flies: Firefly[] = [];
   private timeUniform: { value: number };
   private active = false;
+  private windDirX = 0;
+  private windDirZ = 0;
+  private windStrength = 0;
 
   /** Synchronization: global pulse phase + coupling strength */
   private syncPhase = 0;      // 0-1 repeating cycle
@@ -132,6 +135,13 @@ export class FireflyRenderer {
     this.active = dayTime >= 0.65 || dayTime < 0.05;
   }
 
+  /** Set wind parameters — fireflies drift gently with the wind */
+  setWind(windAngle: number, strength: number): void {
+    this.windDirX = Math.cos(windAngle);
+    this.windDirZ = Math.sin(windAngle);
+    this.windStrength = strength;
+  }
+
   /** Update firefly positions and blinking. Call each frame. */
   update(dt: number, elapsedTime: number): void {
     this.timeUniform.value = elapsedTime;
@@ -183,9 +193,9 @@ export class FireflyRenderer {
         this.actives[i] *= 0.15;
       }
 
-      // Lazy drift
-      f.x += f.vx * dt;
-      f.y += f.vy * dt;
+      // Lazy drift + wind influence (fireflies are light — wind moves them)
+      f.x += (f.vx + this.windDirX * this.windStrength * 0.2) * dt;
+      f.y += (f.vy + this.windDirZ * this.windStrength * 0.2) * dt;
       f.z += f.vz * dt;
 
       // Gentle random direction change

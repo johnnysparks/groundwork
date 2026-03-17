@@ -1806,6 +1806,7 @@ async function main() {
     // Fireflies + cricket sounds: active during dusk/night
     const dayTime = dayCycle.getTime();
     fireflies.setActive(dayTime);
+    fireflies.setWind(windAngle, foliage.getWindStrength());
     fireflies.update(dt, elapsed);
     // Firefly water reflections + moth flutter: nighttime light-drawn effects
     {
