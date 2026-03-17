@@ -102,14 +102,23 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Birch, Willow, Pine all proportionally adjusted
 - Pine height reduced 2.8→2.5m for better silhouette
 
-### Water Surface Polish (Sprint 144)
+### Water Surface Polish (Sprints 144, 149)
 - Caustic refraction patterns (bright dancing lines, strongest in shallow water)
 - Gentle vertex wave displacement (surface undulates)
+- Rain ripple rings: concentric circles from drop points during rain
 
 ### Squirrel Trust Arc (Sprint 145)
 - Trust milestone HUD messages at 50, 100, 150, 180
 - Discovery chime at trust 180 (companion threshold)
 - Enhanced emotion particles scale with trust level
+
+### Bird Seed-Drop Particles (Sprint 146)
+- Golden seed particles fall from birds in Acting state
+- Completes Bird Express visual chain
+
+### Day-Night Atmosphere (Sprints 147-148)
+- Foliage color tinting: warm gold→neutral→amber→cool blue across day cycle
+- Terrain tinting: trunks, branches, soil follow same temperature curve
 
 ### Quality of Life (Sprints 111-112)
 - Auto-save "Saved" indicator (bottom-right, fades after 1.5s)
