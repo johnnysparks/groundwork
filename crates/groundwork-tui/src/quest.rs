@@ -82,12 +82,12 @@ const QUEST_DEFS: &[QuestDef] = &[
     },
     QuestDef {
         id: QuestId::PlaceWater,
-        name: "Use the watering can",
+        name: "Dig an irrigation channel",
         chapter: 1,
-        detail: "Select the watering can with Tab, then Space to \
-                 pour. Water obeys gravity — it falls through air \
-                 and pools on solid ground. Plants need water \
-                 nearby to grow.",
+        detail: "Use the shovel to dig a path from the spring toward \
+                 your plants. Water flows downhill through channels \
+                 and soaks into nearby soil. Shape the terrain to \
+                 guide water where you need it.",
     },
     QuestDef {
         id: QuestId::ObserveWetSoil,

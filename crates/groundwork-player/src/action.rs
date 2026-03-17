@@ -14,7 +14,7 @@ pub enum Action {
 
     // --- Tool use ---
     /// Place a tool at a single coordinate.
-    /// Tool: "seed", "water", "soil", "stone", "air"/"dig"
+    /// Tool: "seed", "water" (debug only — use dig for irrigation), "soil", "stone", "air"/"dig"
     /// Species: optional species name for seed tool (e.g. "oak", "fern")
     Place {
         tool: String,

@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-16T21:00:00
-**Status:** Alpha complete. 145 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars/moonlight/shooting stars, discovery feedback loop, dawn chorus, welcome flow, growth stage celebrations, stout tree proportions, water caustics, squirrel trust arc.
+**Last updated:** 2026-03-17T12:00:00
+**Status:** Alpha complete. 145 sprints. Living ecosystem with visible ecological interactions, ambient life layers, full day-night cycle with stars/moonlight/shooting stars, discovery feedback loop, dawn chorus, welcome flow, growth stage celebrations, stout tree proportions, water caustics, squirrel trust arc. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -125,6 +125,24 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Contextual ecology tips (suggests next discovery based on garden state)
 
 ---
+
+### Irrigation Replaces Watering Can (Executive Mandate)
+See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`
+
+**Completed (documentation):**
+- Decision document written
+- All docs updated (CLAUDE.md, agents, decisions, balance, quests)
+- Water tool removed from HUD, costs, audio triggers, gnome tool visuals
+- Bridge/WASM comments updated (water tool code kept for debug only)
+
+**Pending (implementation):**
+- P1: Remove Water from BRIDGE_TOOLS array so it doesn't appear in tool palette
+- P1: Update quest completion check for 'placeWater' → detect dig-near-water instead
+- P1: Enhance water_flow visualization (satisfying channel filling)
+- P1: Tutorial flow: first quest guides player to dig from spring to seed area
+- P2: Berm/dam mechanics with soil tool
+- P2: Flow rate visualization overlay
+- P2: Irrigation efficiency HUD feedback
 
 ## P1
 

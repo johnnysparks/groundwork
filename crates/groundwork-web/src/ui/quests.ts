@@ -69,9 +69,9 @@ const QUEST_DEFS: QuestDef[] = [
   },
   {
     id: 'placeWater',
-    name: 'Water your garden',
+    name: 'Irrigate your garden',
     chapter: 1,
-    detail: 'Select the watering can and click near your plants. Water spreads through soil and helps everything grow.',
+    detail: 'Use the shovel to dig a channel from the spring toward your plants. Water flows downhill through channels and soaks into nearby soil.',
   },
   // Chapter 2: Flowers & Fauna (score 500 unlocks flowers)
   {

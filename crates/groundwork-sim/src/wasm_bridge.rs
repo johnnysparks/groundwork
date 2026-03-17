@@ -151,7 +151,7 @@ pub fn get_weather_duration() -> u32 {
     with_sim(|sim| sim.world.resource::<crate::Weather>().duration)
 }
 
-/// Place a tool at (x, y, z). Tool codes: 0=shovel, 1=seed, 2=water, 3=soil, 4=stone.
+/// Place a tool at (x, y, z). Tool codes: 0=shovel, 1=seed, 2=water (debug only — irrigation via digging replaces watering can), 3=soil, 4=stone.
 /// Returns the landing z coordinate, or -1 if the action had no effect.
 #[wasm_bindgen]
 pub fn place_tool(tool: u8, x: usize, y: usize, z: usize) -> i32 {
@@ -616,7 +616,7 @@ pub fn tree_stats_len() -> usize {
 
 // --- Garden Gnome ---
 
-/// Queue a task for the garden gnome. Tool codes: 0=shovel, 1=seed, 2=water, 3=soil, 4=stone.
+/// Queue a task for the garden gnome. Tool codes: 0=shovel, 1=seed, 2=water (debug only), 3=soil, 4=stone.
 /// Species is used for seed tasks (pass 255 for non-seed tools).
 /// Returns true if the task was queued, false if the queue is full.
 #[wasm_bindgen]

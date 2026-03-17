@@ -32,12 +32,12 @@ This is an **executive mandate**: the gardener gnome and zone-planning system ar
 
 All tool actions go through the gnome's task queue. No instant placement mode for players (dev-only debug shortcut available).
 
-- Player selects a tool (seed bag, shovel, watering can, soil, stone)
+- Player selects a tool (seed bag, shovel, soil, stone) — note: watering can removed, see `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`
 - **Drags** across surface to paint a zone (single clicks also work — queue of 1)
 - Zone appears as **ghost overlay** — translucent colored voxels with tool-specific visual treatment:
   - **Seed zones**: soft green tint with gentle pulse animation
   - **Dig zones**: wireframe/dashed outline with red-brown tint ("will be removed")
-  - **Water zones**: translucent blue shimmer
+  - ~~**Water zones**: translucent blue shimmer~~ *(removed — no water tool, use shovel to dig irrigation channels instead)*
   - **Soil zones**: translucent warm brown
 - Right-click to cancel planned zones (removes ghost + dequeues)
 - HUD shows queue counter: "12 tasks remaining"
@@ -56,7 +56,7 @@ The gnome is a **first-class sim entity** following the fauna pattern (`fauna.rs
 #### Core Identity
 
 - **Visual**: ~2.5 voxels tall billboard sprite. Classic gnome look — pointy red hat, round body, white beard, brown boots. Whimsical and warm.
-- **Tool-specific**: carries visible tool matching current task (tiny shovel, watering can, seed bag)
+- **Tool-specific**: carries visible tool matching current task (tiny shovel, seed bag)
 - **Movement**: walks along surface voxels toward nearest queued task. Simple surface pathfinding (greedy walk-toward-goal with obstacle stepping on 80×80 grid).
 - **Pacing**: processes one voxel per 2-3 sim ticks (tunable). Speed multiplier (1x/2x/5x) naturally affects gnome speed.
 
@@ -117,7 +117,7 @@ The gnome and fauna share the same sim space. When proximity + conditions align,
 When the task queue is empty, the gnome doesn't just stand still. It has low-priority autonomous behaviors:
 
 - **Wander and inspect**: walks to plants, kneels to look at them. If plant is struggling (low water, crowded), gnome frowns slightly — visual cue to the player.
-- **Light maintenance**: pulls a weed (removes a random competing seedling in crowded areas). Waters a thirsty plant with a small watering can. These are *very* low-frequency and small-scale — not gardening-for-you, just puttering.
+- **Light maintenance**: pulls a weed (removes a random competing seedling in crowded areas). Clears debris from irrigation channels. These are *very* low-frequency and small-scale — not gardening-for-you, just puttering.
 - **Rest in beautiful spots**: finds aesthetically nice locations (under canopy, near water, on elevated ground) and sits. The gnome's rest spots implicitly teach the player what a "good" garden looks like.
 - **React to garden events**: when a new species appears (pioneer succession), gnome walks over to look. When fauna arrives, gnome watches. When a plant dies, gnome looks sad briefly.
 

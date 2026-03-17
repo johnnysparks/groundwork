@@ -6,7 +6,7 @@
 
 2. **Competition must be visible.** Crowded trees must actually die. This requires: shade penalty > partial recovery rate. Currently shade ~0.006/tick vs partial recovery 0.002/tick = net -0.004/tick death.
 
-3. **Water must matter.** Removing water from the garden must eventually kill plants. Root water decay (-2/tick without wet soil) ensures this.
+3. **Water must matter.** Removing water from the garden must eventually kill plants. Root water decay (-2/tick without wet soil) ensures this. Water comes from natural sources (springs, rain) — players must dig irrigation channels to direct flow. No watering can tool. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`.
 
 4. **First payoff within 3 seconds.** Competitive benchmark: cozy games deliver visual feedback in 1-5 seconds. Our seed -> trunk at ~1.7s, first leaf at ~3s.
 

@@ -136,7 +136,7 @@ See `e2e/playtest.ts` and `src/agent-api.ts` for the full API.
 Gardening tools:
 - `air`/`dig` = **shovel** — removes anything
 - `seed` = **seed bag** — plants a seed (falls through air, dies on stone)
-- `water` = **watering can** — pours water (falls through air)
+- ~~`water` = **watering can**~~ — removed. Water comes from natural sources (springs, rain). Dig channels with shovel to irrigate. See `decisions/2026-03-17T12:00:00_irrigation_replaces_watering_can.md`
 - `soil` = soil (falls through air)
 - `stone` = stone (placed directly)
 
