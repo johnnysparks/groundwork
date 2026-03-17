@@ -903,6 +903,8 @@ async function main() {
           if (msg) hud.addEvent(`${name} ${msg}`);
           playTreeCreak();
           if (t.stage >= GrowthStage.Mature) playDiscovery();
+          // Gently nudge camera toward growth event
+          orbit.nudgeToward(t.rootX + 0.5, GROUND_LEVEL, t.rootY + 0.5);
         }
         _prevTreeStages.set(key, t.stage);
       }

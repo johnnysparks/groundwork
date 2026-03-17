@@ -172,6 +172,14 @@ export class OrbitCamera {
     this.setCenter(simX, GROUND_LEVEL, simY);
   }
 
+  /** Gently nudge camera toward an event (doesn't reset idle).
+   *  Moves 20% of the way toward the target, creating a subtle attention pull. */
+  nudgeToward(x: number, y: number, z: number): void {
+    this.targetCenter.x += (x - this.targetCenter.x) * 0.2;
+    this.targetCenter.y += (y - this.targetCenter.y) * 0.2;
+    this.targetCenter.z += (z - this.targetCenter.z) * 0.2;
+  }
+
   /** Reset camera to default diorama view */
   reset(): void {
     this.resetIdle();
