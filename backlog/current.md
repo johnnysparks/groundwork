@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
 **Last updated:** 2026-03-17T23:00:00
-**Status:** Alpha complete. 200 sprints (milestone!). Living ecosystem with visible ecological interactions, 13-layer responsive audio landscape (20 SFX types), full day-night atmosphere (dawn mist/dew/steam/chorus, midday dust, golden hour bloom boost, dusk fireflies/frogs/crickets, night vitality drone/owls, twinkling stars), camera-reactive foliage, fauna arrival celebrations with flight bob, tree growth creaks, bee waggle dances, weather-driven atmosphere (post-rain drip, mist density, water tinting, drought dust devils, fog day cycle), garden age milestones, "the garden is alive" ecosystem milestone. **Irrigation replaces watering can** (executive mandate).
+**Status:** Alpha complete. 210 sprints. Living ecosystem with complete fauna behavior matrix (every fauna type has visible state-specific animation + trail particles), 14-layer responsive audio landscape (21 SFX types including root crackle), heat shimmer post-processing, rain puddle shimmer, wind direction streaks, ambient gnat swarms, butterfly flower landing, bird perching. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
@@ -137,7 +137,7 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Cloud shadow pulses: 3 overlapping sine waves modulate sun intensity during day
 - Leaf rustle ambient: bandpass noise scales with foliage count + wind strength
 
-### Alive Garden Polish (Sprints 157-200)
+### Alive Garden Polish (Sprints 157-210)
 - Flower petal scatter on wind gusts (pink-purple + warm yellow per species)
 - Seed sprout pop particles (bright green burst on seed→plant transition)
 - Seed dispersal trail (golden particles descending at new seed landing sites)
@@ -176,6 +176,16 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - Drought dust devils (6-particle upward spirals, tan/brown, ~0.3/sec)
 - Fog color follows day cycle (desaturated tint, warm amber→cool blue)
 - "The garden is alive" milestone (plants>1000, fauna≥5, species≥3 → chime + sparkle)
+- Ambient gnat swarms (5 clusters of 8 orbiting over dense vegetation, daylight only)
+- Water ripple from flying fauna (8-particle expanding ring when near water)
+- Root growth crackle sound (3-4 rapid low-pass noise snaps on root expansion)
+- Butterfly flower landing (Acting state settles lower, slow wing pulse, level wings)
+- Heat shimmer post-processing (UV distortion during drought/midday)
+- Bird perch idle animation (tucked wings, head tilt, lowered into canopy)
+- Worm soil disturbance particles (earthy puffs at ground level during activity)
+- Rain puddle shimmer (stationary blue-white reflective particles during rain)
+- Beetle iridescent trail (green-blue shimmer behind active beetles)
+- Wind streak particles (fast horizontal streaks during gusts, slowly drifting direction)
 
 ---
 
