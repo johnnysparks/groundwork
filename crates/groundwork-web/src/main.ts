@@ -1651,6 +1651,12 @@ async function main() {
                 && Math.random() < dt * 1.2) {
               particles.emitBeeWaggle(f.x, f.y); // sim x,y → world x,z
             }
+            // Butterfly pollen trail: soft yellow motes drift from wings while active
+            if (f.type === FaunaType.Butterfly
+                && (f.state === FaunaState.Seeking || f.state === FaunaState.Acting)
+                && Math.random() < dt * 0.6) {
+              particles.emitButterflyPollen(f.x, f.y);
+            }
           } else if (f.type === FaunaType.Beetle) {
             beetles++;
             // Beetle trail shimmer: faint iridescent particles showing decomposition path

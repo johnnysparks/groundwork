@@ -1028,6 +1028,33 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a tiny pollen mote trailing behind a butterfly in flight.
+   * Soft yellow-white particles that drift slowly downward.
+   */
+  emitButterflyPollen(worldX: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.8 + Math.random() * 0.6;
+    p.maxLife = p.life;
+
+    // Near butterfly flight height with slight scatter
+    p.x = worldX + (Math.random() - 0.5) * 0.6;
+    p.y = GROUND_LEVEL + 1.5 + Math.random() * 1.5;
+    p.z = worldZ + (Math.random() - 0.5) * 0.6;
+
+    // Gentle float downward with wandering drift
+    p.vx = (Math.random() - 0.5) * 0.15;
+    p.vy = -0.1 - Math.random() * 0.08;
+    p.vz = (Math.random() - 0.5) * 0.15;
+
+    // Soft warm yellow (pollen)
+    const t = Math.random();
+    p.color.setRGB(1.0, 0.9 + t * 0.1, 0.5 + t * 0.2);
+  }
+
+  /**
    * Emit a ground-level wet shimmer — creates the impression of puddles
    * forming on flat ground during rain. Short-lived reflective sparkle.
    */
