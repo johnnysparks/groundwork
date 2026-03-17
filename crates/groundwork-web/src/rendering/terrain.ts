@@ -444,6 +444,9 @@ function buildMeshFromQuads(quads: MeshQuad[], name: string, material: THREE.Mat
       depthFactor = 1.0 - Math.min(depthBelow / GROUND_LEVEL, 1.0) * 0.15;
       // Per-voxel noise: ±5% brightness variation to break uniformity
       noiseFactor = (voxelNoise(quad.x, quad.y, quad.z) - 0.5) * 0.10;
+    } else if (quad.material === Material.Trunk || quad.material === Material.Branch) {
+      // Bark texture variation: ±8% per-voxel, makes each tree feel unique
+      noiseFactor = (voxelNoise(quad.x, quad.y, quad.z) - 0.5) * 0.16;
     }
 
     const [nx, ny, nz] = FACE_NORMALS[quad.face];
