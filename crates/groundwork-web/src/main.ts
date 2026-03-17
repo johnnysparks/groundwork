@@ -23,6 +23,7 @@ import { FallingLeaves } from './rendering/leaves';
 import { EcologyParticles } from './rendering/ecology';
 import { DewRenderer } from './rendering/dew';
 import { DustMoteRenderer } from './rendering/dustmotes';
+import { MistRenderer } from './rendering/mist';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
 import { OrbitCamera } from './camera/orbit';
@@ -547,6 +548,11 @@ async function main() {
 
   const dew = new DewRenderer();
   scene.add(dew.group);
+
+  // --- Dawn mist ---
+
+  const mist = new MistRenderer();
+  scene.add(mist.group);
 
   // --- Dust motes (midday ambient) ---
 
@@ -1347,6 +1353,8 @@ async function main() {
     fireflies.update(dt, elapsed);
     dew.setActive(dayTime);
     dew.update(dt, elapsed);
+    mist.setActive(dayTime);
+    mist.update(dt);
     dustMotes.setActive(dayTime);
     dustMotes.update(dt, elapsed);
     setNightAmbient(dayTime);
