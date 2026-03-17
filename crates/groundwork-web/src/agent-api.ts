@@ -222,7 +222,7 @@ export function initAgentAPI(config: AgentAPIConfig): void {
     getSpeciesCounts: () => {
       if (!isInitialized()) return {};
       const grid = getGridView();
-      const plantMats = new Set([4, 5, 6, 7, 8]); // root, seed, trunk, branch, leaf
+      const plantMats = new Set([4, 6, 7, 8]); // root, trunk, branch, leaf (not seed — byte 3 is growth counter)
       const maxSpeciesId = SPECIES.length; // valid IDs: 0..11
       const speciesCounts: Record<number, number> = {};
       let invalidCount = 0;
