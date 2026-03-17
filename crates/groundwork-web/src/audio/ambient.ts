@@ -22,6 +22,7 @@ let beetleGain: GainNode | null = null;
 let waterSoundGain: GainNode | null = null;
 let cricketRhythm1: OscillatorNode | null = null;
 let cricketRhythm2: OscillatorNode | null = null;
+let gardenDroneGain: GainNode | null = null;
 let started = false;
 let isRaining = false;
 let isNight = false;
@@ -408,6 +409,37 @@ function createBeetleClick(audioCtx: AudioContext, output: GainNode): void {
   rhythm.start();
 }
 
+/** Create a gentle garden vitality drone — low warm harmonic for thriving night gardens */
+function createGardenDrone(audioCtx: AudioContext, output: GainNode): void {
+  // Two detuned low sines for a warm, organic hum
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 65; // Low C2-ish
+
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 98; // ~G2 (perfect fifth)
+
+  // Very slow LFO for breathing effect
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.frequency.value = 0.08; // 8-second breath cycle
+  lfoGain.gain.value = 0.003;
+  lfo.connect(lfoGain);
+
+  gardenDroneGain = audioCtx.createGain();
+  gardenDroneGain.gain.value = 0;
+
+  osc1.connect(gardenDroneGain);
+  osc2.connect(gardenDroneGain);
+  lfoGain.connect(gardenDroneGain.gain); // breathing modulation
+  gardenDroneGain.connect(output);
+
+  osc1.start();
+  osc2.start();
+  lfo.start();
+}
+
 /** Initialize ambient audio (call once). Starts silent, fades in on interaction. */
 export function initAmbientAudio(): void {
   if (started) return;
@@ -429,6 +461,7 @@ export function initAmbientAudio(): void {
     createPollinatorHum(ctx, masterGain);
     createFrogChorus(ctx, masterGain);
     createBeetleClick(ctx, masterGain);
+    createGardenDrone(ctx, masterGain);
 
     // Fade in over 3 seconds
     masterGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 3);
@@ -568,4 +601,14 @@ export function setNightAmbient(dayTime: number): void {
     cricketRhythm1.frequency.linearRampToValueAtTime(rate1, ctx.currentTime + 2);
     cricketRhythm2.frequency.linearRampToValueAtTime(rate2, ctx.currentTime + 2);
   }
+}
+
+/** Set garden vitality drone volume — thriving night gardens hum softly.
+ *  Only audible at night with 500+ foliage. Very subtle: max 0.006 gain. */
+export function setGardenDrone(foliageCount: number, dayTime: number): void {
+  if (!ctx || !gardenDroneGain) return;
+  const isNightTime = dayTime >= 0.75 || dayTime < 0.15;
+  const vitality = Math.min(1, Math.max(0, (foliageCount - 500) / 500));
+  const target = isNightTime ? vitality * 0.006 : 0;
+  gardenDroneGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 5);
 }
