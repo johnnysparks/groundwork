@@ -70,6 +70,13 @@ export class FireflyRenderer {
   private timeUniform: { value: number };
   private active = false;
 
+  /** Synchronization: global pulse phase + coupling strength */
+  private syncPhase = 0;      // 0-1 repeating cycle
+  private syncElapsed = 0;    // time fireflies have been active
+  private static readonly SYNC_ONSET = 15;     // seconds before sync begins
+  private static readonly SYNC_PERIOD = 2.5;   // sync pulse period in seconds
+  private static readonly SYNC_FULL = 60;      // seconds to reach full sync
+
   constructor() {
     this.group = new THREE.Group();
     this.group.name = 'fireflies';
@@ -131,6 +138,20 @@ export class FireflyRenderer {
 
     const targetActive = this.active ? 1 : 0;
 
+    // Track sync timing
+    if (this.active) {
+      this.syncElapsed += dt;
+      this.syncPhase += dt / FireflyRenderer.SYNC_PERIOD;
+      if (this.syncPhase >= 1) this.syncPhase -= 1;
+    } else {
+      this.syncElapsed = 0;
+    }
+
+    // Coupling strength: 0 before onset, ramps to 1 over SYNC_FULL seconds
+    const coupling = this.syncElapsed > FireflyRenderer.SYNC_ONSET
+      ? Math.min(1, (this.syncElapsed - FireflyRenderer.SYNC_ONSET) / (FireflyRenderer.SYNC_FULL - FireflyRenderer.SYNC_ONSET))
+      : 0;
+
     for (let i = 0; i < MAX_FIREFLIES; i++) {
       const f = this.flies[i];
 
@@ -145,6 +166,16 @@ export class FireflyRenderer {
       if (f.blinkTimer <= 0) {
         f.blinkOn = !f.blinkOn;
         f.blinkTimer = f.blinkOn ? 1 + Math.random() * 2 : 0.5 + Math.random() * 1.5;
+      }
+
+      // Synchronization nudge: when coupling > 0, nudge toward sync pulse
+      if (coupling > 0) {
+        // Sync pulse is "on" during first half of cycle (0.0-0.5)
+        const syncOn = this.syncPhase < 0.5;
+        if (syncOn !== f.blinkOn) {
+          // Nudge timer toward switching — stronger coupling = faster alignment
+          f.blinkTimer -= dt * coupling * 2.0;
+        }
       }
 
       // Dim when blink is off
