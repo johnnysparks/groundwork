@@ -114,6 +114,19 @@ export class Hud {
       this.toolButtons.push(btn);
     }
 
+    // Wire up x-ray lens picker buttons
+    const lensBar = this.container.querySelector('#xray-lens-bar')!;
+    for (const btn of lensBar.querySelectorAll('.lens-btn')) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const lens = (btn as HTMLElement).dataset.lens!;
+        // Update active state
+        for (const b of lensBar.querySelectorAll('.lens-btn')) b.classList.remove('active');
+        btn.classList.add('active');
+        this._onLensChange?.(lens);
+      });
+    }
+
     // Wire up species picker with progressive unlocking:
     // Tier 0 (start): Groundcover (moss, grass, clover)
     // Milestone-based unlock tiers (from sim EcoMilestones):
@@ -430,6 +443,29 @@ export class Hud {
   /** Register callback for New Garden button */
   onNewGarden(cb: () => void): void { this._onNewGarden = cb; }
 
+  private _onLensChange: ((lens: string) => void) | null = null;
+  private _xrayActive = false;
+
+  /** Register callback for lens changes */
+  onLensChange(cb: (lens: string) => void): void { this._onLensChange = cb; }
+
+  /** Toggle x-ray mode — swaps tool bar for lens picker */
+  setXrayUI(active: boolean): void {
+    this._xrayActive = active;
+    const toolBar = this.container.querySelector('#tool-bar') as HTMLElement;
+    const lensBar = this.container.querySelector('#xray-lens-bar') as HTMLElement;
+    const speciesPanel = this.container.querySelector('#species-panel') as HTMLElement;
+    if (active) {
+      toolBar.style.display = 'none';
+      speciesPanel.style.display = 'none';
+      lensBar.style.display = 'flex';
+    } else {
+      toolBar.style.display = 'flex';
+      lensBar.style.display = 'none';
+      // species panel visibility managed by render()
+    }
+  }
+
   /** Reset HUD state for a new garden — back to calm phase 0 */
   resetForNewGarden(): void {
     this.state.tickCount = 0;
@@ -573,6 +609,12 @@ export class Hud {
 
 const HUD_HTML = `
   <div id="tool-bar"></div>
+  <div id="xray-lens-bar" style="display:none">
+    <button class="lens-btn active" data-lens="roots" title="Root networks by species">Roots</button>
+    <button class="lens-btn" data-lens="moisture" title="Soil moisture levels">Moisture</button>
+    <button class="lens-btn" data-lens="light" title="Light penetration">Light</button>
+    <button class="lens-btn" data-lens="nutrients" title="Nutrient density">Nutrients</button>
+  </div>
   <div id="species-panel">
     <div id="species-list"></div>
   </div>
@@ -630,6 +672,46 @@ const HUD_CSS = `
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   pointer-events: auto;
+}
+
+/* X-ray lens picker — replaces tool bar when x-ray is active */
+#xray-lens-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(15, 15, 20, 0.92);
+  border-radius: 10px;
+  border: 1px solid rgba(100, 140, 200, 0.25);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+.lens-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border: 1px solid rgba(100, 140, 200, 0.2);
+  border-radius: 6px;
+  background: rgba(40, 50, 70, 0.6);
+  color: rgba(180, 200, 230, 0.8);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: system-ui, sans-serif;
+  transition: all 0.15s;
+}
+.lens-btn:hover {
+  background: rgba(60, 80, 120, 0.7);
+  color: #e0e8f0;
+}
+.lens-btn.active {
+  background: rgba(70, 100, 160, 0.8);
+  border-color: rgba(120, 160, 220, 0.6);
+  color: #fff;
+  font-weight: 600;
 }
 
 .tool-btn {

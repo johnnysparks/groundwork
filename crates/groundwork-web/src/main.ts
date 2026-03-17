@@ -729,6 +729,30 @@ async function main() {
   }
 
   // New Garden button — resets sim, HUD, and re-meshes
+  // X-ray lens picker: switch data visualization when user picks a lens
+  hud.onLensChange((lens: string) => {
+    const freshGrid = isInitialized() ? getGridView() : grid;
+    switch (lens) {
+      case 'roots':
+        // Roots lens: transparent soil shows root networks (default x-ray)
+        overlay.setMode(OverlayMode.Off);
+        setXrayMode(true);
+        break;
+      case 'moisture':
+        overlay.setMode(OverlayMode.Water);
+        overlay.rebuild(freshGrid);
+        break;
+      case 'light':
+        overlay.setMode(OverlayMode.Light);
+        overlay.rebuild(freshGrid);
+        break;
+      case 'nutrients':
+        overlay.setMode(OverlayMode.Nutrient);
+        overlay.rebuild(freshGrid);
+        break;
+    }
+  });
+
   hud.onNewGarden(() => {
     if (!isInitialized()) return;
     resetSim();
@@ -895,6 +919,7 @@ async function main() {
       xrayActive = active;
       setXrayMode(xrayActive);
       postProcessing.setDesaturation(active ? 1.0 : 0.0);
+      hud.setXrayUI(active);
     },
     setTickCount: (count: number) => hud.setTickCount(count),
     overlay: overlay,
@@ -1102,13 +1127,20 @@ async function main() {
         }
         break;
       case 'q':
-        // Toggle x-ray: greyscale scene + transparent soil to see roots
+        // Toggle x-ray: greyscale scene + lens picker replaces tool bar
         xrayActive = !xrayActive;
         setXrayMode(xrayActive);
         postProcessing.setDesaturation(xrayActive ? 1.0 : 0.0);
+        hud.setXrayUI(xrayActive);
+        if (xrayActive) {
+          // Default lens is "roots" — show root overlay
+          overlay.setMode(OverlayMode.Off); // roots use the transparent soil, not overlay
+        } else {
+          overlay.setMode(OverlayMode.Off);
+        }
         questLog.recordDepthChange();
         if (xrayActive && !_xrayTipShown) {
-          hud.addEvent('X-ray: each species has a unique root color — watch for root wars!');
+          hud.addEvent('X-ray mode — pick a lens to inspect your garden');
           _xrayTipShown = true;
         }
         console.log(`X-ray: ${xrayActive ? 'ON' : 'OFF'}`);
