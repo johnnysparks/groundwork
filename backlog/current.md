@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-18T04:00:00
-**Status:** Alpha complete. 234 sprints. **Condition-based species emergence complete** with neighbor influence + condition-attribution discovery messages. 6 quest chapters (30 quests → 12 quests across 6 chapters). Species discovery explains WHY each species emerged ("A willow grew near water — it loves the moisture"). Quest Chapter 5: "Conditions Matter" (sow near water vs dry ground). Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **Irrigation replaces watering can** (executive mandate).
+**Last updated:** 2026-03-18T05:00:00
+**Status:** Alpha complete. 236 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + condition-attribution messages. Complete onboarding: Meet Gnome → Start Garden → See Underground → Shape Water → Garden Grows → Conditions Matter → A Tree Appeared → The Garden Is Alive. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **Irrigation replaces watering can** (executive mandate).
 
 ---
 
