@@ -239,7 +239,7 @@ function getContextualTip(stats: { plants: number; fauna: number; species: numbe
 let _tipTimer = 0;
 
 /** Detect ecological events by comparing with previous stats */
-function detectEvents(stats: { plants: number; fauna: number; species: number; speciesIds?: Set<number> }, hud: any): void {
+function detectEvents(stats: { plants: number; fauna: number; species: number; speciesIds?: Set<number> }, hud: any, grid?: Uint8Array): void {
   _eventCooldown--;
   if (_eventCooldown > 0) return;
 
@@ -286,6 +286,24 @@ function detectEvents(stats: { plants: number; fauna: number; species: number; s
             }
           }
           playDiscovery();
+        }
+        // Sparkle burst at the new species' location — visual "look here!" cue
+        if (_particles && grid) {
+          const zStride = GRID_X * GRID_Y;
+          for (let sz = GROUND_LEVEL; sz < GROUND_LEVEL + 20; sz++) {
+            let found = false;
+            for (let sy = 0; sy < GRID_Y && !found; sy += 3) {
+              for (let sx = 0; sx < GRID_X && !found; sx += 3) {
+                const idx = (sx + sy * GRID_X + sz * zStride) * VOXEL_BYTES;
+                const mat = grid[idx];
+                if ((mat === Material.Trunk || mat === Material.Leaf) && grid[idx + 3] === sid) {
+                  _particles.emitFaunaArrival(sx + 0.5, sz + 1.5, sy + 0.5);
+                  found = true;
+                }
+              }
+            }
+            if (found) break;
+          }
         }
         _eventCooldown = 20;
         break; // one event per tick
@@ -1506,7 +1524,7 @@ async function main() {
         hud.setGardenStats(stats);
         questLog.recordSpeciesCount(stats.species);
         questLog.check(freshGrid, stats.species, stats.speciesIds);
-        detectEvents(stats, hud);
+        detectEvents(stats, hud, freshGrid);
         fallingLeaves.setTreeSpecies(Array.from(stats.speciesIds));
         // Weather transition events
         const newWeather = getWeatherState();
