@@ -1552,7 +1552,15 @@ async function main() {
     setFrogChorus(prevWaterCount, dayTime);
     setWaterBabble(prevWaterCount);
     setGardenDrone(foliage.count, dayTime);
-    setGardenVitality(foliage.count, getFaunaCount());
+    {
+      const fc = getFaunaCount();
+      setGardenVitality(foliage.count, fc);
+      // Ecosystem health → warmth glow: plants, fauna, and species diversity
+      const plantHealth = Math.min(1, foliage.count / 1000);
+      const faunaHealth = Math.min(1, fc / 8);
+      const ecoWarmth = (plantHealth * 0.5 + faunaHealth * 0.5);
+      postProcessing.setEcoWarmth(ecoWarmth);
+    }
 
     // Owl hoot during deep night
     const isDeepNight = dayTime >= 0.80 || dayTime < 0.10;

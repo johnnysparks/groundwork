@@ -226,6 +226,8 @@ export interface PostProcessing {
   setBloomStrength(strength: number): void;
   /** Set heat shimmer intensity and animate. */
   setHeatShimmer(strength: number, time: number): void;
+  /** Set ecosystem warmth boost (0 = no boost, 1 = full thriving glow). */
+  setEcoWarmth(amount: number): void;
 }
 
 /**
@@ -297,6 +299,7 @@ export function createPostProcessing(
   composer.addPass(outputPass);
 
   const baseSaturation = colorGradePass.uniforms.saturation.value;
+  const baseWarmth = colorGradePass.uniforms.warmth.value;
 
   return {
     composer,
@@ -318,6 +321,11 @@ export function createPostProcessing(
     setHeatShimmer(strength: number, time: number) {
       heatShimmerPass.uniforms.uStrength.value = strength;
       heatShimmerPass.uniforms.uTime.value = time;
+    },
+    /** Set ecosystem warmth boost: healthy gardens glow slightly warmer and more saturated */
+    setEcoWarmth(amount: number) {
+      colorGradePass.uniforms.warmth.value = baseWarmth + amount * 0.015;
+      colorGradePass.uniforms.saturation.value = baseSaturation + amount * 0.08;
     },
   };
 }
