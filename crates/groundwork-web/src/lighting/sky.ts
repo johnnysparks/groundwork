@@ -244,6 +244,13 @@ void main() {
     color = mix(color, rainbow, band * uRainbow * 0.45);
   }
 
+  // Night horizon atmospheric glow: faint warm scattering near horizon
+  if (uNightAmount > 0.1) {
+    float nightHorizon = exp(-h * h * 6.0) * smoothstep(-0.1, 0.05, h);
+    vec3 nightGlow = vec3(0.08, 0.06, 0.12); // faint blue-purple atmospheric
+    color += nightGlow * nightHorizon * uNightAmount;
+  }
+
   gl_FragColor = vec4(color, 1.0);
 }
 `;
