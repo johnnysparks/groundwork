@@ -58,11 +58,11 @@ function irrigationColor(value: number): [number, number, number, number] {
   const r = 0.75 * (1 - t) + 0.15 * t;
   const g = 0.28 * (1 - t) + 0.35 * t;
   const b = 0.18 * (1 - t) + 0.65 * t;
-  // Alpha: high at extremes (0.5), visible in mid-range (0.18)
+  // Alpha: high at extremes (0.55), visible in mid-range (0.25)
   // U-shaped curve with raised floor so the heatmap reads as a continuous
   // gradient, not just highlights at dry/wet extremes.
   const dist = Math.abs(t - 0.5) * 2; // 0 at midpoint, 1 at extremes
-  const alpha = 0.18 + 0.32 * dist * dist;
+  const alpha = 0.25 + 0.30 * dist * dist;
   return [r, g, b, alpha];
 }
 
@@ -265,7 +265,9 @@ export class DataOverlay {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
-    // Use custom shader material for per-vertex alpha
+    // Use custom shader material for per-vertex alpha.
+    // depthTest disabled so the heatmap renders on top of root meshes
+    // (roots are opaque + depth-writing, which would otherwise hide the overlay).
     const material = new THREE.ShaderMaterial({
       vertexShader: `
         attribute float alpha;
@@ -286,6 +288,7 @@ export class DataOverlay {
       `,
       transparent: true,
       depthWrite: false,
+      depthTest: false,
       side: THREE.DoubleSide,
       vertexColors: true,
     });
@@ -294,6 +297,7 @@ export class DataOverlay {
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'data-overlay-mesh';
+    this.mesh.renderOrder = 100; // Render after roots so heatmap is visible
     this.group.add(this.mesh);
   }
 
