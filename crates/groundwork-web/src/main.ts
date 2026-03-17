@@ -1512,14 +1512,21 @@ async function main() {
     const dayTime = dayCycle.getTime();
     fireflies.setActive(dayTime);
     fireflies.update(dt, elapsed);
-    // Firefly water reflections: golden glow on water surface below lit fireflies
-    if (prevWaterCount > 0 && Math.random() < dt * 0.8) {
+    // Firefly water reflections + moth flutter: nighttime light-drawn effects
+    {
       const litFlies = fireflies.getActivePositions();
       if (litFlies.length > 0) {
-        const pick = litFlies[Math.floor(Math.random() * litFlies.length)];
-        // Only reflect if firefly is near ground (close to water level)
-        if (pick.z <= GROUND_LEVEL + 6) {
-          particles.emitFireflyReflection(pick.x, pick.y);
+        // Water reflections
+        if (prevWaterCount > 0 && Math.random() < dt * 0.8) {
+          const pick = litFlies[Math.floor(Math.random() * litFlies.length)];
+          if (pick.z <= GROUND_LEVEL + 6) {
+            particles.emitFireflyReflection(pick.x, pick.y);
+          }
+        }
+        // Moths drawn to firefly light
+        if (Math.random() < dt * 0.3) {
+          const pick = litFlies[Math.floor(Math.random() * litFlies.length)];
+          particles.emitMothFlutter(pick.x, pick.z, pick.y); // sim x,z → Three.js x,y; sim y → Three.js z
         }
       }
     }

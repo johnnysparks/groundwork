@@ -806,6 +806,35 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a pale moth particle that flutters near a light source.
+   * Creates night-time insect activity around fireflies.
+   */
+  emitMothFlutter(worldX: number, worldY: number, worldZ: number): void {
+    const p = this.findDeadParticle();
+    if (!p) return;
+
+    p.alive = true;
+    p.life = 0.8 + Math.random() * 0.6;
+    p.maxLife = p.life;
+
+    // Near the light source, slightly offset
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 0.5 + Math.random() * 1.0;
+    p.x = worldX + Math.cos(angle) * dist;
+    p.y = worldY + (Math.random() - 0.5) * 0.5;
+    p.z = worldZ + Math.sin(angle) * dist;
+
+    // Flutter in circular motion toward light
+    p.vx = Math.cos(angle + Math.PI / 2) * 0.6;
+    p.vy = (Math.random() - 0.3) * 0.2;
+    p.vz = Math.sin(angle + Math.PI / 2) * 0.6;
+
+    // Pale cream-white moth color
+    const t = Math.random();
+    p.color.setRGB(0.85 + t * 0.1, 0.82 + t * 0.1, 0.7 + t * 0.15);
+  }
+
+  /**
    * Emit fungi/decomposition spore particles near dead wood.
    * Warm brown-orange particles drift upward slowly.
    */
