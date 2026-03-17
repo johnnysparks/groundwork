@@ -206,6 +206,36 @@ export class GrowthParticles {
   }
 
   /**
+   * Emit a small dust puff at the gnome's feet (walking/working).
+   * Earthy brown particles that puff outward and settle quickly.
+   */
+  emitDustPuff(worldX: number, worldY: number, worldZ: number): void {
+    const count = 2;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.4 + Math.random() * 0.3;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.6;
+      p.y = worldY;
+      p.z = worldZ + (Math.random() - 0.5) * 0.6;
+
+      // Small outward puff that settles
+      const angle = Math.random() * Math.PI * 2;
+      p.vx = Math.cos(angle) * 0.3;
+      p.vy = 0.1 + Math.random() * 0.2;
+      p.vz = Math.sin(angle) * 0.3;
+
+      // Earthy brown
+      const t = Math.random();
+      p.color.setRGB(0.45 + t * 0.15, 0.35 + t * 0.1, 0.2 + t * 0.1);
+    }
+  }
+
+  /**
    * Emit blue sparkle particles at water flow frontier positions.
    * Call when water surface area increases (channel filling).
    */

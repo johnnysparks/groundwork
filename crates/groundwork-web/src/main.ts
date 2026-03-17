@@ -906,6 +906,7 @@ async function main() {
   let growthSoundCooldown = 0; // ticks until next growth sound can play
   let prevPlantCount = 0; // for detecting growth bursts
   let prevWaterCount = 0; // for detecting water expansion (channel filling)
+  let dustPuffTimer = 0; // seconds until next gnome footstep dust puff
   const BASE_TICK_MS = 100;
   let TICK_INTERVAL_MS = BASE_TICK_MS;
 
@@ -1217,6 +1218,14 @@ async function main() {
             particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
           }
           remeshDirty();
+        }
+
+        // Gnome footstep dust puffs when walking/wandering
+        dustPuffTimer -= dt;
+        if (dustPuffTimer <= 0 && (gnomeSim.state === 1 || gnomeSim.state === 5)) {
+          // Sim coords → Three.js: (x, z+0.5, y)
+          particles.emitDustPuff(gnomeSim.x + 0.5, gnomeSim.z + 0.5, gnomeSim.y + 0.5);
+          dustPuffTimer = 0.25 + Math.random() * 0.15; // every ~0.3s
         }
 
         // Squirrel trust milestone messages
