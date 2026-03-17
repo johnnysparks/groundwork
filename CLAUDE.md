@@ -223,7 +223,7 @@ All tools are used by **painting zones** (drag-to-select area). The garden gnome
 
 **No species picker.** The player plants *density*, not species. The sim picks what grows based on conditions. Species are discovered through the inspect panel. See `decisions/2026-03-17T20:00:00_density_not_species.md`. **Executive mandate.**
 
-**GAP: Condition-based species emergence is underdeveloped.** The sim needs environmental fitness scoring per species — moisture/light/soil preferences, density influence, neighbor effects, maturity gating. Until implemented, the sim uses basic/random selection as a placeholder. This is **P0** for the density-not-species design to actually work.
+**Condition-based species emergence is implemented.** `pick_species_from_conditions()` in systems.rs scores each species by water/light/nutrient fitness, neighbor influence (clover boosts trees, groundcover enables flowers), maturity gating (pioneers first, trees need established ecosystem), and density influence.
 
 ## Species
 Species are *discovered*, never chosen. What emerges depends on environmental conditions.
