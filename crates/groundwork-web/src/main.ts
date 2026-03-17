@@ -23,6 +23,7 @@ import { FallingLeaves } from './rendering/leaves';
 import { EcologyParticles } from './rendering/ecology';
 import { DewRenderer } from './rendering/dew';
 import { DustMoteRenderer } from './rendering/dustmotes';
+import { GnatRenderer } from './rendering/gnats';
 import { MistRenderer } from './rendering/mist';
 import { DataOverlay, OverlayMode } from './rendering/overlay';
 import { buildSkirtMesh, buildForestRing, updateForestCulling, type SkirtWall } from './rendering/skirt';
@@ -594,6 +595,11 @@ async function main() {
 
   const dustMotes = new DustMoteRenderer();
   scene.add(dustMotes.group);
+
+  // --- Ambient gnats (swarming over vegetation) ---
+
+  const gnats = new GnatRenderer();
+  scene.add(gnats.group);
 
   // --- Falling leaves ---
 
@@ -1474,6 +1480,9 @@ async function main() {
     mist.update(dt);
     dustMotes.setActive(dayTime);
     dustMotes.update(dt, elapsed);
+    gnats.setActive(dayTime);
+    gnats.setFoliageCount(foliage.count);
+    gnats.update(dt, elapsed);
     setNightAmbient(dayTime);
     setFrogChorus(prevWaterCount, dayTime);
     setWaterBabble(prevWaterCount);
