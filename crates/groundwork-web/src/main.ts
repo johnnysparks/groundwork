@@ -42,7 +42,7 @@ import { createSkyGradient } from './lighting/sky';
 import { initAgentAPI } from './agent-api';
 import { raycastVoxel } from './ui/raycaster';
 import { initAmbientAudio, setRaining, setNightAmbient, setWindAmbient, setLeafRustle, setPollinatorHum, setFrogChorus, setBeetleClick, setWaterBabble, setGardenDrone } from './audio/ambient';
-import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
+import { playPlant, playDig, playFaunaArrival, playBirdCall, playBirdWarble, playRobinSong, playBuzz, playSquirrelChitter, playDewDrop, playTreeCreak, playRootCrackle, playGrowth, playDiscovery, playRainStart, playDroughtStart, playWindGust, playWindChime, playGnomeSound, playOwlHoot, playShootingStar } from './audio/sfx';
 
 /** Scan the grid and count plant voxels, unique species, and fauna */
 function computeGardenStats(grid: Uint8Array): { plants: number; fauna: number; species: number; speciesIds: Set<number> } {
@@ -773,6 +773,11 @@ async function main() {
       particles.emitWaterFlow(frontier);
     }
     prevWaterCount = waterCount;
+
+    // Root growth crackle: subtle underground sound when roots expand
+    if (particles.rootGrowthDelta > 5 && Math.random() < 0.3) {
+      playRootCrackle();
+    }
   }
 
   // New Garden button — resets sim, HUD, and re-meshes

@@ -643,6 +643,39 @@ export function playGnomeSound(state: number): void {
 }
 
 /** Play a fauna arrival sound based on type */
+/** Play a subtle underground crackle when roots expand.
+ *  3-4 rapid tiny snaps at low pitch — soil breaking apart. */
+export function playRootCrackle(): void {
+  const c = getContext();
+  if (!c) return;
+  const t = c.currentTime;
+
+  const snaps = 3 + Math.floor(Math.random() * 2); // 3-4 snaps
+  for (let i = 0; i < snaps; i++) {
+    const start = t + i * 0.04 + Math.random() * 0.02;
+    // Short noise burst — filtered low for earthy character
+    const bufSize = Math.floor(c.sampleRate * 0.03);
+    const buf = c.createBuffer(1, bufSize, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let j = 0; j < bufSize; j++) data[j] = Math.random() * 2 - 1;
+
+    const src = c.createBufferSource();
+    src.buffer = buf;
+
+    const lpf = c.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.value = 400 + Math.random() * 200;
+
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.015 + Math.random() * 0.01, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.03);
+
+    src.connect(lpf).connect(gain).connect(c.destination);
+    src.start(start);
+    src.stop(start + 0.04);
+  }
+}
+
 export function playFaunaArrival(faunaType: number): void {
   // FaunaType: 0=Bee, 1=Butterfly, 2=Bird, 3=Worm, 4=Beetle
   switch (faunaType) {

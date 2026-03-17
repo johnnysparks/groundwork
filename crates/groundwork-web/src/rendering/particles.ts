@@ -129,6 +129,13 @@ export class GrowthParticles {
   /** Previous tick seed position keys for detecting seed→plant sprout transitions */
   private prevSeedKeys = new Set<number>();
 
+  /** Root voxel count — exposed so main can detect root growth */
+  private _rootCount = 0;
+  private _prevRootCount = 0;
+
+  /** How many new root voxels appeared since last detectGrowth() */
+  get rootGrowthDelta(): number { return Math.max(0, this._rootCount - this._prevRootCount); }
+
   constructor() {
     this.particles = new Array(MAX_PARTICLES);
     for (let i = 0; i < MAX_PARTICLES; i++) {
@@ -458,12 +465,14 @@ export class GrowthParticles {
     const newSeedPositions: { x: number; y: number; z: number }[] = [];
     const newSeedKeys = new Set<number>();
     const newFlowerPositions: { x: number; y: number; z: number; species: number }[] = [];
+    let rootCount = 0;
 
     for (let z = 0; z < GRID_Z; z++) {
       for (let y = 0; y < GRID_Y; y++) {
         for (let x = 0; x < GRID_X; x++) {
           const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
           const mat = grid[idx];
+          if (mat === Material.Root) rootCount++;
 
           if (isFoliage(mat) || mat === Material.Trunk || mat === Material.Branch) {
             const posKey = x + y * GRID_X + z * GRID_X * GRID_Y;
@@ -520,6 +529,8 @@ export class GrowthParticles {
     this.seedPositions = newSeedPositions;
     this.prevSeedKeys = newSeedKeys;
     this.flowerPositions = newFlowerPositions;
+    this._prevRootCount = this._rootCount;
+    this._rootCount = rootCount;
   }
 
   /**
