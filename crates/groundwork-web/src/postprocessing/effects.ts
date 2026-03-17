@@ -170,6 +170,48 @@ const VignetteShader = {
   `,
 };
 
+/**
+ * Heat shimmer: subtle UV distortion that rises from the bottom of the screen.
+ * Active during drought / hot midday — makes the air feel thick and heated.
+ */
+const HeatShimmerShader = {
+  uniforms: {
+    tDiffuse: { value: null as THREE.Texture | null },
+    uTime: { value: 0 },
+    uStrength: { value: 0 },  // 0=off, ~0.003=subtle shimmer
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uStrength;
+    varying vec2 vUv;
+
+    void main() {
+      if (uStrength < 0.0001) {
+        gl_FragColor = texture2D(tDiffuse, vUv);
+        return;
+      }
+      // Rising distortion stronger toward bottom of screen
+      float rise = 1.0 - vUv.y; // stronger at bottom (ground)
+      rise = rise * rise; // quadratic falloff
+      float wave1 = sin(vUv.y * 40.0 + uTime * 2.5) * 0.5;
+      float wave2 = sin(vUv.y * 25.0 - uTime * 1.8 + 3.0) * 0.5;
+      vec2 offset = vec2(
+        (wave1 + wave2) * uStrength * rise,
+        sin(vUv.x * 30.0 + uTime * 1.5) * uStrength * rise * 0.3
+      );
+      gl_FragColor = texture2D(tDiffuse, vUv + offset);
+    }
+  `,
+};
+
 // ---------------------------------------------------------------------------
 // Composer setup
 // ---------------------------------------------------------------------------
@@ -182,6 +224,8 @@ export interface PostProcessing {
   setDesaturation(amount: number): void;
   /** Adjust bloom strength — boost for golden hour warmth. */
   setBloomStrength(strength: number): void;
+  /** Set heat shimmer intensity and animate. */
+  setHeatShimmer(strength: number, time: number): void;
 }
 
 /**
@@ -228,7 +272,11 @@ export function createPostProcessing(
   );
   composer.addPass(bloomPass);
 
-  // 4. Tilt-shift DOF — diorama miniature effect (skip on mobile — expensive blur)
+  // 4. Heat shimmer — drought / midday air distortion
+  const heatShimmerPass = new ShaderPass(HeatShimmerShader);
+  composer.addPass(heatShimmerPass);
+
+  // 5. Tilt-shift DOF — diorama miniature effect (skip on mobile — expensive blur)
   let tiltShiftPass: ShaderPass | null = null;
   if (!mobile) {
     tiltShiftPass = new ShaderPass(TiltShiftShader);
@@ -265,6 +313,11 @@ export function createPostProcessing(
     /** Adjust bloom strength — use to boost warm glow at golden hour */
     setBloomStrength(strength: number) {
       bloomPass.strength = strength;
+    },
+    /** Set heat shimmer intensity and update time for animation */
+    setHeatShimmer(strength: number, time: number) {
+      heatShimmerPass.uniforms.uStrength.value = strength;
+      heatShimmerPass.uniforms.uTime.value = time;
     },
   };
 }

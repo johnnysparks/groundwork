@@ -1457,6 +1457,20 @@ async function main() {
         postProcessing.setBloomStrength(0.25);
       }
 
+      // Heat shimmer: active during drought or hot midday (0.4-0.6)
+      {
+        let shimmer = 0;
+        if (prevWeatherState === 2) {
+          // Drought: steady shimmer
+          shimmer = 0.003;
+        } else if (t >= 0.4 && t <= 0.6) {
+          // Hot midday: gentle shimmer peaks at noon (0.5)
+          const noon = 1.0 - Math.abs(t - 0.5) / 0.1;
+          shimmer = Math.max(0, noon) * 0.0015;
+        }
+        postProcessing.setHeatShimmer(shimmer, elapsed);
+      }
+
       // Fog color follows time of day (unless drought overrides)
       if (scene.fog instanceof THREE.FogExp2 && prevWeatherState !== 2) {
         // Target fog color by time of day
