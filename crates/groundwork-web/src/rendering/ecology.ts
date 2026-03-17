@@ -81,6 +81,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.35, 0.55, 0.70),  // cool dappled blue
     new THREE.Color(0.30, 0.50, 0.55),  // teal shade
   ],
+  birdSeedDrop: [
+    new THREE.Color(0.90, 0.75, 0.30),  // golden seed
+    new THREE.Color(0.80, 0.65, 0.25),  // amber seed
+    new THREE.Color(0.70, 0.55, 0.20),  // earthy gold
+  ],
 };
 
 interface EcoParticle {
@@ -163,6 +168,9 @@ export class EcologyParticles {
         } else if (f.type === FaunaType.Beetle) {
           // Decomposition particles near beetles
           this.emitTrail(f.x, f.z, f.y, INTERACTION_COLORS.decomposition, 3);
+        } else if (f.type === FaunaType.Bird && f.state === FaunaState.Acting) {
+          // Bird seed-drop: golden seeds falling from the bird
+          this.emitSeedDrop(f.x, f.z, f.y);
         }
       }
     }
@@ -284,6 +292,33 @@ export class EcologyParticles {
       p.vz = (Math.random() - 0.5) * 0.3;
 
       const c = palette[Math.floor(Math.random() * palette.length)];
+      p.color.copy(c);
+    }
+  }
+
+  /** Emit seed particles falling from a bird's position */
+  private emitSeedDrop(worldX: number, worldY: number, worldZ: number): void {
+    const count = 5;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDead();
+      if (!p) return;
+
+      p.alive = true;
+      p.maxLife = 1.2 + Math.random() * 0.8;
+      p.life = p.maxLife;
+
+      p.x = worldX + (Math.random() - 0.5) * 1.0;
+      p.y = worldY + (Math.random() - 0.5) * 0.5;
+      p.z = worldZ + (Math.random() - 0.5) * 1.0;
+
+      // Seeds fall downward with gentle drift
+      p.vx = (Math.random() - 0.5) * 0.2;
+      p.vy = -0.4 - Math.random() * 0.3;  // downward
+      p.vz = (Math.random() - 0.5) * 0.2;
+
+      const c = INTERACTION_COLORS.birdSeedDrop[
+        Math.floor(Math.random() * INTERACTION_COLORS.birdSeedDrop.length)
+      ];
       p.color.copy(c);
     }
   }
