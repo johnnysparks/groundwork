@@ -48,6 +48,11 @@ export class TaskQueue {
     this.tasks = [];
   }
 
+  /** Remove all pending tasks */
+  clear(): void {
+    this.tasks.length = 0;
+  }
+
   /** Number of pending tasks */
   get length(): number {
     return this.tasks.length;

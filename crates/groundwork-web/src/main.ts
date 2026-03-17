@@ -722,13 +722,25 @@ async function main() {
     hud.resetForNewGarden();
     hud.setTickCount(Number(getTick()));
     _prevStats = { plants: 0, fauna: 0, species: 0 };
+    _prevSpeciesIds = new Set<number>();
     _prevTreeStages.clear();
     _prevSquirrelTrust = 0;
+    _playerPlantedSpecies.clear();
+    _companionSuggested.clear();
+    _squirrelCacheNotified = false;
+    _pollinatorActNotified = false;
+    _birdDropNotified = false;
+    _xrayTipShown = false;
+    _recentDieOff = false;
     _tipIndex = 0;
     _tipTimer = 0;
+    taskQueue.clear();
+    questLog.reset();
     remeshDirty();
     try { localStorage.removeItem('groundwork-garden'); } catch {}
-    hud.addEvent('Fresh garden — the spring is flowing');
+    // Re-arm phase 0→1 auto-advance
+    phase0Advanced = false;
+    setTimeout(advanceFromPhase0, 3000);
   });
 
   /** Enqueue a task to the WASM sim gnome (single source of truth).

@@ -233,6 +233,17 @@ export class QuestLog {
     cb(this.currentChapter);
   }
 
+  /** Reset all quest progress for a new game */
+  reset(): void {
+    this.currentChapter = 0;
+    this.allComplete = false;
+    for (const q of this.quests) q.completed = false;
+    this.actions = createActionTracker();
+    this.notification = null;
+    this._onChapterChange?.(0);
+    this.render();
+  }
+
   // -------------------------------------------------------------------------
   // Action recording
   // -------------------------------------------------------------------------

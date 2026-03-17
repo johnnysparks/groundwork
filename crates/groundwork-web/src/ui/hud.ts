@@ -197,7 +197,25 @@ export class Hud {
       if (scene.id === currentScene) opt.selected = true;
       sceneSelect.appendChild(opt);
     }
+    // Add "New Game" option at the top — resets sim + progression
+    if (wasmAvailable) {
+      const newOpt = document.createElement('option');
+      newOpt.value = '__new_game__';
+      newOpt.textContent = 'New Game';
+      newOpt.title = 'Start fresh — calm meadow, gnome, pond';
+      sceneSelect.insertBefore(newOpt, sceneSelect.firstChild);
+    }
+
     sceneSelect.addEventListener('change', () => {
+      if (sceneSelect.value === '__new_game__') {
+        // Reset to the sim scene and trigger new garden
+        sceneSelect.value = 'sim';
+        switchScene('sim');
+        this._onNewGarden?.();
+        // Reset to phase 0 — calm start with just the garden
+        this.setPhase(0);
+        return;
+      }
       switchScene(sceneSelect.value);
     });
 
@@ -409,7 +427,7 @@ export class Hud {
   /** Register callback for New Garden button */
   onNewGarden(cb: () => void): void { this._onNewGarden = cb; }
 
-  /** Reset HUD state for a new garden */
+  /** Reset HUD state for a new garden — back to calm phase 0 */
   resetForNewGarden(): void {
     this.state.tickCount = 0;
     this.state.water = this.state.maxWater;
@@ -428,6 +446,8 @@ export class Hud {
     // Clear event feed
     const feed = this.container.querySelector('#event-feed');
     if (feed) feed.innerHTML = '';
+    // Reset to phase 0 — calm start, just garden + gnome
+    this.setPhase(0);
   }
 
   /** Spend water — returns false if not enough */
