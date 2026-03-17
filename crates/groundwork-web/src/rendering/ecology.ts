@@ -106,6 +106,11 @@ const INTERACTION_COLORS = {
     new THREE.Color(0.70, 0.50, 0.20),  // amber
     new THREE.Color(0.65, 0.55, 0.30),  // muted gold-green
   ],
+  rootCompetition: [
+    new THREE.Color(0.85, 0.30, 0.15),  // stress red-orange
+    new THREE.Color(0.75, 0.25, 0.10),  // dark stress
+    new THREE.Color(0.65, 0.35, 0.20),  // muted rust
+  ],
 };
 
 interface EcoParticle {
@@ -397,6 +402,48 @@ export class EcologyParticles {
           INTERACTION_COLORS.nurseLog,
           2,
         );
+      }
+    }
+
+    // Root Competition: detect soil voxels with roots from different species nearby.
+    // When two species' roots overlap in the same zone, they compete for water.
+    // Red-orange stress particles make the "Root War" visible underground.
+    // Discovery: "The oak's roots are stealing water from the birch."
+    const rcStep = 10;
+    for (let sy = 0; sy < GRID_Y; sy += rcStep) {
+      for (let sx = 0; sx < GRID_X; sx += rcStep) {
+        for (let sz = GROUND_LEVEL - 8; sz < GROUND_LEVEL; sz += 3) {
+          const idx = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) * VOXEL_BYTES;
+          if (grid[idx] !== Material.Root) continue;
+          const sp1 = grid[idx + 3]; // species_id
+          if (sp1 >= 12) continue;
+
+          // Check immediate neighbors for a DIFFERENT species root
+          let hasRival = false;
+          const offsets = [-1, 1, -GRID_X, GRID_X];
+          for (const off of offsets) {
+            const ni = (sx + sy * GRID_X + sz * GRID_X * GRID_Y) + off;
+            if (ni < 0 || ni * VOXEL_BYTES >= grid.length) continue;
+            const nIdx = ni * VOXEL_BYTES;
+            if (grid[nIdx] === Material.Root) {
+              const sp2 = grid[nIdx + 3];
+              if (sp2 < 12 && sp2 !== sp1) {
+                hasRival = true;
+                break;
+              }
+            }
+          }
+          if (!hasRival) continue;
+
+          // Emit stress particles at the competition boundary
+          this.emitTrail(
+            sx + 0.5,
+            sz + 0.5,
+            sy + 0.5,
+            INTERACTION_COLORS.rootCompetition,
+            2,
+          );
+        }
       }
     }
   }

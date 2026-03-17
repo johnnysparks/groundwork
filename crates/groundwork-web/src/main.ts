@@ -179,7 +179,7 @@ const FAUNA_MESSAGES: Record<number, string[]> = {
 const ECO_TIPS = [
   'Tip: Plant clover near oak — nitrogen fixing boosts growth 50%',
   'Tip: Flowers attract bees — bees boost health of nearby trees',
-  'Tip: Press Q for x-ray — see roots competing underground',
+  'Tip: Press Q for x-ray — red-orange glow shows roots from different species competing for water',
   'Tip: Press V to see water, light, or nutrient overlays',
   'Tip: Birds near trees carry seeds to surprising new spots',
   'Tip: Pine roots acidify soil — amber particles show the acid zone. Fern and moss tolerate it, others struggle',
