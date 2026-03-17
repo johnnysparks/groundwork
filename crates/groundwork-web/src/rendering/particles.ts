@@ -268,6 +268,36 @@ export class GrowthParticles {
     }
   }
 
+  /** Emit a soft soil puff when placing soil or stone. */
+  emitSoilPlace(worldX: number, worldY: number, worldZ: number, isStone: boolean): void {
+    const count = 4;
+    for (let i = 0; i < count; i++) {
+      const p = this.findDeadParticle();
+      if (!p) return;
+
+      p.alive = true;
+      p.life = 0.4 + Math.random() * 0.3;
+      p.maxLife = p.life;
+
+      p.x = worldX + (Math.random() - 0.5) * 0.3;
+      p.y = worldY;
+      p.z = worldZ + (Math.random() - 0.5) * 0.3;
+
+      // Gentle outward puff settling down
+      const angle = Math.random() * Math.PI * 2;
+      p.vx = Math.cos(angle) * 0.25;
+      p.vy = 0.15 + Math.random() * 0.15;
+      p.vz = Math.sin(angle) * 0.25;
+
+      const t = Math.random();
+      if (isStone) {
+        p.color.setRGB(0.48 + t * 0.08, 0.46 + t * 0.06, 0.44 + t * 0.06);
+      } else {
+        p.color.setRGB(0.40 + t * 0.12, 0.28 + t * 0.08, 0.14 + t * 0.06);
+      }
+    }
+  }
+
   /** Emit golden seed scatter from a planting action — seeds tumbling from the bag. */
   emitSeedScatter(worldX: number, worldY: number, worldZ: number): void {
     const count = 6;

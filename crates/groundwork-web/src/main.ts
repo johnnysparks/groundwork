@@ -1157,6 +1157,8 @@ async function main() {
         particles.emitDigSpray(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       } else if (tool === ToolCode.Seed) {
         particles.emitSeedScatter(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
+      } else if (tool === ToolCode.Soil || tool === ToolCode.Stone) {
+        particles.emitSoilPlace(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5, tool === ToolCode.Stone);
       } else {
         particles.emit(hit.x + 0.5, hit.z + 0.5, hit.y + 0.5);
       }
@@ -1575,6 +1577,8 @@ async function main() {
               particles.emitDigSpray(task.x + 0.5, task.z + 0.5, task.y + 0.5);
             } else if (task.tool === ToolCode.Seed) {
               particles.emitSeedScatter(task.x + 0.5, task.z + 0.5, task.y + 0.5);
+            } else if (task.tool === ToolCode.Soil || task.tool === ToolCode.Stone) {
+              particles.emitSoilPlace(task.x + 0.5, task.z + 0.5, task.y + 0.5, task.tool === ToolCode.Stone);
             } else {
               particles.emit(task.x + 0.5, task.z + 0.5, task.y + 0.5);
             }
