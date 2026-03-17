@@ -1356,7 +1356,7 @@ async function main() {
         const stats = computeGardenStats(freshGrid);
         hud.setGardenStats(stats);
         questLog.recordSpeciesCount(stats.species);
-        questLog.check(freshGrid, stats.species);
+        questLog.check(freshGrid, stats.species, stats.speciesIds);
         detectEvents(stats, hud);
         fallingLeaves.setTreeSpecies(Array.from(stats.speciesIds));
         // Weather transition events

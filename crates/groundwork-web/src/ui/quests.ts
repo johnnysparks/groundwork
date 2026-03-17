@@ -37,7 +37,9 @@ export type QuestId =
   | 'idleWatch'
   | 'wildSpecies'
   | 'sowNearWater'
-  | 'sowDryGround';
+  | 'sowDryGround'
+  | 'firstTree'
+  | 'threeSpecies';
 
 interface QuestDef {
   id: QuestId;
@@ -125,6 +127,19 @@ const QUEST_DEFS: QuestDef[] = [
     chapter: 5,
     detail: 'Plant seeds far from water on dry soil. Compare what grows — different conditions, different species.',
   },
+  // Chapter 6: A Tree Appeared — reward for rich, mature garden
+  {
+    id: 'firstTree',
+    name: 'A tree appeared',
+    chapter: 6,
+    detail: 'Keep building rich conditions — groundcover, water, nutrients. Eventually a tree will emerge on its own.',
+  },
+  {
+    id: 'threeSpecies',
+    name: 'Three types growing',
+    chapter: 6,
+    detail: 'Your garden has groundcover, flowers, and trees. An ecosystem is forming.',
+  },
 ];
 
 const CHAPTER_NAMES = [
@@ -134,6 +149,7 @@ const CHAPTER_NAMES = [
   'Shape the Water',
   'The Garden Grows',
   'Conditions Matter',
+  'A Tree Appeared',
 ];
 
 // ---------------------------------------------------------------------------
@@ -166,6 +182,10 @@ interface ActionTracker {
   sowedNearWater: boolean;
   /** True when the player sowed seeds on dry ground (no Water within 10 voxels) */
   sowedOnDryGround: boolean;
+  /** True when a tree species (0-3) has appeared in the garden */
+  treeAppeared: boolean;
+  /** Number of distinct plant types present (groundcover, flower, shrub, tree) */
+  plantTypesPresent: number;
 }
 
 function createActionTracker(): ActionTracker {
@@ -189,6 +209,8 @@ function createActionTracker(): ActionTracker {
     wildSpeciesAppeared: false,
     sowedNearWater: false,
     sowedOnDryGround: false,
+    treeAppeared: false,
+    plantTypesPresent: 0,
   };
 }
 
@@ -389,8 +411,9 @@ export class QuestLog {
    * Check quest completion against current grid state and recorded actions.
    * Call after each tick and after each tool placement.
    * @param speciesCount - number of unique species currently in the garden
+   * @param speciesIds - set of species IDs currently present
    */
-  check(grid: Uint8Array, speciesCount = 0): void {
+  check(grid: Uint8Array, speciesCount = 0, speciesIds?: Set<number>): void {
     if (this.allComplete) return;
 
     // Increment idle ticks each check (called once per sim tick)
@@ -414,6 +437,19 @@ export class QuestLog {
     // Wild species detection: species count grew while player was idle
     if (speciesCount > this.actions.speciesAtLastPlant && this.actions.idleTicks > 30) {
       this.actions.wildSpeciesAppeared = true;
+    }
+
+    // Detect plant types present for Chapter 6
+    // Species 0-3 = Tree, 4-6 = Shrub, 7-8 = Flower, 9-11 = Groundcover
+    if (speciesIds && speciesIds.size > 0) {
+      const types = new Set<string>();
+      for (const sid of speciesIds) {
+        if (sid <= 3) { types.add('tree'); this.actions.treeAppeared = true; }
+        else if (sid <= 6) types.add('shrub');
+        else if (sid <= 8) types.add('flower');
+        else types.add('groundcover');
+      }
+      this.actions.plantTypesPresent = types.size;
     }
 
     const newlyCompleted: { index: number; name: string }[] = [];
@@ -462,6 +498,13 @@ export class QuestLog {
           break;
         case 'sowDryGround':
           complete = this.actions.sowedOnDryGround;
+          break;
+        case 'firstTree':
+          complete = this.actions.treeAppeared;
+          break;
+        case 'threeSpecies':
+          // 3+ plant types: groundcover + flower + tree (or shrub)
+          complete = this.actions.plantTypesPresent >= 3;
           break;
       }
 
