@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "wasm": "wasm-pack build ../groundwork-sim --target web --out-dir ../groundwork-web/wasm",
+    "wasm": "wasm-pack build ../groundwork-sim --target web --out-dir ../groundwork-web/wasm && cp wasm/groundwork_sim_bg.wasm wasm/groundwork_sim.js wasm/groundwork_sim.d.ts wasm/groundwork_sim_bg.wasm.d.ts public/wasm/",
     "playtest": "npx playwright test",
     "playtest:xvfb": "xvfb-run -a npx playwright test",
     "playtest:headed": "HEADED=1 npx playwright test",

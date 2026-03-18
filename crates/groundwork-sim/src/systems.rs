@@ -5863,4 +5863,5 @@ mod tests {
             "Dense sowing should produce more groundcover: dense={gc_dense}, sparse={gc_sparse}"
         );
     }
+
 }

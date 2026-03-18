@@ -9,7 +9,7 @@
  * This is the bridge between the Rust player agent and the visual renderer.
  */
 
-import { isInitialized, tick as simTick, placeTool, fillTool, setSelectedSpecies, getGridView, getTick, getFaunaCount, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, SPECIES, ToolCode } from './bridge';
+import { isInitialized, tick as simTick, placeTool, fillTool, setSelectedSpecies, getGridView, getTick, getFaunaCount, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL, SPECIES, ToolCode, packTreeStats, getTreeStatsView } from './bridge';
 import { captureScreenshot } from './ui/screenshot';
 
 /** Action types matching groundwork-player's Action enum */
@@ -216,6 +216,43 @@ export function initAgentAPI(config: AgentAPIConfig): void {
         if (mat < names.length) counts[names[mat]]++;
       }
       return counts;
+    },
+
+    /** Sample raw bytes from leaf voxels at various Z levels for debugging */
+    sampleLeafBytes: () => {
+      if (!isInitialized()) return [];
+      const grid = getGridView();
+      const samples: Array<{z: number, bytes: [number, number, number, number]}> = [];
+      // Scan top-down to find tree canopy leaves first
+      for (let z = GRID_Z - 1; z >= 0 && samples.length < 10; z--) {
+        for (let y = 0; y < GRID_Y && samples.length < 10; y++) {
+          for (let x = 0; x < GRID_X && samples.length < 10; x++) {
+            const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * 4;
+            if (grid[idx] === 8) { // Material.Leaf
+              samples.push({z, bytes: [grid[idx], grid[idx+1], grid[idx+2], grid[idx+3]]});
+            }
+          }
+        }
+      }
+      return samples;
+    },
+
+    /** Get tree entity health from WASM (reads Tree component, not grid voxels) */
+    getTreeEntityHealth: () => {
+      const count = packTreeStats();
+      if (count === 0) return [];
+      const view = getTreeStatsView();
+      if (!view) return [];
+      const trees = [];
+      for (let i = 0; i < count; i++) {
+        const off = i * 12;
+        trees.push({
+          species: view.getUint8(off),
+          health_u8: view.getUint8(off + 1),
+          stage: view.getUint8(off + 2),
+        });
+      }
+      return trees;
     },
 
     /** Get health distribution from leaf voxels (byte 1 = tree.health * 255) */
