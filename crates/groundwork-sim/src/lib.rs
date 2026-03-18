@@ -209,16 +209,86 @@ pub fn create_world() -> World {
 
 /// Create a world with terrain ready to play: gentle slope with a pond.
 /// Called by the WASM init and TUI new-world paths.
-/// Runs a few pre-ticks so the pond has water and soil is moist from tick 0.
+/// Plants a starter garden near the pond and pre-ticks so plants are visible on first load.
 pub fn create_world_with_garden() -> World {
     let mut world = create_world();
 
-    // Pre-tick so water flows from the pond into surrounding soil.
-    // 50 ticks is enough for the spring to fill and water to seep downhill.
+    // Pre-tick 50 ticks so water flows from the pond into surrounding soil.
     let mut schedule = create_schedule();
     for _ in 0..50 {
         tick(&mut world, &mut schedule);
     }
+
+    // Plant starter seeds near the pond where soil is now moist.
+    // Pond center is at (POND_X=40, POND_Y=16). Moist soil extends south (higher y).
+    // Species: 0=Oak, 1=Birch, 7=Wildflower, 8=Daisy, 9=Moss, 10=Grass, 11=Clover
+    let starter_seeds: &[(usize, usize, usize)] = &[
+        // Groundcover ring near pond edge (y=20-26) — pioneers that establish quickly
+        (36, 21, 9),  // moss
+        (40, 20, 9),  // moss
+        (44, 22, 9),  // moss
+        (38, 24, 10), // grass
+        (42, 23, 10), // grass
+        (46, 24, 10), // grass
+        (35, 25, 11), // clover
+        (40, 26, 11), // clover
+        (45, 25, 11), // clover
+        // Flowers among the groundcover (y=22-28)
+        (37, 23, 7),  // wildflower
+        (43, 22, 7),  // wildflower
+        (39, 27, 8),  // daisy
+        (41, 26, 8),  // daisy
+        // Trees set back from pond (y=28-35) — will grow into canopy
+        (38, 30, 0),  // oak
+        (44, 32, 0),  // oak
+        (36, 34, 1),  // birch
+        (42, 28, 1),  // birch
+    ];
+
+    {
+        let grid = world.resource::<VoxelGrid>();
+        // Find surface z for each seed position and collect placements
+        let placements: Vec<(usize, usize, usize, usize)> = starter_seeds
+            .iter()
+            .filter_map(|&(x, y, species_id)| {
+                // Find the air cell just above the surface
+                let surface_z = VoxelGrid::surface_height(x, y);
+                let seed_z = surface_z + 1;
+                if seed_z < grid::GRID_Z {
+                    if let Some(v) = grid.get(x, y, seed_z) {
+                        if v.material == Material::Air {
+                            return Some((x, y, seed_z, species_id));
+                        }
+                    }
+                }
+                None
+            })
+            .collect();
+
+        // Release the immutable borrow before mutating
+        let _ = grid;
+
+        // Place seeds and register species
+        let mut grid = world.resource_mut::<VoxelGrid>();
+        for &(x, y, z, _) in &placements {
+            if let Some(voxel) = grid.get_mut(x, y, z) {
+                voxel.set_material(Material::Seed);
+            }
+        }
+        drop(grid);
+
+        let mut seed_map = world.resource_mut::<SeedSpeciesMap>();
+        for &(x, y, z, species_id) in &placements {
+            seed_map.map.insert((x, y, z), species_id);
+        }
+    }
+
+    // Pre-tick 200 more ticks so seeds germinate, groundcover spreads, and
+    // trees reach at least sapling stage with visible leaves.
+    for _ in 0..200 {
+        tick(&mut world, &mut schedule);
+    }
+
     // Reset tick counter so the player starts at tick 0
     world.resource_mut::<Tick>().0 = 0;
 
