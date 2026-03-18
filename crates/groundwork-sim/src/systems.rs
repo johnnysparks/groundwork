@@ -2207,8 +2207,13 @@ pub fn pioneer_succession(
         let h = tree_hash(t + i, 5555);
         let sx = (h as usize) % GRID_X;
         let sy = ((h >> 16) as usize) % GRID_Y;
-        let sz = GROUND_LEVEL + 1; // just above surface
+        // Find the actual surface: first Air cell above Soil.
+        // Surface height varies across the terrain (GROUND_LEVEL to GROUND_LEVEL+5).
+        let sz = VoxelGrid::surface_height(sx, sy) + 1;
 
+        if sz >= GRID_Z {
+            continue;
+        }
         if let Some(cell) = grid.get(sx, sy, sz) {
             if cell.material != Material::Air {
                 continue;
@@ -2218,7 +2223,7 @@ pub fn pioneer_succession(
         }
 
         // Check if the soil below is moist enough
-        let soil_below = grid.get(sx, sy, GROUND_LEVEL);
+        let soil_below = grid.get(sx, sy, sz - 1);
         let water_level = soil_below.map_or(0, |v| v.water_level);
 
         // Nurse Log Effect: DeadWood nearby lowers the moisture threshold,
@@ -2226,7 +2231,7 @@ pub fn pioneer_succession(
         let has_nearby_deadwood = {
             let nr = 3_usize;
             let mut found = false;
-            'dw: for dz in GROUND_LEVEL.saturating_sub(1)..=(GROUND_LEVEL + 3).min(GRID_Z - 1) {
+            'dw: for dz in sz.saturating_sub(2)..=(sz + 3).min(GRID_Z - 1) {
                 for dy in sy.saturating_sub(nr)..=(sy + nr).min(GRID_Y - 1) {
                     for dx in sx.saturating_sub(nr)..=(sx + nr).min(GRID_X - 1) {
                         if let Some(v) = grid.get(dx, dy, dz) {
@@ -2251,7 +2256,7 @@ pub fn pioneer_succession(
         let radius = 4_usize;
         for dy in sy.saturating_sub(radius)..=(sy + radius).min(GRID_Y - 1) {
             for dx in sx.saturating_sub(radius)..=(sx + radius).min(GRID_X - 1) {
-                for dz in GROUND_LEVEL..=(GROUND_LEVEL + 2) {
+                for dz in sz.saturating_sub(1)..=(sz + 2).min(GRID_Z - 1) {
                     if let Some(v) = grid.get(dx, dy, dz) {
                         if v.material == Material::Leaf {
                             let species_id = v.nutrient_level;
