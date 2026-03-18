@@ -17,7 +17,7 @@ test('debug: seed moisture + health verification', async ({ page }) => {
     const results: Array<{x: number, y: number, z: number, mat: number, water: number}> = [];
     // We can't call getGridView directly from here — it's in bridge.ts
     // But getMaterialCounts scans the whole grid. Let's check specific positions.
-    return info;
+    return { ...info, fauna: api.getFaunaCount() };
   });
   console.log('Grid info:', JSON.stringify(moisture));
 
@@ -47,6 +47,7 @@ test('debug: seed moisture + health verification', async ({ page }) => {
       materials: api.getMaterialCounts(),
       trees: api.getTreeEntityHealth(),
       health: api.getHealthHistogram(),
+      fauna: api.getFaunaCount(),
     };
   });
   console.log('After 200 ticks:', JSON.stringify(afterGrow));

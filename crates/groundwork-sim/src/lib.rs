@@ -250,6 +250,17 @@ pub fn create_world_with_garden() -> World {
         (30, 20, 0),  // oak — west of pond
         (50, 20, 1),  // birch — east of pond
         (40, 14, 3),  // pine — north, near pond edge
+        // Scattered groundcover across broader terrain for green carpet.
+        // These fill in the bare soil south and east of the pond.
+        // Pioneer succession will spread from these anchor points.
+        (30, 18, 9),  // moss — west of pond
+        (50, 18, 10), // grass — east of pond
+        (35, 20, 10), // grass — southwest
+        (45, 20, 9),  // moss — southeast
+        (32, 22, 11), // clover — west mid
+        (48, 22, 11), // clover — east mid
+        (34, 18, 10), // grass — near pond west
+        (46, 18, 9),  // moss — near pond east
     ];
 
     {
