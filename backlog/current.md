@@ -1,7 +1,7 @@
 # Backlog — Current Priorities
 
-**Last updated:** 2026-03-18T12:00:00
-**Status:** Alpha complete. 296 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + density influence + condition-attribution messages. Complete onboarding. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **6 new ecology particle types** (mycorrhizal violet, allelopathy amber-red, nurse log golden, root competition red-orange, soil binding olive-green, overgrowth amber). Density-not-species decision: all 5 items complete. **Irrigation replaces watering can** (executive mandate). **Rich sky dome** (FBM clouds, cirrus wisps, cloud shadows, sun/moon discs, rainbow, layered sunset bands, colored stars, night horizon glow). **Dynamic water reflections** (sky tint, moon path, cloud reflections, water bubbles). **Nutrient-rich soil tinting** (golden-brown fertile earth). **14-element coherent wind** (foliage, trunks, leaves, rain, mist, dust, gnats, fireflies, sky, cloud shadow, water, fauna + fauna wind-responsive animation). **Material polish** (warm AO, bark noise, leaf noise, stone mineral variety). **Time-of-day atmosphere** (fog density, post-rain petrichor glow, post-rain mist boost, grass color waves, soil breathing).
+**Last updated:** 2026-03-18T15:00:00
+**Status:** Alpha complete. 341 sprints. **Full quest arc: 8 chapters, 16 quests** from empty meadow to living ecosystem. Condition-based species emergence with neighbor influence + density influence + condition-attribution messages. Complete onboarding. Full cross-system connectivity + fauna behavior particles. 16-layer responsive audio, 25 SFX types. **6 new ecology particle types** (mycorrhizal violet, allelopathy amber-red, nurse log golden, root competition red-orange, soil binding olive-green, overgrowth amber). Density-not-species decision: all 5 items complete. **Irrigation replaces watering can** (executive mandate). **Rich sky dome** (FBM clouds, cirrus wisps, cloud shadows, sun/moon discs, rainbow, layered sunset bands, colored stars, night horizon glow). **Dynamic water reflections** (sky tint, moon path, cloud reflections, water bubbles). **Nutrient-rich soil tinting** (golden-brown fertile earth). **14-element coherent wind** (foliage, trunks, leaves, rain, mist, dust, gnats, fireflies, sky, cloud shadow, water, fauna + fauna wind-responsive animation). **Material polish** (warm AO, bark noise, leaf noise, stone mineral variety). **Time-of-day atmosphere** (fog density, post-rain petrichor glow, post-rain mist boost, grass color waves, soil breathing).
 
 ---
 
@@ -26,9 +26,13 @@ See `decisions/2026-03-16T12:00:00_gardener_gnome_zone_planning.md`
 - 8 branch stubs (cardinal + diagonal) for broader canopy fill
 - 15 branches per tick (was 10) for faster canopy coverage
 
-### Dense Starter Garden (Sprint 87)
+### Dense Starter Garden (Sprints 87, 339-341)
 - 21 seed spots (was 7): 5 moss, 5 grass, 5 clover for green carpet
 - Trunk visual priority fix (leaf spheres can't overwrite trunk voxels)
+- Restored starter garden: 20 seeds (9 groundcover, 4 flowers, 7 trees) near pond
+- 300 pre-ticks for visible growth; pioneer succession fixed for full-terrain coverage
+- Dead pine shows ecological drama on first load (shade competition)
+- 40,395 leaf voxels on first load with 3 dead/dying trees
 
 ### Water & Seed Visibility (Sprints 97-98)
 - Water surface shimmer: dancing sun sparkles, shoreline foam, stronger color contrast
