@@ -243,6 +243,13 @@ pub fn create_world_with_garden() -> World {
         (44, 32, 0),  // oak
         (36, 34, 1),  // birch
         (42, 28, 1),  // birch
+        // Additional trees spread around the wet zone for a fuller garden.
+        // Spaced 10+ voxels apart to avoid territorial suppression (6-voxel radius).
+        // Drama (shade competition, crowding) emerges naturally during gameplay
+        // as trees mature and canopies overlap — not during pre-tick.
+        (30, 20, 0),  // oak — west of pond
+        (50, 20, 1),  // birch — east of pond
+        (40, 14, 3),  // pine — north, near pond edge
     ];
 
     {
@@ -283,9 +290,9 @@ pub fn create_world_with_garden() -> World {
         }
     }
 
-    // Pre-tick 200 more ticks so seeds germinate, groundcover spreads, and
-    // trees reach at least sapling stage with visible leaves.
-    for _ in 0..200 {
+    // Pre-tick 300 more ticks so seeds germinate, trees grow, and the
+    // competing grove has time to develop visible stress from crowding.
+    for _ in 0..300 {
         tick(&mut world, &mut schedule);
     }
 
