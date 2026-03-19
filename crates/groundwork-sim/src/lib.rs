@@ -301,9 +301,9 @@ pub fn create_world_with_garden() -> World {
         }
     }
 
-    // Pre-tick 300 more ticks so seeds germinate, trees grow, and the
-    // competing grove has time to develop visible stress from crowding.
-    for _ in 0..300 {
+    // Pre-tick 650 more ticks so seeds germinate, trees grow, and shade
+    // competition produces visible stress and death.
+    for _ in 0..650 {
         tick(&mut world, &mut schedule);
     }
 
