@@ -249,7 +249,7 @@ pub fn create_world_with_garden() -> World {
         // as trees mature and canopies overlap — not during pre-tick.
         (30, 20, 0),  // oak — west of pond
         (50, 20, 1),  // birch — east of pond
-        (40, 14, 3),  // pine — north, near pond edge
+        (40, 8, 3),   // pine — north of pond, dry upslope (shade-intolerant, will die)
         // Scattered groundcover across broader terrain for green carpet.
         // These fill in the bare soil south and east of the pond.
         // Pioneer succession will spread from these anchor points.

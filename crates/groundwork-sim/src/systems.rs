@@ -2018,12 +2018,12 @@ pub fn tree_rasterize(
                         Material::Root => {
                             cell.material == Material::Soil || cell.material == Material::Root
                         }
-                        // Leaf/Branch must not overwrite Trunk — trunk has visual priority
+                        // Leaf/Branch must not overwrite Trunk or DeadWood — both have visual priority.
+                        // DeadWood must stay visible so the player sees dead trees as drama.
                         Material::Leaf | Material::Branch => {
                             cell.material == Material::Air
                                 || cell.material == Material::Branch
                                 || cell.material == Material::Leaf
-                                || cell.material == Material::DeadWood
                         }
                         _ => {
                             cell.material == Material::Air
@@ -2163,12 +2163,12 @@ pub fn tree_grow_visual(mut trees: Query<&mut Tree>, mut grid: ResMut<VoxelGrid>
                         Material::Root => {
                             cell.material == Material::Soil || cell.material == Material::Root
                         }
-                        // Leaf/Branch must not overwrite Trunk — trunk has visual priority
+                        // Leaf/Branch must not overwrite Trunk or DeadWood — both have visual priority.
+                        // DeadWood must stay visible so the player sees dead trees as drama.
                         Material::Leaf | Material::Branch => {
                             cell.material == Material::Air
                                 || cell.material == Material::Branch
                                 || cell.material == Material::Leaf
-                                || cell.material == Material::DeadWood
                         }
                         _ => {
                             cell.material == Material::Air
