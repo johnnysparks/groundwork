@@ -839,7 +839,7 @@ pub fn fauna_effects(
 
                     // Bird droppings: enrich soil below the bird's position
                     // Creates nutrient hotspots that benefit nearby plants
-                    let ground_z = GROUND_LEVEL;
+                    let ground_z = VoxelGrid::surface_height(cx, cy);
                     if let Some(soil_cell) = grid.get_mut(cx, cy, ground_z) {
                         if soil_cell.material == Material::Soil {
                             soil_cell.nutrient_level = soil_cell.nutrient_level.saturating_add(3);
@@ -860,19 +860,21 @@ pub fn fauna_effects(
                             let rad = (angle as f64) * std::f64::consts::PI / 180.0;
                             let tx = (cx as f64 + rad.cos() * dist as f64) as usize;
                             let ty = (cy as f64 + rad.sin() * dist as f64) as usize;
-                            // Find surface at target position
-                            let tz = GROUND_LEVEL + 1;
+                            // Find surface at target position (uses actual terrain height)
                             if tx < GRID_X && ty < GRID_Y {
-                                if let Some(cell) = grid.get_mut(tx, ty, tz) {
-                                    if cell.material == Material::Air {
-                                        cell.set_material(Material::Seed);
-                                        cell.water_level = 0;
-                                        cell.light_level = 0;
-                                        cell.nutrient_level = 0;
-                                        // Register species so the right plant grows
-                                        // Bird carries seeds from the tree it was near
-                                        if let Some(sid) = nearby_species {
-                                            seed_map.map.insert((tx, ty, tz), sid as usize);
+                                let tz = VoxelGrid::surface_height(tx, ty) + 1;
+                                if tz < GRID_Z {
+                                    if let Some(cell) = grid.get_mut(tx, ty, tz) {
+                                        if cell.material == Material::Air {
+                                            cell.set_material(Material::Seed);
+                                            cell.water_level = 0;
+                                            cell.light_level = 0;
+                                            cell.nutrient_level = 0;
+                                            // Register species so the right plant grows
+                                            // Bird carries seeds from the tree it was near
+                                            if let Some(sid) = nearby_species {
+                                                seed_map.map.insert((tx, ty, tz), sid as usize);
+                                            }
                                         }
                                     }
                                 }
@@ -889,16 +891,18 @@ pub fn fauna_effects(
                 if f.state == FaunaState::Acting {
                     let cx = f.x as usize;
                     let cy = f.y as usize;
-                    let tz = GROUND_LEVEL + 1;
 
                     // ~30% chance per Acting tick to cache an acorn
                     let h = tree_hash(tick.0 + f.rng_seed, 1111);
                     if h.is_multiple_of(3) && cx < GRID_X && cy < GRID_Y {
-                        if let Some(cell) = grid.get_mut(cx, cy, tz) {
-                            if cell.material == Material::Air {
-                                cell.set_material(Material::Seed);
-                                // Register as oak seed
-                                seed_map.map.insert((cx, cy, tz), 0); // oak = species 0
+                        let tz = VoxelGrid::surface_height(cx, cy) + 1;
+                        if tz < GRID_Z {
+                            if let Some(cell) = grid.get_mut(cx, cy, tz) {
+                                if cell.material == Material::Air {
+                                    cell.set_material(Material::Seed);
+                                    // Register as oak seed
+                                    seed_map.map.insert((cx, cy, tz), 0); // oak = species 0
+                                }
                             }
                         }
                     }
