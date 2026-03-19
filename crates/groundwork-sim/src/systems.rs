@@ -273,6 +273,8 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
     let z_stride = GRID_X * GRID_Y;
 
     let cells = grid.cells_mut();
+
+    // Pass 1: Vertical top-down light propagation per column.
     for y in 0..GRID_Y {
         for x in 0..GRID_X {
             let mut light: u8 = 255;
@@ -312,6 +314,48 @@ pub fn light_propagation(mut grid: ResMut<VoxelGrid>) {
                         light = light.saturating_sub(att_water);
                     }
                     _ => {}
+                }
+            }
+        }
+    }
+
+    // Pass 2: Lateral shade spread — dense canopy casts penumbra on neighbors.
+    // Only Air/Seed cells that are darkened by canopy above spread shade sideways.
+    // This creates realistic penumbra zones around tall trees without over-darkening.
+    // Leaf/Trunk/Branch cells already attenuate their own column — they don't spread.
+    for z in (GROUND_LEVEL..GRID_Z).rev() {
+        let z_off = z * z_stride;
+        for y in 1..(GRID_Y - 1) {
+            let y_off = y * GRID_X;
+            for x in 1..(GRID_X - 1) {
+                let idx = x + y_off + z_off;
+                let cell_mat = cells[idx].material;
+                // Only spread shade from air/seed cells under canopy shadow
+                if cell_mat != Material::Air && cell_mat != Material::Seed {
+                    continue;
+                }
+                let here_light = cells[idx].light_level;
+                // Only spread if significantly shaded (below 180 = at least one leaf layer above)
+                if here_light >= 180 {
+                    continue;
+                }
+                // Shade amount: how much darker than full sun
+                let shade = 255u16.saturating_sub(here_light as u16);
+                // Spread 20% of shade to each cardinal neighbor
+                let spread = (shade / 5) as u8;
+                if spread == 0 {
+                    continue;
+                }
+                let neighbors = [
+                    idx.wrapping_sub(1),       // x-1
+                    idx + 1,                    // x+1
+                    idx.wrapping_sub(GRID_X),  // y-1
+                    idx + GRID_X,               // y+1
+                ];
+                for &ni in &neighbors {
+                    if cells[ni].light_level > here_light + spread {
+                        cells[ni].light_level = cells[ni].light_level.saturating_sub(spread);
+                    }
                 }
             }
         }
@@ -977,6 +1021,7 @@ pub fn tree_growth(
         // Accumulate water from root voxels, light from above-ground voxels
         let mut water_intake: f32 = 0.0;
         let mut light_intake: f32 = 0.0;
+        let mut above_ground_count: u32 = 0;
 
         for &(vx, vy, vz) in &tree.voxel_footprint {
             if let Some(voxel) = grid.get(vx, vy, vz) {
@@ -984,11 +1029,17 @@ pub fn tree_growth(
                     Material::Root => water_intake += voxel.water_level as f32,
                     Material::Trunk | Material::Leaf | Material::Branch => {
                         light_intake += voxel.light_level as f32;
+                        above_ground_count += 1;
                     }
                     _ => {}
                 }
             }
         }
+        let avg_light = if above_ground_count > 0 {
+            light_intake / above_ground_count as f32
+        } else {
+            0.0
+        };
 
         // --- Nitrogen boost from nearby groundcover ---
         // Groundcover (clover, moss, grass) at ground level near a tree's roots
@@ -1028,8 +1079,8 @@ pub fn tree_growth(
         // ferns shade moss — each species fills its niche.
         let canopy_boost = if species.shade_tolerance < 60 {
             // shade_tolerance < 60 = very shade-tolerant (fern, moss, holly)
-            // In moderate shade (light_intake 5-30), they grow 1.5× faster
-            if (5.0..30.0).contains(&light_intake) {
+            // In moderate shade (avg_light 30-100), they grow 1.5× faster
+            if (30.0..100.0).contains(&avg_light) {
                 1.5_f32
             } else {
                 1.0
@@ -1119,14 +1170,13 @@ pub fn tree_growth(
         tree.accumulated_light += light_intake.sqrt() * species.growth_rate * total_boost;
 
         // Health declines without resources, recovers when well-supplied.
-        // Light check uses shade_tolerance: low tolerance = sun-loving = dies faster in shade.
-        // Threshold is scaled down because light_intake is sqrt(sum_of_light_across_voxels).
-        // A healthy tree in full sun: ~50 voxels × 200 light = sqrt(10000) ≈ 100 intake.
-        // Shade tolerance maps to threshold: high tolerance → low threshold.
+        // Light check uses avg light per above-ground voxel vs shade_tolerance threshold.
+        // Full sun leaf: ~200 light. Under dense canopy: ~50-100 light. Deep shade: <30.
+        // shade_tolerance: low value = shade-loving, high value = needs sun.
         let water_ok = water_intake >= species.water_need.threshold();
         let shade_factor = 1.0 - species.shade_tolerance as f32 / 255.0; // 0=tolerant, 1=needs sun
-        let light_threshold = 10.0 + shade_factor * 40.0; // range: 10 (tolerant) to 50 (sun-loving)
-        let light_ok = light_intake >= light_threshold;
+        let light_threshold = 15.0 + shade_factor * 85.0; // range: 15 (tolerant) to 100 (sun-loving)
+        let light_ok = avg_light >= light_threshold;
 
         // Young plants are more vulnerable to stress — seedlings and saplings
         // die 3× faster in shade/drought than mature trees. This creates natural
