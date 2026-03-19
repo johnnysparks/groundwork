@@ -149,23 +149,25 @@ fn fauna_positions_are_valid() {
             GRID_Y
         );
 
-        // Pollinators should be above ground
+        // Pollinators should be above the local surface
         if matches!(f.fauna_type, FaunaType::Bee | FaunaType::Butterfly) {
+            let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
             assert!(
-                f.z >= GROUND_LEVEL as f32,
-                "Pollinator z={} should be above ground level {}",
+                f.z >= surface as f32,
+                "Pollinator z={} should be above surface height {}",
                 f.z,
-                GROUND_LEVEL
+                surface
             );
         }
 
-        // Worms should be underground
+        // Worms should be underground (below the local surface)
         if f.fauna_type == FaunaType::Worm {
+            let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
             assert!(
-                f.z < GROUND_LEVEL as f32,
-                "Worm z={} should be below ground level {}",
+                f.z < surface as f32,
+                "Worm z={} should be below surface height {}",
                 f.z,
-                GROUND_LEVEL
+                surface
             );
         }
     }

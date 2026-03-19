@@ -16,7 +16,7 @@
 
 use bevy_ecs::prelude::*;
 
-use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z, GROUND_LEVEL};
+use crate::grid::{VoxelGrid, GRID_X, GRID_Y, GRID_Z};
 use crate::soil::SoilGrid;
 use crate::tree::tree_hash;
 use crate::voxel::Material;
@@ -252,7 +252,8 @@ pub fn fauna_spawn(
             break;
         }
 
-        let sz = GROUND_LEVEL + 2;
+        let surface = VoxelGrid::surface_height(sx, sy);
+        let sz = surface + 2;
         let h = tree_hash(t + si as u64, 999);
 
         // --- Pollinators: spawn near leaf clusters (flowers/foliage) ---
@@ -263,7 +264,7 @@ pub fn fauna_spawn(
         let flower_bonus = {
             let mut flower_leaves = 0u64;
             let r = 6_usize;
-            for fz in GROUND_LEVEL..=(GROUND_LEVEL + 3).min(GRID_Z - 1) {
+            for fz in surface..=(surface + 3).min(GRID_Z - 1) {
                 for fy in sy.saturating_sub(r)..=(sy + r).min(GRID_Y - 1) {
                     for fx in sx.saturating_sub(r)..=(sx + r).min(GRID_X - 1) {
                         if let Some(v) = grid.get(fx, fy, fz) {
@@ -344,7 +345,7 @@ pub fn fauna_spawn(
         }
 
         // --- Worms: spawn in moist soil underground ---
-        let underground_z = GROUND_LEVEL.saturating_sub(3);
+        let underground_z = surface.saturating_sub(3);
         if let Some(v) = grid.get(sx, sy, underground_z) {
             if v.material == Material::Soil && v.water_level > 50 {
                 if let Some(sc) = soil.get(sx, sy, underground_z) {
@@ -410,7 +411,7 @@ pub fn fauna_spawn(
         {
             let mut oak_berry_count = 0u32;
             let sqr = 8_usize;
-            for sqz in GROUND_LEVEL..=(GROUND_LEVEL + 6).min(GRID_Z - 1) {
+            for sqz in surface..=(surface + 6).min(GRID_Z - 1) {
                 for sqy in sy.saturating_sub(sqr)..=(sy + sqr).min(GRID_Y - 1) {
                     for sqx in sx.saturating_sub(sqr)..=(sx + sqr).min(GRID_X - 1) {
                         if let Some(v) = grid.get(sqx, sqy, sqz) {
@@ -434,10 +435,10 @@ pub fn fauna_spawn(
                         state: FaunaState::Idle,
                         x: sx as f32 + 0.5,
                         y: sy as f32 + 0.5,
-                        z: GROUND_LEVEL as f32 + 1.5,
+                        z: surface as f32 + 1.5,
                         target_x: sx as f32,
                         target_y: sy as f32,
-                        target_z: GROUND_LEVEL as f32 + 1.0,
+                        target_z: surface as f32 + 1.0,
                         age: 0,
                         max_age: 500 + (tree_hash(seed, 7) % 300) as u32,
                         rng_seed: seed,
@@ -552,7 +553,8 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                 }
 
                 // Keep pollinators above ground
-                let min_z = GROUND_LEVEL as f32 + 1.0;
+                let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
+                let min_z = surface as f32 + 1.0;
                 if f.z < min_z {
                     f.z = min_z;
                 }
@@ -577,7 +579,8 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                     FaunaState::Acting => {
                         // Swooping down briefly
                         f.z -= 0.2;
-                        if f.z < GROUND_LEVEL as f32 + 3.0 {
+                        let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
+                        if f.z < surface as f32 + 3.0 {
                             f.state = FaunaState::Idle;
                             f.z = f.target_z;
                         }
@@ -613,8 +616,9 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                 }
 
                 // Keep underground
-                let max_z = GROUND_LEVEL as f32 - 0.5;
-                let min_z = (GROUND_LEVEL as f32 - 8.0).max(1.0);
+                let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
+                let max_z = surface as f32 - 0.5;
+                let min_z = (surface as f32 - 8.0).max(1.0);
                 f.z = f.z.clamp(min_z, max_z);
             }
             FaunaType::Beetle => {
@@ -627,7 +631,8 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                 f.y += (t_f * 0.8).cos() * speed;
 
                 // Keep near surface
-                let min_z = GROUND_LEVEL as f32;
+                let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
+                let min_z = surface as f32;
                 if f.z < min_z {
                     f.z = min_z + 0.5;
                 }
@@ -635,6 +640,7 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
             FaunaType::Squirrel => {
                 // Squirrels scurry along the ground, darting between trees.
                 // Fast erratic movement with pauses (Idle → Seeking → Acting cycle).
+                let surface = VoxelGrid::surface_height(f.x as usize, f.y as usize);
                 let speed = 0.15;
                 let phase = f.rng_seed as f32 * 0.9;
                 let t_f = t as f32 + phase;
@@ -668,15 +674,15 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
                             f.x += dx / dist * speed;
                             f.y += dy / dist * speed;
                             // Bobbing motion
-                            f.z = GROUND_LEVEL as f32 + 1.0 + (t_f * 0.4).sin().abs() * 0.3;
+                            f.z = surface as f32 + 1.0 + (t_f * 0.4).sin().abs() * 0.3;
                         }
                     }
                     FaunaState::Acting => {
                         // Brief digging animation, then return to idle
-                        f.z = GROUND_LEVEL as f32 + 0.8;
+                        f.z = surface as f32 + 0.8;
                         if f.age.is_multiple_of(5) {
                             f.state = FaunaState::Idle;
-                            f.z = GROUND_LEVEL as f32 + 1.0;
+                            f.z = surface as f32 + 1.0;
                         }
                     }
                     FaunaState::Leaving => {
@@ -687,7 +693,7 @@ pub fn fauna_update(grid: Res<VoxelGrid>, mut fauna_list: ResMut<FaunaList>, tic
 
                 // Keep on ground surface
                 f.z =
-                    f.z.clamp(GROUND_LEVEL as f32 + 0.5, GROUND_LEVEL as f32 + 2.0);
+                    f.z.clamp(surface as f32 + 0.5, surface as f32 + 2.0);
             }
         }
 
