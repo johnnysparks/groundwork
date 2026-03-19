@@ -1114,8 +1114,9 @@ pub fn tree_growth(
                     if cx == rx && cy == ry {
                         continue;
                     }
-                    // Check at trunk height (surface + 2..5)
-                    for cz in (GROUND_LEVEL + 2)..=(GROUND_LEVEL + 5).min(GRID_Z - 1) {
+                    // Check at trunk height relative to local surface
+                    let col_surface = VoxelGrid::surface_height(cx, cy);
+                    for cz in (col_surface + 1)..=(col_surface + 6).min(GRID_Z - 1) {
                         if let Some(v) = grid.get(cx, cy, cz) {
                             if v.material == Material::Trunk {
                                 nearby_trunks += 1;
@@ -2843,10 +2844,11 @@ pub fn soil_evolution(
                 // and nutrients deplete. This creates negative feedback: too many
                 // trees → dense canopy → poor soil → weakened trees → natural thinning.
                 // Discovery: "The soil quality dropped under my dense forest!"
-                // Only affects near-surface soil (within 3 of ground level).
-                if z >= GROUND_LEVEL.saturating_sub(3) && z <= GROUND_LEVEL {
+                // Only affects near-surface soil (within 3 of local surface height).
+                let local_surface = VoxelGrid::surface_height(x, y);
+                if z >= local_surface.saturating_sub(3) && z <= local_surface {
                     // Check light at surface above this soil cell
-                    let surface_z = GROUND_LEVEL + 1;
+                    let surface_z = local_surface + 1;
                     let surface_idx = x + y * GRID_X + surface_z * z_stride;
                     if surface_idx < snapshot.len() {
                         // snapshot stores (material, water, nutrient) — need light from grid
@@ -3163,10 +3165,11 @@ pub fn milestone_tracker(
         }
     }
 
-    // Count groundcover leaf voxels at ground level
+    // Count groundcover leaf voxels at/near surface across full slope range
     // Groundcover species: moss=9, grass=10, clover=11
+    // Surface height varies from GROUND_LEVEL to GROUND_LEVEL+5, scan +2 above max
     let mut groundcover_count = 0u16;
-    for z in GROUND_LEVEL..=(GROUND_LEVEL + 2).min(GRID_Z - 1) {
+    for z in GROUND_LEVEL..=(GROUND_LEVEL + 7).min(GRID_Z - 1) {
         for y in 0..GRID_Y {
             for x in 0..GRID_X {
                 if let Some(v) = grid.get(x, y, z) {
