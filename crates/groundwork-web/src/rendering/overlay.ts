@@ -25,23 +25,23 @@ export enum OverlayMode {
 
 const MODE_NAMES = ['Off', 'Water', 'Light', 'Nutrient', 'Irrigation'];
 
-/** Color ramps for each data channel */
+/** Color ramps for each data channel — maximally saturated for visibility */
 function waterColor(value: number): [number, number, number] {
   const t = value / 255;
-  // Dry = brown/transparent → wet = bright blue
-  return [0.15 * (1 - t), 0.25 * (1 - t) + 0.6 * t, 0.1 * (1 - t) + 0.9 * t];
+  // Dry = pure red → wet = pure blue (classic thermal palette)
+  return [1.0 * (1 - t), 0.15 * t + 0.15 * (1 - t), 1.0 * t];
 }
 
 function lightColor(value: number): [number, number, number] {
   const t = value / 255;
-  // Dark = deep purple → bright = warm yellow
-  return [0.15 + 0.85 * t, 0.1 + 0.8 * t, 0.3 * (1 - t) + 0.2 * t];
+  // Dark = deep violet → bright = vivid yellow
+  return [0.15 + 0.85 * t, 0.0 + 1.0 * t, 0.5 * (1 - t)];
 }
 
 function nutrientColor(value: number): [number, number, number] {
   const t = value / 255;
-  // Low = pale → high = rich warm orange
-  return [0.3 + 0.7 * t, 0.3 + 0.3 * t, 0.2 * (1 - t)];
+  // Depleted = dark charcoal → rich = vivid emerald green
+  return [0.15 * (1 - t), 0.10 * (1 - t) + 0.95 * t, 0.05 + 0.20 * t];
 }
 
 /**
@@ -140,26 +140,34 @@ export class DataOverlay {
 
     for (let y = 0; y < GRID_Y; y++) {
       for (let x = 0; x < GRID_X; x++) {
-        // Find surface Z (scan down from above ground)
+        // Find surface Z and appropriate data value
         let surfZ = -1;
         let dataValue = 0;
         for (let z = GROUND_LEVEL + 10; z >= GROUND_LEVEL - 5; z--) {
           if (z < 0 || z >= GRID_Z) continue;
           const idx = (x + y * GRID_X + z * GRID_X * GRID_Y) * VOXEL_BYTES;
           const mat = grid[idx];
-          if (mat !== Material.Air) {
+          if (mat === Material.Air) continue;
+
+          // For Light overlay: any surface cell has valid light data
+          if (this._mode === OverlayMode.Light) {
             surfZ = z;
-            switch (this._mode) {
-              case OverlayMode.Water:   dataValue = grid[idx + 1]; break;
-              case OverlayMode.Light:   dataValue = grid[idx + 2]; break;
-              case OverlayMode.Nutrient: dataValue = grid[idx + 3]; break;
-            }
+            dataValue = grid[idx + 2];
+            break;
+          }
+
+          // For Water/Nutrient: prefer Soil cells (Leaf/Trunk store species data,
+          // not actual water/nutrient levels). Fall back to first non-air if no soil.
+          if (surfZ < 0) surfZ = z; // remember first surface for position
+          if (mat === Material.Soil || mat === Material.Water) {
+            surfZ = z;
+            if (this._mode === OverlayMode.Water) dataValue = grid[idx + 1];
+            else dataValue = grid[idx + 3];
             break;
           }
         }
 
         if (surfZ < 0) continue;
-        if (dataValue === 0) continue;
 
         let r: number, g: number, b: number;
         switch (this._mode) {
@@ -192,13 +200,15 @@ export class DataOverlay {
     const material = new THREE.MeshBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.85,
       depthWrite: false,
+      depthTest: false,
       side: THREE.DoubleSide,
     });
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.name = 'data-overlay-mesh';
+    this.mesh.renderOrder = 100;
     this.group.add(this.mesh);
   }
 
