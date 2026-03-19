@@ -53,12 +53,13 @@ pub fn weather_system(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>, mut weather:
         WeatherState::Rain => {
             // Rain: add water to surface air/soil cells every 3 ticks
             if tick.0.is_multiple_of(3) {
-                let z = GROUND_LEVEL + 1;
                 // Scatter rain across ~20% of the surface
                 for i in 0..((GRID_X * GRID_Y) / 5) {
                     let h = tree_hash(tick.0 + i as u64, 54321);
                     let rx = (h as usize) % GRID_X;
                     let ry = ((h >> 16) as usize) % GRID_Y;
+                    let surface = VoxelGrid::surface_height(rx, ry);
+                    let z = surface + 1;
                     // Add water to surface
                     if let Some(cell) = grid.get_mut(rx, ry, z) {
                         if cell.material == Material::Air {
@@ -69,7 +70,7 @@ pub fn weather_system(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>, mut weather:
                         }
                     }
                     // Also moisten the soil below
-                    if let Some(cell) = grid.get_mut(rx, ry, GROUND_LEVEL) {
+                    if let Some(cell) = grid.get_mut(rx, ry, surface) {
                         if cell.material == Material::Soil {
                             cell.water_level = cell.water_level.saturating_add(15);
                         }
@@ -82,24 +83,24 @@ pub fn weather_system(mut grid: ResMut<VoxelGrid>, tick: Res<Tick>, mut weather:
             if tick.0.is_multiple_of(5) {
                 let cells = grid.cells_mut();
                 let z_stride = GRID_X * GRID_Y;
-                // Surface layer: evaporate water
-                let z = GROUND_LEVEL + 1;
                 for y in 0..GRID_Y {
                     for x in 0..GRID_X {
-                        let idx = x + y * GRID_X + z * z_stride;
-                        if cells[idx].material == Material::Water {
-                            cells[idx].water_level = cells[idx].water_level.saturating_sub(8);
-                            if cells[idx].water_level < 5 {
-                                cells[idx].set_material(Material::Air);
+                        let surface = VoxelGrid::surface_height(x, y);
+                        let base = x + y * GRID_X;
+                        // Surface layer: evaporate water
+                        let z = surface + 1;
+                        if z < GRID_Z {
+                            let idx = base + z * z_stride;
+                            if cells[idx].material == Material::Water {
+                                cells[idx].water_level = cells[idx].water_level.saturating_sub(8);
+                                if cells[idx].water_level < 5 {
+                                    cells[idx].set_material(Material::Air);
+                                }
                             }
                         }
-                    }
-                }
-                // Shallow soil: dry out
-                for sz in GROUND_LEVEL.saturating_sub(2)..=GROUND_LEVEL {
-                    for y in 0..GRID_Y {
-                        for x in 0..GRID_X {
-                            let idx = x + y * GRID_X + sz * z_stride;
+                        // Shallow soil: dry out top 3 layers below surface
+                        for sz in surface.saturating_sub(2)..=surface {
+                            let idx = base + sz * z_stride;
                             if cells[idx].material == Material::Soil && cells[idx].water_level > 10
                             {
                                 cells[idx].water_level = cells[idx].water_level.saturating_sub(3);
@@ -1044,7 +1045,7 @@ pub fn tree_growth(
         // --- Nitrogen boost from nearby groundcover ---
         // Groundcover (clover, moss, grass) at ground level near a tree's roots
         // enriches soil nitrogen → 1.5x nutrient accumulation.
-        // Detected by counting Leaf voxels at ground level (z = GROUND_LEVEL to +2).
+        // Detected by counting Leaf voxels near the surface (covers slope variation).
         let nitrogen_boost = if species.plant_type == PlantType::Tree {
             let (rx, ry, _rz) = tree.root_pos;
             let mut ground_leaf_count = 0u32;
@@ -1052,7 +1053,8 @@ pub fn tree_growth(
             let x_hi = (rx + nitrogen_radius).min(GRID_X - 1);
             let y_lo = ry.saturating_sub(nitrogen_radius);
             let y_hi = (ry + nitrogen_radius).min(GRID_Y - 1);
-            for gz in GROUND_LEVEL..=(GROUND_LEVEL + 2) {
+            // Scan from GROUND_LEVEL to GROUND_LEVEL+7 to cover the full slope range (+5) plus 2 above
+            for gz in GROUND_LEVEL..=(GROUND_LEVEL + 7) {
                 for gy in y_lo..=y_hi {
                     for gx in x_lo..=x_hi {
                         if let Some(v) = grid.get(gx, gy, gz) {
@@ -2490,7 +2492,9 @@ pub fn deadwood_decay(
 
                 // Passive decay: +2 per 20-tick cycle (~2550 ticks to full decomposition)
                 // Moisture accelerates: wet dead wood decays faster
-                let moisture_bonus = if z <= GROUND_LEVEL {
+                let surface = VoxelGrid::surface_height(x, y);
+                let is_underground = z <= surface;
+                let moisture_bonus = if is_underground {
                     // Underground dead wood: check adjacent soil water
                     let mut adj_water = 0u16;
                     if x > 0 {
@@ -2515,13 +2519,12 @@ pub fn deadwood_decay(
 
                 // When fully decayed, convert to soil with rich nutrients
                 if cells[idx].water_level >= 250 {
-                    let was_underground = z <= GROUND_LEVEL;
-                    cells[idx].set_material(if was_underground {
+                    cells[idx].set_material(if is_underground {
                         Material::Soil
                     } else {
                         Material::Air
                     });
-                    if was_underground {
+                    if is_underground {
                         cells[idx].nutrient_level = 60; // nutrient-rich soil
                                                         // Enrich the soil composition
                         soil_cells[idx].organic = soil_cells[idx].organic.saturating_add(40);
